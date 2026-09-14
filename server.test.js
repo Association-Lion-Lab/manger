@@ -60,10 +60,14 @@ test('une recette peut être créée puis modifiée avec ses ingrédients', asyn
     minutes: 15,
     servings: 2,
     tags: ['rapide'],
-    instructions: 'Griller le pain puis ajouter les tomates.',
     ingredients: [
       { name: 'pain', amount: 4, unit: 'tranche' },
       { name: 'tomate', amount: 2, unit: 'pièce' }
+    ],
+    steps: [
+      { kind: 'prep', instruction: 'Couper les tomates.', minutes: 5 },
+      { kind: 'cook', instruction: 'Griller le pain.', minutes: 4 },
+      { kind: 'serve', instruction: 'Déposer les tomates sur le pain.', minutes: null }
     ]
   };
 
@@ -85,4 +89,6 @@ test('une recette peut être créée puis modifiée avec ses ingrédients', asyn
   const updated = await updatedResponse.json();
   assert.equal(updated.title, 'Bruschettas');
   assert.deepEqual(updated.ingredients, [{ name: 'tomate', unit: 'pièce', amount: 2 }]);
+  assert.equal(updated.steps.length, 3);
+  assert.deepEqual(updated.steps.map(step => step.kind), ['prep', 'cook', 'serve']);
 });

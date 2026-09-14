@@ -43,7 +43,7 @@ L'application est ensuite disponible sur <http://localhost:3000>. Le volume Dock
 
 La version `0.1` devra permettre de :
 
-1. créer et modifier ses propres recettes ;
+1. créer et modifier ses propres recettes avec des étapes de préparation, cuisson, repos et dressage ;
 2. consulter une petite base interne de recettes libres ;
 3. obtenir des suggestions selon les préférences, le temps disponible et les repas récents ;
 4. placer un repas dans un calendrier hebdomadaire ;

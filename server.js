@@ -43,6 +43,15 @@ function createDatabase(filename) {
       amount REAL NOT NULL CHECK (amount > 0),
       PRIMARY KEY (recipe_id, ingredient_id)
     );
+    CREATE TABLE IF NOT EXISTS recipe_steps (
+      id INTEGER PRIMARY KEY,
+      recipe_id INTEGER NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
+      position INTEGER NOT NULL CHECK (position > 0),
+      kind TEXT NOT NULL CHECK (kind IN ('prep', 'cook', 'rest', 'serve')),
+      instruction TEXT NOT NULL,
+      minutes INTEGER CHECK (minutes IS NULL OR (minutes >= 0 AND minutes <= 1440)),
+      UNIQUE (recipe_id, position)
+    );
     CREATE TABLE IF NOT EXISTS meals (
       id INTEGER PRIMARY KEY,
       date TEXT NOT NULL,
@@ -59,6 +68,13 @@ function createDatabase(filename) {
     db.exec("ALTER TABLE recipes ADD COLUMN instructions TEXT NOT NULL DEFAULT ''");
   }
   seed(db);
+  db.exec(`
+    INSERT INTO recipe_steps (recipe_id, position, kind, instruction, minutes)
+    SELECT recipes.id, 1, 'prep', recipes.instructions, NULL
+    FROM recipes
+    WHERE recipes.instructions <> ''
+      AND NOT EXISTS (SELECT 1 FROM recipe_steps WHERE recipe_steps.recipe_id = recipes.id)
+  `);
   return db;
 }
 
@@ -103,11 +119,16 @@ function recipes(db) {
     FROM recipe_ingredients JOIN ingredients ON ingredients.id = recipe_ingredients.ingredient_id
     WHERE recipe_ingredients.recipe_id = ? ORDER BY ingredients.name
   `);
-  return db.prepare('SELECT id, title, minutes, servings, tags, instructions FROM recipes ORDER BY title').all()
+  const stepQuery = db.prepare(`
+    SELECT position, kind, instruction, minutes
+    FROM recipe_steps WHERE recipe_id = ? ORDER BY position
+  `);
+  return db.prepare('SELECT id, title, minutes, servings, tags FROM recipes ORDER BY title').all()
     .map(recipe => ({
       ...recipe,
       tags: recipe.tags.split(',').filter(Boolean),
-      ingredients: ingredientQuery.all(recipe.id)
+      ingredients: ingredientQuery.all(recipe.id),
+      steps: stepQuery.all(recipe.id)
     }));
 }
 
@@ -115,7 +136,6 @@ function validateRecipe(input) {
   if (!input || typeof input.title !== 'string' || !input.title.trim() || input.title.length > 120) throw new Error('Titre invalide');
   if (!Number.isInteger(input.minutes) || input.minutes < 1 || input.minutes > 1_440) throw new Error('Durée invalide');
   if (!Number.isInteger(input.servings) || input.servings < 1 || input.servings > 100) throw new Error('Nombre de portions invalide');
-  if (typeof input.instructions !== 'string' || !input.instructions.trim() || input.instructions.length > 10_000) throw new Error('Instructions invalides');
   if (!Array.isArray(input.tags) || input.tags.length > 20 || input.tags.some(tag => typeof tag !== 'string' || !tag.trim() || tag.length > 40)) throw new Error('Étiquettes invalides');
   if (!Array.isArray(input.ingredients) || input.ingredients.length < 1 || input.ingredients.length > 100) throw new Error('Ingrédients invalides');
 
@@ -128,13 +148,22 @@ function validateRecipe(input) {
   const duplicate = new Set(ingredients.map(ingredient => `${ingredient.name}\0${ingredient.unit}`));
   if (duplicate.size !== ingredients.length) throw new Error('Un ingrédient est présent plusieurs fois');
 
+  const stepKinds = new Set(['prep', 'cook', 'rest', 'serve']);
+  if (!Array.isArray(input.steps) || input.steps.length < 1 || input.steps.length > 50) throw new Error('Étapes invalides');
+  const steps = input.steps.map((step, index) => {
+    if (!step || !stepKinds.has(step.kind)) throw new Error(`Type invalide à l’étape ${index + 1}`);
+    if (typeof step.instruction !== 'string' || !step.instruction.trim() || step.instruction.length > 2_000) throw new Error(`Instruction invalide à l’étape ${index + 1}`);
+    if (step.minutes != null && (!Number.isInteger(step.minutes) || step.minutes < 0 || step.minutes > 1_440)) throw new Error(`Durée invalide à l’étape ${index + 1}`);
+    return { position: index + 1, kind: step.kind, instruction: step.instruction.trim(), minutes: step.minutes ?? null };
+  });
+
   return {
     title: input.title.trim(),
     minutes: input.minutes,
     servings: input.servings,
     tags: [...new Set(input.tags.map(tag => tag.trim().toLocaleLowerCase('fr')))],
-    instructions: input.instructions.trim(),
-    ingredients
+    ingredients,
+    steps
   };
 }
 
@@ -143,12 +172,13 @@ function saveRecipe(db, recipe, id = null) {
   try {
     if (id == null) {
       id = Number(db.prepare('INSERT INTO recipes (title, minutes, servings, tags, instructions) VALUES (?, ?, ?, ?, ?)')
-        .run(recipe.title, recipe.minutes, recipe.servings, recipe.tags.join(','), recipe.instructions).lastInsertRowid);
+        .run(recipe.title, recipe.minutes, recipe.servings, recipe.tags.join(','), '').lastInsertRowid);
     } else {
       const result = db.prepare('UPDATE recipes SET title = ?, minutes = ?, servings = ?, tags = ?, instructions = ? WHERE id = ?')
-        .run(recipe.title, recipe.minutes, recipe.servings, recipe.tags.join(','), recipe.instructions, id);
+        .run(recipe.title, recipe.minutes, recipe.servings, recipe.tags.join(','), '', id);
       if (result.changes === 0) throw new Error('Recette inconnue');
       db.prepare('DELETE FROM recipe_ingredients WHERE recipe_id = ?').run(id);
+      db.prepare('DELETE FROM recipe_steps WHERE recipe_id = ?').run(id);
       db.prepare('UPDATE meals SET title = ? WHERE recipe_id = ?').run(recipe.title, id);
     }
 
@@ -160,6 +190,8 @@ function saveRecipe(db, recipe, id = null) {
       const ingredientId = findIngredient.get(ingredient.name, ingredient.unit).id;
       linkIngredient.run(id, ingredientId, ingredient.amount);
     }
+    const insertStep = db.prepare('INSERT INTO recipe_steps (recipe_id, position, kind, instruction, minutes) VALUES (?, ?, ?, ?, ?)');
+    for (const step of recipe.steps) insertStep.run(id, step.position, step.kind, step.instruction, step.minutes);
     db.exec('COMMIT');
     return recipes(db).find(item => item.id === id);
   } catch (error) {
