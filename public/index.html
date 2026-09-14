@@ -413,11 +413,14 @@
 
     async function openSuggestions() {
       state.slot = mealFor(state.selected, 'soir') ? 'midi' : 'soir';
-      const response = await fetch('/api/suggestions');
+      const response = await fetch(`/api/suggestions?start=${key(state.weekStart)}`);
       const suggestions = await response.json();
       document.getElementById('dialog-title').textContent = 'Trois idées pour vous';
       document.getElementById('dialog-subtitle').textContent = `${fullDayNames[state.selected]} · ${state.slot === 'midi' ? 'Midi' : 'Soir'}`;
-      document.getElementById('choices').innerHTML = suggestions.map(recipe => choice('✦', recipe.title, `${recipe.minutes} min · ${recipe.lastEaten ? 'à refaire' : 'nouveau cette semaine'}`, { recipe: recipe.id, suggest: 'true' })).join('') + (state.members.length > 1 ? choice('⋈', 'Deux recettes coordonnées', 'Une recette compatible par personne', { duo: 'true' }) : '');
+      document.getElementById('choices').innerHTML = suggestions.map(recipe => {
+        const detail = recipe.reusedIngredients.length ? `Anti-gaspi · réutilise ${recipe.reusedIngredients.join(', ')}` : `${recipe.minutes} min · ${recipe.lastEaten ? 'à refaire' : 'nouveau cette semaine'}`;
+        return choice(recipe.reusedIngredients.length ? '♻' : '✦', recipe.title, detail, { recipe: recipe.id, suggest: 'true' });
+      }).join('') + (state.members.length > 1 ? choice('⋈', 'Deux recettes coordonnées', 'Une recette compatible par personne', { duo: 'true' }) : '');
       dialog.showModal();
     }
 

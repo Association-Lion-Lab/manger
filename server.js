@@ -331,17 +331,43 @@ function isDietCompatible(memberDiet, recipeDiet) {
   return rank[recipeDiet] <= rank[memberDiet];
 }
 
-function suggestions(db) {
-  // ponytail: deterministic recency ranking; add household preferences once profiles exist.
-  return db.prepare(`
+function suggestions(db, start = null) {
+  // ponytail: exact ingredient-name overlap; add pantry quantities only if users need finer scoring.
+  const candidates = db.prepare(`
+    WITH eaten AS (
+      SELECT recipe_id, date FROM meals WHERE recipe_id IS NOT NULL
+      UNION ALL
+      SELECT meal_dishes.recipe_id, meals.date FROM meal_dishes JOIN meals ON meals.id = meal_dishes.meal_id
+    )
     SELECT recipes.id, recipes.title, recipes.minutes, recipes.servings, recipes.tags, recipes.diet,
-           MAX(meals.date) AS lastEaten
-    FROM recipes LEFT JOIN meals ON meals.recipe_id = recipes.id
+           MAX(eaten.date) AS lastEaten
+    FROM recipes LEFT JOIN eaten ON eaten.recipe_id = recipes.id
     GROUP BY recipes.id
-    ORDER BY CASE WHEN MAX(meals.date) IS NULL THEN 0 ELSE 1 END,
-             MAX(meals.date), recipes.title
-    LIMIT 3
-  `).all().map(recipe => ({ ...recipe, tags: recipe.tags.split(',').filter(Boolean) }));
+  `).all();
+  const ingredientQuery = db.prepare(`
+    SELECT ingredients.name FROM recipe_ingredients
+    JOIN ingredients ON ingredients.id = recipe_ingredients.ingredient_id
+    WHERE recipe_ingredients.recipe_id = ? ORDER BY ingredients.name
+  `);
+  const plannedIngredients = new Set(start ? shoppingList(db, start).map(item => item.name) : []);
+  const plannedRecipeIds = new Set(start ? db.prepare(`
+    SELECT recipe_id AS id FROM meals WHERE date BETWEEN ? AND ? AND recipe_id IS NOT NULL
+    UNION SELECT meal_dishes.recipe_id AS id FROM meal_dishes JOIN meals ON meals.id = meal_dishes.meal_id WHERE meals.date BETWEEN ? AND ?
+  `).all(start, addDays(start, 6), start, addDays(start, 6)).map(item => item.id) : []);
+  const ranked = candidates.map(recipe => ({
+    ...recipe,
+    tags: recipe.tags.split(',').filter(Boolean),
+    reusedIngredients: ingredientQuery.all(recipe.id).map(item => item.name).filter(name => plannedIngredients.has(name)),
+    alreadyPlanned: plannedRecipeIds.has(recipe.id)
+  })).sort((left, right) =>
+    right.reusedIngredients.length - left.reusedIngredients.length ||
+    Number(left.alreadyPlanned) - Number(right.alreadyPlanned) ||
+    Number(Boolean(left.lastEaten)) - Number(Boolean(right.lastEaten)) ||
+    String(left.lastEaten || '').localeCompare(String(right.lastEaten || '')) ||
+    left.title.localeCompare(right.title, 'fr')
+  );
+  const fresh = ranked.filter(recipe => !recipe.alreadyPlanned);
+  return [...fresh, ...ranked.filter(recipe => recipe.alreadyPlanned)].slice(0, 3);
 }
 
 function validateMeal(input, db) {
@@ -472,7 +498,9 @@ function createHandler(db) {
       }
 
       if (request.method === 'GET' && url.pathname === '/api/suggestions') {
-        return sendJson(response, 200, suggestions(db));
+        const start = url.searchParams.get('start');
+        if (start != null && !isDateKey(start)) throw new Error('Début de semaine invalide');
+        return sendJson(response, 200, suggestions(db, start));
       }
 
       if (request.method === 'GET' && url.pathname === '/api/household') {

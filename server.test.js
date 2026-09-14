@@ -33,6 +33,19 @@ test('un repas cuisiné alimente la liste de courses et la recommandation évite
   ]);
   assert.notEqual(suggestions(db)[0].id, 1);
 
+  const antiWasteRecipe = await fetch(`${baseUrl}/api/recipes`, {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      title: 'Tomates farcies au riz', minutes: 35, servings: 2, diet: 'vegetarian', tags: ['anti-gaspi'],
+      ingredients: [{ name: 'tomate', amount: 2, unit: 'pièce' }, { name: 'riz', amount: 160, unit: 'g' }],
+      steps: [{ kind: 'cook', instruction: 'Farcir les tomates et cuire.', minutes: 30 }]
+    })
+  });
+  assert.equal(antiWasteRecipe.status, 201);
+  const antiWasteSuggestions = await (await fetch(`${baseUrl}/api/suggestions?start=2026-09-14`)).json();
+  assert.equal(antiWasteSuggestions[0].title, 'Tomates farcies au riz');
+  assert.deepEqual(antiWasteSuggestions[0].reusedIngredients, ['tomate']);
+
   const checked = await fetch(`${baseUrl}/api/shopping-checks`, {
     method: 'POST', headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ weekStart: '2026-09-14', name: 'citron', unit: 'pièce', checked: true })

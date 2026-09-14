@@ -69,13 +69,14 @@ Un date n'est donc pas un type de repas fermé : il peut avoir lieu au restauran
 
 ## Recommandations v1
 
-La première version n'utilisera pas d'IA. Elle appliquera :
+La version `0.1` n'utilise pas d'IA. Son classement est déterministe et explicable :
 
-1. des exclusions strictes pour les allergies et régimes ;
-2. des filtres de temps, matériel et nombre de portions ;
-3. un bonus pour les recettes appréciées ;
-4. une pénalité pour les plats mangés récemment ;
-5. un peu d'aléatoire parmi les meilleurs résultats.
+1. favoriser les recettes qui réutilisent les ingrédients déjà prévus dans la semaine ;
+2. proposer les recettes non encore planifiées avant les répétitions ;
+3. pénaliser les plats mangés récemment ;
+4. départager les égalités par ordre alphabétique.
+
+Les allergies, préférences et contraintes de matériel enrichiront ce classement lorsqu'elles seront enregistrables dans les profils.
 
 ## Parcours de validation `0.1`
 
