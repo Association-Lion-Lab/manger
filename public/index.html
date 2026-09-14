@@ -110,6 +110,12 @@
     .step-row select { width: 100%; min-height: 46px; padding: 10px 8px; color: var(--text); border: 1px solid var(--line); border-radius: 12px; background: var(--raised); }
     .step-row .icon-button { border-radius: 12px; }
     .recipe-form-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .recipe-detail { display: grid; gap: 20px; margin: 18px 0; }
+    .recipe-detail h3 { margin: 0 0 8px; font-size: 14px; }
+    .detail-list { display: grid; gap: 8px; margin: 0; padding-left: 22px; }
+    .detail-step { padding: 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--raised); }
+    .detail-step small { display: block; margin-bottom: 5px; color: var(--accent); font-weight: 650; text-transform: uppercase; }
+    .detail-step p { margin: 0; line-height: 1.45; }
     .error { color: #b42318; }
     .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
     @media (max-width: 430px) {
@@ -200,6 +206,19 @@
         </div>
       </form>
     </dialog>
+
+    <dialog id="recipe-view-dialog">
+      <div class="handle"></div>
+      <div class="section-heading">
+        <div><h2 id="recipe-view-title"></h2><span id="recipe-view-meta" class="muted"></span></div>
+        <button id="close-recipe-view" class="icon-button" type="button" aria-label="Fermer">×</button>
+      </div>
+      <div class="recipe-detail">
+        <section><h3>Ingrédients</h3><ul id="recipe-view-ingredients" class="detail-list"></ul></section>
+        <section><h3>Réalisation</h3><ol id="recipe-view-steps" class="detail-list"></ol></section>
+      </div>
+      <button id="edit-recipe" class="secondary" type="button">Modifier la recette</button>
+    </dialog>
   </div>
 
   <script>
@@ -209,6 +228,8 @@
     const monthNames = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
     const dialog = document.getElementById('meal-dialog');
     const recipeDialog = document.getElementById('recipe-dialog');
+    const recipeViewDialog = document.getElementById('recipe-view-dialog');
+    const stepKindLabels = { prep: 'Préparation', cook: 'Cuisson', rest: 'Repos', serve: 'Dressage' };
     let editingRecipeId = null;
 
     function key(date) {
@@ -388,6 +409,15 @@
       recipeDialog.showModal();
     }
 
+    function openRecipe(recipe) {
+      editingRecipeId = recipe.id;
+      document.getElementById('recipe-view-title').textContent = recipe.title;
+      document.getElementById('recipe-view-meta').textContent = `${recipe.minutes} min · ${recipe.servings} portions`;
+      document.getElementById('recipe-view-ingredients').innerHTML = recipe.ingredients.map(ingredient => `<li>${escapeHtml(shoppingText(ingredient))}</li>`).join('');
+      document.getElementById('recipe-view-steps').innerHTML = recipe.steps.map(step => `<li class="detail-step"><small>${stepKindLabels[step.kind]}${step.minutes == null ? '' : ` · ${step.minutes} min`}</small><p>${escapeHtml(step.instruction)}</p></li>`).join('');
+      recipeViewDialog.showModal();
+    }
+
     async function saveRecipe(event) {
       event.preventDefault();
       const ingredients = [...document.querySelectorAll('.ingredient-row')].map(row => ({
@@ -458,7 +488,13 @@
     document.getElementById('new-recipe').addEventListener('click', () => openRecipeEditor());
     document.getElementById('recipes').addEventListener('click', event => {
       const button = event.target.closest('[data-edit-recipe]');
-      if (button) openRecipeEditor(state.recipes.find(recipe => recipe.id === Number(button.dataset.editRecipe)));
+      if (button) openRecipe(state.recipes.find(recipe => recipe.id === Number(button.dataset.editRecipe)));
+    });
+    document.getElementById('close-recipe-view').addEventListener('click', () => recipeViewDialog.close());
+    document.getElementById('edit-recipe').addEventListener('click', () => {
+      const recipe = state.recipes.find(item => item.id === editingRecipeId);
+      recipeViewDialog.close();
+      openRecipeEditor(recipe);
     });
     document.getElementById('close-recipe-dialog').addEventListener('click', () => recipeDialog.close());
     document.getElementById('cancel-recipe').addEventListener('click', () => recipeDialog.close());
