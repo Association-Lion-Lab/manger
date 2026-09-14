@@ -335,10 +335,11 @@
 
     function openAdd(slot) {
       state.slot = slot;
+      const currentMeal = mealFor(state.selected, slot);
       document.getElementById('dialog-title').textContent = 'Ajouter un repas';
       document.getElementById('dialog-subtitle').textContent = `${fullDayNames[state.selected]} · ${slot === 'midi' ? 'Midi' : 'Soir'}`;
       const recipeChoices = state.recipes.map(recipe => choice('♨', recipe.title, `${recipe.minutes} min · ${recipe.servings} portions`, { recipe: recipe.id }));
-      document.getElementById('choices').innerHTML = recipeChoices.join('') + choice('⌖', 'Manger à l’extérieur', 'Cantine, invitation ou repas libre', { location: 'outside' }) + choice('♥', 'Prévoir un date', 'À la maison ou au restaurant', { occasion: 'date' });
+      document.getElementById('choices').innerHTML = recipeChoices.join('') + choice('⌖', 'Manger à l’extérieur', 'Cantine, invitation ou repas libre', { location: 'outside' }) + choice('♥', 'Prévoir un date', 'À la maison ou au restaurant', { occasion: 'date' }) + (currentMeal ? choice('×', 'Retirer ce repas', currentMeal.title, { remove: 'true' }) : '');
       dialog.showModal();
     }
 
@@ -372,6 +373,14 @@
         message.hidden = false;
         return;
       }
+      dialog.close();
+      await load();
+    }
+
+    async function deleteMeal() {
+      const date = key(dateAt(state.selected));
+      const response = await fetch(`/api/meals?date=${date}&slot=${state.slot}`, { method: 'DELETE' });
+      if (!response.ok) return;
       dialog.close();
       await load();
     }
@@ -469,7 +478,7 @@
     document.getElementById('close-dialog').addEventListener('click', () => dialog.close());
     document.getElementById('choices').addEventListener('click', event => {
       const button = event.target.closest('.choice');
-      if (button) saveMeal(button);
+      if (button) button.dataset.remove ? deleteMeal() : saveMeal(button);
     });
     document.getElementById('previous-week').addEventListener('click', async () => { state.weekStart.setDate(state.weekStart.getDate() - 7); state.selected = 0; await load(); });
     document.getElementById('next-week').addEventListener('click', async () => { state.weekStart.setDate(state.weekStart.getDate() + 7); state.selected = 0; await load(); });

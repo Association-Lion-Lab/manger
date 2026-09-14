@@ -337,6 +337,14 @@ function createHandler(db) {
         return sendJson(response, 200, meal);
       }
 
+      if (request.method === 'DELETE' && url.pathname === '/api/meals') {
+        const date = url.searchParams.get('date');
+        const slot = url.searchParams.get('slot');
+        if (!isDateKey(date) || !['midi', 'soir'].includes(slot)) throw new Error('Créneau invalide');
+        db.prepare('DELETE FROM meals WHERE date = ? AND slot = ?').run(date, slot);
+        return sendJson(response, 200, {});
+      }
+
       sendJson(response, 404, { error: 'Introuvable' });
     } catch (error) {
       sendJson(response, 400, { error: error.message });
