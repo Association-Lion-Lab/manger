@@ -36,7 +36,7 @@
     }
     * { box-sizing: border-box; }
     body { margin: 0; color: var(--text); background: var(--background); }
-    button, input { font: inherit; }
+    button, input, textarea { font: inherit; }
     button { color: inherit; }
     .app { width: min(100%, 760px); min-height: 100dvh; margin: 0 auto; background: var(--background); }
     header { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; padding: 18px 20px 14px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--surface) 94%, transparent); backdrop-filter: blur(12px); }
@@ -73,7 +73,7 @@
     .secondary { border: 1px solid var(--line); background: var(--raised); }
     .panel[hidden] { display: none; }
     .recipe-list, .shopping-list { display: grid; margin-top: 16px; }
-    .recipe { min-height: 68px; display: grid; grid-template-columns: 44px minmax(0, 1fr); align-items: center; gap: 12px; padding: 10px 2px; border-bottom: 1px solid var(--line); }
+    .recipe { width: 100%; min-height: 68px; display: grid; grid-template-columns: 44px minmax(0, 1fr) 20px; align-items: center; gap: 12px; padding: 10px 2px; text-align: left; color: inherit; border: 0; border-bottom: 1px solid var(--line); background: transparent; cursor: pointer; }
     .recipe .meal-icon { font-size: 17px; }
     .recipe-copy { display: grid; gap: 3px; }
     .recipe-copy small { color: var(--muted); }
@@ -86,7 +86,7 @@
     nav button { min-height: 56px; display: grid; place-items: center; align-content: center; gap: 3px; border: 0; border-radius: 14px; color: var(--muted); background: transparent; cursor: pointer; font-size: 12px; }
     nav button span:first-child { font-size: 19px; }
     nav button.active { color: var(--accent); background: var(--accent-soft); }
-    dialog { width: min(calc(100% - 24px), 500px); max-height: calc(100dvh - 24px); margin: auto auto 12px; padding: 8px 18px 22px; color: var(--text); border: 1px solid var(--line); border-radius: 24px; background: var(--surface); }
+    dialog { width: min(calc(100% - 24px), 500px); max-height: calc(100dvh - 24px); margin: auto auto 12px; padding: 8px 18px 22px; overflow-y: auto; color: var(--text); border: 1px solid var(--line); border-radius: 24px; background: var(--surface); }
     dialog::backdrop { background: rgb(0 0 0 / .55); }
     .handle { width: 42px; height: 4px; margin: 2px auto 14px; border-radius: 4px; background: var(--line); }
     .choices { display: grid; gap: 8px; margin-top: 16px; }
@@ -94,8 +94,23 @@
     .choice-icon { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 13px; color: var(--accent); background: var(--accent-soft); }
     .choice-copy { display: grid; gap: 2px; }
     .choice-copy small { color: var(--muted); }
+    .recipe-form { display: grid; gap: 16px; margin-top: 16px; }
+    .field { display: grid; gap: 6px; }
+    .field > span { color: var(--muted); font-size: 13px; font-weight: 650; }
+    .field input, .field textarea { width: 100%; min-height: 46px; padding: 10px 12px; color: var(--text); border: 1px solid var(--line); border-radius: 12px; background: var(--raised); }
+    .field textarea { min-height: 100px; resize: vertical; }
+    .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .ingredient-list { display: grid; gap: 8px; }
+    .ingredient-row { display: grid; grid-template-columns: minmax(0, 1fr) 78px 78px 44px; gap: 6px; align-items: end; }
+    .ingredient-row input { min-width: 0; }
+    .ingredient-row .icon-button { border-radius: 12px; }
+    .recipe-form-actions { position: sticky; bottom: -12px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px 0 12px; background: var(--surface); }
     .error { color: #b42318; }
     .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+    @media (max-width: 430px) {
+      .ingredient-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 44px; }
+      .ingredient-row .field:first-child { grid-column: 1 / -1; }
+    }
     @media (min-width: 620px) { main { padding-inline: 28px; } header { padding-inline: 30px; } }
   </style>
 </head>
@@ -123,7 +138,7 @@
       </section>
 
       <section id="recipes-panel" class="panel" hidden>
-        <div class="section-heading"><div><h1>Mes recettes</h1><span id="recipe-count" class="muted"></span></div></div>
+        <div class="section-heading"><div><h1>Mes recettes</h1><span id="recipe-count" class="muted"></span></div><button id="new-recipe" class="icon-button" type="button" aria-label="Ajouter une recette">＋</button></div>
         <div id="recipes" class="recipe-list"></div>
       </section>
 
@@ -148,6 +163,33 @@
       <div id="choices" class="choices"></div>
       <p id="dialog-error" class="error" role="alert" hidden></p>
     </dialog>
+
+    <dialog id="recipe-dialog">
+      <div class="handle"></div>
+      <div class="section-heading">
+        <div><h2 id="recipe-dialog-title">Nouvelle recette</h2><span class="muted">Recette privée du foyer</span></div>
+        <button id="close-recipe-dialog" class="icon-button" type="button" aria-label="Fermer">×</button>
+      </div>
+      <form id="recipe-form" class="recipe-form">
+        <label class="field"><span>Nom</span><input id="recipe-title" required maxlength="120" autocomplete="off"></label>
+        <div class="form-grid">
+          <label class="field"><span>Préparation (min)</span><input id="recipe-minutes" type="number" min="1" max="1440" value="30" required></label>
+          <label class="field"><span>Portions</span><input id="recipe-servings" type="number" min="1" max="100" value="2" required></label>
+        </div>
+        <label class="field"><span>Étiquettes, séparées par des virgules</span><input id="recipe-tags" placeholder="rapide, végétarien"></label>
+        <label class="field"><span>Instructions</span><textarea id="recipe-instructions" required maxlength="10000"></textarea></label>
+        <div class="field">
+          <span>Ingrédients</span>
+          <div id="ingredient-list" class="ingredient-list"></div>
+          <button id="add-ingredient" class="secondary" type="button">＋ Ajouter un ingrédient</button>
+        </div>
+        <p id="recipe-error" class="error" role="alert" hidden></p>
+        <div class="recipe-form-actions">
+          <button id="cancel-recipe" class="secondary" type="button">Annuler</button>
+          <button class="primary" type="submit">Enregistrer</button>
+        </div>
+      </form>
+    </dialog>
   </div>
 
   <script>
@@ -156,6 +198,8 @@
     const fullDayNames = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
     const monthNames = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
     const dialog = document.getElementById('meal-dialog');
+    const recipeDialog = document.getElementById('recipe-dialog');
+    let editingRecipeId = null;
 
     function key(date) {
       const year = date.getFullYear();
@@ -230,7 +274,7 @@
 
     function renderRecipes() {
       document.getElementById('recipe-count').textContent = `${state.recipes.length} recettes disponibles`;
-      document.getElementById('recipes').innerHTML = state.recipes.map(recipe => `<div class="recipe"><span class="meal-icon">♨</span><span class="recipe-copy"><strong>${escapeHtml(recipe.title)}</strong><small>${recipe.minutes} min · ${recipe.servings} portions · ${recipe.tags.map(escapeHtml).join(' · ')}</small></span></div>`).join('');
+      document.getElementById('recipes').innerHTML = state.recipes.map(recipe => `<button class="recipe" type="button" data-edit-recipe="${recipe.id}"><span class="meal-icon">♨</span><span class="recipe-copy"><strong>${escapeHtml(recipe.title)}</strong><small>${recipe.minutes} min · ${recipe.servings} portions · ${recipe.tags.map(escapeHtml).join(' · ')}</small></span><span>›</span></button>`).join('');
     }
 
     function renderShopping() {
@@ -301,6 +345,60 @@
       await load();
     }
 
+    function ingredientRow(ingredient = { name: '', amount: 1, unit: 'g' }) {
+      const row = document.createElement('div');
+      row.className = 'ingredient-row';
+      row.innerHTML = '<label class="field"><span>Aliment</span><input class="ingredient-name" required maxlength="80"></label><label class="field"><span>Quantité</span><input class="ingredient-amount" type="number" min="0.01" max="1000000" step="0.01" required></label><label class="field"><span>Unité</span><input class="ingredient-unit" required maxlength="24"></label><button class="icon-button remove-ingredient" type="button" aria-label="Retirer cet ingrédient">×</button>';
+      row.querySelector('.ingredient-name').value = ingredient.name;
+      row.querySelector('.ingredient-amount').value = ingredient.amount;
+      row.querySelector('.ingredient-unit').value = ingredient.unit;
+      return row;
+    }
+
+    function openRecipeEditor(recipe = null) {
+      editingRecipeId = recipe?.id ?? null;
+      document.getElementById('recipe-dialog-title').textContent = recipe ? 'Modifier la recette' : 'Nouvelle recette';
+      document.getElementById('recipe-title').value = recipe?.title ?? '';
+      document.getElementById('recipe-minutes').value = recipe?.minutes ?? 30;
+      document.getElementById('recipe-servings').value = recipe?.servings ?? 2;
+      document.getElementById('recipe-tags').value = recipe?.tags.join(', ') ?? '';
+      document.getElementById('recipe-instructions').value = recipe?.instructions ?? '';
+      document.getElementById('recipe-error').hidden = true;
+      document.getElementById('ingredient-list').replaceChildren(...(recipe?.ingredients?.length ? recipe.ingredients : [{ name: '', amount: 1, unit: 'g' }]).map(ingredientRow));
+      recipeDialog.showModal();
+    }
+
+    async function saveRecipe(event) {
+      event.preventDefault();
+      const ingredients = [...document.querySelectorAll('.ingredient-row')].map(row => ({
+        name: row.querySelector('.ingredient-name').value,
+        amount: Number(row.querySelector('.ingredient-amount').value),
+        unit: row.querySelector('.ingredient-unit').value
+      }));
+      const payload = {
+        title: document.getElementById('recipe-title').value,
+        minutes: Number(document.getElementById('recipe-minutes').value),
+        servings: Number(document.getElementById('recipe-servings').value),
+        tags: document.getElementById('recipe-tags').value.split(',').map(tag => tag.trim()).filter(Boolean),
+        instructions: document.getElementById('recipe-instructions').value,
+        ingredients
+      };
+      const response = await fetch(editingRecipeId ? `/api/recipes/${editingRecipeId}` : '/api/recipes', {
+        method: editingRecipeId ? 'PUT' : 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        const message = document.getElementById('recipe-error');
+        message.textContent = error.error;
+        message.hidden = false;
+        return;
+      }
+      recipeDialog.close();
+      await load();
+    }
+
     document.getElementById('days').addEventListener('click', event => {
       const button = event.target.closest('[data-day]');
       if (!button) return;
@@ -332,6 +430,21 @@
       if (navigator.share) await navigator.share({ title: 'Courses — Manger!', text });
       else await navigator.clipboard.writeText(text);
     });
+    document.getElementById('new-recipe').addEventListener('click', () => openRecipeEditor());
+    document.getElementById('recipes').addEventListener('click', event => {
+      const button = event.target.closest('[data-edit-recipe]');
+      if (button) openRecipeEditor(state.recipes.find(recipe => recipe.id === Number(button.dataset.editRecipe)));
+    });
+    document.getElementById('close-recipe-dialog').addEventListener('click', () => recipeDialog.close());
+    document.getElementById('cancel-recipe').addEventListener('click', () => recipeDialog.close());
+    document.getElementById('add-ingredient').addEventListener('click', () => document.getElementById('ingredient-list').append(ingredientRow()));
+    document.getElementById('ingredient-list').addEventListener('click', event => {
+      const button = event.target.closest('.remove-ingredient');
+      if (!button) return;
+      const list = document.getElementById('ingredient-list');
+      if (list.children.length > 1) button.closest('.ingredient-row').remove();
+    });
+    document.getElementById('recipe-form').addEventListener('submit', saveRecipe);
 
     load().catch(error => {
       document.getElementById('schedule').innerHTML = `<p class="error" role="alert">${escapeHtml(error.message)}</p>`;

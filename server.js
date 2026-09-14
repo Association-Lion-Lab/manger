@@ -28,7 +28,8 @@ function createDatabase(filename) {
       title TEXT NOT NULL,
       minutes INTEGER NOT NULL CHECK (minutes > 0),
       servings INTEGER NOT NULL CHECK (servings > 0),
-      tags TEXT NOT NULL DEFAULT ''
+      tags TEXT NOT NULL DEFAULT '',
+      instructions TEXT NOT NULL DEFAULT ''
     );
     CREATE TABLE IF NOT EXISTS ingredients (
       id INTEGER PRIMARY KEY,
@@ -54,6 +55,9 @@ function createDatabase(filename) {
       UNIQUE (date, slot)
     );
   `);
+  if (!db.prepare('PRAGMA table_info(recipes)').all().some(column => column.name === 'instructions')) {
+    db.exec("ALTER TABLE recipes ADD COLUMN instructions TEXT NOT NULL DEFAULT ''");
+  }
   seed(db);
   return db;
 }
@@ -62,9 +66,9 @@ function seed(db) {
   if (db.prepare('SELECT COUNT(*) AS count FROM recipes').get().count > 0) return;
 
   const recipes = [
-    ['Bowl pois chiches', 20, 2, 'végétarien,rapide'],
-    ['Curry coco', 35, 2, 'végétarien,favori'],
-    ['Gnocchis aux légumes', 25, 2, 'facile,rapide']
+    ['Bowl pois chiches', 20, 2, 'végétarien,rapide', 'Mélanger les ingrédients et assaisonner selon votre goût.'],
+    ['Curry coco', 35, 2, 'végétarien,favori', 'Faire mijoter les ingrédients, puis servir avec le riz.'],
+    ['Gnocchis aux légumes', 25, 2, 'facile,rapide', 'Faire revenir les légumes, ajouter les gnocchis et laisser dorer.']
   ];
   const ingredients = [
     ['pois chiches', 'g'], ['tomate', 'pièce'], ['citron', 'pièce'],
@@ -77,7 +81,7 @@ function seed(db) {
     [3, 7, 500], [3, 8, 2], [3, 9, 1]
   ];
 
-  const insertRecipe = db.prepare('INSERT INTO recipes (title, minutes, servings, tags) VALUES (?, ?, ?, ?)');
+  const insertRecipe = db.prepare('INSERT INTO recipes (title, minutes, servings, tags, instructions) VALUES (?, ?, ?, ?, ?)');
   const insertIngredient = db.prepare('INSERT INTO ingredients (name, unit) VALUES (?, ?)');
   const linkIngredient = db.prepare('INSERT INTO recipe_ingredients (recipe_id, ingredient_id, amount) VALUES (?, ?, ?)');
 
@@ -94,8 +98,74 @@ function seed(db) {
 }
 
 function recipes(db) {
-  return db.prepare('SELECT id, title, minutes, servings, tags FROM recipes ORDER BY title').all()
-    .map(recipe => ({ ...recipe, tags: recipe.tags.split(',').filter(Boolean) }));
+  const ingredientQuery = db.prepare(`
+    SELECT ingredients.name, ingredients.unit, recipe_ingredients.amount
+    FROM recipe_ingredients JOIN ingredients ON ingredients.id = recipe_ingredients.ingredient_id
+    WHERE recipe_ingredients.recipe_id = ? ORDER BY ingredients.name
+  `);
+  return db.prepare('SELECT id, title, minutes, servings, tags, instructions FROM recipes ORDER BY title').all()
+    .map(recipe => ({
+      ...recipe,
+      tags: recipe.tags.split(',').filter(Boolean),
+      ingredients: ingredientQuery.all(recipe.id)
+    }));
+}
+
+function validateRecipe(input) {
+  if (!input || typeof input.title !== 'string' || !input.title.trim() || input.title.length > 120) throw new Error('Titre invalide');
+  if (!Number.isInteger(input.minutes) || input.minutes < 1 || input.minutes > 1_440) throw new Error('Durée invalide');
+  if (!Number.isInteger(input.servings) || input.servings < 1 || input.servings > 100) throw new Error('Nombre de portions invalide');
+  if (typeof input.instructions !== 'string' || !input.instructions.trim() || input.instructions.length > 10_000) throw new Error('Instructions invalides');
+  if (!Array.isArray(input.tags) || input.tags.length > 20 || input.tags.some(tag => typeof tag !== 'string' || !tag.trim() || tag.length > 40)) throw new Error('Étiquettes invalides');
+  if (!Array.isArray(input.ingredients) || input.ingredients.length < 1 || input.ingredients.length > 100) throw new Error('Ingrédients invalides');
+
+  const ingredients = input.ingredients.map(ingredient => {
+    if (!ingredient || typeof ingredient.name !== 'string' || !ingredient.name.trim() || ingredient.name.length > 80) throw new Error('Nom d’ingrédient invalide');
+    if (typeof ingredient.unit !== 'string' || !ingredient.unit.trim() || ingredient.unit.length > 24) throw new Error('Unité invalide');
+    if (typeof ingredient.amount !== 'number' || !Number.isFinite(ingredient.amount) || ingredient.amount <= 0 || ingredient.amount > 1_000_000) throw new Error('Quantité invalide');
+    return { name: ingredient.name.trim().toLocaleLowerCase('fr'), unit: ingredient.unit.trim(), amount: ingredient.amount };
+  });
+  const duplicate = new Set(ingredients.map(ingredient => `${ingredient.name}\0${ingredient.unit}`));
+  if (duplicate.size !== ingredients.length) throw new Error('Un ingrédient est présent plusieurs fois');
+
+  return {
+    title: input.title.trim(),
+    minutes: input.minutes,
+    servings: input.servings,
+    tags: [...new Set(input.tags.map(tag => tag.trim().toLocaleLowerCase('fr')))],
+    instructions: input.instructions.trim(),
+    ingredients
+  };
+}
+
+function saveRecipe(db, recipe, id = null) {
+  db.exec('BEGIN');
+  try {
+    if (id == null) {
+      id = Number(db.prepare('INSERT INTO recipes (title, minutes, servings, tags, instructions) VALUES (?, ?, ?, ?, ?)')
+        .run(recipe.title, recipe.minutes, recipe.servings, recipe.tags.join(','), recipe.instructions).lastInsertRowid);
+    } else {
+      const result = db.prepare('UPDATE recipes SET title = ?, minutes = ?, servings = ?, tags = ?, instructions = ? WHERE id = ?')
+        .run(recipe.title, recipe.minutes, recipe.servings, recipe.tags.join(','), recipe.instructions, id);
+      if (result.changes === 0) throw new Error('Recette inconnue');
+      db.prepare('DELETE FROM recipe_ingredients WHERE recipe_id = ?').run(id);
+      db.prepare('UPDATE meals SET title = ? WHERE recipe_id = ?').run(recipe.title, id);
+    }
+
+    const insertIngredient = db.prepare('INSERT INTO ingredients (name, unit) VALUES (?, ?) ON CONFLICT (name, unit) DO NOTHING');
+    const findIngredient = db.prepare('SELECT id FROM ingredients WHERE name = ? AND unit = ?');
+    const linkIngredient = db.prepare('INSERT INTO recipe_ingredients (recipe_id, ingredient_id, amount) VALUES (?, ?, ?)');
+    for (const ingredient of recipe.ingredients) {
+      insertIngredient.run(ingredient.name, ingredient.unit);
+      const ingredientId = findIngredient.get(ingredient.name, ingredient.unit).id;
+      linkIngredient.run(id, ingredientId, ingredient.amount);
+    }
+    db.exec('COMMIT');
+    return recipes(db).find(item => item.id === id);
+  } catch (error) {
+    db.exec('ROLLBACK');
+    throw error;
+  }
 }
 
 function meals(db, start) {
@@ -220,6 +290,15 @@ function createHandler(db) {
         return sendJson(response, 200, suggestions(db));
       }
 
+      if (request.method === 'POST' && url.pathname === '/api/recipes') {
+        return sendJson(response, 201, saveRecipe(db, validateRecipe(await readJson(request))));
+      }
+
+      const recipeMatch = url.pathname.match(/^\/api\/recipes\/(\d+)$/);
+      if (request.method === 'PUT' && recipeMatch) {
+        return sendJson(response, 200, saveRecipe(db, validateRecipe(await readJson(request)), Number(recipeMatch[1])));
+      }
+
       if (request.method === 'POST' && url.pathname === '/api/meals') {
         const meal = validateMeal(await readJson(request), db);
         upsertMeal(db, meal);
@@ -243,4 +322,4 @@ if (require.main === module) {
   server.listen(port, '0.0.0.0', () => console.log(`Manger! écoute sur http://localhost:${port}`));
 }
 
-module.exports = { addDays, createApp, createDatabase, dateKey, isDateKey, shoppingList, suggestions, validateMeal };
+module.exports = { addDays, createApp, createDatabase, dateKey, isDateKey, recipes, saveRecipe, shoppingList, suggestions, validateMeal, validateRecipe };

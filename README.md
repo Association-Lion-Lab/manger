@@ -22,6 +22,14 @@ Ouvrez ensuite <http://localhost:3000>. Les données sont conservées dans `data
 npm test
 ```
 
+## Docker
+
+```shell
+docker compose up -d --build
+```
+
+L'application est ensuite disponible sur <http://localhost:3000>. Le volume Docker `manger-data` conserve la base SQLite entre les mises à jour.
+
 ## Principes
 
 - auto-hébergeable avec une installation Docker simple ;
@@ -89,7 +97,8 @@ Ces fonctions ne seront considérées qu'après validation du parcours principal
 - [x] Valider la présente définition du MVP.
 - [x] Produire une maquette mobile du calendrier hebdomadaire.
 - [x] Choisir la stack à partir de cette maquette.
-- [ ] Implémenter le parcours de validation `0.1`.
+- [x] Implémenter la création et la modification des recettes.
+- [ ] Terminer le parcours de validation `0.1`.
 - [ ] Publier une image Docker versionnée.
 
 ## Identité
