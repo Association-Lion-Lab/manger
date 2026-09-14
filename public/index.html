@@ -423,7 +423,7 @@
 
     async function saveMeal(button) {
       const recipe = button.dataset.recipe ? state.recipes.find(item => item.id === Number(button.dataset.recipe)) : null;
-      if (recipe && button.dataset.suggest && state.members.length) {
+      if (recipe && state.members.length) {
         openVariantSetup(recipe);
         return;
       }
