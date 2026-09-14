@@ -90,6 +90,12 @@ function createDatabase(filename) {
       portions INTEGER NOT NULL CHECK (portions > 0 AND portions <= 20),
       PRIMARY KEY (meal_id, member_id)
     );
+    CREATE TABLE IF NOT EXISTS shopping_checks (
+      week_start TEXT NOT NULL,
+      name TEXT NOT NULL,
+      unit TEXT NOT NULL,
+      PRIMARY KEY (week_start, name, unit)
+    );
   `);
   if (!db.prepare('PRAGMA table_info(recipes)').all().some(column => column.name === 'instructions')) {
     db.exec("ALTER TABLE recipes ADD COLUMN instructions TEXT NOT NULL DEFAULT ''");
@@ -284,6 +290,11 @@ function shoppingList(db, start) {
   `).all(start, addDays(start, 6), start, addDays(start, 6), start, addDays(start, 6)).map(item => ({ ...item, amount: Math.round(item.amount * 100) / 100 }));
 }
 
+function shoppingState(db, start) {
+  const isChecked = db.prepare('SELECT 1 FROM shopping_checks WHERE week_start = ? AND name = ? AND unit = ?');
+  return shoppingList(db, start).map(item => ({ ...item, checked: Boolean(isChecked.get(start, item.name, item.unit)) }));
+}
+
 function household(db) {
   return {
     members: db.prepare('SELECT id, name, diet FROM members ORDER BY name').all(),
@@ -457,7 +468,7 @@ function createHandler(db) {
       if (request.method === 'GET' && url.pathname === '/api/week') {
         const start = url.searchParams.get('start');
         if (!isDateKey(start)) return sendJson(response, 400, { error: 'Début de semaine invalide' });
-        return sendJson(response, 200, { recipes: recipes(db), meals: meals(db, start), shopping: shoppingList(db, start) });
+        return sendJson(response, 200, { recipes: recipes(db), meals: meals(db, start), shopping: shoppingState(db, start) });
       }
 
       if (request.method === 'GET' && url.pathname === '/api/suggestions') {
@@ -478,6 +489,14 @@ function createHandler(db) {
         const protein = validateProtein(await readJson(request));
         const id = Number(db.prepare('INSERT INTO proteins (name, category, amount, unit) VALUES (?, ?, ?, ?)').run(protein.name, protein.category, protein.amount, protein.unit).lastInsertRowid);
         return sendJson(response, 201, { id, ...protein });
+      }
+
+      if (request.method === 'POST' && url.pathname === '/api/shopping-checks') {
+        const input = await readJson(request);
+        if (!input || !isDateKey(input.weekStart) || typeof input.name !== 'string' || !input.name || input.name.length > 80 || typeof input.unit !== 'string' || !input.unit || input.unit.length > 24 || typeof input.checked !== 'boolean') throw new Error('Article invalide');
+        if (input.checked) db.prepare('INSERT INTO shopping_checks (week_start, name, unit) VALUES (?, ?, ?) ON CONFLICT DO NOTHING').run(input.weekStart, input.name, input.unit);
+        else db.prepare('DELETE FROM shopping_checks WHERE week_start = ? AND name = ? AND unit = ?').run(input.weekStart, input.name, input.unit);
+        return sendJson(response, 200, {});
       }
 
       if (request.method === 'POST' && url.pathname === '/api/recipes') {

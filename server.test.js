@@ -33,6 +33,14 @@ test('un repas cuisiné alimente la liste de courses et la recommandation évite
   ]);
   assert.notEqual(suggestions(db)[0].id, 1);
 
+  const checked = await fetch(`${baseUrl}/api/shopping-checks`, {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ weekStart: '2026-09-14', name: 'citron', unit: 'pièce', checked: true })
+  });
+  assert.equal(checked.status, 200);
+  const week = await (await fetch(`${baseUrl}/api/week?start=2026-09-14`)).json();
+  assert.equal(week.shopping.find(item => item.name === 'citron').checked, true);
+
   const deleted = await fetch(`${baseUrl}/api/meals?date=2026-09-14&slot=soir`, { method: 'DELETE' });
   assert.equal(deleted.status, 200);
   assert.deepEqual(shoppingList(db, '2026-09-14'), []);

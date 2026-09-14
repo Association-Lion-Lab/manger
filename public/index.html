@@ -362,8 +362,9 @@
     function renderShopping() {
       const summary = document.getElementById('shopping-summary');
       const container = document.getElementById('shopping');
-      summary.textContent = `${state.shopping.length} article${state.shopping.length > 1 ? 's' : ''} pour la semaine`;
-      container.innerHTML = state.shopping.length ? `<div class="shopping-group"><span class="group-title">Liste générée</span>${state.shopping.map((item, index) => `<label class="shopping-item"><input type="checkbox" data-shopping="${index}"><span>${escapeHtml(shoppingText(item))}</span></label>`).join('')}</div>` : '<div class="empty-state">Planifiez une recette à la maison pour générer la liste de courses.</div>';
+      const remaining = state.shopping.filter(item => !item.checked).length;
+      summary.textContent = `${remaining} à acheter · ${state.shopping.length} au total`;
+      container.innerHTML = state.shopping.length ? `<div class="shopping-group"><span class="group-title">Liste générée</span>${state.shopping.map((item, index) => `<label class="shopping-item"><input type="checkbox" data-shopping="${index}"${item.checked ? ' checked' : ''}><span>${escapeHtml(shoppingText(item))}</span></label>`).join('')}</div>` : '<div class="empty-state">Planifiez une recette à la maison pour générer la liste de courses.</div>';
     }
 
     function renderHousehold() {
@@ -640,9 +641,17 @@
       document.getElementById(`${button.dataset.panel}-panel`).hidden = false;
     });
     document.getElementById('share').addEventListener('click', async () => {
-      const text = state.shopping.map(item => `- ${shoppingText(item)}`).join('\n');
+      const text = state.shopping.filter(item => !item.checked).map(item => `- ${shoppingText(item)}`).join('\n');
       if (navigator.share) await navigator.share({ title: 'Courses — Manger!', text });
       else await navigator.clipboard.writeText(text);
+    });
+    document.getElementById('shopping').addEventListener('change', async event => {
+      const checkbox = event.target.closest('[data-shopping]');
+      if (!checkbox) return;
+      const item = state.shopping[Number(checkbox.dataset.shopping)];
+      item.checked = checkbox.checked;
+      renderShopping();
+      await fetch('/api/shopping-checks', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ weekStart: key(state.weekStart), name: item.name, unit: item.unit, checked: item.checked }) });
     });
     document.getElementById('new-recipe').addEventListener('click', () => openRecipeEditor());
     document.getElementById('recipes').addEventListener('click', event => {
