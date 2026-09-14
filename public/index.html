@@ -397,6 +397,17 @@
       document.getElementById('dialog-subtitle').textContent = `${fullDayNames[state.selected]} · ${slot === 'midi' ? 'Midi' : 'Soir'}`;
       const recipeChoices = state.recipes.map(recipe => choice('♨', recipe.title, `${recipe.minutes} min · ${recipe.servings} portions`, { recipe: recipe.id }));
       document.getElementById('choices').innerHTML = recipeChoices.join('') + choice('⌖', 'Manger à l’extérieur', 'Cantine, restaurant ou repas libre', { location: 'outside' }) + choice('♥', 'Prévoir un date', 'À la maison ou au restaurant', { occasion: 'date' }) + choice('♨', 'Inviter du monde', 'Un repas à partager à la maison', { occasion: 'guests' }) + (currentMeal ? choice('×', 'Retirer ce repas', currentMeal.title, { remove: 'true' }) : '');
+      if (!dialog.open) dialog.showModal();
+    }
+
+    function openMealActions(slot) {
+      const meal = mealFor(state.selected, slot);
+      if (!meal) return openAdd(slot);
+      state.slot = slot;
+      document.getElementById('dialog-title').textContent = meal.title;
+      document.getElementById('dialog-subtitle').textContent = `${fullDayNames[state.selected]} · ${slot === 'midi' ? 'Midi' : 'Soir'}`;
+      const view = meal.recipeId ? choice('◉', 'Voir la recette', 'Ingrédients et étapes de réalisation', { viewplanned: meal.recipeId }) : '';
+      document.getElementById('choices').innerHTML = view + choice('↻', 'Changer ce repas', 'Choisir une autre recette ou occasion', { change: 'true' }) + choice('×', 'Retirer du planning', meal.title, { remove: 'true' });
       dialog.showModal();
     }
 
@@ -619,7 +630,7 @@
     });
     document.getElementById('schedule').addEventListener('click', event => {
       const button = event.target.closest('[data-slot]');
-      if (button) openAdd(button.dataset.slot);
+      if (button) openMealActions(button.dataset.slot);
     });
     document.getElementById('add-meal').addEventListener('click', () => openAdd(mealFor(state.selected, 'soir') ? 'midi' : 'soir'));
     document.getElementById('suggest').addEventListener('click', openSuggestions);
@@ -629,7 +640,13 @@
       if (event.target.closest('#confirm-duo')) return saveDuoMeal();
       if (event.target.closest('#confirm-event')) return saveEvent();
       const button = event.target.closest('.choice');
-      if (button) button.dataset.remove ? deleteMeal() : button.dataset.duo ? openDuoSetup() : saveMeal(button);
+      if (!button) return;
+      if (button.dataset.viewplanned) {
+        dialog.close();
+        return openRecipe(state.recipes.find(recipe => recipe.id === Number(button.dataset.viewplanned)));
+      }
+      if (button.dataset.change) return openAdd(state.slot);
+      button.dataset.remove ? deleteMeal() : button.dataset.duo ? openDuoSetup() : saveMeal(button);
     });
     document.getElementById('previous-week').addEventListener('click', async () => { state.weekStart.setDate(state.weekStart.getDate() - 7); state.selected = 0; await load(); });
     document.getElementById('next-week').addEventListener('click', async () => { state.weekStart.setDate(state.weekStart.getDate() + 7); state.selected = 0; await load(); });
