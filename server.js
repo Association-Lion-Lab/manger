@@ -104,7 +104,14 @@ function createDatabase(filename) {
     db.exec("ALTER TABLE recipes ADD COLUMN diet TEXT NOT NULL DEFAULT 'omnivore' CHECK (diet IN ('vegan', 'vegetarian', 'pescetarian', 'omnivore'))");
   }
   seed(db);
-  db.exec("UPDATE recipes SET diet = 'vegetarian' WHERE diet = 'omnivore' AND tags LIKE '%végétarien%'");
+  if (db.prepare('PRAGMA user_version').get().user_version < 1) {
+    db.exec(`
+      UPDATE recipes SET diet = 'vegetarian'
+      WHERE diet = 'omnivore'
+        AND (tags LIKE '%végétarien%' OR title = 'Gnocchis aux légumes');
+      PRAGMA user_version = 1;
+    `);
+  }
   seedProteins(db);
   db.exec(`
     INSERT INTO recipe_steps (recipe_id, position, kind, instruction, minutes)

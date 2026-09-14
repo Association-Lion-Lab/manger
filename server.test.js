@@ -1,7 +1,25 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { once } = require('node:events');
+const { mkdtempSync, rmSync } = require('node:fs');
+const { tmpdir } = require('node:os');
+const { join } = require('node:path');
 const { createApp, createDatabase, shoppingList, suggestions } = require('./server');
+
+test('la migration corrige le régime des gnocchis dans une base existante', t => {
+  const directory = mkdtempSync(join(tmpdir(), 'manger-'));
+  const filename = join(directory, 'manger.db');
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+
+  let db = createDatabase(filename);
+  db.prepare("UPDATE recipes SET diet = 'omnivore' WHERE title = 'Gnocchis aux légumes'").run();
+  db.exec('PRAGMA user_version = 0');
+  db.close();
+
+  db = createDatabase(filename);
+  assert.equal(db.prepare("SELECT diet FROM recipes WHERE title = 'Gnocchis aux légumes'").get().diet, 'vegetarian');
+  db.close();
+});
 
 test('un repas cuisiné alimente la liste de courses et la recommandation évite le dernier plat', async t => {
   const db = createDatabase(':memory:');
