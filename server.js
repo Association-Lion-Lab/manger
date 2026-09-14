@@ -29,6 +29,7 @@ function createDatabase(filename) {
       minutes INTEGER NOT NULL CHECK (minutes > 0),
       servings INTEGER NOT NULL CHECK (servings > 0),
       tags TEXT NOT NULL DEFAULT '',
+      diet TEXT NOT NULL DEFAULT 'omnivore' CHECK (diet IN ('vegan', 'vegetarian', 'pescetarian', 'omnivore')),
       instructions TEXT NOT NULL DEFAULT ''
     );
     CREATE TABLE IF NOT EXISTS ingredients (
@@ -82,11 +83,22 @@ function createDatabase(filename) {
       portions INTEGER NOT NULL CHECK (portions > 0 AND portions <= 20),
       PRIMARY KEY (meal_id, member_id)
     );
+    CREATE TABLE IF NOT EXISTS meal_dishes (
+      meal_id INTEGER NOT NULL REFERENCES meals(id) ON DELETE CASCADE,
+      member_id INTEGER NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+      recipe_id INTEGER NOT NULL REFERENCES recipes(id),
+      portions INTEGER NOT NULL CHECK (portions > 0 AND portions <= 20),
+      PRIMARY KEY (meal_id, member_id)
+    );
   `);
   if (!db.prepare('PRAGMA table_info(recipes)').all().some(column => column.name === 'instructions')) {
     db.exec("ALTER TABLE recipes ADD COLUMN instructions TEXT NOT NULL DEFAULT ''");
   }
+  if (!db.prepare('PRAGMA table_info(recipes)').all().some(column => column.name === 'diet')) {
+    db.exec("ALTER TABLE recipes ADD COLUMN diet TEXT NOT NULL DEFAULT 'omnivore' CHECK (diet IN ('vegan', 'vegetarian', 'pescetarian', 'omnivore'))");
+  }
   seed(db);
+  db.exec("UPDATE recipes SET diet = 'vegetarian' WHERE diet = 'omnivore' AND tags LIKE '%végétarien%'");
   seedProteins(db);
   db.exec(`
     INSERT INTO recipe_steps (recipe_id, position, kind, instruction, minutes)
@@ -112,9 +124,9 @@ function seed(db) {
   if (db.prepare('SELECT COUNT(*) AS count FROM recipes').get().count > 0) return;
 
   const recipes = [
-    ['Bowl pois chiches', 20, 2, 'végétarien,rapide', 'Mélanger les ingrédients et assaisonner selon votre goût.'],
-    ['Curry coco', 35, 2, 'végétarien,favori', 'Faire mijoter les ingrédients, puis servir avec le riz.'],
-    ['Gnocchis aux légumes', 25, 2, 'facile,rapide', 'Faire revenir les légumes, ajouter les gnocchis et laisser dorer.']
+    ['Bowl pois chiches', 20, 2, 'végétarien,rapide', 'vegetarian', 'Mélanger les ingrédients et assaisonner selon votre goût.'],
+    ['Curry coco', 35, 2, 'végétarien,favori', 'vegetarian', 'Faire mijoter les ingrédients, puis servir avec le riz.'],
+    ['Gnocchis aux légumes', 25, 2, 'facile,rapide', 'vegetarian', 'Faire revenir les légumes, ajouter les gnocchis et laisser dorer.']
   ];
   const ingredients = [
     ['pois chiches', 'g'], ['tomate', 'pièce'], ['citron', 'pièce'],
@@ -127,7 +139,7 @@ function seed(db) {
     [3, 7, 500], [3, 8, 2], [3, 9, 1]
   ];
 
-  const insertRecipe = db.prepare('INSERT INTO recipes (title, minutes, servings, tags, instructions) VALUES (?, ?, ?, ?, ?)');
+  const insertRecipe = db.prepare('INSERT INTO recipes (title, minutes, servings, tags, diet, instructions) VALUES (?, ?, ?, ?, ?, ?)');
   const insertIngredient = db.prepare('INSERT INTO ingredients (name, unit) VALUES (?, ?)');
   const linkIngredient = db.prepare('INSERT INTO recipe_ingredients (recipe_id, ingredient_id, amount) VALUES (?, ?, ?)');
 
@@ -153,7 +165,7 @@ function recipes(db) {
     SELECT position, kind, instruction, minutes
     FROM recipe_steps WHERE recipe_id = ? ORDER BY position
   `);
-  return db.prepare('SELECT id, title, minutes, servings, tags FROM recipes ORDER BY title').all()
+  return db.prepare('SELECT id, title, minutes, servings, tags, diet FROM recipes ORDER BY title').all()
     .map(recipe => ({
       ...recipe,
       tags: recipe.tags.split(',').filter(Boolean),
@@ -166,6 +178,7 @@ function validateRecipe(input) {
   if (!input || typeof input.title !== 'string' || !input.title.trim() || input.title.length > 120) throw new Error('Titre invalide');
   if (!Number.isInteger(input.minutes) || input.minutes < 1 || input.minutes > 1_440) throw new Error('Durée invalide');
   if (!Number.isInteger(input.servings) || input.servings < 1 || input.servings > 100) throw new Error('Nombre de portions invalide');
+  if (!['vegan', 'vegetarian', 'pescetarian', 'omnivore'].includes(input.diet)) throw new Error('Régime de recette invalide');
   if (!Array.isArray(input.tags) || input.tags.length > 20 || input.tags.some(tag => typeof tag !== 'string' || !tag.trim() || tag.length > 40)) throw new Error('Étiquettes invalides');
   if (!Array.isArray(input.ingredients) || input.ingredients.length < 1 || input.ingredients.length > 100) throw new Error('Ingrédients invalides');
 
@@ -192,6 +205,7 @@ function validateRecipe(input) {
     minutes: input.minutes,
     servings: input.servings,
     tags: [...new Set(input.tags.map(tag => tag.trim().toLocaleLowerCase('fr')))],
+    diet: input.diet,
     ingredients,
     steps
   };
@@ -201,11 +215,11 @@ function saveRecipe(db, recipe, id = null) {
   db.exec('BEGIN');
   try {
     if (id == null) {
-      id = Number(db.prepare('INSERT INTO recipes (title, minutes, servings, tags, instructions) VALUES (?, ?, ?, ?, ?)')
-        .run(recipe.title, recipe.minutes, recipe.servings, recipe.tags.join(','), '').lastInsertRowid);
+      id = Number(db.prepare('INSERT INTO recipes (title, minutes, servings, tags, diet, instructions) VALUES (?, ?, ?, ?, ?, ?)')
+        .run(recipe.title, recipe.minutes, recipe.servings, recipe.tags.join(','), recipe.diet, '').lastInsertRowid);
     } else {
-      const result = db.prepare('UPDATE recipes SET title = ?, minutes = ?, servings = ?, tags = ?, instructions = ? WHERE id = ?')
-        .run(recipe.title, recipe.minutes, recipe.servings, recipe.tags.join(','), '', id);
+      const result = db.prepare('UPDATE recipes SET title = ?, minutes = ?, servings = ?, tags = ?, diet = ?, instructions = ? WHERE id = ?')
+        .run(recipe.title, recipe.minutes, recipe.servings, recipe.tags.join(','), recipe.diet, '', id);
       if (result.changes === 0) throw new Error('Recette inconnue');
       db.prepare('DELETE FROM recipe_ingredients WHERE recipe_id = ?').run(id);
       db.prepare('DELETE FROM recipe_steps WHERE recipe_id = ?').run(id);
@@ -249,6 +263,16 @@ function shoppingList(db, start) {
       JOIN recipe_ingredients ON recipe_ingredients.recipe_id = recipes.id
       JOIN ingredients ON ingredients.id = recipe_ingredients.ingredient_id
       WHERE meals.location = 'home' AND meals.date BETWEEN ? AND ?
+        AND NOT EXISTS (SELECT 1 FROM meal_dishes WHERE meal_dishes.meal_id = meals.id)
+      UNION ALL
+      SELECT ingredients.name, ingredients.unit,
+             recipe_ingredients.amount * meal_dishes.portions / recipes.servings AS amount
+      FROM meal_dishes
+      JOIN meals ON meals.id = meal_dishes.meal_id
+      JOIN recipes ON recipes.id = meal_dishes.recipe_id
+      JOIN recipe_ingredients ON recipe_ingredients.recipe_id = recipes.id
+      JOIN ingredients ON ingredients.id = recipe_ingredients.ingredient_id
+      WHERE meals.date BETWEEN ? AND ?
       UNION ALL
       SELECT proteins.name, proteins.unit, proteins.amount * meal_assignments.portions
       FROM meal_assignments
@@ -257,7 +281,7 @@ function shoppingList(db, start) {
       WHERE meals.date BETWEEN ? AND ?
     )
     SELECT name, unit, SUM(amount) AS amount FROM items GROUP BY name, unit ORDER BY name
-  `).all(start, addDays(start, 6), start, addDays(start, 6)).map(item => ({ ...item, amount: Math.round(item.amount * 100) / 100 }));
+  `).all(start, addDays(start, 6), start, addDays(start, 6), start, addDays(start, 6)).map(item => ({ ...item, amount: Math.round(item.amount * 100) / 100 }));
 }
 
 function household(db) {
@@ -291,10 +315,15 @@ function isCompatible(diet, category) {
   return allowed[diet]?.includes(category) === true;
 }
 
+function isDietCompatible(memberDiet, recipeDiet) {
+  const rank = { vegan: 0, vegetarian: 1, pescetarian: 2, omnivore: 3 };
+  return rank[recipeDiet] <= rank[memberDiet];
+}
+
 function suggestions(db) {
   // ponytail: deterministic recency ranking; add household preferences once profiles exist.
   return db.prepare(`
-    SELECT recipes.id, recipes.title, recipes.minutes, recipes.servings, recipes.tags,
+    SELECT recipes.id, recipes.title, recipes.minutes, recipes.servings, recipes.tags, recipes.diet,
            MAX(meals.date) AS lastEaten
     FROM recipes LEFT JOIN meals ON meals.recipe_id = recipes.id
     GROUP BY recipes.id
@@ -314,7 +343,8 @@ function validateMeal(input, db) {
   if (!occasions.has(input.occasion)) throw new Error('Occasion invalide');
   if (!Number.isInteger(input.people) || input.people < 1 || input.people > 100) throw new Error('Nombre de personnes invalide');
   if (typeof input.title !== 'string' || !input.title.trim() || input.title.length > 120) throw new Error('Titre invalide');
-  if (input.recipeId != null && !db.prepare('SELECT 1 FROM recipes WHERE id = ?').get(input.recipeId)) throw new Error('Recette inconnue');
+  const baseRecipe = input.recipeId == null ? null : db.prepare('SELECT diet FROM recipes WHERE id = ?').get(input.recipeId);
+  if (input.recipeId != null && !baseRecipe) throw new Error('Recette inconnue');
   if (input.location !== 'home' && input.recipeId != null) throw new Error('Une recette est réservée aux repas à la maison');
   const assignments = input.assignments == null ? [] : input.assignments;
   if (!Array.isArray(assignments) || assignments.length > 100) throw new Error('Répartition invalide');
@@ -325,19 +355,34 @@ function validateMeal(input, db) {
     seenMembers.add(assignment.memberId);
     const member = db.prepare('SELECT diet FROM members WHERE id = ?').get(assignment.memberId);
     const protein = db.prepare('SELECT category FROM proteins WHERE id = ?').get(assignment.proteinId);
-    if (!member || !protein || !isCompatible(member.diet, protein.category)) throw new Error('Protéine incompatible avec le régime');
+    if (!member || !protein || !isCompatible(member.diet, protein.category) || (baseRecipe && !isDietCompatible(member.diet, baseRecipe.diet))) throw new Error('Recette ou protéine incompatible avec le régime');
     return assignment;
   });
   if (input.location !== 'home' && checkedAssignments.length) throw new Error('Les variantes sont réservées aux repas à la maison');
+  const dishes = input.dishes == null ? [] : input.dishes;
+  if (!Array.isArray(dishes) || dishes.length > 100 || (dishes.length && checkedAssignments.length)) throw new Error('Répartition invalide');
+  const seenDishMembers = new Set();
+  const checkedDishes = dishes.map(dish => {
+    if (!dish || !Number.isInteger(dish.memberId) || !Number.isInteger(dish.recipeId) || !Number.isInteger(dish.portions) || dish.portions < 1 || dish.portions > 20) throw new Error('Répartition invalide');
+    if (seenDishMembers.has(dish.memberId)) throw new Error('Membre présent plusieurs fois');
+    seenDishMembers.add(dish.memberId);
+    const member = db.prepare('SELECT diet FROM members WHERE id = ?').get(dish.memberId);
+    const recipe = db.prepare('SELECT diet FROM recipes WHERE id = ?').get(dish.recipeId);
+    if (!member || !recipe || !isDietCompatible(member.diet, recipe.diet)) throw new Error('Recette incompatible avec le régime');
+    return dish;
+  });
+  if (input.location !== 'home' && checkedDishes.length) throw new Error('Les recettes sont réservées aux repas à la maison');
+  if (checkedDishes.length && input.recipeId != null) throw new Error('Une base commune et deux recettes ne peuvent pas être combinées');
   return {
     date: input.date,
     slot: input.slot,
     location: input.location,
     occasion: input.occasion,
-    people: checkedAssignments.length ? checkedAssignments.reduce((total, item) => total + item.portions, 0) : input.people,
+    people: checkedAssignments.length ? checkedAssignments.reduce((total, item) => total + item.portions, 0) : checkedDishes.length ? checkedDishes.reduce((total, item) => total + item.portions, 0) : input.people,
     recipeId: input.recipeId ?? null,
     title: input.title.trim(),
-    assignments: checkedAssignments
+    assignments: checkedAssignments,
+    dishes: checkedDishes
   };
 }
 
@@ -356,8 +401,11 @@ function upsertMeal(db, meal) {
     `).run(meal.date, meal.slot, meal.location, meal.occasion, meal.people, meal.recipeId, meal.title);
     const mealId = db.prepare('SELECT id FROM meals WHERE date = ? AND slot = ?').get(meal.date, meal.slot).id;
     db.prepare('DELETE FROM meal_assignments WHERE meal_id = ?').run(mealId);
+    db.prepare('DELETE FROM meal_dishes WHERE meal_id = ?').run(mealId);
     const insert = db.prepare('INSERT INTO meal_assignments (meal_id, member_id, protein_id, portions) VALUES (?, ?, ?, ?)');
     meal.assignments.forEach(assignment => insert.run(mealId, assignment.memberId, assignment.proteinId, assignment.portions));
+    const insertDish = db.prepare('INSERT INTO meal_dishes (meal_id, member_id, recipe_id, portions) VALUES (?, ?, ?, ?)');
+    meal.dishes.forEach(dish => insertDish.run(mealId, dish.memberId, dish.recipeId, dish.portions));
     db.exec('COMMIT');
   } catch (error) {
     db.exec('ROLLBACK');
@@ -472,4 +520,4 @@ if (require.main === module) {
   server.listen(port, '0.0.0.0', () => console.log(`Manger! écoute sur http://localhost:${port}`));
 }
 
-module.exports = { addDays, createApp, createDatabase, dateKey, household, isCompatible, isDateKey, recipes, saveRecipe, shoppingList, suggestions, validateMeal, validateMember, validateProtein, validateRecipe };
+module.exports = { addDays, createApp, createDatabase, dateKey, household, isCompatible, isDietCompatible, isDateKey, recipes, saveRecipe, shoppingList, suggestions, validateMeal, validateMember, validateProtein, validateRecipe };

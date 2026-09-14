@@ -131,6 +131,7 @@
     .assignment label { display: flex; align-items: center; gap: 8px; }
     .assignment strong, .assignment small { display: block; }
     .assignment input { width: 20px; height: 20px; accent-color: var(--accent); }
+    .assignment select { width: 100%; min-width: 0; min-height: 44px; padding: 8px 10px; color: var(--text); border: 1px solid var(--line); border-radius: 11px; background: var(--raised); }
     .error { color: #b42318; }
     .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
     @media (max-width: 430px) {
@@ -204,6 +205,7 @@
           <label class="field"><span>Préparation (min)</span><input id="recipe-minutes" type="number" min="1" max="1440" value="30" required></label>
           <label class="field"><span>Portions</span><input id="recipe-servings" type="number" min="1" max="100" value="2" required></label>
         </div>
+        <label class="field"><span>Compatible avec</span><select id="recipe-diet"><option value="vegan">J’aime les graines</option><option value="vegetarian">Veggie cool</option><option value="pescetarian">Team océan</option><option value="omnivore">Je mange de tout</option></select></label>
         <label class="field"><span>Étiquettes, séparées par des virgules</span><input id="recipe-tags" placeholder="rapide, végétarien"></label>
         <div class="field">
           <span>Ingrédients</span>
@@ -354,7 +356,7 @@
 
     function renderRecipes() {
       document.getElementById('recipe-count').textContent = `${state.recipes.length} recettes disponibles`;
-      document.getElementById('recipes').innerHTML = state.recipes.map(recipe => `<button class="recipe" type="button" data-edit-recipe="${recipe.id}"><span class="meal-icon">♨</span><span class="recipe-copy"><strong>${escapeHtml(recipe.title)}</strong><small>${recipe.minutes} min · ${recipe.servings} portions · ${recipe.steps.length} étape${recipe.steps.length > 1 ? 's' : ''}</small></span><span>›</span></button>`).join('');
+      document.getElementById('recipes').innerHTML = state.recipes.map(recipe => `<button class="recipe" type="button" data-edit-recipe="${recipe.id}"><span class="meal-icon">♨</span><span class="recipe-copy"><strong>${escapeHtml(recipe.title)}</strong><small>${recipe.minutes} min · ${dietLabels[recipe.diet]} · ${recipe.steps.length} étape${recipe.steps.length > 1 ? 's' : ''}</small></span><span>›</span></button>`).join('');
     }
 
     function renderShopping() {
@@ -403,7 +405,7 @@
       const suggestions = await response.json();
       document.getElementById('dialog-title').textContent = 'Trois idées pour vous';
       document.getElementById('dialog-subtitle').textContent = `${fullDayNames[state.selected]} · ${state.slot === 'midi' ? 'Midi' : 'Soir'}`;
-      document.getElementById('choices').innerHTML = suggestions.map(recipe => choice('✦', recipe.title, `${recipe.minutes} min · ${recipe.lastEaten ? 'à refaire' : 'nouveau cette semaine'}`, { recipe: recipe.id, suggest: 'true' })).join('');
+      document.getElementById('choices').innerHTML = suggestions.map(recipe => choice('✦', recipe.title, `${recipe.minutes} min · ${recipe.lastEaten ? 'à refaire' : 'nouveau cette semaine'}`, { recipe: recipe.id, suggest: 'true' })).join('') + (state.members.length > 1 ? choice('⋈', 'Deux recettes coordonnées', 'Une recette compatible par personne', { duo: 'true' }) : '');
       dialog.showModal();
     }
 
@@ -445,6 +447,11 @@
       return state.proteins.filter(protein => allowed[member.diet].includes(protein.category));
     }
 
+    function compatibleRecipes(member) {
+      const rank = { vegan: 0, vegetarian: 1, pescetarian: 2, omnivore: 3 };
+      return state.recipes.filter(recipe => rank[recipe.diet] <= rank[member.diet]);
+    }
+
     function openVariantSetup(recipe) {
       state.pendingRecipe = recipe;
       document.getElementById('dialog-title').textContent = recipe.title;
@@ -472,6 +479,23 @@
         date: key(dateAt(state.selected)), slot: state.slot, location: 'home', occasion: 'regular',
         people: assignments.length, recipeId: state.pendingRecipe.id, title: state.pendingRecipe.title, assignments
       });
+    }
+
+    function openDuoSetup() {
+      document.getElementById('dialog-title').textContent = 'Deux recettes coordonnées';
+      document.getElementById('dialog-subtitle').textContent = 'Une assiette compatible pour chacun';
+      const rows = state.members.map(member => {
+        const options = compatibleRecipes(member).map(recipe => `<option value="${recipe.id}">${escapeHtml(recipe.title)} · ${dietLabels[recipe.diet]}</option>`).join('');
+        return `<div class="assignment dish-assignment" data-member="${member.id}"><label><input type="checkbox" checked><span><strong>${escapeHtml(member.name)}</strong><small class="muted">${dietLabels[member.diet]}</small></span></label><select aria-label="Recette pour ${escapeHtml(member.name)}">${options}</select></div>`;
+      }).join('');
+      document.getElementById('choices').innerHTML = rows + '<button id="confirm-duo" class="primary" type="button">Planifier les deux assiettes</button>';
+    }
+
+    async function saveDuoMeal() {
+      const dishes = [...document.querySelectorAll('.dish-assignment')].filter(row => row.querySelector('input').checked).map(row => ({ memberId: Number(row.dataset.member), recipeId: Number(row.querySelector('select').value), portions: 1 }));
+      if (!dishes.length) return;
+      const names = [...new Set(dishes.map(dish => state.recipes.find(recipe => recipe.id === dish.recipeId).title))];
+      await postMeal({ date: key(dateAt(state.selected)), slot: state.slot, location: 'home', occasion: 'regular', people: dishes.length, recipeId: null, title: names.join(' + '), assignments: [], dishes });
     }
 
     async function deleteMeal() {
@@ -508,6 +532,7 @@
       document.getElementById('recipe-title').value = recipe?.title ?? '';
       document.getElementById('recipe-minutes').value = recipe?.minutes ?? 30;
       document.getElementById('recipe-servings').value = recipe?.servings ?? 2;
+      document.getElementById('recipe-diet').value = recipe?.diet ?? 'omnivore';
       document.getElementById('recipe-tags').value = recipe?.tags.join(', ') ?? '';
       document.getElementById('recipe-error').hidden = true;
       document.getElementById('ingredient-list').replaceChildren(...(recipe?.ingredients?.length ? recipe.ingredients : [{ name: '', amount: 1, unit: 'g' }]).map(ingredientRow));
@@ -518,7 +543,7 @@
     function openRecipe(recipe) {
       editingRecipeId = recipe.id;
       document.getElementById('recipe-view-title').textContent = recipe.title;
-      document.getElementById('recipe-view-meta').textContent = `${recipe.minutes} min · ${recipe.servings} portions`;
+      document.getElementById('recipe-view-meta').textContent = `${recipe.minutes} min · ${recipe.servings} portions · ${dietLabels[recipe.diet]}`;
       document.getElementById('recipe-view-ingredients').innerHTML = recipe.ingredients.map(ingredient => `<li>${escapeHtml(shoppingText(ingredient))}</li>`).join('');
       document.getElementById('recipe-view-steps').innerHTML = recipe.steps.map(step => `<li class="detail-step"><small>${stepKindLabels[step.kind]}${step.minutes == null ? '' : ` · ${step.minutes} min`}</small><p>${escapeHtml(step.instruction)}</p></li>`).join('');
       recipeViewDialog.showModal();
@@ -540,6 +565,7 @@
         title: document.getElementById('recipe-title').value,
         minutes: Number(document.getElementById('recipe-minutes').value),
         servings: Number(document.getElementById('recipe-servings').value),
+        diet: document.getElementById('recipe-diet').value,
         tags: document.getElementById('recipe-tags').value.split(',').map(tag => tag.trim()).filter(Boolean),
         ingredients,
         steps
@@ -575,8 +601,9 @@
     document.getElementById('close-dialog').addEventListener('click', () => dialog.close());
     document.getElementById('choices').addEventListener('click', event => {
       if (event.target.closest('#confirm-mixed')) return saveMixedMeal();
+      if (event.target.closest('#confirm-duo')) return saveDuoMeal();
       const button = event.target.closest('.choice');
-      if (button) button.dataset.remove ? deleteMeal() : saveMeal(button);
+      if (button) button.dataset.remove ? deleteMeal() : button.dataset.duo ? openDuoSetup() : saveMeal(button);
     });
     document.getElementById('previous-week').addEventListener('click', async () => { state.weekStart.setDate(state.weekStart.getDate() - 7); state.selected = 0; await load(); });
     document.getElementById('next-week').addEventListener('click', async () => { state.weekStart.setDate(state.weekStart.getDate() + 7); state.selected = 0; await load(); });

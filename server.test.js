@@ -63,6 +63,7 @@ test('une recette peut être créée puis modifiée avec ses ingrédients et ses
     title: 'Tartines tomates',
     minutes: 15,
     servings: 2,
+    diet: 'vegetarian',
     tags: ['rapide'],
     ingredients: [
       { name: 'pain', amount: 4, unit: 'tranche' },
@@ -124,4 +125,31 @@ test('un foyer mixte reçoit des protéines compatibles ajoutées aux courses', 
 
   const seitan = await add('/api/proteins', { name: 'Seitan grillé', category: 'plant', amount: 130, unit: 'g' });
   assert.equal(seitan.status, 201);
+});
+
+test('deux recettes coordonnées respectent les régimes et alimentent les courses', async t => {
+  const db = createDatabase(':memory:');
+  const server = createApp(db);
+  server.listen(0, '127.0.0.1');
+  await once(server, 'listening');
+  t.after(() => server.close());
+  const baseUrl = `http://127.0.0.1:${server.address().port}`;
+  const add = (path, body) => fetch(`${baseUrl}${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  const alice = await (await add('/api/members', { name: 'Alice', diet: 'vegetarian' })).json();
+  const bob = await (await add('/api/members', { name: 'Bob', diet: 'omnivore' })).json();
+  const steak = await (await add('/api/recipes', {
+    title: 'Steak minute', minutes: 10, servings: 1, diet: 'omnivore', tags: ['rapide'],
+    ingredients: [{ name: 'steak haché', amount: 150, unit: 'g' }],
+    steps: [{ kind: 'cook', instruction: 'Cuire le steak.', minutes: 6 }]
+  })).json();
+
+  const incompatible = await add('/api/meals', { date: '2026-09-14', slot: 'midi', location: 'home', occasion: 'regular', people: 1, recipeId: null, title: 'Duo', dishes: [{ memberId: alice.id, recipeId: steak.id, portions: 1 }] });
+  assert.equal(incompatible.status, 400);
+
+  const duo = await add('/api/meals', { date: '2026-09-14', slot: 'soir', location: 'home', occasion: 'regular', people: 2, recipeId: null, title: 'Bowl + steak', dishes: [{ memberId: alice.id, recipeId: 1, portions: 1 }, { memberId: bob.id, recipeId: steak.id, portions: 1 }] });
+  assert.equal(duo.status, 200);
+  assert.deepEqual(shoppingList(db, '2026-09-14').filter(item => ['pois chiches', 'steak haché'].includes(item.name)), [
+    { name: 'pois chiches', unit: 'g', amount: 200 },
+    { name: 'steak haché', unit: 'g', amount: 150 }
+  ]);
 });
