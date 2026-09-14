@@ -269,7 +269,7 @@
   </div>
 
   <script>
-    const state = { weekStart: monday(new Date()), selected: 0, recipes: [], meals: [], shopping: [], members: [], proteins: [], slot: 'soir', pendingRecipe: null };
+    const state = { weekStart: monday(new Date()), selected: 0, recipes: [], meals: [], shopping: [], members: [], proteins: [], slot: 'soir', pendingRecipe: null, pendingEvent: null };
     const dayNames = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
     const fullDayNames = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
     const monthNames = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
@@ -395,7 +395,7 @@
       document.getElementById('dialog-title').textContent = 'Ajouter un repas';
       document.getElementById('dialog-subtitle').textContent = `${fullDayNames[state.selected]} · ${slot === 'midi' ? 'Midi' : 'Soir'}`;
       const recipeChoices = state.recipes.map(recipe => choice('♨', recipe.title, `${recipe.minutes} min · ${recipe.servings} portions`, { recipe: recipe.id }));
-      document.getElementById('choices').innerHTML = recipeChoices.join('') + choice('⌖', 'Manger à l’extérieur', 'Cantine, invitation ou repas libre', { location: 'outside' }) + choice('♥', 'Prévoir un date', 'À la maison ou au restaurant', { occasion: 'date' }) + (currentMeal ? choice('×', 'Retirer ce repas', currentMeal.title, { remove: 'true' }) : '');
+      document.getElementById('choices').innerHTML = recipeChoices.join('') + choice('⌖', 'Manger à l’extérieur', 'Cantine, restaurant ou repas libre', { location: 'outside' }) + choice('♥', 'Prévoir un date', 'À la maison ou au restaurant', { occasion: 'date' }) + choice('♨', 'Inviter du monde', 'Un repas à partager à la maison', { occasion: 'guests' }) + (currentMeal ? choice('×', 'Retirer ce repas', currentMeal.title, { remove: 'true' }) : '');
       dialog.showModal();
     }
 
@@ -415,18 +415,42 @@
         openVariantSetup(recipe);
         return;
       }
-      const isDate = button.dataset.occasion === 'date';
+      if (!recipe) {
+        openEventSetup(button);
+        return;
+      }
       const payload = {
         date: key(dateAt(state.selected)),
         slot: state.slot,
-        location: recipe ? 'home' : isDate ? 'restaurant' : 'outside',
-        occasion: isDate ? 'date' : 'regular',
-        people: isDate ? 2 : recipe ? recipe.servings : 1,
-        recipeId: recipe?.id ?? null,
-        title: recipe?.title ?? (isDate ? 'Date à organiser' : 'Repas à l’extérieur'),
+        location: 'home',
+        occasion: 'regular',
+        people: recipe.servings,
+        recipeId: recipe.id,
+        title: recipe.title,
         assignments: []
       };
       await postMeal(payload);
+    }
+
+    function openEventSetup(button) {
+      const occasion = button.dataset.occasion || 'regular';
+      state.pendingEvent = { occasion };
+      const isDate = occasion === 'date';
+      const isGuests = occasion === 'guests';
+      document.getElementById('dialog-title').textContent = isDate ? 'Prévoir un date' : isGuests ? 'Inviter du monde' : 'Manger à l’extérieur';
+      document.getElementById('dialog-subtitle').textContent = `${fullDayNames[state.selected]} · ${state.slot === 'midi' ? 'Midi' : 'Soir'}`;
+      document.getElementById('choices').innerHTML = `<div class="recipe-form"><label class="field"><span>Nom</span><input id="event-title" maxlength="120" value="${isDate ? 'Date à organiser' : isGuests ? 'Repas avec des invités' : 'Repas à l’extérieur'}" required></label><label class="field"><span>Lieu</span><select id="event-location">${isGuests ? '<option value="home">À la maison</option>' : ''}<option value="restaurant">Restaurant</option><option value="outside">Autre lieu</option>${isDate ? '<option value="home">À la maison</option>' : ''}</select></label><label class="field"><span>Nombre de personnes</span><input id="event-people" type="number" min="1" max="100" value="${isDate || isGuests ? 2 : 1}" required></label><button id="confirm-event" class="primary" type="button">Ajouter au calendrier</button></div>`;
+    }
+
+    async function saveEvent() {
+      await postMeal({
+        date: key(dateAt(state.selected)), slot: state.slot,
+        location: document.getElementById('event-location').value,
+        occasion: state.pendingEvent.occasion,
+        people: Number(document.getElementById('event-people').value),
+        recipeId: null, title: document.getElementById('event-title').value,
+        assignments: [], dishes: []
+      });
     }
 
     async function postMeal(payload) {
@@ -602,6 +626,7 @@
     document.getElementById('choices').addEventListener('click', event => {
       if (event.target.closest('#confirm-mixed')) return saveMixedMeal();
       if (event.target.closest('#confirm-duo')) return saveDuoMeal();
+      if (event.target.closest('#confirm-event')) return saveEvent();
       const button = event.target.closest('.choice');
       if (button) button.dataset.remove ? deleteMeal() : button.dataset.duo ? openDuoSetup() : saveMeal(button);
     });
