@@ -428,7 +428,7 @@
         return;
       }
       if (!recipe) {
-        openEventSetup(button);
+        button.dataset.occasion === 'guests' ? openGuestChoices() : openEventSetup(button.dataset.occasion || 'regular');
         return;
       }
       const payload = {
@@ -444,14 +444,27 @@
       await postMeal(payload);
     }
 
-    function openEventSetup(button) {
-      const occasion = button.dataset.occasion || 'regular';
-      state.pendingEvent = { occasion };
+    function openGuestChoices() {
+      document.getElementById('dialog-title').textContent = 'Inviter du monde';
+      document.getElementById('dialog-subtitle').textContent = 'Qu’est-ce qu’on prévoit ?';
+      document.getElementById('choices').innerHTML = choice('♨', 'Cuisiner une recette', 'Les ingrédients seront ajoutés aux courses', { guestmode: 'recipe' }) + choice('⌁', 'Commander', 'Pizza, sushi, traiteur…', { guestmode: 'order' }) + choice('○', 'Sans recette', 'Apéro, chacun apporte quelque chose…', { guestmode: 'free' });
+    }
+
+    function openGuestRecipes() {
+      document.getElementById('dialog-title').textContent = 'Recette pour les invités';
+      document.getElementById('dialog-subtitle').textContent = 'Choisissez le plat à préparer';
+      document.getElementById('choices').innerHTML = state.recipes.map(recipe => choice('♨', recipe.title, `${recipe.minutes} min · ${dietLabels[recipe.diet]}`, { guestrecipe: recipe.id })).join('');
+    }
+
+    function openEventSetup(occasion, mode = 'standard', recipe = null) {
+      state.pendingEvent = { occasion, recipeId: recipe?.id ?? null };
       const isDate = occasion === 'date';
       const isGuests = occasion === 'guests';
-      document.getElementById('dialog-title').textContent = isDate ? 'Prévoir un date' : isGuests ? 'Inviter du monde' : 'Manger à l’extérieur';
+      const title = recipe?.title ?? (isDate ? 'Date à organiser' : mode === 'order' ? 'Commande pizza' : isGuests ? 'Repas sans recette' : 'Repas à l’extérieur');
+      document.getElementById('dialog-title').textContent = recipe ? 'Cuisiner pour les invités' : isDate ? 'Prévoir un date' : mode === 'order' ? 'Commander' : isGuests ? 'Repas sans recette' : 'Manger à l’extérieur';
       document.getElementById('dialog-subtitle').textContent = `${fullDayNames[state.selected]} · ${state.slot === 'midi' ? 'Midi' : 'Soir'}`;
-      document.getElementById('choices').innerHTML = `<div class="recipe-form"><label class="field"><span>Nom</span><input id="event-title" maxlength="120" value="${isDate ? 'Date à organiser' : isGuests ? 'Repas avec des invités' : 'Repas à l’extérieur'}" required></label><label class="field"><span>Lieu</span><select id="event-location">${isGuests ? '<option value="home">À la maison</option>' : ''}<option value="restaurant">Restaurant</option><option value="outside">Autre lieu</option>${isDate ? '<option value="home">À la maison</option>' : ''}</select></label><label class="field"><span>Nombre de personnes</span><input id="event-people" type="number" min="1" max="100" value="${isDate || isGuests ? 2 : 1}" required></label><button id="confirm-event" class="primary" type="button">Ajouter au calendrier</button></div>`;
+      const places = isGuests ? '<option value="home">À la maison</option>' : '<option value="restaurant">Restaurant</option><option value="outside">Autre lieu</option>' + (isDate ? '<option value="home">À la maison</option>' : '');
+      document.getElementById('choices').innerHTML = `<div class="recipe-form"><label class="field"><span>Nom</span><input id="event-title" maxlength="120" value="${escapeHtml(title)}" required></label><label class="field"><span>Lieu</span><select id="event-location">${places}</select></label><label class="field"><span>Nombre de personnes</span><input id="event-people" type="number" min="1" max="100" value="${isGuests ? 4 : isDate ? 2 : 1}" required></label><button id="confirm-event" class="primary" type="button">Ajouter au calendrier</button></div>`;
     }
 
     async function saveEvent() {
@@ -460,7 +473,7 @@
         location: document.getElementById('event-location').value,
         occasion: state.pendingEvent.occasion,
         people: Number(document.getElementById('event-people').value),
-        recipeId: null, title: document.getElementById('event-title').value,
+        recipeId: state.pendingEvent.recipeId, title: document.getElementById('event-title').value,
         assignments: [], dishes: []
       });
     }
@@ -641,6 +654,8 @@
       if (event.target.closest('#confirm-event')) return saveEvent();
       const button = event.target.closest('.choice');
       if (!button) return;
+      if (button.dataset.guestmode) return button.dataset.guestmode === 'recipe' ? openGuestRecipes() : openEventSetup('guests', button.dataset.guestmode);
+      if (button.dataset.guestrecipe) return openEventSetup('guests', 'recipe', state.recipes.find(recipe => recipe.id === Number(button.dataset.guestrecipe)));
       if (button.dataset.viewplanned) {
         dialog.close();
         return openRecipe(state.recipes.find(recipe => recipe.id === Number(button.dataset.viewplanned)));
