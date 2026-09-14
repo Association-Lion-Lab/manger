@@ -87,4 +87,4 @@ Ces fonctions ne seront considérées qu'après validation du parcours principal
 
 ## Licence
 
-L'AGPL-3.0-or-later est proposée afin que les améliorations d'instances accessibles en ligne restent partagées. La licence définitive sera ajoutée avant le premier code.
+Le code de **Manger!** est distribué sous licence [GNU AGPL-3.0-or-later](LICENSE). Les licences applicables aux recettes et aux médias seront précisées séparément avant leur ajout au projet.
