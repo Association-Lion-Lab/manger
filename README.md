@@ -99,7 +99,7 @@ Ces fonctions ne seront considérées qu'après validation du parcours principal
 - [x] Produire une maquette mobile du calendrier hebdomadaire.
 - [x] Choisir la stack à partir de cette maquette.
 - [x] Implémenter la création et la modification des recettes.
-- [ ] Terminer le parcours de validation `0.1`.
+- [x] Terminer le parcours de validation `0.1`.
 - [ ] Publier une image Docker versionnée.
 
 ## Identité
