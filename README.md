@@ -6,7 +6,21 @@
 
 ## État du projet
 
-Le projet est en phase de conception. Le premier objectif est de valider un parcours complet, simple et utilisable sur mobile avant d'ajouter des intégrations externes.
+La maquette mobile du calendrier est validée. Une première tranche fonctionnelle permet de planifier des recettes, des sorties et des dates, puis de générer la liste de courses correspondante.
+
+## Lancer localement
+
+Prérequis : Node.js 24 ou plus récent. Aucune dépendance n'est à installer.
+
+```shell
+npm start
+```
+
+Ouvrez ensuite <http://localhost:3000>. Les données sont conservées dans `data/manger.db`.
+
+```shell
+npm test
+```
 
 ## Principes
 
@@ -72,9 +86,9 @@ Ces fonctions ne seront considérées qu'après validation du parcours principal
 
 ## Premiers jalons
 
-- [ ] Valider la présente définition du MVP.
-- [ ] Produire une maquette mobile du calendrier hebdomadaire.
-- [ ] Choisir la stack à partir de cette maquette.
+- [x] Valider la présente définition du MVP.
+- [x] Produire une maquette mobile du calendrier hebdomadaire.
+- [x] Choisir la stack à partir de cette maquette.
 - [ ] Implémenter le parcours de validation `0.1`.
 - [ ] Publier une image Docker versionnée.
 

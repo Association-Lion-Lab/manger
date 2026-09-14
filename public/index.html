@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#d94f32">
+  <title>Manger! — On mange quoi cette semaine ?</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --accent: #d94f32;
+      --accent-soft: #fff0eb;
+      --background: #f4f1ea;
+      --surface: #fffdf9;
+      --raised: #ffffff;
+      --text: #28241e;
+      --muted: #746c61;
+      --line: #e4ded4;
+      --green: #287257;
+      --purple: #76508f;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --accent: #ff765b;
+        --accent-soft: #3c211c;
+        --background: #171816;
+        --surface: #22231f;
+        --raised: #2b2c27;
+        --text: #f7f1e7;
+        --muted: #b9b1a6;
+        --line: #3b3d36;
+        --green: #6fd0a7;
+        --purple: #c99bea;
+      }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: var(--text); background: var(--background); }
+    button, input { font: inherit; }
+    button { color: inherit; }
+    .app { width: min(100%, 760px); min-height: 100dvh; margin: 0 auto; background: var(--background); }
+    header { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; padding: 18px 20px 14px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--surface) 94%, transparent); backdrop-filter: blur(12px); }
+    .brand { font-size: 24px; font-weight: 700; letter-spacing: -.045em; }
+    .brand span { color: var(--accent); }
+    .tagline, .muted { color: var(--muted); font-size: 13px; }
+    .icon-button { width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 50%; background: var(--raised); cursor: pointer; }
+    main { padding: 18px 18px 90px; }
+    h1, h2 { margin: 0; font-weight: 650; }
+    h1 { font-size: 19px; }
+    h2 { font-size: 17px; }
+    .toolbar, .section-heading, .day-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .toolbar { text-align: center; }
+    .days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin: 18px 0 22px; }
+    .day { min-width: 0; min-height: 58px; display: grid; place-items: center; align-content: center; gap: 3px; padding: 6px 2px; border: 0; border-radius: 15px; background: transparent; cursor: pointer; }
+    .day small { color: var(--muted); font-size: 11px; text-transform: uppercase; }
+    .day i { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
+    .day[aria-selected="true"] { color: #fff; background: var(--accent); }
+    .day[aria-selected="true"] small { color: inherit; opacity: .8; }
+    .day[aria-selected="true"] i { background: currentColor; }
+    .text-action { min-height: 44px; display: inline-flex; align-items: center; gap: 5px; border: 0; color: var(--accent); background: transparent; font-weight: 650; cursor: pointer; }
+    .schedule { display: grid; gap: 10px; margin: 12px 0 18px; }
+    .slot-label, .group-title { display: block; margin: 6px 2px; color: var(--muted); font-size: 12px; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; }
+    .meal { width: 100%; min-height: 72px; display: grid; grid-template-columns: 44px minmax(0, 1fr) 20px; align-items: center; gap: 12px; padding: 13px; text-align: left; border: 1px solid var(--line); border-radius: 20px; background: var(--raised); cursor: pointer; }
+    .meal.empty { border-style: dashed; color: var(--muted); background: transparent; }
+    .meal-icon { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 14px; color: var(--accent); background: var(--accent-soft); font-size: 19px; }
+    .meal.outside .meal-icon { color: var(--green); background: color-mix(in srgb, var(--green) 14%, transparent); }
+    .meal.date .meal-icon { color: var(--purple); background: color-mix(in srgb, var(--purple) 14%, transparent); }
+    .meal-copy { min-width: 0; display: grid; gap: 3px; }
+    .meal-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; }
+    .meal-copy small { color: var(--muted); font-size: 12px; }
+    .primary, .secondary { width: 100%; min-height: 50px; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 16px; border-radius: 16px; font-weight: 650; cursor: pointer; }
+    .primary { border: 0; color: #fff; background: var(--accent); }
+    .secondary { border: 1px solid var(--line); background: var(--raised); }
+    .panel[hidden] { display: none; }
+    .recipe-list, .shopping-list { display: grid; margin-top: 16px; }
+    .recipe { min-height: 68px; display: grid; grid-template-columns: 44px minmax(0, 1fr); align-items: center; gap: 12px; padding: 10px 2px; border-bottom: 1px solid var(--line); }
+    .recipe .meal-icon { font-size: 17px; }
+    .recipe-copy { display: grid; gap: 3px; }
+    .recipe-copy small { color: var(--muted); }
+    .shopping-group { margin: 22px 0; }
+    .shopping-item { min-height: 46px; display: flex; align-items: center; gap: 11px; border-bottom: 1px solid var(--line); cursor: pointer; }
+    .shopping-item input { width: 20px; height: 20px; accent-color: var(--accent); }
+    .shopping-item input:checked + span { color: var(--muted); text-decoration: line-through; }
+    .empty-state { padding: 34px 12px; text-align: center; color: var(--muted); }
+    nav { position: fixed; z-index: 3; inset: auto 0 0; width: min(100%, 760px); margin: auto; display: grid; grid-template-columns: repeat(3, 1fr); padding: 8px 10px 10px; border-top: 1px solid var(--line); background: var(--surface); }
+    nav button { min-height: 56px; display: grid; place-items: center; align-content: center; gap: 3px; border: 0; border-radius: 14px; color: var(--muted); background: transparent; cursor: pointer; font-size: 12px; }
+    nav button span:first-child { font-size: 19px; }
+    nav button.active { color: var(--accent); background: var(--accent-soft); }
+    dialog { width: min(calc(100% - 24px), 500px); max-height: calc(100dvh - 24px); margin: auto auto 12px; padding: 8px 18px 22px; color: var(--text); border: 1px solid var(--line); border-radius: 24px; background: var(--surface); }
+    dialog::backdrop { background: rgb(0 0 0 / .55); }
+    .handle { width: 42px; height: 4px; margin: 2px auto 14px; border-radius: 4px; background: var(--line); }
+    .choices { display: grid; gap: 8px; margin-top: 16px; }
+    .choice { min-height: 60px; display: grid; grid-template-columns: 42px minmax(0, 1fr); align-items: center; gap: 12px; padding: 9px 12px; text-align: left; border: 1px solid var(--line); border-radius: 16px; background: var(--raised); cursor: pointer; }
+    .choice-icon { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 13px; color: var(--accent); background: var(--accent-soft); }
+    .choice-copy { display: grid; gap: 2px; }
+    .choice-copy small { color: var(--muted); }
+    .error { color: #b42318; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+    @media (min-width: 620px) { main { padding-inline: 28px; } header { padding-inline: 30px; } }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div><div class="brand">Manger<span>!</span></div><div class="tagline">On mange quoi cette semaine ?</div></div>
+      <button class="icon-button" type="button" aria-label="Profil">☺</button>
+    </header>
+
+    <main>
+      <section id="week-panel" class="panel">
+        <div class="toolbar">
+          <button id="previous-week" class="icon-button" type="button" aria-label="Semaine précédente">‹</button>
+          <div><h1 id="week-title"></h1><span id="week-number" class="muted"></span></div>
+          <button id="next-week" class="icon-button" type="button" aria-label="Semaine suivante">›</button>
+        </div>
+        <div id="days" class="days" role="tablist" aria-label="Jours de la semaine"></div>
+        <div class="day-heading">
+          <div><h2 id="selected-day"></h2><span id="day-summary" class="muted"></span></div>
+          <button id="add-meal" class="text-action" type="button">＋ Ajouter</button>
+        </div>
+        <div id="schedule" class="schedule" aria-live="polite"></div>
+        <button id="suggest" class="primary" type="button">✦ Proposer le prochain repas</button>
+      </section>
+
+      <section id="recipes-panel" class="panel" hidden>
+        <div class="section-heading"><div><h1>Mes recettes</h1><span id="recipe-count" class="muted"></span></div></div>
+        <div id="recipes" class="recipe-list"></div>
+      </section>
+
+      <section id="shopping-panel" class="panel" hidden>
+        <div class="section-heading"><div><h1>Courses</h1><span id="shopping-summary" class="muted"></span></div><button id="share" class="icon-button" type="button" aria-label="Partager la liste">↗</button></div>
+        <div id="shopping" class="shopping-list"></div>
+      </section>
+    </main>
+
+    <nav aria-label="Navigation principale">
+      <button class="active" type="button" data-panel="week" aria-current="page"><span>▦</span><span>Semaine</span></button>
+      <button type="button" data-panel="recipes"><span>▤</span><span>Recettes</span></button>
+      <button type="button" data-panel="shopping"><span>⌑</span><span>Courses</span></button>
+    </nav>
+
+    <dialog id="meal-dialog">
+      <div class="handle"></div>
+      <div class="section-heading">
+        <div><h2 id="dialog-title">Ajouter un repas</h2><span id="dialog-subtitle" class="muted"></span></div>
+        <button id="close-dialog" class="icon-button" type="button" aria-label="Fermer">×</button>
+      </div>
+      <div id="choices" class="choices"></div>
+      <p id="dialog-error" class="error" role="alert" hidden></p>
+    </dialog>
+  </div>
+
+  <script>
+    const state = { weekStart: monday(new Date()), selected: 0, recipes: [], meals: [], shopping: [], slot: 'soir' };
+    const dayNames = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+    const fullDayNames = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+    const monthNames = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+    const dialog = document.getElementById('meal-dialog');
+
+    function key(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    function monday(date) {
+      const result = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12);
+      result.setDate(result.getDate() - (result.getDay() + 6) % 7);
+      return result;
+    }
+
+    function dateAt(index) {
+      const result = new Date(state.weekStart);
+      result.setDate(result.getDate() + index);
+      return result;
+    }
+
+    function mealFor(index, slot) {
+      return state.meals.find(meal => meal.date === key(dateAt(index)) && meal.slot === slot);
+    }
+
+    function weekNumber(date) {
+      const target = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+      target.setUTCDate(target.getUTCDate() + 4 - (target.getUTCDay() || 7));
+      const yearStart = new Date(Date.UTC(target.getUTCFullYear(), 0, 1));
+      return Math.ceil((((target - yearStart) / 86400000) + 1) / 7);
+    }
+
+    async function load() {
+      const response = await fetch(`/api/week?start=${key(state.weekStart)}`);
+      if (!response.ok) throw new Error('Impossible de charger la semaine');
+      Object.assign(state, await response.json());
+      render();
+    }
+
+    function render() {
+      const end = dateAt(6);
+      document.getElementById('week-title').textContent = `${state.weekStart.getDate()}–${end.getDate()} ${monthNames[end.getMonth()]}`;
+      document.getElementById('week-number').textContent = `Semaine ${weekNumber(state.weekStart)}`;
+      document.getElementById('selected-day').textContent = `${fullDayNames[state.selected]} ${dateAt(state.selected).getDate()}`;
+      renderDays();
+      renderSchedule();
+      renderRecipes();
+      renderShopping();
+    }
+
+    function renderDays() {
+      document.getElementById('days').innerHTML = dayNames.map((name, index) => {
+        const planned = mealFor(index, 'midi') || mealFor(index, 'soir');
+        return `<button class="day" type="button" role="tab" aria-selected="${index === state.selected}" data-day="${index}"><small>${name}</small><strong>${dateAt(index).getDate()}</strong>${planned ? '<i></i>' : ''}</button>`;
+      }).join('');
+    }
+
+    function mealMarkup(slot, meal) {
+      if (!meal) return `<button class="meal empty" type="button" data-slot="${slot}"><span class="meal-icon">＋</span><span class="meal-copy"><strong>Rien de prévu</strong><small>Ajouter un repas</small></span><span>›</span></button>`;
+      const css = meal.occasion === 'date' ? 'date' : meal.location === 'home' ? '' : 'outside';
+      const icon = meal.occasion === 'date' ? '♥' : meal.location === 'home' ? '♨' : '⌖';
+      const place = meal.location === 'home' ? 'Maison' : meal.location === 'restaurant' ? 'Restaurant' : 'Extérieur';
+      return `<button class="meal ${css}" type="button" data-slot="${slot}"><span class="meal-icon">${icon}</span><span class="meal-copy"><strong>${escapeHtml(meal.title)}</strong><small>${place} · ${meal.people} personne${meal.people > 1 ? 's' : ''}${meal.minutes ? ` · ${meal.minutes} min` : ''}</small></span><span>›</span></button>`;
+    }
+
+    function renderSchedule() {
+      const midi = mealFor(state.selected, 'midi');
+      const soir = mealFor(state.selected, 'soir');
+      const count = Number(Boolean(midi)) + Number(Boolean(soir));
+      document.getElementById('day-summary').textContent = `${count} repas prévu${count > 1 ? 's' : ''}`;
+      document.getElementById('schedule').innerHTML = `<div><span class="slot-label">Midi</span>${mealMarkup('midi', midi)}</div><div><span class="slot-label">Soir</span>${mealMarkup('soir', soir)}</div>`;
+    }
+
+    function renderRecipes() {
+      document.getElementById('recipe-count').textContent = `${state.recipes.length} recettes disponibles`;
+      document.getElementById('recipes').innerHTML = state.recipes.map(recipe => `<div class="recipe"><span class="meal-icon">♨</span><span class="recipe-copy"><strong>${escapeHtml(recipe.title)}</strong><small>${recipe.minutes} min · ${recipe.servings} portions · ${recipe.tags.map(escapeHtml).join(' · ')}</small></span></div>`).join('');
+    }
+
+    function renderShopping() {
+      const summary = document.getElementById('shopping-summary');
+      const container = document.getElementById('shopping');
+      summary.textContent = `${state.shopping.length} article${state.shopping.length > 1 ? 's' : ''} pour la semaine`;
+      container.innerHTML = state.shopping.length ? `<div class="shopping-group"><span class="group-title">Liste générée</span>${state.shopping.map((item, index) => `<label class="shopping-item"><input type="checkbox" data-shopping="${index}"><span>${escapeHtml(shoppingText(item))}</span></label>`).join('')}</div>` : '<div class="empty-state">Planifiez une recette à la maison pour générer la liste de courses.</div>';
+    }
+
+    function formatAmount(amount) {
+      return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(amount);
+    }
+
+    function shoppingText(item) {
+      const amount = formatAmount(item.amount);
+      if (item.unit === 'pièce') return `${amount} ${item.name}${item.amount > 1 ? 's' : ''}`;
+      return `${amount} ${item.unit} de ${item.name}`;
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>'"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character]);
+    }
+
+    function choice(icon, title, detail, data) {
+      return `<button class="choice" type="button" ${Object.entries(data).map(([name, value]) => `data-${name}="${escapeHtml(value)}"`).join(' ')}><span class="choice-icon">${icon}</span><span class="choice-copy"><strong>${escapeHtml(title)}</strong><small>${escapeHtml(detail)}</small></span></button>`;
+    }
+
+    function openAdd(slot) {
+      state.slot = slot;
+      document.getElementById('dialog-title').textContent = 'Ajouter un repas';
+      document.getElementById('dialog-subtitle').textContent = `${fullDayNames[state.selected]} · ${slot === 'midi' ? 'Midi' : 'Soir'}`;
+      const recipeChoices = state.recipes.map(recipe => choice('♨', recipe.title, `${recipe.minutes} min · ${recipe.servings} portions`, { recipe: recipe.id }));
+      document.getElementById('choices').innerHTML = recipeChoices.join('') + choice('⌖', 'Manger à l’extérieur', 'Cantine, invitation ou repas libre', { location: 'outside' }) + choice('♥', 'Prévoir un date', 'À la maison ou au restaurant', { occasion: 'date' });
+      dialog.showModal();
+    }
+
+    async function openSuggestions() {
+      state.slot = mealFor(state.selected, 'soir') ? 'midi' : 'soir';
+      const response = await fetch('/api/suggestions');
+      const suggestions = await response.json();
+      document.getElementById('dialog-title').textContent = 'Trois idées pour vous';
+      document.getElementById('dialog-subtitle').textContent = `${fullDayNames[state.selected]} · ${state.slot === 'midi' ? 'Midi' : 'Soir'}`;
+      document.getElementById('choices').innerHTML = suggestions.map(recipe => choice('✦', recipe.title, `${recipe.minutes} min · ${recipe.lastEaten ? 'à refaire' : 'nouveau cette semaine'}`, { recipe: recipe.id })).join('');
+      dialog.showModal();
+    }
+
+    async function saveMeal(button) {
+      const recipe = button.dataset.recipe ? state.recipes.find(item => item.id === Number(button.dataset.recipe)) : null;
+      const isDate = button.dataset.occasion === 'date';
+      const payload = {
+        date: key(dateAt(state.selected)),
+        slot: state.slot,
+        location: recipe ? 'home' : isDate ? 'restaurant' : 'outside',
+        occasion: isDate ? 'date' : 'regular',
+        people: isDate ? 2 : recipe ? recipe.servings : 1,
+        recipeId: recipe?.id ?? null,
+        title: recipe?.title ?? (isDate ? 'Date à organiser' : 'Repas à l’extérieur')
+      };
+      const response = await fetch('/api/meals', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) });
+      if (!response.ok) {
+        const error = await response.json();
+        const message = document.getElementById('dialog-error');
+        message.textContent = error.error;
+        message.hidden = false;
+        return;
+      }
+      dialog.close();
+      await load();
+    }
+
+    document.getElementById('days').addEventListener('click', event => {
+      const button = event.target.closest('[data-day]');
+      if (!button) return;
+      state.selected = Number(button.dataset.day);
+      render();
+    });
+    document.getElementById('schedule').addEventListener('click', event => {
+      const button = event.target.closest('[data-slot]');
+      if (button) openAdd(button.dataset.slot);
+    });
+    document.getElementById('add-meal').addEventListener('click', () => openAdd(mealFor(state.selected, 'soir') ? 'midi' : 'soir'));
+    document.getElementById('suggest').addEventListener('click', openSuggestions);
+    document.getElementById('close-dialog').addEventListener('click', () => dialog.close());
+    document.getElementById('choices').addEventListener('click', event => {
+      const button = event.target.closest('.choice');
+      if (button) saveMeal(button);
+    });
+    document.getElementById('previous-week').addEventListener('click', async () => { state.weekStart.setDate(state.weekStart.getDate() - 7); state.selected = 0; await load(); });
+    document.getElementById('next-week').addEventListener('click', async () => { state.weekStart.setDate(state.weekStart.getDate() + 7); state.selected = 0; await load(); });
+    document.querySelector('nav').addEventListener('click', event => {
+      const button = event.target.closest('[data-panel]');
+      if (!button) return;
+      document.querySelectorAll('nav button').forEach(item => { item.classList.toggle('active', item === button); item.toggleAttribute('aria-current', item === button); });
+      document.querySelectorAll('.panel').forEach(panel => { panel.hidden = true; });
+      document.getElementById(`${button.dataset.panel}-panel`).hidden = false;
+    });
+    document.getElementById('share').addEventListener('click', async () => {
+      const text = state.shopping.map(item => `- ${shoppingText(item)}`).join('\n');
+      if (navigator.share) await navigator.share({ title: 'Courses — Manger!', text });
+      else await navigator.clipboard.writeText(text);
+    });
+
+    load().catch(error => {
+      document.getElementById('schedule').innerHTML = `<p class="error" role="alert">${escapeHtml(error.message)}</p>`;
+    });
+  </script>
+</body>
+</html>
