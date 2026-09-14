@@ -96,3 +96,32 @@ test('une recette peut être créée puis modifiée avec ses ingrédients et ses
   assert.equal(updated.steps.length, 3);
   assert.deepEqual(updated.steps.map(step => step.kind), ['prep', 'cook', 'serve']);
 });
+
+test('un foyer mixte reçoit des protéines compatibles ajoutées aux courses', async t => {
+  const db = createDatabase(':memory:');
+  const server = createApp(db);
+  server.listen(0, '127.0.0.1');
+  await once(server, 'listening');
+  t.after(() => server.close());
+  const baseUrl = `http://127.0.0.1:${server.address().port}`;
+
+  const add = (path, body) => fetch(`${baseUrl}${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  const alice = await (await add('/api/members', { name: 'Alice', diet: 'vegetarian' })).json();
+  const bob = await (await add('/api/members', { name: 'Bob', diet: 'omnivore' })).json();
+  const household = await (await fetch(`${baseUrl}/api/household`)).json();
+  const tofu = household.proteins.find(protein => protein.name === 'tofu');
+  const beef = household.proteins.find(protein => protein.name === 'bœuf');
+
+  const incompatible = await add('/api/meals', { date: '2026-09-14', slot: 'midi', location: 'home', occasion: 'regular', people: 1, recipeId: 1, title: 'Bowl', assignments: [{ memberId: alice.id, proteinId: beef.id, portions: 1 }] });
+  assert.equal(incompatible.status, 400);
+
+  const meal = await add('/api/meals', { date: '2026-09-14', slot: 'soir', location: 'home', occasion: 'regular', people: 2, recipeId: 1, title: 'Bowl', assignments: [{ memberId: alice.id, proteinId: tofu.id, portions: 1 }, { memberId: bob.id, proteinId: beef.id, portions: 1 }] });
+  assert.equal(meal.status, 200);
+  assert.deepEqual(shoppingList(db, '2026-09-14').filter(item => ['tofu', 'bœuf'].includes(item.name)), [
+    { name: 'bœuf', unit: 'g', amount: 150 },
+    { name: 'tofu', unit: 'g', amount: 120 }
+  ]);
+
+  const seitan = await add('/api/proteins', { name: 'Seitan grillé', category: 'plant', amount: 130, unit: 'g' });
+  assert.equal(seitan.status, 201);
+});

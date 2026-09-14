@@ -6,7 +6,7 @@
 
 ## État du projet
 
-La maquette mobile du calendrier est validée. Une première tranche fonctionnelle permet de planifier des recettes, des sorties et des dates, puis de générer la liste de courses correspondante.
+La maquette mobile du calendrier est validée. Une première tranche fonctionnelle permet de planifier des recettes, des sorties et des dates, puis de générer la liste de courses correspondante. Les foyers mixtes peuvent enregistrer les régimes de leurs membres et attribuer une protéine compatible à chacun autour d'une base commune.
 
 ## Lancer localement
 
@@ -51,6 +51,7 @@ La version `0.1` devra permettre de :
 6. marquer une occasion comme un date ou un repas avec des invités ;
 7. générer une liste de courses depuis les recettes planifiées ;
 8. cocher, copier et partager cette liste depuis l'application.
+9. adapter un repas partagé aux régimes des membres du foyer avec des protéines explicitement compatibles.
 
 ## Modèle fonctionnel
 

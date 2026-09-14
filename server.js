@@ -63,11 +63,31 @@ function createDatabase(filename) {
       title TEXT NOT NULL,
       UNIQUE (date, slot)
     );
+    CREATE TABLE IF NOT EXISTS members (
+      id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL UNIQUE,
+      diet TEXT NOT NULL CHECK (diet IN ('vegan', 'vegetarian', 'pescetarian', 'omnivore'))
+    );
+    CREATE TABLE IF NOT EXISTS proteins (
+      id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL UNIQUE,
+      category TEXT NOT NULL CHECK (category IN ('plant', 'egg', 'fish', 'meat')),
+      amount REAL NOT NULL CHECK (amount > 0),
+      unit TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS meal_assignments (
+      meal_id INTEGER NOT NULL REFERENCES meals(id) ON DELETE CASCADE,
+      member_id INTEGER NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+      protein_id INTEGER NOT NULL REFERENCES proteins(id),
+      portions INTEGER NOT NULL CHECK (portions > 0 AND portions <= 20),
+      PRIMARY KEY (meal_id, member_id)
+    );
   `);
   if (!db.prepare('PRAGMA table_info(recipes)').all().some(column => column.name === 'instructions')) {
     db.exec("ALTER TABLE recipes ADD COLUMN instructions TEXT NOT NULL DEFAULT ''");
   }
   seed(db);
+  seedProteins(db);
   db.exec(`
     INSERT INTO recipe_steps (recipe_id, position, kind, instruction, minutes)
     SELECT recipes.id, 1, 'prep', recipes.instructions, NULL
@@ -76,6 +96,16 @@ function createDatabase(filename) {
       AND NOT EXISTS (SELECT 1 FROM recipe_steps WHERE recipe_steps.recipe_id = recipes.id)
   `);
   return db;
+}
+
+function seedProteins(db) {
+  if (db.prepare('SELECT COUNT(*) AS count FROM proteins').get().count > 0) return;
+  const insert = db.prepare('INSERT INTO proteins (name, category, amount, unit) VALUES (?, ?, ?, ?)');
+  [
+    ['tofu', 'plant', 120, 'g'], ['tofu fumé', 'plant', 120, 'g'], ['tempeh', 'plant', 120, 'g'],
+    ['œuf', 'egg', 2, 'pièce'], ['saumon', 'fish', 150, 'g'], ['thon', 'fish', 150, 'g'],
+    ['poulet', 'meat', 150, 'g'], ['porc', 'meat', 150, 'g'], ['bœuf', 'meat', 150, 'g']
+  ].forEach(protein => insert.run(...protein));
 }
 
 function seed(db) {
@@ -211,15 +241,54 @@ function meals(db, start) {
 
 function shoppingList(db, start) {
   return db.prepare(`
-    SELECT ingredients.name, ingredients.unit,
-           SUM(recipe_ingredients.amount * meals.people / recipes.servings) AS amount
-    FROM meals
-    JOIN recipes ON recipes.id = meals.recipe_id
-    JOIN recipe_ingredients ON recipe_ingredients.recipe_id = recipes.id
-    JOIN ingredients ON ingredients.id = recipe_ingredients.ingredient_id
-    WHERE meals.location = 'home' AND meals.date BETWEEN ? AND ?
-    GROUP BY ingredients.id ORDER BY ingredients.name
-  `).all(start, addDays(start, 6)).map(item => ({ ...item, amount: Math.round(item.amount * 100) / 100 }));
+    WITH items AS (
+      SELECT ingredients.name, ingredients.unit,
+             recipe_ingredients.amount * meals.people / recipes.servings AS amount
+      FROM meals
+      JOIN recipes ON recipes.id = meals.recipe_id
+      JOIN recipe_ingredients ON recipe_ingredients.recipe_id = recipes.id
+      JOIN ingredients ON ingredients.id = recipe_ingredients.ingredient_id
+      WHERE meals.location = 'home' AND meals.date BETWEEN ? AND ?
+      UNION ALL
+      SELECT proteins.name, proteins.unit, proteins.amount * meal_assignments.portions
+      FROM meal_assignments
+      JOIN meals ON meals.id = meal_assignments.meal_id
+      JOIN proteins ON proteins.id = meal_assignments.protein_id
+      WHERE meals.date BETWEEN ? AND ?
+    )
+    SELECT name, unit, SUM(amount) AS amount FROM items GROUP BY name, unit ORDER BY name
+  `).all(start, addDays(start, 6), start, addDays(start, 6)).map(item => ({ ...item, amount: Math.round(item.amount * 100) / 100 }));
+}
+
+function household(db) {
+  return {
+    members: db.prepare('SELECT id, name, diet FROM members ORDER BY name').all(),
+    proteins: db.prepare('SELECT id, name, category, amount, unit FROM proteins ORDER BY name').all()
+  };
+}
+
+function validateMember(input) {
+  if (!input || typeof input.name !== 'string' || !input.name.trim() || input.name.length > 60) throw new Error('Nom invalide');
+  if (!['vegan', 'vegetarian', 'pescetarian', 'omnivore'].includes(input.diet)) throw new Error('Régime invalide');
+  return { name: input.name.trim(), diet: input.diet };
+}
+
+function validateProtein(input) {
+  if (!input || typeof input.name !== 'string' || !input.name.trim() || input.name.length > 60) throw new Error('Protéine invalide');
+  if (!['plant', 'egg', 'fish', 'meat'].includes(input.category)) throw new Error('Catégorie invalide');
+  if (typeof input.amount !== 'number' || !Number.isFinite(input.amount) || input.amount <= 0 || input.amount > 10_000) throw new Error('Quantité invalide');
+  if (typeof input.unit !== 'string' || !input.unit.trim() || input.unit.length > 24) throw new Error('Unité invalide');
+  return { name: input.name.trim().toLocaleLowerCase('fr'), category: input.category, amount: input.amount, unit: input.unit.trim() };
+}
+
+function isCompatible(diet, category) {
+  const allowed = {
+    vegan: ['plant'],
+    vegetarian: ['plant', 'egg'],
+    pescetarian: ['plant', 'egg', 'fish'],
+    omnivore: ['plant', 'egg', 'fish', 'meat']
+  };
+  return allowed[diet]?.includes(category) === true;
 }
 
 function suggestions(db) {
@@ -247,28 +316,53 @@ function validateMeal(input, db) {
   if (typeof input.title !== 'string' || !input.title.trim() || input.title.length > 120) throw new Error('Titre invalide');
   if (input.recipeId != null && !db.prepare('SELECT 1 FROM recipes WHERE id = ?').get(input.recipeId)) throw new Error('Recette inconnue');
   if (input.location !== 'home' && input.recipeId != null) throw new Error('Une recette est réservée aux repas à la maison');
+  const assignments = input.assignments == null ? [] : input.assignments;
+  if (!Array.isArray(assignments) || assignments.length > 100) throw new Error('Répartition invalide');
+  const seenMembers = new Set();
+  const checkedAssignments = assignments.map(assignment => {
+    if (!assignment || !Number.isInteger(assignment.memberId) || !Number.isInteger(assignment.proteinId) || !Number.isInteger(assignment.portions) || assignment.portions < 1 || assignment.portions > 20) throw new Error('Répartition invalide');
+    if (seenMembers.has(assignment.memberId)) throw new Error('Membre présent plusieurs fois');
+    seenMembers.add(assignment.memberId);
+    const member = db.prepare('SELECT diet FROM members WHERE id = ?').get(assignment.memberId);
+    const protein = db.prepare('SELECT category FROM proteins WHERE id = ?').get(assignment.proteinId);
+    if (!member || !protein || !isCompatible(member.diet, protein.category)) throw new Error('Protéine incompatible avec le régime');
+    return assignment;
+  });
+  if (input.location !== 'home' && checkedAssignments.length) throw new Error('Les variantes sont réservées aux repas à la maison');
   return {
     date: input.date,
     slot: input.slot,
     location: input.location,
     occasion: input.occasion,
-    people: input.people,
+    people: checkedAssignments.length ? checkedAssignments.reduce((total, item) => total + item.portions, 0) : input.people,
     recipeId: input.recipeId ?? null,
-    title: input.title.trim()
+    title: input.title.trim(),
+    assignments: checkedAssignments
   };
 }
 
 function upsertMeal(db, meal) {
-  db.prepare(`
-    INSERT INTO meals (date, slot, location, occasion, people, recipe_id, title)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT (date, slot) DO UPDATE SET
-      location = excluded.location,
-      occasion = excluded.occasion,
-      people = excluded.people,
-      recipe_id = excluded.recipe_id,
-      title = excluded.title
-  `).run(meal.date, meal.slot, meal.location, meal.occasion, meal.people, meal.recipeId, meal.title);
+  db.exec('BEGIN');
+  try {
+    db.prepare(`
+      INSERT INTO meals (date, slot, location, occasion, people, recipe_id, title)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT (date, slot) DO UPDATE SET
+        location = excluded.location,
+        occasion = excluded.occasion,
+        people = excluded.people,
+        recipe_id = excluded.recipe_id,
+        title = excluded.title
+    `).run(meal.date, meal.slot, meal.location, meal.occasion, meal.people, meal.recipeId, meal.title);
+    const mealId = db.prepare('SELECT id FROM meals WHERE date = ? AND slot = ?').get(meal.date, meal.slot).id;
+    db.prepare('DELETE FROM meal_assignments WHERE meal_id = ?').run(mealId);
+    const insert = db.prepare('INSERT INTO meal_assignments (meal_id, member_id, protein_id, portions) VALUES (?, ?, ?, ?)');
+    meal.assignments.forEach(assignment => insert.run(mealId, assignment.memberId, assignment.proteinId, assignment.portions));
+    db.exec('COMMIT');
+  } catch (error) {
+    db.exec('ROLLBACK');
+    throw error;
+  }
 }
 
 function sendJson(response, status, value) {
@@ -322,6 +416,22 @@ function createHandler(db) {
         return sendJson(response, 200, suggestions(db));
       }
 
+      if (request.method === 'GET' && url.pathname === '/api/household') {
+        return sendJson(response, 200, household(db));
+      }
+
+      if (request.method === 'POST' && url.pathname === '/api/members') {
+        const member = validateMember(await readJson(request));
+        const id = Number(db.prepare('INSERT INTO members (name, diet) VALUES (?, ?)').run(member.name, member.diet).lastInsertRowid);
+        return sendJson(response, 201, { id, ...member });
+      }
+
+      if (request.method === 'POST' && url.pathname === '/api/proteins') {
+        const protein = validateProtein(await readJson(request));
+        const id = Number(db.prepare('INSERT INTO proteins (name, category, amount, unit) VALUES (?, ?, ?, ?)').run(protein.name, protein.category, protein.amount, protein.unit).lastInsertRowid);
+        return sendJson(response, 201, { id, ...protein });
+      }
+
       if (request.method === 'POST' && url.pathname === '/api/recipes') {
         return sendJson(response, 201, saveRecipe(db, validateRecipe(await readJson(request))));
       }
@@ -362,4 +472,4 @@ if (require.main === module) {
   server.listen(port, '0.0.0.0', () => console.log(`Manger! écoute sur http://localhost:${port}`));
 }
 
-module.exports = { addDays, createApp, createDatabase, dateKey, isDateKey, recipes, saveRecipe, shoppingList, suggestions, validateMeal, validateRecipe };
+module.exports = { addDays, createApp, createDatabase, dateKey, household, isCompatible, isDateKey, recipes, saveRecipe, shoppingList, suggestions, validateMeal, validateMember, validateProtein, validateRecipe };
