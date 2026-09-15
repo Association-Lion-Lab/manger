@@ -69,6 +69,7 @@
     .meal-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; }
     .meal-copy small { color: var(--muted); font-size: 12px; }
     .primary, .secondary { width: 100%; min-height: 50px; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 16px; border-radius: 16px; font-weight: 650; cursor: pointer; }
+    .primary[hidden], .secondary[hidden] { display: none; }
     .primary { border: 0; color: #fff; background: var(--accent); }
     .secondary { border: 1px solid var(--line); background: var(--raised); }
     .panel[hidden] { display: none; }
@@ -118,7 +119,9 @@
     .detail-step p { margin: 0; line-height: 1.45; }
     .household-section { display: grid; gap: 10px; margin-top: 18px; }
     .household-list { display: flex; flex-wrap: wrap; gap: 7px; }
-    .food-tag { padding: 7px 10px; border-radius: 99px; color: var(--accent); background: var(--accent-soft); font-size: 12px; font-weight: 700; }
+    .food-tag { padding: 7px 10px; border: 0; border-radius: 99px; color: var(--accent); background: var(--accent-soft); font-size: 12px; font-weight: 700; }
+    button.food-tag { cursor: pointer; }
+    button.food-tag[aria-pressed="true"] { outline: 2px solid var(--accent); outline-offset: 2px; }
     .food-tag[data-category="plant"] { color: var(--green); background: color-mix(in srgb, var(--green) 13%, transparent); }
     .food-tag[data-category="fish"] { color: #23718a; background: #e5f3f7; }
     .food-tag[data-category="meat"] { color: #a33b2a; background: #fae9e5; }
@@ -250,7 +253,8 @@
         <form id="member-form" class="compact-form">
           <label class="field"><span>Prénom</span><input id="member-name" required maxlength="60" placeholder="Camille"></label>
           <label class="field"><span>Style</span><select id="member-diet"><option value="vegan">J’aime les graines</option><option value="vegetarian">Veggie cool</option><option value="pescetarian">Team océan</option><option value="omnivore">Je mange de tout</option></select></label>
-          <button class="primary wide" type="submit">Ajouter au foyer</button>
+          <button id="save-member" class="primary wide" type="submit">Ajouter au foyer</button>
+          <button id="delete-member" class="secondary wide" type="button" hidden>Retirer cette personne</button>
         </form>
       </section>
       <section class="household-section">
@@ -281,6 +285,7 @@
     const dietLabels = { vegan: 'J’aime les graines', vegetarian: 'Veggie cool', pescetarian: 'Team océan', omnivore: 'Je mange de tout' };
     const categoryLabels = { plant: 'Graines & plantes', egg: 'Veggie', fish: 'Team océan', meat: 'Viandard·e' };
     let editingRecipeId = null;
+    let editingMemberId = null;
 
     function key(date) {
       const year = date.getFullYear();
@@ -368,7 +373,7 @@
     }
 
     function renderHousehold() {
-      document.getElementById('member-list').innerHTML = state.members.length ? state.members.map(member => `<span class="food-tag">${escapeHtml(member.name)} · ${dietLabels[member.diet]}</span>`).join('') : '<span class="muted">Ajoutez les personnes qui mangent régulièrement ici.</span>';
+      document.getElementById('member-list').innerHTML = state.members.length ? state.members.map(member => `<button class="food-tag" type="button" data-member="${member.id}" aria-pressed="${member.id === editingMemberId}">${escapeHtml(member.name)} · ${dietLabels[member.diet]}</button>`).join('') : '<span class="muted">Ajoutez les personnes qui mangent régulièrement ici.</span>';
       document.getElementById('protein-list').innerHTML = state.proteins.map(protein => `<span class="food-tag" data-category="${protein.category}" title="${formatAmount(protein.amount)} ${escapeHtml(protein.unit)} par portion">${escapeHtml(protein.name)} · ${categoryLabels[protein.category]}</span>`).join('');
     }
 
@@ -729,9 +734,28 @@
     document.getElementById('close-household').addEventListener('click', () => householdDialog.close());
     document.getElementById('member-form').addEventListener('submit', async event => {
       event.preventDefault();
-      const response = await fetch('/api/members', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: document.getElementById('member-name').value, diet: document.getElementById('member-diet').value }) });
+      const response = await fetch(editingMemberId ? `/api/members/${editingMemberId}` : '/api/members', { method: editingMemberId ? 'PUT' : 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: document.getElementById('member-name').value, diet: document.getElementById('member-diet').value }) });
       if (!response.ok) return showHouseholdError(await response.json());
-      event.target.reset();
+      clearMemberEditor();
+      await load();
+    });
+    document.getElementById('member-list').addEventListener('click', event => {
+      const button = event.target.closest('[data-member]');
+      if (!button) return;
+      const member = state.members.find(item => item.id === Number(button.dataset.member));
+      editingMemberId = member.id;
+      document.getElementById('member-name').value = member.name;
+      document.getElementById('member-diet').value = member.diet;
+      document.getElementById('save-member').textContent = 'Enregistrer les changements';
+      document.getElementById('delete-member').hidden = false;
+      renderHousehold();
+    });
+    document.getElementById('delete-member').addEventListener('click', async () => {
+      const member = state.members.find(item => item.id === editingMemberId);
+      if (!member || !confirm(`Retirer ${member.name} du foyer ?`)) return;
+      const response = await fetch(`/api/members/${member.id}`, { method: 'DELETE' });
+      if (!response.ok) return showHouseholdError(await response.json());
+      clearMemberEditor();
       await load();
     });
     document.getElementById('protein-form').addEventListener('submit', async event => {
@@ -748,6 +772,14 @@
       const message = document.getElementById('household-error');
       message.textContent = error.error;
       message.hidden = false;
+    }
+
+    function clearMemberEditor() {
+      editingMemberId = null;
+      document.getElementById('member-form').reset();
+      document.getElementById('save-member').textContent = 'Ajouter au foyer';
+      document.getElementById('delete-member').hidden = true;
+      document.getElementById('household-error').hidden = true;
     }
 
     load().catch(error => {

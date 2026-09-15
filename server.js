@@ -527,6 +527,18 @@ function createHandler(db) {
         return sendJson(response, 201, { id, ...member });
       }
 
+      const memberMatch = url.pathname.match(/^\/api\/members\/(\d+)$/);
+      if (request.method === 'PUT' && memberMatch) {
+        const id = Number(memberMatch[1]);
+        const member = validateMember(await readJson(request));
+        if (db.prepare('UPDATE members SET name = ?, diet = ? WHERE id = ?').run(member.name, member.diet, id).changes === 0) throw new Error('Membre inconnu');
+        return sendJson(response, 200, { id, ...member });
+      }
+      if (request.method === 'DELETE' && memberMatch) {
+        if (db.prepare('DELETE FROM members WHERE id = ?').run(Number(memberMatch[1])).changes === 0) throw new Error('Membre inconnu');
+        return sendJson(response, 200, {});
+      }
+
       if (request.method === 'POST' && url.pathname === '/api/proteins') {
         const protein = validateProtein(await readJson(request));
         const id = Number(db.prepare('INSERT INTO proteins (name, category, amount, unit) VALUES (?, ?, ?, ?)').run(protein.name, protein.category, protein.amount, protein.unit).lastInsertRowid);
