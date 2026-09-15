@@ -411,17 +411,23 @@
       dialog.showModal();
     }
 
-    async function openSuggestions() {
-      state.slot = mealFor(state.selected, 'soir') ? 'midi' : 'soir';
-      const response = await fetch(`/api/suggestions?start=${key(state.weekStart)}`);
+    async function renderSuggestions(maxMinutes = '30') {
+      const response = await fetch(`/api/suggestions?start=${key(state.weekStart)}${maxMinutes ? `&maxMinutes=${maxMinutes}` : ''}`);
       const suggestions = await response.json();
-      document.getElementById('dialog-title').textContent = 'Trois idées pour vous';
-      document.getElementById('dialog-subtitle').textContent = `${fullDayNames[state.selected]} · ${state.slot === 'midi' ? 'Midi' : 'Soir'}`;
-      document.getElementById('choices').innerHTML = suggestions.map(recipe => {
+      const filter = `<label class="field"><span>Temps disponible</span><select id="suggestion-minutes"><option value="15"${maxMinutes === '15' ? ' selected' : ''}>15 minutes</option><option value="30"${maxMinutes === '30' ? ' selected' : ''}>30 minutes</option><option value="45"${maxMinutes === '45' ? ' selected' : ''}>45 minutes</option><option value="60"${maxMinutes === '60' ? ' selected' : ''}>1 heure</option><option value=""${maxMinutes === '' ? ' selected' : ''}>Peu importe</option></select></label>`;
+      const recipes = suggestions.map(recipe => {
         const detail = recipe.reusedIngredients.length ? `Anti-gaspi · réutilise ${recipe.reusedIngredients.join(', ')}` : `${recipe.minutes} min · ${recipe.lastEaten ? 'à refaire' : 'nouveau cette semaine'}`;
         return choice(recipe.reusedIngredients.length ? '♻' : '✦', recipe.title, detail, { recipe: recipe.id, suggest: 'true' });
-      }).join('') + (state.members.length > 1 ? choice('⋈', 'Deux recettes coordonnées', 'Une recette compatible par personne', { duo: 'true' }) : '');
+      }).join('') || '<div class="empty-state">Aucune recette ne correspond à ce temps et à tout le foyer.</div>';
+      document.getElementById('choices').innerHTML = filter + recipes + (state.members.length > 1 ? choice('⋈', 'Deux recettes coordonnées', 'Une recette compatible par personne', { duo: 'true' }) : '');
+    }
+
+    async function openSuggestions() {
+      state.slot = mealFor(state.selected, 'soir') ? 'midi' : 'soir';
+      document.getElementById('dialog-title').textContent = 'Trois idées pour vous';
+      document.getElementById('dialog-subtitle').textContent = `${fullDayNames[state.selected]} · ${state.slot === 'midi' ? 'Midi' : 'Soir'}`;
       dialog.showModal();
+      await renderSuggestions();
     }
 
     async function saveMeal(button) {
@@ -665,6 +671,9 @@
       }
       if (button.dataset.change) return openAdd(state.slot);
       button.dataset.remove ? deleteMeal() : button.dataset.duo ? openDuoSetup() : saveMeal(button);
+    });
+    document.getElementById('choices').addEventListener('change', event => {
+      if (event.target.id === 'suggestion-minutes') renderSuggestions(event.target.value);
     });
     document.getElementById('previous-week').addEventListener('click', async () => { state.weekStart.setDate(state.weekStart.getDate() - 7); state.selected = 0; await load(); });
     document.getElementById('next-week').addEventListener('click', async () => { state.weekStart.setDate(state.weekStart.getDate() + 7); state.selected = 0; await load(); });

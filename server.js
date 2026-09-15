@@ -338,8 +338,9 @@ function isDietCompatible(memberDiet, recipeDiet) {
   return rank[recipeDiet] <= rank[memberDiet];
 }
 
-function suggestions(db, start = null) {
+function suggestions(db, start = null, maxMinutes = null) {
   // ponytail: exact ingredient-name overlap; add pantry quantities only if users need finer scoring.
+  const memberDiets = db.prepare('SELECT diet FROM members').all().map(member => member.diet);
   const candidates = db.prepare(`
     WITH eaten AS (
       SELECT recipe_id, date FROM meals WHERE recipe_id IS NOT NULL
@@ -350,7 +351,10 @@ function suggestions(db, start = null) {
            MAX(eaten.date) AS lastEaten
     FROM recipes LEFT JOIN eaten ON eaten.recipe_id = recipes.id
     GROUP BY recipes.id
-  `).all();
+  `).all().filter(recipe =>
+    (maxMinutes == null || recipe.minutes <= maxMinutes) &&
+    memberDiets.every(diet => isDietCompatible(diet, recipe.diet))
+  );
   const ingredientQuery = db.prepare(`
     SELECT ingredients.name FROM recipe_ingredients
     JOIN ingredients ON ingredients.id = recipe_ingredients.ingredient_id
@@ -506,8 +510,11 @@ function createHandler(db) {
 
       if (request.method === 'GET' && url.pathname === '/api/suggestions') {
         const start = url.searchParams.get('start');
+        const maxMinutesValue = url.searchParams.get('maxMinutes');
+        const maxMinutes = maxMinutesValue == null ? null : Number(maxMinutesValue);
         if (start != null && !isDateKey(start)) throw new Error('Début de semaine invalide');
-        return sendJson(response, 200, suggestions(db, start));
+        if (maxMinutes != null && (!Number.isInteger(maxMinutes) || maxMinutes < 1 || maxMinutes > 1440)) throw new Error('Temps disponible invalide');
+        return sendJson(response, 200, suggestions(db, start, maxMinutes));
       }
 
       if (request.method === 'GET' && url.pathname === '/api/household') {
