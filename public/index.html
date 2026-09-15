@@ -238,7 +238,11 @@
         <section><h3>Ingrédients</h3><ul id="recipe-view-ingredients" class="detail-list"></ul></section>
         <section><h3>Réalisation</h3><ol id="recipe-view-steps" class="detail-list"></ol></section>
       </div>
-      <button id="edit-recipe" class="secondary" type="button">Modifier la recette</button>
+      <p id="recipe-view-error" class="error" role="alert" hidden></p>
+      <div class="recipe-form-actions">
+        <button id="edit-recipe" class="secondary" type="button">Modifier</button>
+        <button id="delete-recipe" class="secondary" type="button">Supprimer</button>
+      </div>
     </dialog>
 
     <dialog id="household-dialog">
@@ -607,6 +611,7 @@
 
     function openRecipe(recipe) {
       editingRecipeId = recipe.id;
+      document.getElementById('recipe-view-error').hidden = true;
       document.getElementById('recipe-view-title').textContent = recipe.title;
       document.getElementById('recipe-view-meta').textContent = `${recipe.minutes} min · ${recipe.servings} portions · ${dietLabels[recipe.diet]}`;
       document.getElementById('recipe-view-ingredients').innerHTML = recipe.ingredients.map(ingredient => `<li>${escapeHtml(shoppingText(ingredient))}</li>`).join('');
@@ -714,6 +719,19 @@
       const recipe = state.recipes.find(item => item.id === editingRecipeId);
       recipeViewDialog.close();
       openRecipeEditor(recipe);
+    });
+    document.getElementById('delete-recipe').addEventListener('click', async () => {
+      const recipe = state.recipes.find(item => item.id === editingRecipeId);
+      if (!recipe || !confirm(`Supprimer la recette « ${recipe.title} » ?`)) return;
+      const response = await fetch(`/api/recipes/${recipe.id}`, { method: 'DELETE' });
+      if (!response.ok) {
+        const message = document.getElementById('recipe-view-error');
+        message.textContent = (await response.json()).error;
+        message.hidden = false;
+        return;
+      }
+      recipeViewDialog.close();
+      await load();
     });
     document.getElementById('close-recipe-dialog').addEventListener('click', () => recipeDialog.close());
     document.getElementById('cancel-recipe').addEventListener('click', () => recipeDialog.close());

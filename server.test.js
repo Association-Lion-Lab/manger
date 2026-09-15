@@ -239,3 +239,20 @@ test('une protéine peut être gérée sans casser les régimes planifiés', asy
   assert.equal((await request(`/api/proteins/${tofu.id}`, 'PUT', { ...tofu, category: 'meat' })).status, 400);
   assert.equal((await request(`/api/proteins/${tofu.id}`, 'DELETE')).status, 400);
 });
+
+test('une recette libre peut être supprimée mais pas une recette planifiée', async t => {
+  const server = createApp(createDatabase(':memory:'));
+  server.listen(0, '127.0.0.1');
+  await once(server, 'listening');
+  t.after(() => server.close());
+  const baseUrl = `http://127.0.0.1:${server.address().port}`;
+  const request = (path, method, body) => fetch(`${baseUrl}${path}`, { method, headers: { 'content-type': 'application/json' }, body: body && JSON.stringify(body) });
+  const recipe = { title: 'Test à supprimer', minutes: 10, servings: 1, diet: 'vegan', tags: [], ingredients: [{ name: 'tomate', amount: 1, unit: 'pièce' }], steps: [{ kind: 'prep', instruction: 'Couper.', minutes: 2 }] };
+
+  const created = await (await request('/api/recipes', 'POST', recipe)).json();
+  assert.equal((await request(`/api/recipes/${created.id}`, 'DELETE')).status, 200);
+  assert.equal((await request(`/api/recipes/${created.id}`, 'DELETE')).status, 400);
+
+  await request('/api/meals', 'POST', { date: '2026-09-14', slot: 'soir', location: 'home', occasion: 'regular', people: 2, recipeId: 1, title: 'Bowl', assignments: [] });
+  assert.equal((await request('/api/recipes/1', 'DELETE')).status, 400);
+});

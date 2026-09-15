@@ -577,6 +577,13 @@ function createHandler(db) {
       if (request.method === 'PUT' && recipeMatch) {
         return sendJson(response, 200, saveRecipe(db, validateRecipe(await readJson(request)), Number(recipeMatch[1])));
       }
+      if (request.method === 'DELETE' && recipeMatch) {
+        const id = Number(recipeMatch[1]);
+        const planned = db.prepare('SELECT 1 FROM meals WHERE recipe_id = ? UNION SELECT 1 FROM meal_dishes WHERE recipe_id = ?').get(id, id);
+        if (planned) throw new Error('Cette recette est utilisée dans le planning');
+        if (db.prepare('DELETE FROM recipes WHERE id = ?').run(id).changes === 0) throw new Error('Recette inconnue');
+        return sendJson(response, 200, {});
+      }
 
       if (request.method === 'POST' && url.pathname === '/api/meals') {
         const meal = validateMeal(await readJson(request), db);
