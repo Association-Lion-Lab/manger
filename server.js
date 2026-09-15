@@ -545,6 +545,22 @@ function createHandler(db) {
         return sendJson(response, 201, { id, ...protein });
       }
 
+      const proteinMatch = url.pathname.match(/^\/api\/proteins\/(\d+)$/);
+      if (request.method === 'PUT' && proteinMatch) {
+        const id = Number(proteinMatch[1]);
+        const protein = validateProtein(await readJson(request));
+        const diets = db.prepare('SELECT members.diet FROM meal_assignments JOIN members ON members.id = meal_assignments.member_id WHERE protein_id = ?').all(id);
+        if (diets.some(member => !isCompatible(member.diet, protein.category))) throw new Error('Cette catégorie est incompatible avec un repas déjà planifié');
+        if (db.prepare('UPDATE proteins SET name = ?, category = ?, amount = ?, unit = ? WHERE id = ?').run(protein.name, protein.category, protein.amount, protein.unit, id).changes === 0) throw new Error('Protéine inconnue');
+        return sendJson(response, 200, { id, ...protein });
+      }
+      if (request.method === 'DELETE' && proteinMatch) {
+        const id = Number(proteinMatch[1]);
+        if (db.prepare('SELECT 1 FROM meal_assignments WHERE protein_id = ?').get(id)) throw new Error('Cette protéine est utilisée dans le planning');
+        if (db.prepare('DELETE FROM proteins WHERE id = ?').run(id).changes === 0) throw new Error('Protéine inconnue');
+        return sendJson(response, 200, {});
+      }
+
       if (request.method === 'POST' && url.pathname === '/api/shopping-checks') {
         const input = await readJson(request);
         if (!input || !isDateKey(input.weekStart) || typeof input.name !== 'string' || !input.name || input.name.length > 80 || typeof input.unit !== 'string' || !input.unit || input.unit.length > 24 || typeof input.checked !== 'boolean') throw new Error('Article invalide');

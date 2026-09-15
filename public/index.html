@@ -265,7 +265,8 @@
           <label class="field"><span>Famille</span><select id="protein-category"><option value="plant">J’aime les graines</option><option value="egg">Veggie cool</option><option value="fish">Team océan</option><option value="meat">Viandard·e</option></select></label>
           <label class="field"><span>Quantité</span><input id="protein-amount" type="number" min="0.01" max="10000" step="0.01" value="150" required></label>
           <label class="field wide"><span>Unité</span><input id="protein-unit" value="g" required maxlength="24"></label>
-          <button class="primary wide" type="submit">Ajouter la protéine</button>
+          <button id="save-protein" class="primary wide" type="submit">Ajouter la protéine</button>
+          <button id="delete-protein" class="secondary wide" type="button" hidden>Retirer cette protéine</button>
         </form>
         <p id="household-error" class="error" role="alert" hidden></p>
       </section>
@@ -286,6 +287,7 @@
     const categoryLabels = { plant: 'Graines & plantes', egg: 'Veggie', fish: 'Team océan', meat: 'Viandard·e' };
     let editingRecipeId = null;
     let editingMemberId = null;
+    let editingProteinId = null;
 
     function key(date) {
       const year = date.getFullYear();
@@ -374,7 +376,7 @@
 
     function renderHousehold() {
       document.getElementById('member-list').innerHTML = state.members.length ? state.members.map(member => `<button class="food-tag" type="button" data-member="${member.id}" aria-pressed="${member.id === editingMemberId}">${escapeHtml(member.name)} · ${dietLabels[member.diet]}</button>`).join('') : '<span class="muted">Ajoutez les personnes qui mangent régulièrement ici.</span>';
-      document.getElementById('protein-list').innerHTML = state.proteins.map(protein => `<span class="food-tag" data-category="${protein.category}" title="${formatAmount(protein.amount)} ${escapeHtml(protein.unit)} par portion">${escapeHtml(protein.name)} · ${categoryLabels[protein.category]}</span>`).join('');
+      document.getElementById('protein-list').innerHTML = state.proteins.map(protein => `<button class="food-tag" type="button" data-protein="${protein.id}" data-category="${protein.category}" aria-pressed="${protein.id === editingProteinId}" title="${formatAmount(protein.amount)} ${escapeHtml(protein.unit)} par portion">${escapeHtml(protein.name)} · ${categoryLabels[protein.category]}</button>`).join('');
     }
 
     function formatAmount(amount) {
@@ -760,11 +762,30 @@
     });
     document.getElementById('protein-form').addEventListener('submit', async event => {
       event.preventDefault();
-      const response = await fetch('/api/proteins', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: document.getElementById('protein-name').value, category: document.getElementById('protein-category').value, amount: Number(document.getElementById('protein-amount').value), unit: document.getElementById('protein-unit').value }) });
+      const response = await fetch(editingProteinId ? `/api/proteins/${editingProteinId}` : '/api/proteins', { method: editingProteinId ? 'PUT' : 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: document.getElementById('protein-name').value, category: document.getElementById('protein-category').value, amount: Number(document.getElementById('protein-amount').value), unit: document.getElementById('protein-unit').value }) });
       if (!response.ok) return showHouseholdError(await response.json());
-      event.target.reset();
-      document.getElementById('protein-amount').value = 150;
-      document.getElementById('protein-unit').value = 'g';
+      clearProteinEditor();
+      await load();
+    });
+    document.getElementById('protein-list').addEventListener('click', event => {
+      const button = event.target.closest('[data-protein]');
+      if (!button) return;
+      const protein = state.proteins.find(item => item.id === Number(button.dataset.protein));
+      editingProteinId = protein.id;
+      document.getElementById('protein-name').value = protein.name;
+      document.getElementById('protein-category').value = protein.category;
+      document.getElementById('protein-amount').value = protein.amount;
+      document.getElementById('protein-unit').value = protein.unit;
+      document.getElementById('save-protein').textContent = 'Enregistrer la protéine';
+      document.getElementById('delete-protein').hidden = false;
+      renderHousehold();
+    });
+    document.getElementById('delete-protein').addEventListener('click', async () => {
+      const protein = state.proteins.find(item => item.id === editingProteinId);
+      if (!protein || !confirm(`Retirer ${protein.name} du bar à protéines ?`)) return;
+      const response = await fetch(`/api/proteins/${protein.id}`, { method: 'DELETE' });
+      if (!response.ok) return showHouseholdError(await response.json());
+      clearProteinEditor();
       await load();
     });
 
@@ -779,6 +800,16 @@
       document.getElementById('member-form').reset();
       document.getElementById('save-member').textContent = 'Ajouter au foyer';
       document.getElementById('delete-member').hidden = true;
+      document.getElementById('household-error').hidden = true;
+    }
+
+    function clearProteinEditor() {
+      editingProteinId = null;
+      document.getElementById('protein-form').reset();
+      document.getElementById('protein-amount').value = 150;
+      document.getElementById('protein-unit').value = 'g';
+      document.getElementById('save-protein').textContent = 'Ajouter la protéine';
+      document.getElementById('delete-protein').hidden = true;
       document.getElementById('household-error').hidden = true;
     }
 

@@ -218,3 +218,24 @@ test('un membre du foyer peut être modifié puis retiré', async t => {
   assert.equal((await fetch(`${baseUrl}/api/members/${created.id}`, { method: 'DELETE' })).status, 200);
   assert.deepEqual((await (await fetch(`${baseUrl}/api/household`)).json()).members, []);
 });
+
+test('une protéine peut être gérée sans casser les régimes planifiés', async t => {
+  const server = createApp(createDatabase(':memory:'));
+  server.listen(0, '127.0.0.1');
+  await once(server, 'listening');
+  t.after(() => server.close());
+  const baseUrl = `http://127.0.0.1:${server.address().port}`;
+  const request = (path, method, body) => fetch(`${baseUrl}${path}`, { method, headers: { 'content-type': 'application/json' }, body: body && JSON.stringify(body) });
+
+  const created = await (await request('/api/proteins', 'POST', { name: 'Seitan', category: 'plant', amount: 120, unit: 'g' })).json();
+  const updated = await request(`/api/proteins/${created.id}`, 'PUT', { name: 'Seitan grillé', category: 'plant', amount: 140, unit: 'g' });
+  assert.equal(updated.status, 200);
+  assert.equal((await updated.json()).amount, 140);
+  assert.equal((await request(`/api/proteins/${created.id}`, 'DELETE')).status, 200);
+
+  const member = await (await request('/api/members', 'POST', { name: 'Julie', diet: 'vegetarian' })).json();
+  const tofu = (await (await fetch(`${baseUrl}/api/household`)).json()).proteins.find(protein => protein.name === 'tofu');
+  await request('/api/meals', 'POST', { date: '2026-09-14', slot: 'soir', location: 'home', occasion: 'regular', people: 1, recipeId: 1, title: 'Bowl', assignments: [{ memberId: member.id, proteinId: tofu.id, portions: 1 }] });
+  assert.equal((await request(`/api/proteins/${tofu.id}`, 'PUT', { ...tofu, category: 'meat' })).status, 400);
+  assert.equal((await request(`/api/proteins/${tofu.id}`, 'DELETE')).status, 400);
+});
