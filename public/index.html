@@ -416,7 +416,7 @@
       const suggestions = await response.json();
       const filter = `<label class="field"><span>Temps disponible</span><select id="suggestion-minutes"><option value="15"${maxMinutes === '15' ? ' selected' : ''}>15 minutes</option><option value="30"${maxMinutes === '30' ? ' selected' : ''}>30 minutes</option><option value="45"${maxMinutes === '45' ? ' selected' : ''}>45 minutes</option><option value="60"${maxMinutes === '60' ? ' selected' : ''}>1 heure</option><option value=""${maxMinutes === '' ? ' selected' : ''}>Peu importe</option></select></label>`;
       const recipes = suggestions.map(recipe => {
-        const detail = recipe.reusedIngredients.length ? `Anti-gaspi · réutilise ${recipe.reusedIngredients.join(', ')}` : `${recipe.minutes} min · ${recipe.lastEaten ? 'à refaire' : 'nouveau cette semaine'}`;
+        const detail = `${recipe.minutes} min · ${recipe.reusedIngredients.length ? `Anti-gaspi · réutilise ${recipe.reusedIngredients.join(', ')}` : recipe.lastEaten ? 'à refaire' : 'nouveau cette semaine'}`;
         return choice(recipe.reusedIngredients.length ? '♻' : '✦', recipe.title, detail, { recipe: recipe.id, suggest: 'true' });
       }).join('') || '<div class="empty-state">Aucune recette ne correspond à ce temps et à tout le foyer.</div>';
       document.getElementById('choices').innerHTML = filter + recipes + (state.members.length > 1 ? choice('⋈', 'Deux recettes coordonnées', 'Une recette compatible par personne', { duo: 'true' }) : '');
