@@ -471,6 +471,19 @@ function sendJson(response, status, value) {
   response.end(body);
 }
 
+function calendar(db, start) {
+  const escape = value => String(value).replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;');
+  const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
+  const events = meals(db, start).flatMap(meal => {
+    const date = meal.date.replace(/-/g, '');
+    const nextDate = addDays(meal.date, 1).replace(/-/g, '');
+    const slot = meal.slot === 'midi' ? 'Midi' : 'Soir';
+    const place = meal.location === 'home' ? 'Maison' : meal.location === 'restaurant' ? 'Restaurant' : 'Extérieur';
+    return ['BEGIN:VEVENT', `UID:meal-${meal.id}@manger`, `DTSTAMP:${stamp}`, `DTSTART;VALUE=DATE:${date}`, `DTEND;VALUE=DATE:${nextDate}`, `SUMMARY:${escape(`${slot} — ${meal.title}`)}`, `DESCRIPTION:${escape(`${place} · ${meal.people} personne${meal.people > 1 ? 's' : ''}`)}`, 'END:VEVENT'];
+  });
+  return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Manger!//FR', 'CALSCALE:GREGORIAN', ...events, 'END:VCALENDAR', ''].join('\r\n');
+}
+
 async function readJson(request) {
   const chunks = [];
   let size = 0;
@@ -506,6 +519,15 @@ function createHandler(db) {
         const start = url.searchParams.get('start');
         if (!isDateKey(start)) return sendJson(response, 400, { error: 'Début de semaine invalide' });
         return sendJson(response, 200, { recipes: recipes(db), meals: meals(db, start), shopping: shoppingState(db, start) });
+      }
+
+      if (request.method === 'GET' && url.pathname === '/api/calendar.ics') {
+        const start = url.searchParams.get('start');
+        if (!isDateKey(start)) throw new Error('Début de semaine invalide');
+        const body = Buffer.from(calendar(db, start));
+        response.writeHead(200, { 'Content-Type': 'text/calendar; charset=utf-8', 'Content-Disposition': `attachment; filename="manger-${start}.ics"`, 'Content-Length': body.length, 'Cache-Control': 'no-store' });
+        response.end(body);
+        return;
       }
 
       if (request.method === 'GET' && url.pathname === '/api/suggestions') {
@@ -616,4 +638,4 @@ if (require.main === module) {
   server.listen(port, '0.0.0.0', () => console.log(`Manger! écoute sur http://localhost:${port}`));
 }
 
-module.exports = { addDays, createApp, createDatabase, dateKey, household, isCompatible, isDietCompatible, isDateKey, recipes, saveRecipe, shoppingList, suggestions, validateMeal, validateMember, validateProtein, validateRecipe };
+module.exports = { addDays, calendar, createApp, createDatabase, dateKey, household, isCompatible, isDietCompatible, isDateKey, recipes, saveRecipe, shoppingList, suggestions, validateMeal, validateMember, validateProtein, validateRecipe };

@@ -59,6 +59,7 @@
     .day[aria-selected="true"] i { background: currentColor; }
     .text-action { min-height: 44px; display: inline-flex; align-items: center; gap: 5px; border: 0; color: var(--accent); background: transparent; font-weight: 650; cursor: pointer; }
     .schedule { display: grid; gap: 10px; margin: 12px 0 18px; }
+    .week-actions { display: grid; gap: 8px; }
     .slot-label, .group-title { display: block; margin: 6px 2px; color: var(--muted); font-size: 12px; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; }
     .meal { width: 100%; min-height: 72px; display: grid; grid-template-columns: 44px minmax(0, 1fr) 20px; align-items: center; gap: 12px; padding: 13px; text-align: left; border: 1px solid var(--line); border-radius: 20px; background: var(--raised); cursor: pointer; }
     .meal.empty { border-style: dashed; color: var(--muted); background: transparent; }
@@ -166,7 +167,10 @@
           <button id="add-meal" class="text-action" type="button">＋ Ajouter</button>
         </div>
         <div id="schedule" class="schedule" aria-live="polite"></div>
-        <button id="suggest" class="primary" type="button">✦ Proposer le prochain repas</button>
+        <div class="week-actions">
+          <button id="suggest" class="primary" type="button">✦ Proposer le prochain repas</button>
+          <button id="export-calendar" class="secondary" type="button">⇩ Exporter la semaine</button>
+        </div>
       </section>
 
       <section id="recipes-panel" class="panel" hidden>
@@ -668,6 +672,7 @@
     });
     document.getElementById('add-meal').addEventListener('click', () => openAdd(mealFor(state.selected, 'soir') ? 'midi' : 'soir'));
     document.getElementById('suggest').addEventListener('click', openSuggestions);
+    document.getElementById('export-calendar').addEventListener('click', () => { location.href = `/api/calendar.ics?start=${key(state.weekStart)}`; });
     document.getElementById('close-dialog').addEventListener('click', () => dialog.close());
     document.getElementById('choices').addEventListener('click', event => {
       if (event.target.closest('#confirm-mixed')) return saveMixedMeal();
