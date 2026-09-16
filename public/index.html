@@ -77,6 +77,8 @@
     .recipe-list, .shopping-list { display: grid; margin-top: 16px; }
     .recipe { width: 100%; min-height: 68px; display: grid; grid-template-columns: 44px minmax(0, 1fr) 20px; align-items: center; gap: 12px; padding: 10px 2px; text-align: left; color: inherit; border: 0; border-bottom: 1px solid var(--line); background: transparent; cursor: pointer; }
     .recipe .meal-icon { font-size: 17px; }
+    .recipe-list > .recipe:last-child { border-bottom: 0; }
+    #import-catalog { margin-top: 24px; }
     .recipe-copy { display: grid; gap: 3px; }
     .recipe-copy small { color: var(--muted); }
     .shopping-group { margin: 22px 0; }
@@ -97,8 +99,14 @@
     .choices > div:has(> a) .choice { border: 0; border-radius: 0; }
     .choices > div > a { display: block; padding: 8px 12px; color: var(--accent); font-size: 13px; text-decoration: none; border-top: 1px solid var(--line); }
     .recipe-filters { display: grid; gap: 10px; margin: 16px 0; }
-    .category-options { display: flex; flex-wrap: wrap; gap: 10px; }
-    .category-options label { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+    .category-options { display: flex; flex-wrap: wrap; gap: 8px; }
+    .category-options label { position: relative; display: flex; max-width: 100%; cursor: pointer; }
+    .category-options label > input { position: absolute; width: 1px; height: 1px; min-height: 0; padding: 0; border: 0; margin: 0; overflow: hidden; clip-path: inset(50%); }
+    .category-options label > span { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 99px; background: var(--raised); color: var(--text); font-size: 13px; line-height: 1.3; }
+    .category-options label > span::before { content: '+'; font-size: 16px; }
+    .category-options input:checked + span { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+    .category-options input:checked + span::before { content: '✓'; }
+    .category-options input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 3px; }
     .choice { min-height: 60px; display: grid; grid-template-columns: 42px minmax(0, 1fr); align-items: center; gap: 12px; padding: 9px 12px; text-align: left; border: 1px solid var(--line); border-radius: 16px; background: var(--raised); cursor: pointer; }
     .choice-icon { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 13px; color: var(--accent); background: var(--accent-soft); }
     .choice-copy { display: grid; gap: 2px; }
@@ -425,8 +433,8 @@
       const currentMeal = mealFor(state.selected, slot);
       document.getElementById('dialog-title').textContent = 'Ajouter un repas';
       document.getElementById('dialog-subtitle').textContent = `${fullDayNames[state.selected]} · ${slot === 'midi' ? 'Midi' : 'Soir'}`;
-      const recipeChoices = state.recipes.map(recipe => choice('♨', recipe.title, `${recipe.minutes} min · ${recipe.servings} portions`, { recipe: recipe.id }));
-      document.getElementById('choices').innerHTML = recipeChoices.join('') + choice('⌖', 'Manger à l’extérieur', 'Cantine, restaurant ou repas libre', { location: 'outside' }) + choice('♥', 'Prévoir un date', 'À la maison ou au restaurant', { occasion: 'date' }) + choice('♨', 'Inviter du monde', 'Un repas à partager à la maison', { occasion: 'guests' }) + (currentMeal ? choice('×', 'Retirer ce repas', currentMeal.title, { remove: 'true' }) : '');
+      document.getElementById('choices').innerHTML = recipePicker() + choice('⌖', 'Manger à l’extérieur', 'Cantine, restaurant ou repas libre', { location: 'outside' }) + choice('♥', 'Prévoir un date', 'À la maison ou au restaurant', { occasion: 'date' }) + choice('♨', 'Inviter du monde', 'Un repas à partager à la maison', { occasion: 'guests' }) + (currentMeal ? choice('×', 'Retirer ce repas', currentMeal.title, { remove: 'true' }) : '');
+      renderPickerRecipes();
       if (!dialog.open) dialog.showModal();
     }
 
@@ -492,7 +500,19 @@
     function openGuestRecipes() {
       document.getElementById('dialog-title').textContent = 'Recette pour les invités';
       document.getElementById('dialog-subtitle').textContent = 'Choisissez le plat à préparer';
-      document.getElementById('choices').innerHTML = state.recipes.map(recipe => choice('♨', recipe.title, `${recipe.minutes} min · ${dietLabels[recipe.diet]}`, { guestrecipe: recipe.id })).join('');
+      document.getElementById('choices').innerHTML = recipePicker('guestrecipe');
+      renderPickerRecipes();
+    }
+
+    function recipePicker(mode = 'recipe') {
+      return `<label class="field"><span>Rechercher un plat</span><input id="picker-search" type="search" placeholder="Nom ou ingrédient…"></label><label class="field"><span>Univers</span><select id="picker-category"><option value="">Tous les univers</option>${Object.entries(recipeCategories).map(([key, label]) => `<option value="${key}">${label}</option>`).join('')}</select></label><div id="picker-recipes" class="choices" data-mode="${mode}"></div>`;
+    }
+
+    function renderPickerRecipes() {
+      const query = document.getElementById('picker-search').value.trim().toLocaleLowerCase('fr');
+      const category = document.getElementById('picker-category').value;
+      const container = document.getElementById('picker-recipes');
+      container.innerHTML = state.recipes.filter(recipe => (!category || recipe.tags.includes(category)) && `${recipe.title} ${recipe.ingredients.map(item => item.name).join(' ')}`.toLocaleLowerCase('fr').includes(query)).map(recipe => choice('♨', recipe.title, `${recipe.minutes} min · ${dietLabels[recipe.diet]}`, { [container.dataset.mode]: recipe.id })).join('') || '<p class="empty-state">Aucun plat trouvé. Changez le mot recherché ou l’univers.</p>';
     }
 
     function openEventSetup(occasion, mode = 'standard', recipe = null) {
@@ -504,7 +524,18 @@
       document.getElementById('dialog-subtitle').textContent = `${fullDayNames[state.selected]} · ${state.slot === 'midi' ? 'Midi' : 'Soir'}`;
       const places = isGuests ? '<option value="home">À la maison</option>' : '<option value="restaurant">Restaurant</option><option value="outside">Autre lieu</option>' + (isDate ? '<option value="home">À la maison</option>' : '');
       const restaurantSearch = isGuests ? '' : '<div class="field"><button id="find-restaurants" class="secondary" type="button">⌖ Localise-moi</button><small class="muted">Après autorisation, votre position est transmise à Manger puis à Overpass, sans enregistrement par Manger.</small></div><label class="field"><span>Ou ville / code postal en France</span><input id="restaurant-place" maxlength="80" placeholder="Arras ou 62000" autocomplete="off"></label><button id="find-place" class="secondary" type="button">Rechercher la commune</button><small class="muted">La saisie est envoyée à l’API publique des communes ; le centre choisi est transmis à Overpass.</small><div id="restaurant-results" aria-live="polite"></div>';
-      document.getElementById('choices').innerHTML = `<div class="recipe-form"><label class="field"><span>Nom</span><input id="event-title" maxlength="120" value="${escapeHtml(title)}" required></label><label class="field"><span>Lieu</span><select id="event-location">${places}</select></label>${restaurantSearch}<label class="field"><span>Nombre de personnes</span><input id="event-people" type="number" min="1" max="100" value="${isGuests ? 4 : isDate ? 2 : 1}" required></label><button id="confirm-event" class="primary" type="button">Ajouter au calendrier</button></div>`;
+      const dateRecipes = isDate ? `<div id="date-home-recipes" hidden><label class="field"><span>Recette à préparer</span><select id="date-recipe"><option value="">Sans recette pour le moment</option>${[...state.recipes].sort((a, b) => Number(b.tags.includes('date')) - Number(a.tags.includes('date'))).map(item => `<option value="${item.id}">${escapeHtml(item.title)} · ${item.minutes} min${item.tags.includes('date') ? ' · ♥ Date' : ''}</option>`).join('')}</select></label><p class="muted">Les recettes de date apparaissent en premier. Les ingrédients seront ajoutés aux courses.</p></div>` : '';
+      document.getElementById('choices').innerHTML = `<div class="recipe-form"><label class="field"><span>Nom</span><input id="event-title" maxlength="120" value="${escapeHtml(title)}" required></label><label class="field"><span>Lieu</span><select id="event-location">${places}</select></label><div id="event-restaurant-search">${restaurantSearch}</div>${dateRecipes}<label class="field"><span>Nombre de personnes</span><input id="event-people" type="number" min="1" max="100" value="${isGuests ? 4 : isDate ? 2 : 1}" required></label><button id="confirm-event" class="primary" type="button">Ajouter au calendrier</button></div>`;
+      document.getElementById('event-location').addEventListener('change', () => {
+        const location = document.getElementById('event-location').value;
+        document.getElementById('event-restaurant-search').hidden = location !== 'restaurant';
+        if (isDate) document.getElementById('date-home-recipes').hidden = location !== 'home';
+      });
+      document.getElementById('date-recipe')?.addEventListener('change', event => {
+        const selected = state.recipes.find(item => item.id === Number(event.target.value));
+        document.getElementById('event-title').value = selected?.title ?? 'Date à organiser';
+      });
+      document.getElementById('event-location').dispatchEvent(new Event('change'));
     }
 
     function findRestaurants() {
@@ -565,12 +596,14 @@
     }
 
     async function saveEvent() {
+      const location = document.getElementById('event-location').value;
+      const recipeId = state.pendingEvent.occasion === 'date' ? (location === 'home' ? Number(document.getElementById('date-recipe').value) || null : null) : state.pendingEvent.recipeId;
       await postMeal({
         date: key(dateAt(state.selected)), slot: state.slot,
-        location: document.getElementById('event-location').value,
+        location,
         occasion: state.pendingEvent.occasion,
         people: Number(document.getElementById('event-people').value),
-        recipeId: state.pendingEvent.recipeId, title: document.getElementById('event-title').value,
+        recipeId, title: document.getElementById('event-title').value,
         assignments: [], dishes: []
       });
     }
@@ -680,7 +713,7 @@
       document.getElementById('recipe-servings').value = recipe?.servings ?? 2;
       document.getElementById('recipe-diet').value = recipe?.diet ?? 'omnivore';
       document.getElementById('recipe-tags').value = recipe?.tags.join(', ') ?? '';
-      document.getElementById('recipe-categories').innerHTML = Object.entries(recipeCategories).map(([key, label]) => `<label><input type="checkbox" value="${key}"${recipe?.tags.includes(key) ? ' checked' : ''}>${label}</label>`).join('');
+      document.getElementById('recipe-categories').innerHTML = Object.entries(recipeCategories).map(([key, label]) => `<label><input type="checkbox" value="${key}"${recipe?.tags.includes(key) ? ' checked' : ''}><span>${label}</span></label>`).join('');
       document.getElementById('recipe-error').hidden = true;
       document.getElementById('ingredient-list').replaceChildren(...(recipe?.ingredients?.length ? recipe.ingredients : [{ name: '', amount: 1, unit: 'g' }]).map(ingredientRow));
       document.getElementById('step-list').replaceChildren(...(recipe?.steps?.length ? recipe.steps : [{ kind: 'prep', instruction: '', minutes: null }]).map(stepRow));
@@ -775,6 +808,10 @@
     });
     document.getElementById('choices').addEventListener('change', event => {
       if (event.target.id === 'suggestion-minutes') renderSuggestions(event.target.value);
+      if (event.target.id === 'picker-category') renderPickerRecipes();
+    });
+    document.getElementById('choices').addEventListener('input', event => {
+      if (event.target.id === 'picker-search') renderPickerRecipes();
     });
     document.getElementById('previous-week').addEventListener('click', async () => { state.weekStart.setDate(state.weekStart.getDate() - 7); state.selected = 0; await load(); });
     document.getElementById('next-week').addEventListener('click', async () => { state.weekStart.setDate(state.weekStart.getDate() + 7); state.selected = 0; await load(); });

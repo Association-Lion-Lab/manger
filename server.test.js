@@ -7,6 +7,24 @@ const { tmpdir } = require('node:os');
 const { join } = require('node:path');
 const { createApp, createDatabase, restaurantResults, shoppingList, suggestions } = require('./server');
 
+test('un date à la maison conserve sa recette et ajoute les ingrédients aux courses', async t => {
+  const db = createDatabase(':memory:');
+  const server = createApp(db);
+  server.listen(0, '127.0.0.1');
+  await once(server, 'listening');
+  t.after(() => { server.close(); db.close(); });
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const response = await fetch(`${base}/api/meals`, {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ date: '2026-09-14', slot: 'soir', location: 'home', occasion: 'date', people: 2, recipeId: 1, title: 'Date maison', assignments: [], dishes: [] })
+  });
+  assert.equal(response.status, 200);
+  const week = await (await fetch(`${base}/api/week?start=2026-09-14`)).json();
+  assert.equal(week.meals[0].occasion, 'date');
+  assert.equal(week.meals[0].recipeId, 1);
+  assert.ok(shoppingList(db, '2026-09-14').some(item => item.name === 'pois chiches' && item.amount === 400));
+});
+
 test('le catalogue importe 14 recettes complètes sans doublon ni remplacement', async t => {
   const db = createDatabase(':memory:');
   const server = createApp(db);
