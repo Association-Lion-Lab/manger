@@ -488,7 +488,36 @@
       document.getElementById('dialog-title').textContent = recipe ? 'Cuisiner pour les invités' : isDate ? 'Prévoir un date' : mode === 'order' ? 'Commander' : isGuests ? 'Repas sans recette' : 'Manger à l’extérieur';
       document.getElementById('dialog-subtitle').textContent = `${fullDayNames[state.selected]} · ${state.slot === 'midi' ? 'Midi' : 'Soir'}`;
       const places = isGuests ? '<option value="home">À la maison</option>' : '<option value="restaurant">Restaurant</option><option value="outside">Autre lieu</option>' + (isDate ? '<option value="home">À la maison</option>' : '');
-      document.getElementById('choices').innerHTML = `<div class="recipe-form"><label class="field"><span>Nom</span><input id="event-title" maxlength="120" value="${escapeHtml(title)}" required></label><label class="field"><span>Lieu</span><select id="event-location">${places}</select></label><label class="field"><span>Nombre de personnes</span><input id="event-people" type="number" min="1" max="100" value="${isGuests ? 4 : isDate ? 2 : 1}" required></label><button id="confirm-event" class="primary" type="button">Ajouter au calendrier</button></div>`;
+      const restaurantSearch = isGuests ? '' : '<div class="field"><button id="find-restaurants" class="secondary" type="button">⌖ Restaurants autour de moi</button><small class="muted">Après votre autorisation, la position sera envoyée à votre serveur Manger et au service public Overpass. Elle n’est pas conservée.</small></div><div id="restaurant-results" aria-live="polite"></div>';
+      document.getElementById('choices').innerHTML = `<div class="recipe-form"><label class="field"><span>Nom</span><input id="event-title" maxlength="120" value="${escapeHtml(title)}" required></label><label class="field"><span>Lieu</span><select id="event-location">${places}</select></label>${restaurantSearch}<label class="field"><span>Nombre de personnes</span><input id="event-people" type="number" min="1" max="100" value="${isGuests ? 4 : isDate ? 2 : 1}" required></label><button id="confirm-event" class="primary" type="button">Ajouter au calendrier</button></div>`;
+    }
+
+    function findRestaurants() {
+      const results = document.getElementById('restaurant-results');
+      const button = document.getElementById('find-restaurants');
+      if (!navigator.geolocation) {
+        results.innerHTML = '<p class="error">La géolocalisation n’est pas disponible sur cet appareil.</p>';
+        return;
+      }
+      button.disabled = true;
+      button.textContent = 'Recherche en cours…';
+      navigator.geolocation.getCurrentPosition(async position => {
+        try {
+          const response = await fetch('/api/restaurants', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ latitude: position.coords.latitude, longitude: position.coords.longitude }) });
+          if (!response.ok) throw new Error((await response.json()).error);
+          const restaurants = await response.json();
+          results.innerHTML = restaurants.length ? `<div class="choices">${restaurants.map(restaurant => choice('⌖', restaurant.name, `${restaurant.distance} m${restaurant.cuisine ? ` · ${restaurant.cuisine}` : ''}`, { restaurant: restaurant.name })).join('')}</div><small class="muted">Données © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">contributeurs OpenStreetMap</a></small>` : '<p class="muted">Aucun restaurant référencé dans un rayon de 3 km.</p>';
+        } catch (error) {
+          results.innerHTML = `<p class="error">${escapeHtml(error.message || 'Recherche impossible')}</p>`;
+        } finally {
+          button.disabled = false;
+          button.textContent = '⌖ Restaurants autour de moi';
+        }
+      }, () => {
+        results.innerHTML = '<p class="error">Autorisez la position pour chercher autour de vous.</p>';
+        button.disabled = false;
+        button.textContent = '⌖ Restaurants autour de moi';
+      }, { enableHighAccuracy: false, timeout: 10_000, maximumAge: 300_000 });
     }
 
     async function saveEvent() {
@@ -675,11 +704,17 @@
     document.getElementById('export-calendar').addEventListener('click', () => { location.href = `/api/calendar.ics?start=${key(state.weekStart)}`; });
     document.getElementById('close-dialog').addEventListener('click', () => dialog.close());
     document.getElementById('choices').addEventListener('click', event => {
+      if (event.target.closest('#find-restaurants')) return findRestaurants();
       if (event.target.closest('#confirm-mixed')) return saveMixedMeal();
       if (event.target.closest('#confirm-duo')) return saveDuoMeal();
       if (event.target.closest('#confirm-event')) return saveEvent();
       const button = event.target.closest('.choice');
       if (!button) return;
+      if (button.dataset.restaurant) {
+        document.getElementById('event-title').value = button.dataset.restaurant;
+        document.getElementById('event-location').value = 'restaurant';
+        return;
+      }
       if (button.dataset.guestmode) return button.dataset.guestmode === 'recipe' ? openGuestRecipes() : openEventSetup('guests', button.dataset.guestmode);
       if (button.dataset.guestrecipe) return openEventSetup('guests', 'recipe', state.recipes.find(recipe => recipe.id === Number(button.dataset.guestrecipe)));
       if (button.dataset.viewplanned) {

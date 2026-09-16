@@ -309,6 +309,17 @@ function household(db) {
   };
 }
 
+function restaurantResults(elements, latitude, longitude) {
+  const radians = value => value * Math.PI / 180;
+  return elements.flatMap(element => {
+    const lat = element.lat ?? element.center?.lat;
+    const lon = element.lon ?? element.center?.lon;
+    if (!element.tags?.name || !Number.isFinite(lat) || !Number.isFinite(lon)) return [];
+    const a = Math.sin(radians(lat - latitude) / 2) ** 2 + Math.cos(radians(latitude)) * Math.cos(radians(lat)) * Math.sin(radians(lon - longitude) / 2) ** 2;
+    return [{ id: `${element.type}/${element.id}`, name: element.tags.name, cuisine: element.tags.cuisine?.replace(/;/g, ', ') || null, distance: Math.round(6_371_000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))), latitude: lat, longitude: lon }];
+  }).sort((left, right) => left.distance - right.distance || left.name.localeCompare(right.name, 'fr')).slice(0, 8);
+}
+
 function validateMember(input) {
   if (!input || typeof input.name !== 'string' || !input.name.trim() || input.name.length > 60) throw new Error('Nom invalide');
   if (!['vegan', 'vegetarian', 'pescetarian', 'omnivore'].includes(input.diet)) throw new Error('Régime invalide');
@@ -499,7 +510,7 @@ async function readJson(request) {
   }
 }
 
-function createHandler(db) {
+function createHandler(db, overpassUrl) {
   return async (request, response) => {
     const url = new URL(request.url, 'http://localhost');
     try {
@@ -541,6 +552,15 @@ function createHandler(db) {
 
       if (request.method === 'GET' && url.pathname === '/api/household') {
         return sendJson(response, 200, household(db));
+      }
+
+      if (request.method === 'POST' && url.pathname === '/api/restaurants') {
+        const { latitude, longitude } = await readJson(request);
+        if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90 || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) throw new Error('Position invalide');
+        const query = `[out:json][timeout:8];nwr["amenity"="restaurant"](around:3000,${latitude},${longitude});out center;`;
+        const overpass = await fetch(overpassUrl, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', 'user-agent': 'Manger/0.1' }, body: new URLSearchParams({ data: query }), signal: AbortSignal.timeout(10_000) });
+        if (!overpass.ok) throw new Error('La recherche de restaurants est temporairement indisponible');
+        return sendJson(response, 200, restaurantResults((await overpass.json()).elements || [], latitude, longitude));
       }
 
       if (request.method === 'POST' && url.pathname === '/api/members') {
@@ -628,8 +648,8 @@ function createHandler(db) {
   };
 }
 
-function createApp(database = createDatabase(process.env.MANGER_DB || join(__dirname, 'data', 'manger.db'))) {
-  return createServer(createHandler(database));
+function createApp(database = createDatabase(process.env.MANGER_DB || join(__dirname, 'data', 'manger.db')), overpassUrl = process.env.MANGER_OVERPASS_URL || 'https://overpass-api.de/api/interpreter') {
+  return createServer(createHandler(database, overpassUrl));
 }
 
 if (require.main === module) {
@@ -638,4 +658,4 @@ if (require.main === module) {
   server.listen(port, '0.0.0.0', () => console.log(`Manger! écoute sur http://localhost:${port}`));
 }
 
-module.exports = { addDays, calendar, createApp, createDatabase, dateKey, household, isCompatible, isDietCompatible, isDateKey, recipes, saveRecipe, shoppingList, suggestions, validateMeal, validateMember, validateProtein, validateRecipe };
+module.exports = { addDays, calendar, createApp, createDatabase, dateKey, household, isCompatible, isDietCompatible, isDateKey, recipes, restaurantResults, saveRecipe, shoppingList, suggestions, validateMeal, validateMember, validateProtein, validateRecipe };
