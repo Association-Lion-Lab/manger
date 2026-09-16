@@ -7,6 +7,30 @@ const { tmpdir } = require('node:os');
 const { join } = require('node:path');
 const { createApp, createDatabase, restaurantResults, shoppingList, suggestions } = require('./server');
 
+test('le catalogue importe 14 recettes complètes sans doublon ni remplacement', async t => {
+  const db = createDatabase(':memory:');
+  const server = createApp(db);
+  server.listen(0, '127.0.0.1');
+  await once(server, 'listening');
+  t.after(() => { server.close(); db.close(); });
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const initial = await (await fetch(`${base}/api/week?start=2026-09-14`)).json();
+  const imported = await fetch(`${base}/api/catalog/import`, { method: 'POST' });
+  assert.equal(imported.status, 200);
+  assert.deepEqual(await imported.json(), { added: 14 });
+  assert.deepEqual(await (await fetch(`${base}/api/catalog/import`, { method: 'POST' })).json(), { added: 0 });
+  const final = await (await fetch(`${base}/api/week?start=2026-09-14`)).json();
+  assert.equal(final.recipes.length, initial.recipes.length + 14);
+  for (const recipe of initial.recipes) assert.deepEqual(final.recipes.find(item => item.id === recipe.id), recipe);
+  const recipes = final.recipes.filter(recipe => !initial.recipes.some(item => item.id === recipe.id));
+  for (const recipe of recipes) {
+    assert.ok(recipe.ingredients.length >= 4);
+    assert.ok(recipe.steps.length >= 3);
+    assert.ok(recipe.minutes > 0);
+  }
+  for (const tag of ['rat', 'date', 'mijote', 'japon', 'chine', 'terroir', 'chef']) assert.ok(recipes.some(recipe => recipe.tags.includes(tag)));
+});
+
 test('la migration corrige le régime des gnocchis dans une base existante', t => {
   const directory = mkdtempSync(join(tmpdir(), 'manger-'));
   const filename = join(directory, 'manger.db');

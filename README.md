@@ -88,6 +88,12 @@ La géolocalisation nécessite HTTPS, sauf sur `localhost`. Pour utiliser une au
 
 En cas de géolocalisation indisponible, saisissez une ville ou un code postal français et choisissez la commune. La recherche est alors centrée sur cette commune. Cette saisie est transmise à l'API officielle `geo.api.gouv.fr`, configurable via `MANGER_COMMUNES_URL`. Les résultats affichent l'adresse lorsqu'elle est renseignée et proposent un lien vers la carte OpenStreetMap.
 
+## Catalogue et univers
+
+Dans Recettes, le bouton d'import ajoute 14 recettes originales avec ingrédients quantifiés et étapes de préparation, cuisson et service. L'import conserve les recettes existantes et ignore les titres déjà présents. Les recettes importées restent modifiables et alimentent les suggestions et la liste de courses.
+
+La recherche porte sur le nom et les ingrédients. Les univers sont combinables dans l'éditeur : Recettes du rat (budget), Recettes de date, Plats mijotés, Japon, Chine, Terroir français et Côté chef. « Budget » ne garantit pas un prix ; « Côté chef » désigne une inspiration soignée, sans attribution à un chef connu. Les recettes n'ont pas encore été validées par des essais en cuisine.
+
 ## Parcours de validation `0.1`
 
 Une personne doit pouvoir ajouter trois recettes, demander des suggestions, organiser sa semaine, noter une sortie et un date, puis obtenir la liste de courses correspondante sans ressaisir les ingrédients.
@@ -122,4 +128,4 @@ Ces fonctions ne seront considérées qu'après validation du parcours principal
 
 ## Licence
 
-Le code de **Manger!** est distribué sous licence [GNU AGPL-3.0-or-later](LICENSE). Les licences applicables aux recettes et aux médias seront précisées séparément avant leur ajout au projet.
+Le code de **Manger!** est distribué sous licence [GNU AGPL-3.0-or-later](LICENSE). Les descriptions et données des 14 recettes originales de `catalog.js` sont dédiées au domaine public sous [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/). Aucune recette ni photographie de Jow n'est reprise. Les contenus ajoutés par les utilisateurs restent sous leur responsabilité.

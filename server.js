@@ -2,6 +2,7 @@ const { createServer } = require('node:http');
 const { readFileSync, mkdirSync } = require('node:fs');
 const { dirname, join } = require('node:path');
 const { DatabaseSync } = require('node:sqlite');
+const catalog = require('./catalog');
 
 const INDEX_HTML = readFileSync(join(__dirname, 'public', 'index.html'));
 const DAY_MS = 86_400_000;
@@ -631,6 +632,17 @@ function createHandler(db, overpassUrl, communesUrl) {
       }
 
       const recipeMatch = url.pathname.match(/^\/api\/recipes\/(\d+)$/);
+      if (request.method === 'POST' && url.pathname === '/api/catalog/import') {
+        const validated = catalog.map(validateRecipe);
+        let added = 0;
+        for (const recipe of validated) {
+          if (!db.prepare('SELECT 1 FROM recipes WHERE title = ?').get(recipe.title)) {
+            saveRecipe(db, recipe);
+            added++;
+          }
+        }
+        return sendJson(response, 200, { added });
+      }
       if (request.method === 'PUT' && recipeMatch) {
         return sendJson(response, 200, saveRecipe(db, validateRecipe(await readJson(request)), Number(recipeMatch[1])));
       }

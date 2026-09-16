@@ -92,6 +92,13 @@
     dialog::backdrop { background: rgb(0 0 0 / .55); }
     .handle { width: 42px; height: 4px; margin: 2px auto 14px; border-radius: 4px; background: var(--line); }
     .choices { display: grid; gap: 8px; margin-top: 16px; }
+    .choices .choice { width: 100%; }
+    .choices > div:has(> a) { border: 1px solid var(--line); border-radius: 18px; overflow: hidden; background: var(--raised); }
+    .choices > div:has(> a) .choice { border: 0; border-radius: 0; }
+    .choices > div > a { display: block; padding: 8px 12px; color: var(--accent); font-size: 13px; text-decoration: none; border-top: 1px solid var(--line); }
+    .recipe-filters { display: grid; gap: 10px; margin: 16px 0; }
+    .category-options { display: flex; flex-wrap: wrap; gap: 10px; }
+    .category-options label { display: flex; align-items: center; gap: 6px; font-size: 13px; }
     .choice { min-height: 60px; display: grid; grid-template-columns: 42px minmax(0, 1fr); align-items: center; gap: 12px; padding: 9px 12px; text-align: left; border: 1px solid var(--line); border-radius: 16px; background: var(--raised); cursor: pointer; }
     .choice-icon { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 13px; color: var(--accent); background: var(--accent-soft); }
     .choice-copy { display: grid; gap: 2px; }
@@ -176,6 +183,8 @@
       <section id="recipes-panel" class="panel" hidden>
         <div class="section-heading"><div><h1>Mes recettes</h1><span id="recipe-count" class="muted"></span></div><button id="new-recipe" class="icon-button" type="button" aria-label="Ajouter une recette">＋</button></div>
         <div id="recipes" class="recipe-list"></div>
+        <button id="import-catalog" class="secondary" type="button">＋ Ajouter les 14 recettes du catalogue</button>
+        <p id="catalog-status" class="muted" role="status"></p>
       </section>
 
       <section id="shopping-panel" class="panel" hidden>
@@ -214,6 +223,7 @@
         </div>
         <label class="field"><span>Compatible avec</span><select id="recipe-diet"><option value="vegan">J’aime les graines</option><option value="vegetarian">Veggie cool</option><option value="pescetarian">Team océan</option><option value="omnivore">Je mange de tout</option></select></label>
         <label class="field"><span>Étiquettes, séparées par des virgules</span><input id="recipe-tags" placeholder="rapide, végétarien"></label>
+        <div class="field"><span>Univers (plusieurs possibles)</span><div id="recipe-categories" class="category-options"></div></div>
         <div class="field">
           <span>Ingrédients</span>
           <div id="ingredient-list" class="ingredient-list"></div>
@@ -293,6 +303,8 @@
     const stepKindLabels = { prep: 'Préparation', cook: 'Cuisson', rest: 'Repos', serve: 'Dressage' };
     const dietLabels = { vegan: 'J’aime les graines', vegetarian: 'Veggie cool', pescetarian: 'Team océan', omnivore: 'Je mange de tout' };
     const categoryLabels = { plant: 'Graines & plantes', egg: 'Veggie', fish: 'Team océan', meat: 'Viandard·e' };
+    const recipeCategories = { rat: '🐀 Recettes du rat', date: '♥ Recettes de date', mijote: '🍲 Plats mijotés', japon: '🇯🇵 Japon', chine: '🇨🇳 Chine', terroir: '🥖 Terroir français', chef: '✦ Côté chef' };
+    document.getElementById('recipes').insertAdjacentHTML('beforebegin', `<div class="recipe-filters"><label class="field"><span>Rechercher une recette</span><input id="recipe-search" type="search" placeholder="Nom ou ingrédient…"></label><label class="field"><span>Univers</span><select id="recipe-category"><option value="">Tous les univers</option>${Object.entries(recipeCategories).map(([key, label]) => `<option value="${key}">${label}</option>`).join('')}</select></label></div>`);
     let editingRecipeId = null;
     let editingMemberId = null;
     let editingProteinId = null;
@@ -370,8 +382,11 @@
     }
 
     function renderRecipes() {
-      document.getElementById('recipe-count').textContent = `${state.recipes.length} recettes disponibles`;
-      document.getElementById('recipes').innerHTML = state.recipes.map(recipe => `<button class="recipe" type="button" data-edit-recipe="${recipe.id}"><span class="meal-icon">♨</span><span class="recipe-copy"><strong>${escapeHtml(recipe.title)}</strong><small>${recipe.minutes} min · ${dietLabels[recipe.diet]} · ${recipe.steps.length} étape${recipe.steps.length > 1 ? 's' : ''}</small></span><span>›</span></button>`).join('');
+      const query = document.getElementById('recipe-search').value.trim().toLocaleLowerCase('fr');
+      const category = document.getElementById('recipe-category').value;
+      const filtered = state.recipes.filter(recipe => (!category || recipe.tags.includes(category)) && `${recipe.title} ${recipe.ingredients.map(item => item.name).join(' ')}`.toLocaleLowerCase('fr').includes(query));
+      document.getElementById('recipe-count').textContent = `${filtered.length} sur ${state.recipes.length} recettes`;
+      document.getElementById('recipes').innerHTML = filtered.map(recipe => `<button class="recipe" type="button" data-edit-recipe="${recipe.id}"><span class="meal-icon">${recipe.tags.includes('rat') ? '🐀' : '♨'}</span><span class="recipe-copy"><strong>${escapeHtml(recipe.title)}</strong><small>${recipe.minutes} min · ${dietLabels[recipe.diet]} · ${recipe.steps.length} étape${recipe.steps.length > 1 ? 's' : ''}</small><small>${recipe.tags.filter(tag => recipeCategories[tag]).map(tag => recipeCategories[tag]).join(' · ')}</small></span><span>›</span></button>`).join('') || '<div class="empty-state">Aucune recette ne correspond à ces filtres.</div>';
     }
 
     function renderShopping() {
@@ -665,6 +680,7 @@
       document.getElementById('recipe-servings').value = recipe?.servings ?? 2;
       document.getElementById('recipe-diet').value = recipe?.diet ?? 'omnivore';
       document.getElementById('recipe-tags').value = recipe?.tags.join(', ') ?? '';
+      document.getElementById('recipe-categories').innerHTML = Object.entries(recipeCategories).map(([key, label]) => `<label><input type="checkbox" value="${key}"${recipe?.tags.includes(key) ? ' checked' : ''}>${label}</label>`).join('');
       document.getElementById('recipe-error').hidden = true;
       document.getElementById('ingredient-list').replaceChildren(...(recipe?.ingredients?.length ? recipe.ingredients : [{ name: '', amount: 1, unit: 'g' }]).map(ingredientRow));
       document.getElementById('step-list').replaceChildren(...(recipe?.steps?.length ? recipe.steps : [{ kind: 'prep', instruction: '', minutes: null }]).map(stepRow));
@@ -698,7 +714,7 @@
         minutes: Number(document.getElementById('recipe-minutes').value),
         servings: Number(document.getElementById('recipe-servings').value),
         diet: document.getElementById('recipe-diet').value,
-        tags: document.getElementById('recipe-tags').value.split(',').map(tag => tag.trim()).filter(Boolean),
+        tags: [...document.getElementById('recipe-tags').value.split(',').map(tag => tag.trim()).filter(tag => tag && !recipeCategories[tag]), ...[...document.querySelectorAll('#recipe-categories input:checked')].map(input => input.value)],
         ingredients,
         steps
       };
@@ -783,6 +799,19 @@
       await fetch('/api/shopping-checks', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ weekStart: key(state.weekStart), name: item.name, unit: item.unit, checked: item.checked }) });
     });
     document.getElementById('new-recipe').addEventListener('click', () => openRecipeEditor());
+    document.getElementById('recipe-search').addEventListener('input', renderRecipes);
+    document.getElementById('recipe-category').addEventListener('change', renderRecipes);
+    document.getElementById('import-catalog').addEventListener('click', async event => {
+      event.target.disabled = true;
+      try {
+        const response = await fetch('/api/catalog/import', { method: 'POST' });
+        if (!response.ok) throw new Error((await response.json()).error);
+        document.getElementById('catalog-status').textContent = `${(await response.json()).added} nouvelles recettes ajoutées. Vos recettes existantes sont conservées.`;
+        await load();
+      } catch (error) {
+        document.getElementById('catalog-status').textContent = error.message;
+      } finally { event.target.disabled = false; }
+    });
     document.getElementById('recipes').addEventListener('click', event => {
       const button = event.target.closest('[data-edit-recipe]');
       if (button) openRecipe(state.recipes.find(recipe => recipe.id === Number(button.dataset.editRecipe)));
