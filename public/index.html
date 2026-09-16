@@ -292,6 +292,7 @@
       </div>
       <p id="recipe-view-error" class="error" role="alert" hidden></p>
       <div class="recipe-view-actions">
+        <button id="favorite-recipe" class="secondary" style="grid-column:1 / -1" type="button" aria-pressed="false">☆ Ajouter aux favoris</button>
         <button id="edit-recipe" class="secondary" type="button">Modifier</button>
         <button id="duplicate-recipe" class="secondary" type="button">Dupliquer</button>
         <button id="delete-recipe" class="delete-action" type="button">Supprimer cette recette</button>
@@ -361,6 +362,7 @@
     const recipeCategories = { rat: '🐀 Recettes du rat', date: '♥ Recettes de date', mijote: '🍲 Plats mijotés', japon: '🇯🇵 Japon', chine: '🇨🇳 Chine', terroir: '🥖 Terroir français', chef: '✦ Côté chef', express: '⚡ Express · 30 min max', batch: '📦 Batch cooking', emporter: '🥡 À emporter', comfort: '🛋️ Doudou food', mediterranee: '☀️ Méditerranée', italie: '🍝 Italie', inde: '🍛 Inde', mexique: '🌮 Mexique' };
     document.getElementById('recipes').insertAdjacentHTML('beforebegin', `<div class="recipe-filters"><label class="field"><span>Rechercher une recette</span><input id="recipe-search" type="search" placeholder="Nom ou ingrédient…"></label><label class="field"><span>Univers</span><select id="recipe-category"><option value="">Tous les univers</option>${Object.entries(recipeCategories).map(([key, label]) => `<option value="${key}">${label}</option>`).join('')}</select></label></div>`);
     let editingRecipeId = null;
+    document.getElementById('recipe-category').insertAdjacentHTML('beforeend', '<option value="__favorites">★ Mes favoris</option>');
     let editingMemberId = null;
     let editingProteinId = null;
 
@@ -439,7 +441,7 @@
     function renderRecipes() {
       const query = document.getElementById('recipe-search').value.trim().toLocaleLowerCase('fr');
       const category = document.getElementById('recipe-category').value;
-      const filtered = state.recipes.filter(recipe => (!category || recipe.tags.includes(category)) && `${recipe.title} ${recipe.ingredients.map(item => item.name).join(' ')}`.toLocaleLowerCase('fr').includes(query));
+      const filtered = state.recipes.filter(recipe => (category === '__favorites' ? recipe.favorite : !category || recipe.tags.includes(category)) && `${recipe.title} ${recipe.ingredients.map(item => item.name).join(' ')}`.toLocaleLowerCase('fr').includes(query));
       document.getElementById('recipe-count').textContent = `${filtered.length} sur ${state.recipes.length} recettes`;
       document.getElementById('recipes').innerHTML = filtered.map(recipe => `<button class="recipe" type="button" data-edit-recipe="${recipe.id}"><span class="meal-icon">${recipe.tags.includes('rat') ? '🐀' : '♨'}</span><span class="recipe-copy"><strong>${escapeHtml(recipe.title)}</strong><small>${recipe.minutes} min · ${dietLabels[recipe.diet]} · ${recipe.steps.length} étape${recipe.steps.length > 1 ? 's' : ''}</small><small>${recipe.tags.filter(tag => recipeCategories[tag]).map(tag => recipeCategories[tag]).join(' · ')}</small></span><span>›</span></button>`).join('') || '<div class="empty-state">Aucune recette ne correspond à ces filtres.</div>';
     }
@@ -638,7 +640,8 @@
       const query = document.getElementById('picker-search').value.trim().toLocaleLowerCase('fr');
       const category = document.getElementById('picker-category').value;
       const container = document.getElementById('picker-recipes');
-      container.innerHTML = state.recipes.filter(recipe => (!category || recipe.tags.includes(category)) && `${recipe.title} ${recipe.ingredients.map(item => item.name).join(' ')}`.toLocaleLowerCase('fr').includes(query)).map(recipe => choice('♨', recipe.title, `${recipe.minutes} min · ${dietLabels[recipe.diet]}`, { [container.dataset.mode]: recipe.id })).join('') || '<p class="empty-state">Aucun plat trouvé. Changez le mot recherché ou l’univers.</p>';
+      if (!document.querySelector('#picker-category option[value="__favorites"]')) document.getElementById('picker-category').insertAdjacentHTML('beforeend', '<option value="__favorites">★ Mes favoris</option>');
+      container.innerHTML = state.recipes.filter(recipe => (category === '__favorites' ? recipe.favorite : !category || recipe.tags.includes(category)) && `${recipe.title} ${recipe.ingredients.map(item => item.name).join(' ')}`.toLocaleLowerCase('fr').includes(query)).map(recipe => choice(recipe.favorite ? '★' : '♨', recipe.title, `${recipe.minutes} min · ${dietLabels[recipe.diet]}`, { [container.dataset.mode]: recipe.id })).join('') || '<p class="empty-state">Aucun plat trouvé. Changez le mot recherché ou l’univers.</p>';
     }
 
     function openEventSetup(occasion, mode = 'standard', recipe = null) {
@@ -848,6 +851,9 @@
 
     function openRecipe(recipe) {
       editingRecipeId = recipe.id;
+      const favoriteButton = document.getElementById('favorite-recipe');
+      favoriteButton.textContent = recipe.favorite ? '★ Retirer des favoris' : '☆ Ajouter aux favoris';
+      favoriteButton.setAttribute('aria-pressed', String(Boolean(recipe.favorite)));
       document.getElementById('recipe-view-error').hidden = true;
       document.getElementById('recipe-view-title').textContent = recipe.title;
       document.getElementById('recipe-view-meta').textContent = `${recipe.minutes} min · ${recipe.servings} portions · ${dietLabels[recipe.diet]}`;
@@ -1163,6 +1169,22 @@
       if (button) openRecipe(state.recipes.find(recipe => recipe.id === Number(button.dataset.editRecipe)));
     });
     document.getElementById('close-recipe-view').addEventListener('click', () => recipeViewDialog.close());
+    document.getElementById('favorite-recipe').addEventListener('click', async event => {
+      const recipe = state.recipes.find(item => item.id === editingRecipeId);
+      if (!recipe) return;
+      const button = event.target; button.disabled = true;
+      document.getElementById('recipe-view-error').hidden = true;
+      try {
+        const response = await fetch(`/api/recipes/${recipe.id}/favorite`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ favorite: !recipe.favorite }) });
+        if (!response.ok) throw new Error((await response.json()).error);
+        recipe.favorite = (await response.json()).favorite;
+        button.textContent = recipe.favorite ? '★ Retirer des favoris' : '☆ Ajouter aux favoris';
+        button.setAttribute('aria-pressed', String(recipe.favorite));
+        renderRecipes();
+      } catch (error) {
+        const message = document.getElementById('recipe-view-error'); message.textContent = error.message; message.hidden = false;
+      } finally { button.disabled = false; }
+    });
     document.getElementById('edit-recipe').addEventListener('click', () => {
       const recipe = state.recipes.find(item => item.id === editingRecipeId);
       recipeViewDialog.close();

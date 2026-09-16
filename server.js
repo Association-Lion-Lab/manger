@@ -106,6 +106,9 @@ function createDatabase(filename) {
       name TEXT NOT NULL, unit TEXT NOT NULL, aisle TEXT NOT NULL,
       PRIMARY KEY (name, unit)
     );
+    CREATE TABLE IF NOT EXISTS recipe_favorites (
+      recipe_id INTEGER PRIMARY KEY REFERENCES recipes(id) ON DELETE CASCADE
+    );
   `);
   if (!db.prepare('PRAGMA table_info(recipes)').all().some(column => column.name === 'instructions')) {
     db.exec("ALTER TABLE recipes ADD COLUMN instructions TEXT NOT NULL DEFAULT ''");
@@ -188,9 +191,10 @@ function recipes(db) {
     SELECT position, kind, instruction, minutes
     FROM recipe_steps WHERE recipe_id = ? ORDER BY position
   `);
-  return db.prepare('SELECT id, title, minutes, servings, tags, diet FROM recipes ORDER BY title').all()
+  return db.prepare('SELECT id, title, minutes, servings, tags, diet, EXISTS(SELECT 1 FROM recipe_favorites WHERE recipe_id = recipes.id) AS favorite FROM recipes ORDER BY title').all()
     .map(recipe => ({
       ...recipe,
+      favorite: Boolean(recipe.favorite),
       tags: recipe.tags.split(',').filter(Boolean),
       ingredients: ingredientQuery.all(recipe.id),
       steps: stepQuery.all(recipe.id)
@@ -703,6 +707,16 @@ function createHandler(db, overpassUrl, communesUrl) {
       }
 
       const recipeMatch = url.pathname.match(/^\/api\/recipes\/(\d+)$/);
+      const favoriteMatch = url.pathname.match(/^\/api\/recipes\/(\d+)\/favorite$/);
+      if (request.method === 'PUT' && favoriteMatch) {
+        const input = await readJson(request);
+        const id = Number(favoriteMatch[1]);
+        if (!input || typeof input.favorite !== 'boolean') throw new Error('Favori invalide');
+        if (!db.prepare('SELECT 1 FROM recipes WHERE id = ?').get(id)) throw new Error('Recette inconnue');
+        if (input.favorite) db.prepare('INSERT INTO recipe_favorites (recipe_id) VALUES (?) ON CONFLICT DO NOTHING').run(id);
+        else db.prepare('DELETE FROM recipe_favorites WHERE recipe_id = ?').run(id);
+        return sendJson(response, 200, { favorite: input.favorite });
+      }
       if (request.method === 'POST' && url.pathname === '/api/catalog/import') {
         const validated = catalog.map(validateRecipe);
         let added = 0;
