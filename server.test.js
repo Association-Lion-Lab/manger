@@ -7,6 +7,39 @@ const { tmpdir } = require('node:os');
 const { join } = require('node:path');
 const { createApp, createDatabase, restaurantResults, shoppingList, suggestions } = require('./server');
 
+test('la composition hebdomadaire préserve les repas et valide tout avant écriture', async t => {
+  const db = createDatabase(':memory:');
+  const server = createApp(db);
+  server.listen(0, '127.0.0.1');
+  await once(server, 'listening');
+  t.after(() => { server.close(); db.close(); });
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const post = (path, data) => fetch(`${base}${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) });
+  const meal = (date, recipeId = 1) => ({ date, slot: 'soir', location: 'home', occasion: 'regular', people: 2, recipeId, title: 'Menu', assignments: [], dishes: [] });
+  const start = '2026-09-14';
+  await post('/api/meals', { ...meal(start), title: 'Date réservé', occasion: 'date', recipeId: null });
+  assert.equal((await post('/api/week/plan', { start, meals: [meal('2026-09-15'), meal(start)] })).status, 400);
+  assert.equal(db.prepare('SELECT COUNT(*) AS count FROM meals').get().count, 1);
+  assert.equal((await post('/api/week/plan', { start, meals: [meal('2026-09-15'), meal('2026-09-16', 999)] })).status, 400);
+  assert.equal((await post('/api/week/plan', { start, meals: [meal('2026-09-15'), meal('2026-09-15')] })).status, 400);
+  assert.equal((await post('/api/week/plan', { start, meals: [meal('2026-09-21')] })).status, 400);
+  const member = await (await post('/api/members', { name: 'Julie', diet: 'vegan' })).json();
+  assert.equal((await post('/api/week/plan', { start, meals: [meal('2026-09-15')] })).status, 400);
+  const vegan = await (await post('/api/recipes', { title: 'Carottes', minutes: 15, servings: 2, diet: 'vegan', tags: [], ingredients: [{ name: 'carotte', amount: 4, unit: 'pièce' }], steps: [{ kind: 'cook', instruction: 'Cuire les carottes.', minutes: 15 }] })).json();
+  const shared = { ...meal('2026-09-15'), recipeId: null, dishes: [{ memberId: member.id, recipeId: vegan.id, portions: 1 }] };
+  const response = await post('/api/week/plan', { start, meals: [shared, { ...shared, date: '2026-09-16' }] });
+  assert.deepEqual(await response.json(), { added: 2 });
+  assert.equal(db.prepare('SELECT title FROM meals WHERE date = ?').get(start).title, 'Date réservé');
+  assert.equal(shoppingList(db, start).find(item => item.name === 'carotte').amount, 4);
+  const week = await (await fetch(`${base}/api/week?start=${start}`)).json();
+  assert.equal(week.meals[1].minutes, 15);
+  assert.equal(week.meals[1].dishes[0].recipeId, vegan.id);
+  assert.equal((await post('/api/week/plan', { start, meals: [shared] })).status, 400);
+  db.exec("CREATE TRIGGER fail_test_menu BEFORE INSERT ON meals WHEN NEW.date = '2026-09-18' BEGIN SELECT RAISE(ABORT, 'test rollback'); END;");
+  assert.equal((await post('/api/week/plan', { start, meals: [{ ...shared, date: '2026-09-17' }, { ...shared, date: '2026-09-18' }] })).status, 400);
+  assert.equal(db.prepare("SELECT COUNT(*) AS count FROM meals WHERE date >= '2026-09-17'").get().count, 0);
+});
+
 test('un date à la maison conserve sa recette et ajoute les ingrédients aux courses', async t => {
   const db = createDatabase(':memory:');
   const server = createApp(db);

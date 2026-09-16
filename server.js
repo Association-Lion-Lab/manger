@@ -264,7 +264,10 @@ function meals(db, start) {
            meals.title, recipes.minutes
     FROM meals LEFT JOIN recipes ON recipes.id = meals.recipe_id
     WHERE date BETWEEN ? AND ? ORDER BY date, slot
-  `).all(start, addDays(start, 6));
+  `).all(start, addDays(start, 6)).map(meal => {
+    const dishes = db.prepare('SELECT member_id AS memberId, recipe_id AS recipeId, portions, recipes.minutes FROM meal_dishes JOIN recipes ON recipes.id = meal_dishes.recipe_id WHERE meal_id = ?').all(meal.id);
+    return dishes.length ? { ...meal, minutes: Math.max(...dishes.map(dish => dish.minutes)), dishes: dishes.map(({ minutes, ...dish }) => dish) } : meal;
+  });
 }
 
 function shoppingList(db, start) {
@@ -447,8 +450,8 @@ function validateMeal(input, db) {
   };
 }
 
-function upsertMeal(db, meal) {
-  db.exec('BEGIN');
+function upsertMeal(db, meal, transactional = true) {
+  if (transactional) db.exec('BEGIN');
   try {
     db.prepare(`
       INSERT INTO meals (date, slot, location, occasion, people, recipe_id, title)
@@ -467,9 +470,9 @@ function upsertMeal(db, meal) {
     meal.assignments.forEach(assignment => insert.run(mealId, assignment.memberId, assignment.proteinId, assignment.portions));
     const insertDish = db.prepare('INSERT INTO meal_dishes (meal_id, member_id, recipe_id, portions) VALUES (?, ?, ?, ?)');
     meal.dishes.forEach(dish => insertDish.run(mealId, dish.memberId, dish.recipeId, dish.portions));
-    db.exec('COMMIT');
+    if (transactional) db.exec('COMMIT');
   } catch (error) {
-    db.exec('ROLLBACK');
+    if (transactional) db.exec('ROLLBACK');
     throw error;
   }
 }
@@ -550,6 +553,37 @@ function createHandler(db, overpassUrl, communesUrl) {
         if (start != null && !isDateKey(start)) throw new Error('Début de semaine invalide');
         if (maxMinutes != null && (!Number.isInteger(maxMinutes) || maxMinutes < 1 || maxMinutes > 1440)) throw new Error('Temps disponible invalide');
         return sendJson(response, 200, suggestions(db, start, maxMinutes));
+      }
+
+      if (request.method === 'POST' && url.pathname === '/api/week/plan') {
+        const input = await readJson(request);
+        if (!input || !isDateKey(input.start) || !Array.isArray(input.meals) || input.meals.length < 1 || input.meals.length > 14) throw new Error('Menu hebdomadaire invalide');
+        const seen = new Set();
+        const meals = input.meals.map(item => {
+          const meal = validateMeal(item, db);
+          const slotKey = `${meal.date}/${meal.slot}`;
+          if (meal.date < input.start || meal.date > addDays(input.start, 6) || seen.has(slotKey) || meal.location !== 'home' || meal.occasion !== 'regular' || (!meal.recipeId && !meal.dishes.length)) throw new Error('Créneau du menu invalide');
+          seen.add(slotKey);
+          if (db.prepare('SELECT 1 FROM meals WHERE date = ? AND slot = ?').get(meal.date, meal.slot)) throw new Error('Un repas est déjà prévu sur ce créneau. Recomposez votre menu.');
+          if (meal.recipeId) {
+            const recipe = db.prepare('SELECT diet FROM recipes WHERE id = ?').get(meal.recipeId);
+            const members = db.prepare('SELECT diet FROM members').all();
+            if (!meal.assignments.length && members.some(member => !isDietCompatible(member.diet, recipe.diet))) throw new Error('Recette incompatible avec le foyer');
+          }
+          return meal;
+        });
+        db.exec('BEGIN');
+        try {
+          meals.forEach(meal => {
+            if (db.prepare('SELECT 1 FROM meals WHERE date = ? AND slot = ?').get(meal.date, meal.slot)) throw new Error('Un repas est déjà prévu sur ce créneau. Recomposez votre menu.');
+            upsertMeal(db, meal, false);
+          });
+          db.exec('COMMIT');
+        } catch (error) {
+          db.exec('ROLLBACK');
+          throw error;
+        }
+        return sendJson(response, 200, { added: meals.length });
       }
 
       if (request.method === 'GET' && url.pathname === '/api/household') {

@@ -88,6 +88,14 @@ La géolocalisation nécessite HTTPS, sauf sur `localhost`. Pour utiliser une au
 
 En cas de géolocalisation indisponible, saisissez une ville ou un code postal français et choisissez la commune. La recherche est alors centrée sur cette commune. Cette saisie est transmise à l'API officielle `geo.api.gouv.fr`, configurable via `MANGER_COMMUNES_URL`. Les résultats affichent l'adresse lorsqu'elle est renseignée et proposent un lien vers la carte OpenStreetMap.
 
+## Composer sa semaine
+
+Dans Semaine, « Compose ma semaine » propose un menu pour les créneaux libres sélectionnés. Choisissez le temps maximum et les participants (une portion chacun), ou le nombre de personnes si aucun foyer n'est configuré. La base commune respecte les régimes des participants ; cette première version n'ajoute pas de supplément de protéine. Les variantes par personne restent disponibles dans l'ajout manuel.
+
+L'aperçu ne modifie rien : chaque plat peut être remplacé avant validation. Le classement privilégie la variété, puis les ingrédients communs avec les courses de la semaine et les plats proposés. Ce rapprochement par noms n'est ni une estimation de prix ni un calcul de stock. Un catalogue limité peut entraîner des répétitions. Modifier les critères invalide l'aperçu.
+
+La validation ajoute tous les repas et met à jour les courses. Si un créneau a été rempli entre-temps, aucun repas du menu n'est enregistré : fermez le formulaire et recomposez. Les repas existants ne sont jamais remplacés par cet outil.
+
 ## Catalogue et univers
 
 Depuis une fiche, « Dupliquer » ouvre une copie dans l'éditeur avec ses ingrédients, étapes et univers. La variante n'est créée qu'à l'enregistrement et ne modifie pas l'original ; annuler ne crée aucune recette.
