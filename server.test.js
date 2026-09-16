@@ -306,3 +306,26 @@ test('la recherche de restaurants interroge le service configuré', async t => {
   assert.equal(response.status, 200);
   assert.deepEqual((await response.json()).map(restaurant => restaurant.name), ['Le Petit Jardin']);
 });
+
+test('ville et code postal proposent les communes sans demander de géolocalisation', async t => {
+  const queries = [];
+  const provider = createServer((request, response) => {
+    queries.push(new URL(request.url, 'http://localhost').searchParams);
+    response.writeHead(200, { 'content-type': 'application/json' });
+    response.end(JSON.stringify([{ nom: 'Arras', code: '62041', codesPostaux: ['62000'], centre: { coordinates: [2.78, 50.29] } }]));
+  });
+  provider.listen(0, '127.0.0.1');
+  await once(provider, 'listening');
+  t.after(() => provider.close());
+  const server = createApp(createDatabase(':memory:'), 'http://localhost', `http://127.0.0.1:${provider.address().port}/communes`);
+  server.listen(0, '127.0.0.1');
+  await once(server, 'listening');
+  t.after(() => server.close());
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const response = await fetch(`${base}/api/places?query=62000`);
+  assert.deepEqual(await response.json(), [{ name: 'Arras', code: '62041', postalCodes: ['62000'], longitude: 2.78, latitude: 50.29 }]);
+  await fetch(`${base}/api/places?query=Arras`);
+  assert.equal(queries[0].get('codePostal'), '62000');
+  assert.equal(queries[1].get('nom'), 'Arras');
+  assert.equal((await fetch(`${base}/api/places?query=`)).status, 400);
+});

@@ -316,7 +316,8 @@ function restaurantResults(elements, latitude, longitude) {
     const lon = element.lon ?? element.center?.lon;
     if (!element.tags?.name || !Number.isFinite(lat) || !Number.isFinite(lon)) return [];
     const a = Math.sin(radians(lat - latitude) / 2) ** 2 + Math.cos(radians(latitude)) * Math.cos(radians(lat)) * Math.sin(radians(lon - longitude) / 2) ** 2;
-    return [{ id: `${element.type}/${element.id}`, name: element.tags.name, cuisine: element.tags.cuisine?.replace(/;/g, ', ') || null, distance: Math.round(6_371_000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))), latitude: lat, longitude: lon }];
+    const address = [element.tags['addr:housenumber'], element.tags['addr:street'], element.tags['addr:postcode'], element.tags['addr:city']].filter(Boolean).join(' ');
+    return [{ id: `${element.type}/${element.id}`, name: element.tags.name, address: address || null, mapUrl: `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=18/${lat}/${lon}`, cuisine: element.tags.cuisine?.replace(/;/g, ', ') || null, distance: Math.round(6_371_000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))), latitude: lat, longitude: lon }];
   }).sort((left, right) => left.distance - right.distance || left.name.localeCompare(right.name, 'fr')).slice(0, 8);
 }
 
@@ -510,7 +511,7 @@ async function readJson(request) {
   }
 }
 
-function createHandler(db, overpassUrl) {
+function createHandler(db, overpassUrl, communesUrl) {
   return async (request, response) => {
     const url = new URL(request.url, 'http://localhost');
     try {
@@ -552,6 +553,20 @@ function createHandler(db, overpassUrl) {
 
       if (request.method === 'GET' && url.pathname === '/api/household') {
         return sendJson(response, 200, household(db));
+      }
+
+      if (request.method === 'GET' && url.pathname === '/api/places') {
+        const query = url.searchParams.get('query')?.trim();
+        if (!query || query.length < 2 || query.length > 80) throw new Error('Ville ou code postal invalide');
+        const target = new URL(communesUrl);
+        target.searchParams.set(/^\d{5}$/.test(query) ? 'codePostal' : 'nom', query);
+        target.searchParams.set('fields', 'nom,code,codesPostaux,centre');
+        target.searchParams.set('boost', 'population');
+        target.searchParams.set('limit', '8');
+        const result = await fetch(target, { signal: AbortSignal.timeout(10_000) });
+        if (!result.ok) throw new Error('La recherche de communes est temporairement indisponible');
+        const places = (await result.json()).filter(place => Array.isArray(place.centre?.coordinates)).slice(0, 8).map(place => ({ name: place.nom, code: place.code, postalCodes: place.codesPostaux, longitude: place.centre.coordinates[0], latitude: place.centre.coordinates[1] }));
+        return sendJson(response, 200, places);
       }
 
       if (request.method === 'POST' && url.pathname === '/api/restaurants') {
@@ -648,8 +663,8 @@ function createHandler(db, overpassUrl) {
   };
 }
 
-function createApp(database = createDatabase(process.env.MANGER_DB || join(__dirname, 'data', 'manger.db')), overpassUrl = process.env.MANGER_OVERPASS_URL || 'https://overpass-api.de/api/interpreter') {
-  return createServer(createHandler(database, overpassUrl));
+function createApp(database = createDatabase(process.env.MANGER_DB || join(__dirname, 'data', 'manger.db')), overpassUrl = process.env.MANGER_OVERPASS_URL || 'https://overpass-api.de/api/interpreter', communesUrl = process.env.MANGER_COMMUNES_URL || 'https://geo.api.gouv.fr/communes') {
+  return createServer(createHandler(database, overpassUrl, communesUrl));
 }
 
 if (require.main === module) {

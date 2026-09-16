@@ -488,7 +488,7 @@
       document.getElementById('dialog-title').textContent = recipe ? 'Cuisiner pour les invités' : isDate ? 'Prévoir un date' : mode === 'order' ? 'Commander' : isGuests ? 'Repas sans recette' : 'Manger à l’extérieur';
       document.getElementById('dialog-subtitle').textContent = `${fullDayNames[state.selected]} · ${state.slot === 'midi' ? 'Midi' : 'Soir'}`;
       const places = isGuests ? '<option value="home">À la maison</option>' : '<option value="restaurant">Restaurant</option><option value="outside">Autre lieu</option>' + (isDate ? '<option value="home">À la maison</option>' : '');
-      const restaurantSearch = isGuests ? '' : '<div class="field"><button id="find-restaurants" class="secondary" type="button">⌖ Restaurants autour de moi</button><small class="muted">Après votre autorisation, la position sera envoyée à votre serveur Manger et au service public Overpass. Elle n’est pas conservée.</small></div><div id="restaurant-results" aria-live="polite"></div>';
+      const restaurantSearch = isGuests ? '' : '<div class="field"><button id="find-restaurants" class="secondary" type="button">⌖ Localise-moi</button><small class="muted">Après autorisation, votre position est transmise à Manger puis à Overpass, sans enregistrement par Manger.</small></div><label class="field"><span>Ou ville / code postal en France</span><input id="restaurant-place" maxlength="80" placeholder="Arras ou 62000" autocomplete="off"></label><button id="find-place" class="secondary" type="button">Rechercher la commune</button><small class="muted">La saisie est envoyée à l’API publique des communes ; le centre choisi est transmis à Overpass.</small><div id="restaurant-results" aria-live="polite"></div>';
       document.getElementById('choices').innerHTML = `<div class="recipe-form"><label class="field"><span>Nom</span><input id="event-title" maxlength="120" value="${escapeHtml(title)}" required></label><label class="field"><span>Lieu</span><select id="event-location">${places}</select></label>${restaurantSearch}<label class="field"><span>Nombre de personnes</span><input id="event-people" type="number" min="1" max="100" value="${isGuests ? 4 : isDate ? 2 : 1}" required></label><button id="confirm-event" class="primary" type="button">Ajouter au calendrier</button></div>`;
     }
 
@@ -504,15 +504,12 @@
       results.textContent = '';
       navigator.geolocation.getCurrentPosition(async position => {
         try {
-          const response = await fetch('/api/restaurants', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ latitude: position.coords.latitude, longitude: position.coords.longitude }) });
-          if (!response.ok) throw new Error((await response.json()).error);
-          const restaurants = await response.json();
-          results.innerHTML = restaurants.length ? `<div class="choices">${restaurants.map(restaurant => choice('⌖', restaurant.name, `${restaurant.distance} m${restaurant.cuisine ? ` · ${restaurant.cuisine}` : ''}`, { restaurant: restaurant.name })).join('')}</div><small class="muted">Données © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">contributeurs OpenStreetMap</a></small>` : '<p class="muted">Aucun restaurant référencé dans un rayon de 3 km.</p>';
+          await searchRestaurantPosition(position.coords.latitude, position.coords.longitude);
         } catch (error) {
           results.innerHTML = `<p class="error">${escapeHtml(error.message || 'Recherche impossible')}</p>`;
         } finally {
           button.disabled = false;
-          button.textContent = '⌖ Restaurants autour de moi';
+          button.textContent = '⌖ Localise-moi';
         }
       }, error => {
         const messages = {
@@ -522,8 +519,34 @@
         };
         results.innerHTML = `<p class="error">${messages[error.code] || 'Impossible d’obtenir votre position.'}</p>`;
         button.disabled = false;
-        button.textContent = '⌖ Restaurants autour de moi';
+        button.textContent = '⌖ Localise-moi';
       }, { enableHighAccuracy: false, timeout: 20_000, maximumAge: 300_000 });
+    }
+
+    async function searchRestaurantPosition(latitude, longitude, origin = 'votre position') {
+      const results = document.getElementById('restaurant-results');
+      results.textContent = 'Recherche des restaurants…';
+      const response = await fetch('/api/restaurants', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ latitude, longitude }) });
+      if (!response.ok) throw new Error((await response.json()).error);
+      const restaurants = await response.json();
+      results.innerHTML = restaurants.length ? `<small class="muted">À moins de 3 km de ${escapeHtml(origin)}</small><div class="choices">${restaurants.map(restaurant => `<div>${choice('⌖', restaurant.name, `${restaurant.distance} m${restaurant.address ? ` · ${restaurant.address}` : ''}${restaurant.cuisine ? ` · ${restaurant.cuisine}` : ''}`, { restaurant: restaurant.name })}<a href="https://www.openstreetmap.org/?mlat=${Number(restaurant.latitude)}&mlon=${Number(restaurant.longitude)}#map=18/${Number(restaurant.latitude)}/${Number(restaurant.longitude)}" target="_blank" rel="noopener noreferrer">Voir sur la carte</a></div>`).join('')}</div><small class="muted">Données © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">contributeurs OpenStreetMap</a></small>` : '<p class="muted">Aucun restaurant référencé dans un rayon de 3 km.</p>';
+    }
+
+    async function findPlaces() {
+      const results = document.getElementById('restaurant-results');
+      const button = document.getElementById('find-place');
+      button.disabled = true;
+      results.textContent = 'Recherche de la commune…';
+      try {
+        const response = await fetch(`/api/places?query=${encodeURIComponent(document.getElementById('restaurant-place').value.trim())}`);
+        if (!response.ok) throw new Error((await response.json()).error);
+        const places = await response.json();
+        results.innerHTML = places.length ? `<small class="muted">Choisissez le centre de votre recherche</small><div class="choices">${places.map(place => choice('⌖', place.name, (place.postalCodes || []).join(', '), { place: place.name, latitude: place.latitude, longitude: place.longitude })).join('')}</div>` : '<p class="muted">Aucune commune trouvée. Essayez son nom ou un code postal à 5 chiffres.</p>';
+      } catch (error) {
+        results.innerHTML = `<p class="error">${escapeHtml(error.message)}</p>`;
+      } finally {
+        button.disabled = false;
+      }
     }
 
     async function saveEvent() {
@@ -711,11 +734,15 @@
     document.getElementById('close-dialog').addEventListener('click', () => dialog.close());
     document.getElementById('choices').addEventListener('click', event => {
       if (event.target.closest('#find-restaurants')) return findRestaurants();
+      if (event.target.closest('#find-place')) return findPlaces();
       if (event.target.closest('#confirm-mixed')) return saveMixedMeal();
       if (event.target.closest('#confirm-duo')) return saveDuoMeal();
       if (event.target.closest('#confirm-event')) return saveEvent();
       const button = event.target.closest('.choice');
       if (!button) return;
+      if (button.dataset.place) {
+        return searchRestaurantPosition(Number(button.dataset.latitude), Number(button.dataset.longitude), `la commune de ${button.dataset.place}`).catch(error => { document.getElementById('restaurant-results').innerHTML = `<p class="error">${escapeHtml(error.message)}</p>`; });
+      }
       if (button.dataset.restaurant) {
         document.getElementById('event-title').value = button.dataset.restaurant;
         document.getElementById('event-location').value = 'restaurant';
