@@ -501,6 +501,7 @@
       }
       button.disabled = true;
       button.textContent = 'Recherche en cours…';
+      results.textContent = '';
       navigator.geolocation.getCurrentPosition(async position => {
         try {
           const response = await fetch('/api/restaurants', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ latitude: position.coords.latitude, longitude: position.coords.longitude }) });
@@ -513,11 +514,16 @@
           button.disabled = false;
           button.textContent = '⌖ Restaurants autour de moi';
         }
-      }, () => {
-        results.innerHTML = '<p class="error">Autorisez la position pour chercher autour de vous.</p>';
+      }, error => {
+        const messages = {
+          1: 'Accès à la position refusé. Autorisez-le dans les permissions du navigateur.',
+          2: 'Position indisponible malgré l’autorisation. Vérifiez le service de localisation de Windows ou réessayez sur un téléphone.',
+          3: 'La localisation a dépassé le délai. Vérifiez votre connexion et réessayez.'
+        };
+        results.innerHTML = `<p class="error">${messages[error.code] || 'Impossible d’obtenir votre position.'}</p>`;
         button.disabled = false;
         button.textContent = '⌖ Restaurants autour de moi';
-      }, { enableHighAccuracy: false, timeout: 10_000, maximumAge: 300_000 });
+      }, { enableHighAccuracy: false, timeout: 20_000, maximumAge: 300_000 });
     }
 
     async function saveEvent() {
