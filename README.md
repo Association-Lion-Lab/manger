@@ -90,6 +90,8 @@ En cas de géolocalisation indisponible, saisissez une ville ou un code postal f
 
 ## Catalogue et univers
 
+Depuis une fiche, « Dupliquer » ouvre une copie dans l'éditeur avec ses ingrédients, étapes et univers. La variante n'est créée qu'à l'enregistrement et ne modifie pas l'original ; annuler ne crée aucune recette.
+
 Dans Recettes, le bouton d'import ajoute 14 recettes originales avec ingrédients quantifiés et étapes de préparation, cuisson et service. L'import conserve les recettes existantes et ignore les titres déjà présents. Les recettes importées restent modifiables et alimentent les suggestions et la liste de courses.
 
 La recherche porte sur le nom et les ingrédients. Les univers sont combinables dans l'éditeur : Recettes du rat (budget), Recettes de date, Plats mijotés, Japon, Chine, Terroir français et Côté chef. « Budget » ne garantit pas un prix ; « Côté chef » désigne une inspiration soignée, sans attribution à un chef connu. Les recettes n'ont pas encore été validées par des essais en cuisine.

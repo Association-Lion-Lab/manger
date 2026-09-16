@@ -263,6 +263,7 @@
       <p id="recipe-view-error" class="error" role="alert" hidden></p>
       <div class="recipe-form-actions">
         <button id="edit-recipe" class="secondary" type="button">Modifier</button>
+        <button id="duplicate-recipe" class="secondary" type="button" style="grid-column: 1 / -1">Dupliquer</button>
         <button id="delete-recipe" class="secondary" type="button">Supprimer</button>
       </div>
     </dialog>
@@ -858,6 +859,13 @@
       const recipe = state.recipes.find(item => item.id === editingRecipeId);
       recipeViewDialog.close();
       openRecipeEditor(recipe);
+    });
+    document.getElementById('duplicate-recipe').addEventListener('click', () => {
+      const recipe = state.recipes.find(item => item.id === editingRecipeId);
+      if (!recipe) return;
+      recipeViewDialog.close();
+      openRecipeEditor({ ...recipe, id: null, title: `${recipe.title.slice(0, 110)} — copie` });
+      document.getElementById('recipe-dialog-title').textContent = 'Créer une variante';
     });
     document.getElementById('delete-recipe').addEventListener('click', async () => {
       const recipe = state.recipes.find(item => item.id === editingRecipeId);
