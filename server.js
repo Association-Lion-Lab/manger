@@ -97,6 +97,11 @@ function createDatabase(filename) {
       unit TEXT NOT NULL,
       PRIMARY KEY (week_start, name, unit)
     );
+    CREATE TABLE IF NOT EXISTS shopping_manual (
+      id INTEGER PRIMARY KEY, week_start TEXT NOT NULL, name TEXT NOT NULL,
+      amount REAL NOT NULL, unit TEXT NOT NULL, aisle TEXT NOT NULL,
+      checked INTEGER NOT NULL DEFAULT 0
+    );
   `);
   if (!db.prepare('PRAGMA table_info(recipes)').all().some(column => column.name === 'instructions')) {
     db.exec("ALTER TABLE recipes ADD COLUMN instructions TEXT NOT NULL DEFAULT ''");
@@ -303,7 +308,8 @@ function shoppingList(db, start) {
 
 function shoppingState(db, start) {
   const isChecked = db.prepare('SELECT 1 FROM shopping_checks WHERE week_start = ? AND name = ? AND unit = ?');
-  return shoppingList(db, start).map(item => ({ ...item, checked: Boolean(isChecked.get(start, item.name, item.unit)) }));
+  return [...shoppingList(db, start).map(item => ({ ...item, checked: Boolean(isChecked.get(start, item.name, item.unit)) })),
+    ...db.prepare('SELECT id AS manualId, name, amount, unit, aisle, checked FROM shopping_manual WHERE week_start = ? ORDER BY id').all(start).map(item => ({ ...item, checked: Boolean(item.checked) }))];
 }
 
 function household(db) {
@@ -656,8 +662,24 @@ function createHandler(db, overpassUrl, communesUrl) {
       if (request.method === 'POST' && url.pathname === '/api/shopping-checks') {
         const input = await readJson(request);
         if (!input || !isDateKey(input.weekStart) || typeof input.name !== 'string' || !input.name || input.name.length > 80 || typeof input.unit !== 'string' || !input.unit || input.unit.length > 24 || typeof input.checked !== 'boolean') throw new Error('Article invalide');
+        if (input.manualId != null) {
+          if (!Number.isSafeInteger(input.manualId) || db.prepare('UPDATE shopping_manual SET checked = ? WHERE id = ? AND week_start = ?').run(Number(input.checked), input.manualId, input.weekStart).changes === 0) throw new Error('Article inconnu');
+          return sendJson(response, 200, {});
+        }
         if (input.checked) db.prepare('INSERT INTO shopping_checks (week_start, name, unit) VALUES (?, ?, ?) ON CONFLICT DO NOTHING').run(input.weekStart, input.name, input.unit);
         else db.prepare('DELETE FROM shopping_checks WHERE week_start = ? AND name = ? AND unit = ?').run(input.weekStart, input.name, input.unit);
+        return sendJson(response, 200, {});
+      }
+
+      if (request.method === 'POST' && url.pathname === '/api/shopping-manual') {
+        const input = await readJson(request);
+        if (!input || !isDateKey(input.weekStart) || typeof input.name !== 'string' || !input.name.trim() || input.name.length > 80 || typeof input.unit !== 'string' || !input.unit.trim() || input.unit.length > 24 || !Number.isFinite(input.amount) || input.amount <= 0 || input.amount > 10000 || !['Fruits et légumes', 'Frais', 'Épicerie', 'Surgelés', 'Maison', 'Autres'].includes(input.aisle)) throw new Error('Article invalide');
+        const result = db.prepare('INSERT INTO shopping_manual (week_start, name, amount, unit, aisle) VALUES (?, ?, ?, ?, ?)').run(input.weekStart, input.name.trim(), input.amount, input.unit.trim(), input.aisle);
+        return sendJson(response, 201, { id: Number(result.lastInsertRowid) });
+      }
+      const shoppingManualMatch = url.pathname.match(/^\/api\/shopping-manual\/(\d+)$/);
+      if (request.method === 'DELETE' && shoppingManualMatch) {
+        if (db.prepare('DELETE FROM shopping_manual WHERE id = ?').run(Number(shoppingManualMatch[1])).changes === 0) throw new Error('Article inconnu');
         return sendJson(response, 200, {});
       }
 

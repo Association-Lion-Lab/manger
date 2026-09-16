@@ -207,6 +207,15 @@
       <section id="shopping-panel" class="panel" hidden>
         <div class="section-heading"><div><h1>Courses</h1><span id="shopping-summary" class="muted"></span></div><button id="share" class="icon-button" type="button" aria-label="Partager la liste">↗</button></div>
         <div id="shopping" class="shopping-list"></div>
+        <details><summary>Ajouter un article</summary><form id="manual-shopping-form" class="compact-form">
+          <label class="field wide"><span>Article</span><input id="manual-name" required maxlength="80" placeholder="Café, savon…"></label>
+          <label class="field"><span>Quantité</span><input id="manual-amount" type="number" value="1" min="0.01" max="10000" step="0.01" required></label>
+          <label class="field"><span>Unité</span><input id="manual-unit" value="pièce" required maxlength="24"></label>
+          <label class="field wide"><span>Rayon</span><select id="manual-aisle"><option>Autres</option><option>Fruits et légumes</option><option>Frais</option><option>Épicerie</option><option>Surgelés</option><option>Maison</option></select></label>
+          <button class="primary wide" type="submit">Ajouter aux courses</button>
+        </form></details>
+        <p class="muted">Les ajouts restent dans cette semaine. Le rangement automatique des ingrédients est indicatif.</p>
+        <p id="shopping-error" class="error" role="alert" hidden></p>
       </section>
     </main>
 
@@ -424,7 +433,13 @@
       const container = document.getElementById('shopping');
       const remaining = state.shopping.filter(item => !item.checked).length;
       summary.textContent = `${remaining} à acheter · ${state.shopping.length} au total`;
-      container.innerHTML = state.shopping.length ? `<div class="shopping-group"><span class="group-title">Liste générée</span>${state.shopping.map((item, index) => `<label class="shopping-item"><input type="checkbox" data-shopping="${index}"${item.checked ? ' checked' : ''}><span>${escapeHtml(shoppingText(item))}</span></label>`).join('')}</div>` : '<div class="empty-state">Planifiez une recette à la maison pour générer la liste de courses.</div>';
+      const groups = new Map();
+      state.shopping.forEach((item, index) => {
+        const aisle = shoppingAisle(item);
+        if (!groups.has(aisle)) groups.set(aisle, []);
+        groups.get(aisle).push(`<div style="display:flex;gap:8px;align-items:center"><label class="shopping-item" style="flex:1;min-width:0"><input type="checkbox" data-shopping="${index}"${item.checked ? ' checked' : ''}><span>${escapeHtml(shoppingText(item))}${item.manualId ? ' · ajouté' : ''}</span></label>${item.manualId ? `<button type="button" class="icon-button" data-remove-shopping="${item.manualId}" aria-label="Supprimer ${escapeHtml(item.name)}">×</button>` : ''}</div>`);
+      });
+      container.innerHTML = groups.size ? [...groups].sort(([a], [b]) => a.localeCompare(b, 'fr')).map(([aisle, items]) => `<section class="shopping-group"><h2 class="group-title">${escapeHtml(aisle)}</h2>${items.join('')}</section>`).join('') : '<div class="empty-state">Planifiez une recette ou ajoutez un article à acheter.</div>';
     }
 
     function renderHousehold() {
@@ -434,6 +449,15 @@
 
     function formatAmount(amount) {
       return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(amount);
+    }
+
+    function shoppingAisle(item) {
+      if (item.aisle) return item.aisle;
+      // ponytail: classement indicatif par mots, préférer des rayons enregistrés si le catalogue grandit.
+      if (/\b(carotte|tomate|courgette|oignon|ail|citron|brocoli|champignon|pomme de terre|chou|gingembre|aubergine|poivron)s?\b/i.test(item.name)) return 'Fruits et légumes';
+      if (/\b(œuf|oeuf|lait|crème|beurre|fromage|poulet|porc|bœuf|boeuf|saumon|tofu)s?\b/i.test(item.name)) return 'Frais';
+      if (/\b(riz|pâtes|lentille|pois|huile|sucre|sel|sauce|coco|farine|café)s?\b/i.test(item.name)) return 'Épicerie';
+      return 'Autres';
     }
 
     function shoppingText(item) {
@@ -972,9 +996,39 @@
       const checkbox = event.target.closest('[data-shopping]');
       if (!checkbox) return;
       const item = state.shopping[Number(checkbox.dataset.shopping)];
-      item.checked = checkbox.checked;
-      renderShopping();
-      await fetch('/api/shopping-checks', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ weekStart: key(state.weekStart), name: item.name, unit: item.unit, checked: item.checked }) });
+      checkbox.disabled = true;
+      try {
+        const response = await fetch('/api/shopping-checks', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ weekStart: key(state.weekStart), name: item.name, unit: item.unit, manualId: item.manualId, checked: checkbox.checked }) });
+        if (!response.ok) throw new Error((await response.json()).error);
+        item.checked = checkbox.checked;
+        renderShopping();
+      } catch (error) { checkbox.checked = item.checked; shoppingError(error); }
+      finally { checkbox.disabled = false; }
+    });
+    function shoppingError(error) {
+      const message = document.getElementById('shopping-error');
+      message.textContent = error.message; message.hidden = false;
+    }
+    document.getElementById('manual-shopping-form').addEventListener('submit', async event => {
+      event.preventDefault();
+      const button = event.target.querySelector('button'); button.disabled = true;
+      document.getElementById('shopping-error').hidden = true;
+      try {
+        const response = await fetch('/api/shopping-manual', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ weekStart: key(state.weekStart), name: document.getElementById('manual-name').value, amount: Number(document.getElementById('manual-amount').value), unit: document.getElementById('manual-unit').value, aisle: document.getElementById('manual-aisle').value }) });
+        if (!response.ok) throw new Error((await response.json()).error);
+        event.target.reset(); await load();
+      } catch (error) { shoppingError(error); }
+      finally { button.disabled = false; }
+    });
+    document.getElementById('shopping').addEventListener('click', async event => {
+      const button = event.target.closest('[data-remove-shopping]');
+      if (!button || !confirm('Supprimer cet article ajouté aux courses ?')) return;
+      button.disabled = true;
+      try {
+        const response = await fetch(`/api/shopping-manual/${button.dataset.removeShopping}`, { method: 'DELETE' });
+        if (!response.ok) throw new Error((await response.json()).error);
+        await load();
+      } catch (error) { shoppingError(error); button.disabled = false; }
     });
     document.getElementById('new-recipe').addEventListener('click', () => openRecipeEditor());
     document.getElementById('recipe-search').addEventListener('input', renderRecipes);

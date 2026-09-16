@@ -34,6 +34,8 @@ L'application est ensuite disponible sur <http://localhost:3000>. Le volume Dock
 
 ## Principes
 
+Les courses combinent les ingrédients calculés depuis le planning et des articles ajoutés manuellement pour la semaine affichée. Les ajouts peuvent être cochés, supprimés et partagés avec la liste. Leur rayon est choisi à l'ajout ; celui des ingrédients est estimé par mots-clés et peut être approximatif. Les ajouts ne sont ni fusionnés avec les ingrédients ni effacés lorsqu'un repas change.
+
 - auto-hébergeable avec une installation Docker simple ;
 - utilisable confortablement depuis un téléphone ;
 - aucune dépendance obligatoire à un service cloud ou à une IA ;

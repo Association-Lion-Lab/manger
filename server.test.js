@@ -7,6 +7,29 @@ const { tmpdir } = require('node:os');
 const { join } = require('node:path');
 const { createApp, createDatabase, restaurantResults, shoppingList, suggestions } = require('./server');
 
+test('les ajouts aux courses sont indépendants, isolés par semaine et validés', async t => {
+  const db = createDatabase(':memory:');
+  const server = createApp(db); server.listen(0, '127.0.0.1');
+  await once(server, 'listening');
+  t.after(() => { server.close(); db.close(); });
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const post = (path, data) => fetch(base + path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) });
+  const input = { weekStart: '2026-09-14', name: 'Savon', amount: 2, unit: 'pièce', aisle: 'Maison' };
+  for (const bad of [{ amount: -1 }, { amount: '2' }, { name: ' ' }, { aisle: 'inconnu' }, { weekStart: '2026-99-99' }]) assert.equal((await post('/api/shopping-manual', { ...input, ...bad })).status, 400);
+  const added = await (await post('/api/shopping-manual', input)).json();
+  const week = async start => (await (await fetch(`${base}/api/week?start=${start}`)).json()).shopping;
+  let items = await week(input.weekStart);
+  assert.equal(items.find(item => item.manualId === added.id).amount, 2);
+  assert.equal((await week('2026-09-21')).length, 0);
+  assert.equal((await post('/api/shopping-checks', { ...input, manualId: added.id, checked: true })).status, 200);
+  assert.equal((await post('/api/shopping-checks', { ...input, weekStart: '2026-09-21', manualId: added.id, checked: true })).status, 400);
+  assert.equal((await week(input.weekStart)).find(item => item.manualId === added.id).checked, true);
+  db.exec('DELETE FROM meals');
+  assert.equal((await week(input.weekStart)).length, 1);
+  assert.equal((await fetch(`${base}/api/shopping-manual/${added.id}`, { method: 'DELETE' })).status, 200);
+  assert.equal((await week(input.weekStart)).length, 0);
+});
+
 test('la composition hebdomadaire préserve les repas et valide tout avant écriture', async t => {
   const db = createDatabase(':memory:');
   const server = createApp(db);
