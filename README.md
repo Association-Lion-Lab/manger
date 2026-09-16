@@ -36,7 +36,7 @@ L'application est ensuite disponible sur <http://localhost:3000>. Le volume Dock
 
 Les courses combinent les ingrédients calculés depuis le planning et des articles ajoutés manuellement pour la semaine affichée. Les ajouts peuvent être cochés, supprimés et partagés avec la liste. Leur rayon est choisi à l'ajout ; celui des ingrédients est estimé par mots-clés et peut être approximatif. Les ajouts ne sont ni fusionnés avec les ingrédients ni effacés lorsqu'un repas change.
 
-Dans les courses, « Changer le rayon » permet de corriger le classement. Pour un ingrédient calculé, ce choix est retenu pour son nom exact et son unité dans toutes les semaines ; « Automatique » retire la correction. Pour un article ajouté manuellement, seul cet article est modifié.
+Dans les courses, « Organiser les rayons » active les choix de rayon ; « Terminer » retrouve la liste épurée. Chaque correction est enregistrée immédiatement. Pour un ingrédient calculé, ce choix est retenu pour son nom exact et son unité dans toutes les semaines ; « Automatique » retire la correction. Pour un article ajouté manuellement, seul cet article est modifié.
 
 - auto-hébergeable avec une installation Docker simple ;
 - utilisable confortablement depuis un téléphone ;

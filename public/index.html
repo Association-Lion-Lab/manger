@@ -206,6 +206,8 @@
 
       <section id="shopping-panel" class="panel" hidden>
         <div class="section-heading"><div><h1>Courses</h1><span id="shopping-summary" class="muted"></span></div><button id="share" class="icon-button" type="button" aria-label="Partager la liste">↗</button></div>
+        <button id="organize-shopping" class="secondary" type="button" aria-pressed="false" aria-controls="shopping">Organiser les rayons</button>
+        <p id="organize-shopping-help" class="muted" hidden>Les corrections des ingrédients sont retenues pour les prochaines semaines. Chaque changement est enregistré immédiatement.</p>
         <div id="shopping" class="shopping-list"></div>
         <details><summary>Ajouter un article</summary><form id="manual-shopping-form" class="compact-form">
           <label class="field wide"><span>Article</span><input id="manual-name" required maxlength="80" placeholder="Café, savon…"></label>
@@ -428,6 +430,7 @@
       document.getElementById('recipes').innerHTML = filtered.map(recipe => `<button class="recipe" type="button" data-edit-recipe="${recipe.id}"><span class="meal-icon">${recipe.tags.includes('rat') ? '🐀' : '♨'}</span><span class="recipe-copy"><strong>${escapeHtml(recipe.title)}</strong><small>${recipe.minutes} min · ${dietLabels[recipe.diet]} · ${recipe.steps.length} étape${recipe.steps.length > 1 ? 's' : ''}</small><small>${recipe.tags.filter(tag => recipeCategories[tag]).map(tag => recipeCategories[tag]).join(' · ')}</small></span><span>›</span></button>`).join('') || '<div class="empty-state">Aucune recette ne correspond à ces filtres.</div>';
     }
 
+    let organizingShopping = false;
     function renderShopping() {
       const summary = document.getElementById('shopping-summary');
       const container = document.getElementById('shopping');
@@ -440,10 +443,10 @@
         groups.get(aisle).push(`<div style="display:flex;gap:8px;align-items:center"><label class="shopping-item" style="flex:1;min-width:0"><input type="checkbox" data-shopping="${index}"${item.checked ? ' checked' : ''}><span>${escapeHtml(shoppingText(item))}${item.manualId ? ' · ajouté' : ''}</span></label>${item.manualId ? `<button type="button" class="icon-button" data-remove-shopping="${item.manualId}" aria-label="Supprimer ${escapeHtml(item.name)}">×</button>` : ''}</div>`);
       });
       container.innerHTML = groups.size ? [...groups].sort(([a], [b]) => a.localeCompare(b, 'fr')).map(([aisle, items]) => `<section class="shopping-group"><h2 class="group-title">${escapeHtml(aisle)}</h2>${items.join('')}</section>`).join('') : '<div class="empty-state">Planifiez une recette ou ajoutez un article à acheter.</div>';
-      container.querySelectorAll('[data-shopping]').forEach(input => {
+      if (organizingShopping) container.querySelectorAll('[data-shopping]').forEach(input => {
         const index = Number(input.dataset.shopping);
         const item = state.shopping[index];
-        input.closest('div').insertAdjacentHTML('afterend', `<details style="margin:8px 0 16px"><summary>Changer le rayon</summary><label class="field"><span>${item.manualId ? 'Pour cet article' : 'Retenu pour cet ingrédient et cette unité, toutes les semaines'}</span><select data-shopping-aisle="${index}" aria-label="Rayon de ${escapeHtml(item.name)}">${(item.manualId ? [] : ['']).concat(['Fruits et légumes', 'Frais', 'Épicerie', 'Surgelés', 'Maison', 'Autres']).map(aisle => `<option value="${aisle}"${(item.aisle || '') === aisle ? ' selected' : ''}>${aisle || 'Automatique'}</option>`).join('')}</select></label></details>`);
+        input.closest('div').insertAdjacentHTML('afterend', `<label class="field" style="margin:8px 0 16px"><span>Rayon${item.manualId ? ' de cet article' : ''}</span><select data-shopping-aisle="${index}" aria-label="Rayon de ${escapeHtml(item.name)}">${(item.manualId ? [] : ['']).concat(['Fruits et légumes', 'Frais', 'Épicerie', 'Surgelés', 'Maison', 'Autres']).map(aisle => `<option value="${aisle}"${(item.aisle || '') === aisle ? ' selected' : ''}>${aisle || 'Automatique'}</option>`).join('')}</select></label>`);
       });
     }
 
@@ -991,6 +994,13 @@
       document.querySelectorAll('nav button').forEach(item => { item.classList.toggle('active', item === button); item.toggleAttribute('aria-current', item === button); });
       document.querySelectorAll('.panel').forEach(panel => { panel.hidden = true; });
       document.getElementById(`${button.dataset.panel}-panel`).hidden = false;
+    });
+    document.getElementById('organize-shopping').addEventListener('click', event => {
+      organizingShopping = !organizingShopping;
+      event.target.textContent = organizingShopping ? 'Terminer' : 'Organiser les rayons';
+      event.target.setAttribute('aria-pressed', String(organizingShopping));
+      document.getElementById('organize-shopping-help').hidden = !organizingShopping;
+      renderShopping();
     });
     document.getElementById('share').addEventListener('click', async () => {
       const text = state.shopping.filter(item => !item.checked).map(item => `- ${shoppingText(item)}`).join('\n');
