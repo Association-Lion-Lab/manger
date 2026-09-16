@@ -29,6 +29,8 @@ test('le catalogue importe 14 recettes complètes sans doublon ni remplacement',
     assert.ok(recipe.minutes > 0);
   }
   for (const tag of ['rat', 'date', 'mijote', 'japon', 'chine', 'terroir', 'chef']) assert.ok(recipes.some(recipe => recipe.tags.includes(tag)));
+  for (const tag of ['express', 'batch', 'emporter', 'comfort', 'mediterranee', 'italie', 'inde']) assert.ok(recipes.some(recipe => recipe.tags.includes(tag)));
+  assert.ok(recipes.filter(recipe => recipe.tags.includes('express')).every(recipe => recipe.minutes <= 30));
 });
 
 test('la migration corrige le régime des gnocchis dans une base existante', t => {

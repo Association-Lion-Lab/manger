@@ -303,7 +303,7 @@
     const stepKindLabels = { prep: 'Préparation', cook: 'Cuisson', rest: 'Repos', serve: 'Dressage' };
     const dietLabels = { vegan: 'J’aime les graines', vegetarian: 'Veggie cool', pescetarian: 'Team océan', omnivore: 'Je mange de tout' };
     const categoryLabels = { plant: 'Graines & plantes', egg: 'Veggie', fish: 'Team océan', meat: 'Viandard·e' };
-    const recipeCategories = { rat: '🐀 Recettes du rat', date: '♥ Recettes de date', mijote: '🍲 Plats mijotés', japon: '🇯🇵 Japon', chine: '🇨🇳 Chine', terroir: '🥖 Terroir français', chef: '✦ Côté chef' };
+    const recipeCategories = { rat: '🐀 Recettes du rat', date: '♥ Recettes de date', mijote: '🍲 Plats mijotés', japon: '🇯🇵 Japon', chine: '🇨🇳 Chine', terroir: '🥖 Terroir français', chef: '✦ Côté chef', express: '⚡ Express · 30 min max', batch: '📦 Batch cooking', emporter: '🥡 À emporter', comfort: '🛋️ Doudou food', mediterranee: '☀️ Méditerranée', italie: '🍝 Italie', inde: '🍛 Inde', mexique: '🌮 Mexique' };
     document.getElementById('recipes').insertAdjacentHTML('beforebegin', `<div class="recipe-filters"><label class="field"><span>Rechercher une recette</span><input id="recipe-search" type="search" placeholder="Nom ou ingrédient…"></label><label class="field"><span>Univers</span><select id="recipe-category"><option value="">Tous les univers</option>${Object.entries(recipeCategories).map(([key, label]) => `<option value="${key}">${label}</option>`).join('')}</select></label></div>`);
     let editingRecipeId = null;
     let editingMemberId = null;

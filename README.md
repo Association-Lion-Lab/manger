@@ -94,6 +94,8 @@ Dans Recettes, le bouton d'import ajoute 14 recettes originales avec ingrédient
 
 La recherche porte sur le nom et les ingrédients. Les univers sont combinables dans l'éditeur : Recettes du rat (budget), Recettes de date, Plats mijotés, Japon, Chine, Terroir français et Côté chef. « Budget » ne garantit pas un prix ; « Côté chef » désigne une inspiration soignée, sans attribution à un chef connu. Les recettes n'ont pas encore été validées par des essais en cuisine.
 
+Huit univers supplémentaires sont disponibles : Express (30 min maximum), Batch cooking, À emporter, Doudou food, Méditerranée, Italie, Inde et Mexique. Ils se choisissent dans l'éditeur et le filtre de recettes. Les prochains imports du catalogue incluent les nouvelles étiquettes pertinentes ; les recettes déjà importées restent inchangées et peuvent être classées manuellement. Mexique est disponible pour vos créations, sans recette dédiée dans ce premier catalogue. Les étiquettes de conservation ne remplacent pas les précautions de refroidissement, de transport et de réchauffage.
+
 ## Parcours de validation `0.1`
 
 Une personne doit pouvoir ajouter trois recettes, demander des suggestions, organiser sa semaine, noter une sortie et un date, puis obtenir la liste de courses correspondante sans ressaisir les ingrédients.
