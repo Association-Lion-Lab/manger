@@ -128,6 +128,10 @@
     .step-row .icon-button { border-radius: 12px; }
     .recipe-form-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .recipe-view-actions { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; padding-top: 18px; border-top: 1px solid var(--line); }
+    #cooking-timer-controls[hidden] { display: none; }
+    #start-cooking { width: 100%; margin-bottom: 18px; }
+    #cooking-dialog button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+    #cooking-dialog button:active { filter: brightness(.9); }
     .recipe-view-actions button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
     .recipe-view-actions button:active { filter: brightness(.9); }
     .recipe-view-actions .delete-action { grid-column: 1 / -1; justify-self: center; min-height: 44px; padding: 8px 16px; border: 0; border-radius: 12px; color: var(--accent); background: transparent; font-size: 13px; cursor: pointer; }
@@ -261,6 +265,7 @@
         <div><h2 id="recipe-view-title"></h2><span id="recipe-view-meta" class="muted"></span></div>
         <button id="close-recipe-view" class="icon-button" type="button" aria-label="Fermer">×</button>
       </div>
+      <button id="start-cooking" class="primary" type="button">Cuisiner cette recette</button>
       <div class="recipe-detail">
         <section><h3>Ingrédients</h3><ul id="recipe-view-ingredients" class="detail-list"></ul></section>
         <section><h3>Réalisation</h3><ol id="recipe-view-steps" class="detail-list"></ol></section>
@@ -271,6 +276,17 @@
         <button id="duplicate-recipe" class="secondary" type="button">Dupliquer</button>
         <button id="delete-recipe" class="delete-action" type="button">Supprimer cette recette</button>
       </div>
+    </dialog>
+
+    <dialog id="cooking-dialog">
+      <div class="section-heading"><div><h2 id="cooking-title"></h2><span class="muted">Mode cuisine</span></div><button id="close-cooking" class="icon-button" type="button" aria-label="Quitter le mode cuisine">×</button></div>
+      <p class="muted">Les minuteurs fonctionnent tant que cette vue reste ouverte. Pas d’alarme sonore ni de notification en arrière-plan.</p>
+      <details><summary>Voir les ingrédients</summary><ul id="cooking-ingredients" class="detail-list"></ul></details>
+      <p id="cooking-progress" class="muted"></p>
+      <section class="detail-step" aria-labelledby="cooking-kind"><h3 id="cooking-kind"></h3><p id="cooking-instruction" style="font-size: 1.2rem; line-height: 1.65; white-space: pre-line"></p></section>
+      <div id="cooking-timer-controls" class="recipe-view-actions"><button id="cooking-timer" class="secondary" type="button"></button><button id="cooking-reset" class="secondary" type="button">Réinitialiser</button></div>
+      <p id="cooking-timers" role="status" aria-live="polite"></p>
+      <div class="recipe-view-actions"><button id="cooking-back" class="secondary" type="button">Précédente</button><button id="cooking-next" class="primary" type="button">Suivante</button></div>
     </dialog>
 
     <dialog id="household-dialog">
@@ -788,6 +804,66 @@
       document.getElementById('recipe-view-steps').innerHTML = recipe.steps.map(step => `<li class="detail-step"><small>${stepKindLabels[step.kind]}${step.minutes == null ? '' : ` · ${step.minutes} min`}</small><p>${escapeHtml(step.instruction)}</p></li>`).join('');
       recipeViewDialog.showModal();
     }
+
+    const cookingDialog = document.getElementById('cooking-dialog');
+    let cooking = null;
+    let cookingInterval = null;
+
+    function timerSeconds(timer, now = Date.now()) {
+      return timer.end == null ? timer.remaining : Math.max(0, Math.ceil((timer.end - now) / 1000));
+    }
+
+    function renderCookingTimers() {
+      if (!cooking) return;
+      const timer = cooking.timers[cooking.index];
+      document.getElementById('cooking-timer').textContent = timerSeconds(timer) === 0 ? 'Relancer' : timer.end != null ? 'Mettre en pause' : timer.started ? 'Reprendre' : 'Démarrer le minuteur';
+      // Only announce changes at whole minutes or completion, not every second.
+      document.getElementById('cooking-timers').textContent = cooking.timers.map((item, index) => {
+        if (!item.started) return '';
+        const seconds = timerSeconds(item);
+        return `Étape ${index + 1} : ${seconds === 0 ? 'minuteur terminé — vérifie la cuisson' : `${Math.ceil(seconds / 60)} min restantes${item.end == null ? ' · en pause' : ''}`}`;
+      }).filter(Boolean).join(' · ');
+    }
+
+    function renderCooking() {
+      const step = cooking.recipe.steps[cooking.index];
+      document.getElementById('cooking-progress').textContent = `Étape ${cooking.index + 1} sur ${cooking.recipe.steps.length}`;
+      document.getElementById('cooking-kind').textContent = `${stepKindLabels[step.kind]}${step.minutes ? ` · ${step.minutes} min` : ''}`;
+      document.getElementById('cooking-instruction').textContent = step.instruction;
+      document.getElementById('cooking-timer-controls').hidden = !step.minutes;
+      document.getElementById('cooking-back').disabled = cooking.index === 0;
+      document.getElementById('cooking-next').textContent = cooking.index === cooking.recipe.steps.length - 1 ? 'Terminer' : 'Suivante';
+      renderCookingTimers();
+    }
+
+    document.getElementById('start-cooking').addEventListener('click', () => {
+      const recipe = state.recipes.find(item => item.id === editingRecipeId);
+      if (!recipe?.steps.length) return;
+      cooking = { recipe, index: 0, timers: recipe.steps.map(step => ({ remaining: (step.minutes || 0) * 60, end: null, started: false })) };
+      document.getElementById('cooking-title').textContent = recipe.title;
+      document.getElementById('cooking-ingredients').innerHTML = recipe.ingredients.map(item => `<li>${escapeHtml(shoppingText(item))}</li>`).join('');
+      recipeViewDialog.close();
+      renderCooking();
+      cookingDialog.showModal();
+      cookingInterval = setInterval(renderCookingTimers, 1000);
+    });
+    document.getElementById('cooking-timer').addEventListener('click', () => {
+      const timer = cooking.timers[cooking.index];
+      if (timer.end != null && timerSeconds(timer) > 0) { timer.remaining = timerSeconds(timer); timer.end = null; }
+      else { if (timerSeconds(timer) === 0) timer.remaining = cooking.recipe.steps[cooking.index].minutes * 60; timer.end = Date.now() + timer.remaining * 1000; timer.started = true; }
+      renderCookingTimers();
+    });
+    document.getElementById('cooking-reset').addEventListener('click', () => {
+      cooking.timers[cooking.index] = { remaining: cooking.recipe.steps[cooking.index].minutes * 60, end: null, started: false };
+      renderCookingTimers();
+    });
+    document.getElementById('cooking-back').addEventListener('click', () => { if (cooking.index > 0) cooking.index--; renderCooking(); });
+    document.getElementById('cooking-next').addEventListener('click', () => {
+      if (cooking.index === cooking.recipe.steps.length - 1) cookingDialog.close();
+      else { cooking.index++; renderCooking(); }
+    });
+    document.getElementById('close-cooking').addEventListener('click', () => cookingDialog.close());
+    cookingDialog.addEventListener('close', () => { clearInterval(cookingInterval); cookingInterval = null; cooking = null; });
 
     async function saveRecipe(event) {
       event.preventDefault();

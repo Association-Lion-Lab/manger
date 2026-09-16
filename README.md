@@ -10,6 +10,8 @@ La maquette mobile du calendrier est validée. Une première tranche fonctionnel
 
 ## Lancer localement
 
+Depuis une fiche recette, **Cuisiner cette recette** ouvre les étapes guidées et les ingrédients. Chaque étape chronométrée dispose d'un minuteur indépendant : démarrer, mettre en pause, reprendre et réinitialiser. Passer à une autre étape ne l'arrête pas. Quitter le mode cuisine annule les minuteurs ; cette première version n'émet ni son ni notification en arrière-plan. Les durées servent de repères, pas de garantie de cuisson.
+
 Prérequis : Node.js 24 ou plus récent. Aucune dépendance n'est à installer.
 
 ```shell
