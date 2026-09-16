@@ -24,10 +24,22 @@ test('les ajouts aux courses sont indépendants, isolés par semaine et validés
   assert.equal((await post('/api/shopping-checks', { ...input, manualId: added.id, checked: true })).status, 200);
   assert.equal((await post('/api/shopping-checks', { ...input, weekStart: '2026-09-21', manualId: added.id, checked: true })).status, 400);
   assert.equal((await week(input.weekStart)).find(item => item.manualId === added.id).checked, true);
+  assert.equal((await post('/api/shopping-aisles', { ...input, manualId: added.id, aisle: 'Épicerie' })).status, 200);
+  assert.equal((await week(input.weekStart)).find(item => item.manualId === added.id).aisle, 'Épicerie');
+  assert.equal((await post('/api/shopping-aisles', { ...input, aisle: 'incorrect' })).status, 400);
   db.exec('DELETE FROM meals');
   assert.equal((await week(input.weekStart)).length, 1);
   assert.equal((await fetch(`${base}/api/shopping-manual/${added.id}`, { method: 'DELETE' })).status, 200);
   assert.equal((await week(input.weekStart)).length, 0);
+  await post('/api/meals', { date: input.weekStart, slot: 'soir', location: 'home', occasion: 'regular', people: 2, recipeId: 1, title: 'Repas', assignments: [], dishes: [] });
+  const ingredient = (await week(input.weekStart))[0];
+  assert.ok(ingredient);
+  assert.equal((await post('/api/shopping-aisles', { ...ingredient, aisle: 'Surgelés' })).status, 200);
+  assert.equal((await week(input.weekStart))[0].aisle, 'Surgelés');
+  db.exec("UPDATE meals SET date = '2026-09-21'");
+  assert.equal((await week('2026-09-21'))[0].aisle, 'Surgelés');
+  assert.equal((await post('/api/shopping-aisles', { ...ingredient, aisle: '' })).status, 200);
+  assert.equal((await week('2026-09-21'))[0].aisle, null);
 });
 
 test('la composition hebdomadaire préserve les repas et valide tout avant écriture', async t => {

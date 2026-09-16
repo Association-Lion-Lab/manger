@@ -102,6 +102,10 @@ function createDatabase(filename) {
       amount REAL NOT NULL, unit TEXT NOT NULL, aisle TEXT NOT NULL,
       checked INTEGER NOT NULL DEFAULT 0
     );
+    CREATE TABLE IF NOT EXISTS shopping_aisles (
+      name TEXT NOT NULL, unit TEXT NOT NULL, aisle TEXT NOT NULL,
+      PRIMARY KEY (name, unit)
+    );
   `);
   if (!db.prepare('PRAGMA table_info(recipes)').all().some(column => column.name === 'instructions')) {
     db.exec("ALTER TABLE recipes ADD COLUMN instructions TEXT NOT NULL DEFAULT ''");
@@ -308,7 +312,8 @@ function shoppingList(db, start) {
 
 function shoppingState(db, start) {
   const isChecked = db.prepare('SELECT 1 FROM shopping_checks WHERE week_start = ? AND name = ? AND unit = ?');
-  return [...shoppingList(db, start).map(item => ({ ...item, checked: Boolean(isChecked.get(start, item.name, item.unit)) })),
+  const aisle = db.prepare('SELECT aisle FROM shopping_aisles WHERE name = ? AND unit = ?');
+  return [...shoppingList(db, start).map(item => ({ ...item, aisle: aisle.get(item.name, item.unit)?.aisle || null, checked: Boolean(isChecked.get(start, item.name, item.unit)) })),
     ...db.prepare('SELECT id AS manualId, name, amount, unit, aisle, checked FROM shopping_manual WHERE week_start = ? ORDER BY id').all(start).map(item => ({ ...item, checked: Boolean(item.checked) }))];
 }
 
@@ -671,6 +676,16 @@ function createHandler(db, overpassUrl, communesUrl) {
         return sendJson(response, 200, {});
       }
 
+      if (request.method === 'POST' && url.pathname === '/api/shopping-aisles') {
+        const input = await readJson(request);
+        if (!input || typeof input.name !== 'string' || !input.name.trim() || input.name.length > 80 || typeof input.unit !== 'string' || !input.unit.trim() || input.unit.length > 24 || !['', 'Fruits et légumes', 'Frais', 'Épicerie', 'Surgelés', 'Maison', 'Autres'].includes(input.aisle)) throw new Error('Rayon invalide');
+        if (input.manualId != null) {
+          if (!Number.isSafeInteger(input.manualId) || !isDateKey(input.weekStart) || db.prepare('UPDATE shopping_manual SET aisle = ? WHERE id = ? AND week_start = ?').run(input.aisle || 'Autres', input.manualId, input.weekStart).changes === 0) throw new Error('Article inconnu');
+        } else if (input.aisle) {
+          db.prepare('INSERT INTO shopping_aisles (name, unit, aisle) VALUES (?, ?, ?) ON CONFLICT(name, unit) DO UPDATE SET aisle = excluded.aisle').run(input.name, input.unit, input.aisle);
+        } else db.prepare('DELETE FROM shopping_aisles WHERE name = ? AND unit = ?').run(input.name, input.unit);
+        return sendJson(response, 200, {});
+      }
       if (request.method === 'POST' && url.pathname === '/api/shopping-manual') {
         const input = await readJson(request);
         if (!input || !isDateKey(input.weekStart) || typeof input.name !== 'string' || !input.name.trim() || input.name.length > 80 || typeof input.unit !== 'string' || !input.unit.trim() || input.unit.length > 24 || !Number.isFinite(input.amount) || input.amount <= 0 || input.amount > 10000 || !['Fruits et légumes', 'Frais', 'Épicerie', 'Surgelés', 'Maison', 'Autres'].includes(input.aisle)) throw new Error('Article invalide');

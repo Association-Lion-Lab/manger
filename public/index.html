@@ -440,6 +440,11 @@
         groups.get(aisle).push(`<div style="display:flex;gap:8px;align-items:center"><label class="shopping-item" style="flex:1;min-width:0"><input type="checkbox" data-shopping="${index}"${item.checked ? ' checked' : ''}><span>${escapeHtml(shoppingText(item))}${item.manualId ? ' · ajouté' : ''}</span></label>${item.manualId ? `<button type="button" class="icon-button" data-remove-shopping="${item.manualId}" aria-label="Supprimer ${escapeHtml(item.name)}">×</button>` : ''}</div>`);
       });
       container.innerHTML = groups.size ? [...groups].sort(([a], [b]) => a.localeCompare(b, 'fr')).map(([aisle, items]) => `<section class="shopping-group"><h2 class="group-title">${escapeHtml(aisle)}</h2>${items.join('')}</section>`).join('') : '<div class="empty-state">Planifiez une recette ou ajoutez un article à acheter.</div>';
+      container.querySelectorAll('[data-shopping]').forEach(input => {
+        const index = Number(input.dataset.shopping);
+        const item = state.shopping[index];
+        input.closest('div').insertAdjacentHTML('afterend', `<details style="margin:8px 0 16px"><summary>Changer le rayon</summary><label class="field"><span>${item.manualId ? 'Pour cet article' : 'Retenu pour cet ingrédient et cette unité, toutes les semaines'}</span><select data-shopping-aisle="${index}" aria-label="Rayon de ${escapeHtml(item.name)}">${(item.manualId ? [] : ['']).concat(['Fruits et légumes', 'Frais', 'Épicerie', 'Surgelés', 'Maison', 'Autres']).map(aisle => `<option value="${aisle}"${(item.aisle || '') === aisle ? ' selected' : ''}>${aisle || 'Automatique'}</option>`).join('')}</select></label></details>`);
+      });
     }
 
     function renderHousehold() {
@@ -993,6 +998,19 @@
       else await navigator.clipboard.writeText(text);
     });
     document.getElementById('shopping').addEventListener('change', async event => {
+      const select = event.target.closest('[data-shopping-aisle]');
+      if (select) {
+        const item = state.shopping[Number(select.dataset.shoppingAisle)];
+        select.disabled = true;
+        document.getElementById('shopping-error').hidden = true;
+        try {
+          const response = await fetch('/api/shopping-aisles', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ weekStart: key(state.weekStart), name: item.name, unit: item.unit, manualId: item.manualId, aisle: select.value }) });
+          if (!response.ok) throw new Error((await response.json()).error);
+          await load();
+        } catch (error) { select.value = item.aisle || ''; shoppingError(error); }
+        finally { select.disabled = false; }
+        return;
+      }
       const checkbox = event.target.closest('[data-shopping]');
       if (!checkbox) return;
       const item = state.shopping[Number(checkbox.dataset.shopping)];
