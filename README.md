@@ -12,6 +12,8 @@ La maquette mobile du calendrier est validée. Une première tranche fonctionnel
 
 Depuis une fiche recette, **Cuisiner cette recette** ouvre les étapes guidées et les ingrédients. Chaque étape chronométrée dispose d'un minuteur indépendant : démarrer, mettre en pause, reprendre et réinitialiser. Passer à une autre étape ne l'arrête pas. Quitter le mode cuisine annule les minuteurs ; cette première version n'émet ni son ni notification en arrière-plan. Les durées servent de repères, pas de garantie de cuisson.
 
+Le nombre de portions est ajustable de 1 à 100 dans la fiche et le mode cuisine : les ingrédients sont recalculés sans modifier la recette, le planning ou les courses. Les instructions rédigées et les durées ne sont pas recalculées automatiquement ; adaptez la cuisson si nécessaire. Changer les portions ne réinitialise pas les minuteurs.
+
 Prérequis : Node.js 24 ou plus récent. Aucune dépendance n'est à installer.
 
 ```shell
@@ -35,6 +37,8 @@ L'application est ensuite disponible sur <http://localhost:3000>. Le volume Dock
 ## Principes
 
 Une fiche recette permet d'ajouter ou retirer un favori. « Mes favoris » dans le filtre Univers du catalogue et du choix des plats affiche uniquement ces recettes. Les favoris sont communs au foyer et persistants, sans changer les règles de régime ni les ingrédients des courses.
+
+Dans « Mon foyer », les goûts permettent d'éviter jusqu'à 50 mots ou expressions dans les noms d'ingrédients déclarés. Le filtre ignore la casse et les accents et s'applique aux suggestions ainsi qu'à la composition automatique d'une semaine. Il ne masque pas le catalogue et n'empêche pas de choisir manuellement un plat. Ce n'est pas une protection contre les allergies : ingrédients cachés, synonymes, traces et contaminations croisées ne sont pas détectés. Une liste vide efface ces préférences.
 
 Les courses combinent les ingrédients calculés depuis le planning et des articles ajoutés manuellement pour la semaine affichée. Les ajouts peuvent être cochés, supprimés et partagés avec la liste. Leur rayon est choisi à l'ajout ; celui des ingrédients est estimé par mots-clés et peut être approximatif. Les ajouts ne sont ni fusionnés avec les ingrédients ni effacés lorsqu'un repas change.
 

@@ -109,6 +109,7 @@ function createDatabase(filename) {
     CREATE TABLE IF NOT EXISTS recipe_favorites (
       recipe_id INTEGER PRIMARY KEY REFERENCES recipes(id) ON DELETE CASCADE
     );
+    CREATE TABLE IF NOT EXISTS avoided_ingredients (name TEXT PRIMARY KEY);
   `);
   if (!db.prepare('PRAGMA table_info(recipes)').all().some(column => column.name === 'instructions')) {
     db.exec("ALTER TABLE recipes ADD COLUMN instructions TEXT NOT NULL DEFAULT ''");
@@ -323,6 +324,7 @@ function shoppingState(db, start) {
 
 function household(db) {
   return {
+    avoidedIngredients: db.prepare('SELECT name FROM avoided_ingredients ORDER BY name').all().map(item => item.name),
     members: db.prepare('SELECT id, name, diet FROM members ORDER BY name').all(),
     proteins: db.prepare('SELECT id, name, category, amount, unit FROM proteins ORDER BY name').all()
   };
@@ -396,7 +398,10 @@ function suggestions(db, start = null, maxMinutes = null) {
     SELECT recipe_id AS id FROM meals WHERE date BETWEEN ? AND ? AND recipe_id IS NOT NULL
     UNION SELECT meal_dishes.recipe_id AS id FROM meal_dishes JOIN meals ON meals.id = meal_dishes.meal_id WHERE meals.date BETWEEN ? AND ?
   `).all(start, addDays(start, 6), start, addDays(start, 6)).map(item => item.id) : []);
-  const ranked = candidates.map(recipe => ({
+  const avoided = household(db).avoidedIngredients;
+  const normalize = name => name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('fr');
+  // ponytail: mots dans les noms déclarés, pas une détection d'allergènes ou des ingrédients cachés.
+  const ranked = candidates.filter(recipe => !ingredientQuery.all(recipe.id).some(item => avoided.some(word => normalize(item.name).includes(normalize(word))))).map(recipe => ({
     ...recipe,
     tags: recipe.tags.split(',').filter(Boolean),
     reusedIngredients: ingredientQuery.all(recipe.id).map(item => item.name).filter(name => plannedIngredients.has(name)),
@@ -603,6 +608,19 @@ function createHandler(db, overpassUrl, communesUrl) {
 
       if (request.method === 'GET' && url.pathname === '/api/household') {
         return sendJson(response, 200, household(db));
+      }
+      if (request.method === 'PUT' && url.pathname === '/api/household/preferences') {
+        const input = await readJson(request);
+        if (!input || !Array.isArray(input.avoidedIngredients) || input.avoidedIngredients.length > 50 || input.avoidedIngredients.some(name => typeof name !== 'string' || !name.trim() || name.length > 80)) throw new Error('Préférences invalides : 50 mots ou expressions maximum');
+        const names = [...new Set(input.avoidedIngredients.map(name => name.trim().toLocaleLowerCase('fr')))];
+        db.exec('BEGIN');
+        try {
+          db.exec('DELETE FROM avoided_ingredients');
+          const insert = db.prepare('INSERT INTO avoided_ingredients (name) VALUES (?)');
+          names.forEach(name => insert.run(name));
+          db.exec('COMMIT');
+        } catch (error) { db.exec('ROLLBACK'); throw error; }
+        return sendJson(response, 200, { avoidedIngredients: names });
       }
 
       if (request.method === 'GET' && url.pathname === '/api/places') {

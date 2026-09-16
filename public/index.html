@@ -286,6 +286,8 @@
         <button id="close-recipe-view" class="icon-button" type="button" aria-label="Fermer">×</button>
       </div>
       <button id="start-cooking" class="primary" type="button">Cuisiner cette recette</button>
+      <label class="field"><span>Portions à préparer</span><input id="recipe-view-portions" type="number" min="1" max="100" step="1" required></label>
+      <p class="muted">Recalcul de consultation uniquement. Les instructions et durées restent celles de la recette d’origine : adapte la cuisson si nécessaire.</p>
       <div class="recipe-detail">
         <section><h3>Ingrédients</h3><ul id="recipe-view-ingredients" class="detail-list"></ul></section>
         <section><h3>Réalisation</h3><ol id="recipe-view-steps" class="detail-list"></ol></section>
@@ -303,6 +305,9 @@
       <div class="section-heading"><div><h2 id="cooking-title"></h2><span class="muted">Mode cuisine</span></div><button id="close-cooking" class="icon-button" type="button" aria-label="Quitter le mode cuisine">×</button></div>
       <p class="muted">Les minuteurs fonctionnent tant que cette vue reste ouverte. Pas d’alarme sonore ni de notification en arrière-plan.</p>
       <details><summary>Voir les ingrédients</summary><ul id="cooking-ingredients" class="detail-list"></ul></details>
+      <label class="field"><span>Portions à préparer</span><input id="cooking-portions" type="number" min="1" max="100" step="1" required></label>
+      <p id="cooking-portions-error" class="error" role="alert" hidden>Choisis entre 1 et 100 portions entières.</p>
+      <p class="muted">Seuls les ingrédients sont recalculés, pas les instructions ni les temps de cuisson.</p>
       <p id="cooking-progress" class="muted"></p>
       <section class="detail-step" aria-labelledby="cooking-kind"><h3 id="cooking-kind"></h3><p id="cooking-instruction" style="font-size: 1.2rem; line-height: 1.65; white-space: pre-line"></p></section>
       <div id="cooking-timer-controls" class="recipe-view-actions"><button id="cooking-timer" class="secondary" type="button"></button><button id="cooking-reset" class="secondary" type="button">Réinitialiser</button></div>
@@ -321,6 +326,16 @@
         <div><h2>Mon foyer</h2><span class="muted">Des goûts différents, une seule tablée.</span></div>
         <button id="close-household" class="icon-button" type="button" aria-label="Fermer">×</button>
       </div>
+      <section class="household-section">
+        <h2>Les goûts du foyer</h2>
+        <form id="preferences-form">
+          <label class="field"><span>Ingrédients à éviter dans les propositions</span><input id="avoided-ingredients" maxlength="4049" placeholder="champignon, coriandre…"></label>
+          <p class="muted">Mots ou expressions séparés par des virgules. Filtre les noms d’ingrédients déclarés dans les suggestions et les menus automatiques, sans masquer les recettes du catalogue.</p>
+          <p class="muted">Préférences de goût uniquement : ce filtre n’est pas une protection contre les allergies, les traces ou les ingrédients cachés.</p>
+          <button class="secondary" type="submit">Enregistrer les goûts</button>
+          <p id="preferences-status" role="status" class="muted"></p>
+        </form>
+      </section>
       <section class="household-section">
         <div><h2>Les gourmands</h2><span class="muted">Le régime sert de limite stricte aux propositions.</span></div>
         <div id="member-list" class="household-list"></div>
@@ -472,6 +487,7 @@
     }
 
     function renderHousehold() {
+      document.getElementById('avoided-ingredients').value = (state.avoidedIngredients || []).join(', ');
       document.getElementById('member-list').innerHTML = state.members.length ? state.members.map(member => `<button class="food-tag" type="button" data-member="${member.id}" aria-pressed="${member.id === editingMemberId}">${escapeHtml(member.name)} · ${dietLabels[member.diet]}</button>`).join('') : '<span class="muted">Ajoutez les personnes qui mangent régulièrement ici.</span>';
       document.getElementById('protein-list').innerHTML = state.proteins.map(protein => `<button class="food-tag" type="button" data-protein="${protein.id}" data-category="${protein.category}" aria-pressed="${protein.id === editingProteinId}" title="${formatAmount(protein.amount)} ${escapeHtml(protein.unit)} par portion">${escapeHtml(protein.name)} · ${categoryLabels[protein.category]}</button>`).join('');
     }
@@ -598,7 +614,8 @@
       const people = members.length || Number(document.getElementById('compose-people')?.value);
       const slots = [...document.querySelectorAll('[data-compose-day]:checked')];
       const output = document.getElementById('compose-preview');
-      const candidates = state.recipes.filter(recipe => recipe.minutes <= Number(document.getElementById('compose-minutes').value) && members.every(member => rank[recipe.diet] <= rank[member.diet]));
+      const normalize = name => name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('fr');
+      const candidates = state.recipes.filter(recipe => recipe.minutes <= Number(document.getElementById('compose-minutes').value) && members.every(member => rank[recipe.diet] <= rank[member.diet]) && !recipe.ingredients.some(item => (state.avoidedIngredients || []).some(word => normalize(item.name).includes(normalize(word)))));
       if (!Number.isInteger(people) || people < 1 || people > 100 || !slots.length) { output.innerHTML = '<p class="error">Choisissez au moins une personne et un créneau libre.</p>'; return; }
       if (!candidates.length) { output.innerHTML = '<p class="error">Aucune recette compatible. Augmentez le temps disponible ou ajoutez des recettes adaptées.</p>'; return; }
       // ponytail: exact name overlap, not a guarantee of savings or ingredient quantities.
@@ -857,6 +874,8 @@
       document.getElementById('recipe-view-error').hidden = true;
       document.getElementById('recipe-view-title').textContent = recipe.title;
       document.getElementById('recipe-view-meta').textContent = `${recipe.minutes} min · ${recipe.servings} portions · ${dietLabels[recipe.diet]}`;
+      document.getElementById('recipe-view-portions').value = recipe.servings;
+      document.getElementById('start-cooking').disabled = false;
       document.getElementById('recipe-view-ingredients').innerHTML = recipe.ingredients.map(ingredient => `<li>${escapeHtml(shoppingText(ingredient))}</li>`).join('');
       document.getElementById('recipe-view-steps').innerHTML = recipe.steps.map(step => `<li class="detail-step"><small>${stepKindLabels[step.kind]}${step.minutes == null ? '' : ` · ${step.minutes} min`}</small><p>${escapeHtml(step.instruction)}</p></li>`).join('');
       recipeViewDialog.showModal();
@@ -865,6 +884,30 @@
     const cookingDialog = document.getElementById('cooking-dialog');
     let cooking = null;
     let cookingInterval = null;
+
+    function scaledIngredients(recipe, portions) {
+      if (!Number.isInteger(portions) || portions < 1 || portions > 100) throw new Error('Choisis entre 1 et 100 portions entières.');
+      return recipe.ingredients.map(item => ({ ...item, amount: item.amount * portions / recipe.servings }));
+    }
+
+    function renderPortions(recipe, input, target, errorId) {
+      const error = document.getElementById(errorId);
+      try {
+        const portions = Number(input.value);
+        document.getElementById(target).innerHTML = scaledIngredients(recipe, portions).map(item => `<li>${escapeHtml(shoppingText(item))}</li>`).join('');
+        error.hidden = true;
+        return portions;
+      } catch (failure) { error.textContent = failure.message; error.hidden = false; return null; }
+    }
+    document.getElementById('recipe-view-portions').addEventListener('input', event => {
+      const recipe = state.recipes.find(item => item.id === editingRecipeId);
+      document.getElementById('start-cooking').disabled = renderPortions(recipe, event.target, 'recipe-view-ingredients', 'recipe-view-error') == null;
+    });
+    document.getElementById('cooking-portions').addEventListener('input', event => {
+      if (!cooking) return;
+      const portions = renderPortions(cooking.recipe, event.target, 'cooking-ingredients', 'cooking-portions-error');
+      if (portions != null) cooking.portions = portions;
+    });
 
     function timerSeconds(timer, now = Date.now()) {
       return timer.end == null ? timer.remaining : Math.max(0, Math.ceil((timer.end - now) / 1000));
@@ -896,9 +939,12 @@
     document.getElementById('start-cooking').addEventListener('click', () => {
       const recipe = state.recipes.find(item => item.id === editingRecipeId);
       if (!recipe?.steps.length) return;
-      cooking = { recipe, index: 0, timers: recipe.steps.map(step => ({ remaining: (step.minutes || 0) * 60, end: null, started: false })) };
+      const portions = renderPortions(recipe, document.getElementById('recipe-view-portions'), 'recipe-view-ingredients', 'recipe-view-error');
+      if (portions == null) return;
+      cooking = { recipe, portions, index: 0, timers: recipe.steps.map(step => ({ remaining: (step.minutes || 0) * 60, end: null, started: false })) };
       document.getElementById('cooking-title').textContent = recipe.title;
-      document.getElementById('cooking-ingredients').innerHTML = recipe.ingredients.map(item => `<li>${escapeHtml(shoppingText(item))}</li>`).join('');
+      document.getElementById('cooking-portions').value = portions;
+      renderPortions(recipe, document.getElementById('cooking-portions'), 'cooking-ingredients', 'cooking-portions-error');
       recipeViewDialog.close();
       renderCooking();
       cookingDialog.showModal();
@@ -1228,6 +1274,20 @@
     });
     document.getElementById('recipe-form').addEventListener('submit', saveRecipe);
     document.getElementById('household-button').addEventListener('click', () => householdDialog.showModal());
+    document.getElementById('preferences-form').addEventListener('submit', async event => {
+      event.preventDefault();
+      const button = event.target.querySelector('button'); button.disabled = true;
+      const status = document.getElementById('preferences-status'); status.textContent = '';
+      try {
+        const avoidedIngredients = document.getElementById('avoided-ingredients').value.split(',').map(word => word.trim()).filter(Boolean);
+        const response = await fetch('/api/household/preferences', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ avoidedIngredients }) });
+        if (!response.ok) throw new Error((await response.json()).error);
+        state.avoidedIngredients = (await response.json()).avoidedIngredients;
+        document.getElementById('avoided-ingredients').value = state.avoidedIngredients.join(', ');
+        status.textContent = 'Goûts enregistrés. Les prochaines propositions en tiendront compte.';
+      } catch (error) { status.textContent = error.message; }
+      finally { button.disabled = false; }
+    });
     document.getElementById('close-household').addEventListener('click', () => householdDialog.close());
     document.getElementById('member-form').addEventListener('submit', async event => {
       event.preventDefault();
