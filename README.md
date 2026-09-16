@@ -40,9 +40,25 @@ Une fiche recette permet d'ajouter ou retirer un favori. « Mes favoris » dans 
 
 Dans « Mon foyer », les goûts permettent d'éviter jusqu'à 50 mots ou expressions dans les noms d'ingrédients déclarés. Le filtre ignore la casse et les accents et s'applique aux suggestions ainsi qu'à la composition automatique d'une semaine. Il ne masque pas le catalogue et n'empêche pas de choisir manuellement un plat. Ce n'est pas une protection contre les allergies : ingrédients cachés, synonymes, traces et contaminations croisées ne sont pas détectés. Une liste vide efface ces préférences.
 
+## Importer et exporter des recettes
+
+Dans l'onglet Recettes, le bouton ⇩ ouvre l'import par lien ou fichier. « Exporter mes recettes (JSON) » télécharge les recettes, leurs ingrédients, étapes et liens source au format `manger-recipes` version 1. Ce fichier ne sauvegarde pas le foyer, les favoris, les protéines, le calendrier ou les courses.
+
+L'import d'un fichier (1 Mo, 1 à 200 recettes) valide les données puis permet de choisir une recette à relire dans l'éditeur. Il crée une nouvelle recette : aucun remplacement ni import en masse. Les anciennes recettes sans étapes restent des brouillons à compléter avant enregistrement. Il est possible de renommer le brouillon pour éviter des titres identiques.
+
+L'import internet consulte la page depuis votre serveur et lit les blocs JSON-LD Schema.org `Recipe`. Il n'exécute pas JavaScript et ne télécharge pas les photographies. HTTPS public sur le port 443 et IPv4 uniquement : les adresses locales, privées et réservées sont refusées, chaque redirection est revérifiée et l'adresse DNS validée est épinglée à la connexion. Limites : 15 secondes, 3 redirections, 1,5 Mo par page, un téléchargement à la fois. Les sites sans données structurées, bloqués ou nécessitant une connexion peuvent être incompatibles ; aucun contournement n'est effectué.
+
+La relecture est obligatoire dans l'interface. Les fractions et unités courantes sont reconnues partiellement ; les unités non reconnues sont laissées à remplir. Portions et durée absentes ou ambiguës sont signalées, avec valeurs provisoires de 2 portions et 30 min. Le régime proposé reste omnivore à vérifier, les étapes sont classées en préparation sans minuteurs automatiques, et les instructions ne sont ni traduites ni recalculées. Le lien de la source est conservé et visible dans la fiche : les recettes importées ne deviennent pas des contenus CC0 de Manger!.
+
+Cette version ne dispose pas encore d'authentification : ne l'exposez pas directement sur Internet. Utilisez un réseau de confiance ou un accès protégé en amont.
+
+## Courses et organisation
+
 Les courses combinent les ingrédients calculés depuis le planning et des articles ajoutés manuellement pour la semaine affichée. Les ajouts peuvent être cochés, supprimés et partagés avec la liste. Leur rayon est choisi à l'ajout ; celui des ingrédients est estimé par mots-clés et peut être approximatif. Les ajouts ne sont ni fusionnés avec les ingrédients ni effacés lorsqu'un repas change.
 
 Dans les courses, « Organiser les rayons » affiche une poignée ⠿ par article. Glissez-la à la souris ou au toucher vers un rayon (les destinations restent visibles en haut), ou activez-la par toucher, Entrée ou Espace pour choisir le rayon dans une fenêtre. « Terminer » retrouve la liste épurée. Chaque correction est enregistrée immédiatement. Pour un ingrédient calculé, ce choix est retenu pour son nom exact et son unité dans toutes les semaines ; « Automatique » retire la correction. Pour un article ajouté manuellement, seul cet article est modifié. Le déplacement change le rayon, pas l'ordre des articles à l'intérieur d'un rayon.
+
+## Engagements
 
 - auto-hébergeable avec une installation Docker simple ;
 - utilisable confortablement depuis un téléphone ;

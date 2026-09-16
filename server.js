@@ -3,6 +3,7 @@ const { readFileSync, mkdirSync } = require('node:fs');
 const { dirname, join } = require('node:path');
 const { DatabaseSync } = require('node:sqlite');
 const catalog = require('./catalog');
+const { downloadRecipePage, extractRecipeDraft } = require('./recipe-import');
 
 const INDEX_HTML = readFileSync(join(__dirname, 'public', 'index.html'));
 const DAY_MS = 86_400_000;
@@ -111,6 +112,7 @@ function createDatabase(filename) {
     );
     CREATE TABLE IF NOT EXISTS avoided_ingredients (name TEXT PRIMARY KEY);
   `);
+  if (!db.prepare('PRAGMA table_info(recipes)').all().some(column => column.name === 'source_url')) db.exec('ALTER TABLE recipes ADD COLUMN source_url TEXT');
   if (!db.prepare('PRAGMA table_info(recipes)').all().some(column => column.name === 'instructions')) {
     db.exec("ALTER TABLE recipes ADD COLUMN instructions TEXT NOT NULL DEFAULT ''");
   }
@@ -192,7 +194,7 @@ function recipes(db) {
     SELECT position, kind, instruction, minutes
     FROM recipe_steps WHERE recipe_id = ? ORDER BY position
   `);
-  return db.prepare('SELECT id, title, minutes, servings, tags, diet, EXISTS(SELECT 1 FROM recipe_favorites WHERE recipe_id = recipes.id) AS favorite FROM recipes ORDER BY title').all()
+  return db.prepare('SELECT id, title, minutes, servings, tags, diet, source_url AS sourceUrl, EXISTS(SELECT 1 FROM recipe_favorites WHERE recipe_id = recipes.id) AS favorite FROM recipes ORDER BY title').all()
     .map(recipe => ({
       ...recipe,
       favorite: Boolean(recipe.favorite),
@@ -228,12 +230,20 @@ function validateRecipe(input) {
     return { position: index + 1, kind: step.kind, instruction: step.instruction.trim(), minutes: step.minutes ?? null };
   });
 
+  let sourceUrl = null;
+  if (input.sourceUrl != null && input.sourceUrl !== '') {
+    if (typeof input.sourceUrl !== 'string' || input.sourceUrl.length > 2000) throw new Error('Lien source invalide');
+    let url; try { url = new URL(input.sourceUrl); } catch { throw new Error('Lien source invalide'); }
+    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) throw new Error('Lien source invalide');
+    sourceUrl = url.href;
+  }
   return {
     title: input.title.trim(),
     minutes: input.minutes,
     servings: input.servings,
     tags: [...new Set(input.tags.map(tag => tag.trim().toLocaleLowerCase('fr')))],
     diet: input.diet,
+    sourceUrl,
     ingredients,
     steps
   };
@@ -253,6 +263,8 @@ function saveRecipe(db, recipe, id = null) {
       db.prepare('DELETE FROM recipe_steps WHERE recipe_id = ?').run(id);
       db.prepare('UPDATE meals SET title = ? WHERE recipe_id = ?').run(recipe.title, id);
     }
+
+    db.prepare('UPDATE recipes SET source_url = ? WHERE id = ?').run(recipe.sourceUrl || null, id);
 
     const insertIngredient = db.prepare('INSERT INTO ingredients (name, unit) VALUES (?, ?) ON CONFLICT (name, unit) DO NOTHING');
     const findIngredient = db.prepare('SELECT id FROM ingredients WHERE name = ? AND unit = ?');
@@ -520,12 +532,12 @@ function calendar(db, start) {
   return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Manger!//FR', 'CALSCALE:GREGORIAN', ...events, 'END:VCALENDAR', ''].join('\r\n');
 }
 
-async function readJson(request) {
+async function readJson(request, maxSize = 32_768) {
   const chunks = [];
   let size = 0;
   for await (const chunk of request) {
     size += chunk.length;
-    if (size > 32_768) throw new Error('Requête trop volumineuse');
+    if (size > maxSize) throw new Error('Requête trop volumineuse');
     chunks.push(chunk);
   }
   try {
@@ -536,6 +548,7 @@ async function readJson(request) {
 }
 
 function createHandler(db, overpassUrl, communesUrl) {
+  let importingUrl = false;
   return async (request, response) => {
     const url = new URL(request.url, 'http://localhost');
     try {
@@ -555,6 +568,31 @@ function createHandler(db, overpassUrl, communesUrl) {
         const start = url.searchParams.get('start');
         if (!isDateKey(start)) return sendJson(response, 400, { error: 'Début de semaine invalide' });
         return sendJson(response, 200, { recipes: recipes(db), meals: meals(db, start), shopping: shoppingState(db, start) });
+      }
+      if (request.method === 'GET' && url.pathname === '/api/recipes/export') {
+        response.setHeader('Content-Disposition', 'attachment; filename="manger-recettes.json"');
+        return sendJson(response, 200, { format: 'manger-recipes', version: 1, recipes: recipes(db).map(({ id, favorite, ...recipe }) => recipe) });
+      }
+      if (request.method === 'POST' && url.pathname === '/api/recipes/import-preview') {
+        const input = await readJson(request, 1048576);
+        if (!input || !['url', 'file'].includes(input.kind)) throw new Error('Import invalide');
+        let result;
+        if (input.kind === 'url') {
+          if (importingUrl) throw new Error('Un import internet est déjà en cours, réessaie dans un instant');
+          importingUrl = true;
+          try { const page = await downloadRecipePage(input.url); result = extractRecipeDraft(page.html, page.sourceUrl); }
+          finally { importingUrl = false; }
+        } else {
+          if (!input.data || input.data.format !== 'manger-recipes' || input.data.version !== 1 || !Array.isArray(input.data.recipes) || input.data.recipes.length < 1 || input.data.recipes.length > 200) throw new Error('Fichier Manger! version 1 attendu (1 à 200 recettes)');
+          result = { recipes: input.data.recipes, warnings: ['Sélectionne une recette puis vérifie-la. L’import crée une nouvelle recette, sans remplacer les recettes existantes.'] };
+        }
+        const validated = result.recipes.map(recipe => {
+          const missingSteps = input.kind === 'file' && Array.isArray(recipe?.steps) && recipe.steps.length === 0;
+          const draft = validateRecipe(missingSteps ? { ...recipe, steps: [{ kind: 'prep', instruction: 'À compléter', minutes: null }] } : recipe);
+          if (missingSteps) { draft.steps = []; result.warnings.push(`« ${draft.title} » n’a pas encore d’étapes : complète-les dans le brouillon avant d’enregistrer.`); }
+          return draft;
+        });
+        return sendJson(response, 200, { recipes: validated, warnings: result.warnings });
       }
 
       if (request.method === 'GET' && url.pathname === '/api/calendar.ics') {
@@ -721,7 +759,7 @@ function createHandler(db, overpassUrl, communesUrl) {
       }
 
       if (request.method === 'POST' && url.pathname === '/api/recipes') {
-        return sendJson(response, 201, saveRecipe(db, validateRecipe(await readJson(request))));
+        return sendJson(response, 201, saveRecipe(db, validateRecipe(await readJson(request, 131072))));
       }
 
       const recipeMatch = url.pathname.match(/^\/api\/recipes\/(\d+)$/);
@@ -747,7 +785,7 @@ function createHandler(db, overpassUrl, communesUrl) {
         return sendJson(response, 200, { added });
       }
       if (request.method === 'PUT' && recipeMatch) {
-        return sendJson(response, 200, saveRecipe(db, validateRecipe(await readJson(request)), Number(recipeMatch[1])));
+        return sendJson(response, 200, saveRecipe(db, validateRecipe(await readJson(request, 131072)), Number(recipeMatch[1])));
       }
       if (request.method === 'DELETE' && recipeMatch) {
         const id = Number(recipeMatch[1]);

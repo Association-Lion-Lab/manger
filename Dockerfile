@@ -1,7 +1,7 @@
 FROM node:24-alpine
 
 WORKDIR /app
-COPY --chown=node:node package.json server.js catalog.js ./
+COPY --chown=node:node package.json server.js catalog.js recipe-import.js ./
 COPY --chown=node:node public ./public
 RUN mkdir /data && chown node:node /data
 
