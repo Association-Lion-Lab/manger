@@ -422,8 +422,9 @@
 
     function shoppingText(item) {
       const amount = formatAmount(item.amount);
-      if (item.unit === 'pièce') return `${amount} ${item.name}${item.amount > 1 ? 's' : ''}`;
-      return `${amount} ${item.unit} de ${item.name}`;
+      if (item.unit === 'pièce') return `${amount} × ${item.name}`;
+      const article = /^[aàâäeéèêëiîïoôöuùûüyÿœæ]/i.test(item.name) || /^huile\b/i.test(item.name) ? 'd’' : 'de ';
+      return `${amount} ${item.unit} ${article}${item.name}`;
     }
 
     function escapeHtml(value) {
