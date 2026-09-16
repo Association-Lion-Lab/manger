@@ -82,6 +82,12 @@
     .recipe-copy { display: grid; gap: 3px; }
     .recipe-copy small { color: var(--muted); }
     .shopping-group { margin: 22px 0; }
+    .shopping-handle { touch-action: none; cursor: grab; flex-shrink: 0; }
+    .shopping-handle:active { cursor: grabbing; }
+    .shopping-drop-targets { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 0; background: var(--surface); }
+    .shopping-drop-targets > div { min-height: 44px; flex: 1 1 30%; display: flex; align-items: center; justify-content: center; cursor: default; }
+    .shopping-drop-active { outline: 2px dashed var(--accent); outline-offset: 2px; }
+    .shopping-dragging { opacity: .5; }
     .shopping-item { min-height: 46px; display: flex; align-items: center; gap: 11px; border-bottom: 1px solid var(--line); cursor: pointer; }
     .shopping-item input { width: 20px; height: 20px; accent-color: var(--accent); }
     .shopping-item input:checked + span { color: var(--muted); text-decoration: line-through; }
@@ -207,7 +213,7 @@
       <section id="shopping-panel" class="panel" hidden>
         <div class="section-heading"><div><h1>Courses</h1><span id="shopping-summary" class="muted"></span></div><button id="share" class="icon-button" type="button" aria-label="Partager la liste">↗</button></div>
         <button id="organize-shopping" class="secondary" type="button" aria-pressed="false" aria-controls="shopping">Organiser les rayons</button>
-        <p id="organize-shopping-help" class="muted" hidden>Les corrections des ingrédients sont retenues pour les prochaines semaines. Chaque changement est enregistré immédiatement.</p>
+        <p id="organize-shopping-help" class="muted" hidden>Glisse la poignée ⠿ vers un rayon. Ou touche-la pour choisir le rayon. Les corrections sont enregistrées immédiatement.</p>
         <div id="shopping" class="shopping-list"></div>
         <details><summary>Ajouter un article</summary><form id="manual-shopping-form" class="compact-form">
           <label class="field wide"><span>Article</span><input id="manual-name" required maxlength="80" placeholder="Café, savon…"></label>
@@ -300,6 +306,11 @@
       <div class="recipe-view-actions"><button id="cooking-back" class="secondary" type="button">Précédente</button><button id="cooking-next" class="primary" type="button">Suivante</button></div>
     </dialog>
 
+    <dialog id="shopping-move-dialog">
+      <div class="section-heading"><h2 id="shopping-move-title">Déplacer l’article</h2><button id="close-shopping-move" class="icon-button" type="button" aria-label="Annuler le déplacement">×</button></div>
+      <label class="field"><span>Rayon</span><select id="shopping-move-aisle"></select></label>
+      <button id="save-shopping-move" class="primary" type="button">Déplacer</button>
+    </dialog>
     <dialog id="household-dialog">
       <div class="handle"></div>
       <div class="section-heading">
@@ -446,8 +457,13 @@
       if (organizingShopping) container.querySelectorAll('[data-shopping]').forEach(input => {
         const index = Number(input.dataset.shopping);
         const item = state.shopping[index];
-        input.closest('div').insertAdjacentHTML('afterend', `<label class="field" style="margin:8px 0 16px"><span>Rayon${item.manualId ? ' de cet article' : ''}</span><select data-shopping-aisle="${index}" aria-label="Rayon de ${escapeHtml(item.name)}">${(item.manualId ? [] : ['']).concat(['Fruits et légumes', 'Frais', 'Épicerie', 'Surgelés', 'Maison', 'Autres']).map(aisle => `<option value="${aisle}"${(item.aisle || '') === aisle ? ' selected' : ''}>${aisle || 'Automatique'}</option>`).join('')}</select></label>`);
+        input.closest('div').insertAdjacentHTML('afterbegin', `<button type="button" class="icon-button shopping-handle" data-shopping-handle="${index}" aria-label="Déplacer ${escapeHtml(item.name)} vers un rayon">⠿</button>`);
       });
+      if (organizingShopping) {
+        const aisles = ['Fruits et légumes', 'Frais', 'Épicerie', 'Surgelés', 'Maison', 'Autres'];
+        container.insertAdjacentHTML('afterbegin', `<div class="shopping-drop-targets" role="group" aria-label="Rayons de destination">${aisles.map(aisle => `<div class="secondary" data-drop-aisle="${aisle}">${aisle}</div>`).join('')}</div>`);
+        container.querySelectorAll('.shopping-group').forEach(group => { group.dataset.dropAisle = group.querySelector('h2').textContent; });
+      }
     }
 
     function renderHousehold() {
@@ -1008,19 +1024,6 @@
       else await navigator.clipboard.writeText(text);
     });
     document.getElementById('shopping').addEventListener('change', async event => {
-      const select = event.target.closest('[data-shopping-aisle]');
-      if (select) {
-        const item = state.shopping[Number(select.dataset.shoppingAisle)];
-        select.disabled = true;
-        document.getElementById('shopping-error').hidden = true;
-        try {
-          const response = await fetch('/api/shopping-aisles', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ weekStart: key(state.weekStart), name: item.name, unit: item.unit, manualId: item.manualId, aisle: select.value }) });
-          if (!response.ok) throw new Error((await response.json()).error);
-          await load();
-        } catch (error) { select.value = item.aisle || ''; shoppingError(error); }
-        finally { select.disabled = false; }
-        return;
-      }
       const checkbox = event.target.closest('[data-shopping]');
       if (!checkbox) return;
       const item = state.shopping[Number(checkbox.dataset.shopping)];
@@ -1037,6 +1040,79 @@
       const message = document.getElementById('shopping-error');
       message.textContent = error.message; message.hidden = false;
     }
+    const shoppingMoveDialog = document.getElementById('shopping-move-dialog');
+    let shoppingMove = null;
+    let shoppingDrag = null;
+    let suppressShoppingClick = false;
+    async function moveShoppingItem(item, aisle) {
+      const container = document.getElementById('shopping');
+      container.inert = true;
+      document.getElementById('organize-shopping').disabled = true;
+      document.getElementById('shopping-error').hidden = true;
+      try {
+        const response = await fetch('/api/shopping-aisles', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ weekStart: key(state.weekStart), name: item.name, unit: item.unit, manualId: item.manualId, aisle }) });
+        if (!response.ok) throw new Error((await response.json()).error);
+        await load();
+        shoppingMoveDialog.close();
+        document.getElementById('organize-shopping').focus();
+      } catch (error) { shoppingError(error); shoppingMoveDialog.close(); }
+      finally { container.inert = false; document.getElementById('organize-shopping').disabled = false; document.getElementById('organize-shopping').focus(); }
+    }
+    document.getElementById('shopping').addEventListener('click', event => {
+      const handle = event.target.closest('[data-shopping-handle]');
+      if (!handle) return;
+      if (suppressShoppingClick && event.detail > 0) { suppressShoppingClick = false; return; }
+      shoppingMove = state.shopping[Number(handle.dataset.shoppingHandle)];
+      document.getElementById('shopping-move-title').textContent = `Déplacer ${shoppingMove.name}`;
+      document.getElementById('shopping-move-aisle').innerHTML = (shoppingMove.manualId ? [] : ['']).concat(['Fruits et légumes', 'Frais', 'Épicerie', 'Surgelés', 'Maison', 'Autres']).map(aisle => `<option value="${aisle}"${(shoppingMove.aisle || '') === aisle ? ' selected' : ''}>${aisle || 'Automatique'}</option>`).join('');
+      shoppingMoveDialog.showModal();
+    });
+    document.getElementById('close-shopping-move').addEventListener('click', () => shoppingMoveDialog.close());
+    document.getElementById('save-shopping-move').addEventListener('click', async event => {
+      event.target.disabled = true;
+      await moveShoppingItem(shoppingMove, document.getElementById('shopping-move-aisle').value);
+      event.target.disabled = false;
+    });
+    document.getElementById('shopping').addEventListener('pointerdown', event => {
+      const handle = event.target.closest('[data-shopping-handle]');
+      if (!handle || event.button !== 0) return;
+      suppressShoppingClick = false;
+      shoppingDrag = { handle, item: state.shopping[Number(handle.dataset.shoppingHandle)], x: event.clientX, y: event.clientY, moved: false, target: null, ghost: null };
+      handle.setPointerCapture(event.pointerId);
+    });
+    document.getElementById('shopping').addEventListener('pointermove', event => {
+      if (!shoppingDrag) return;
+      const drag = shoppingDrag;
+      if (!drag.moved && Math.hypot(event.clientX - drag.x, event.clientY - drag.y) < 8) return;
+      drag.moved = true;
+      drag.handle.parentElement.classList.add('shopping-dragging');
+      if (!drag.ghost) {
+        drag.ghost = document.createElement('div');
+        drag.ghost.textContent = drag.item.name;
+        drag.ghost.style.cssText = 'position:fixed;pointer-events:none;z-index:20;padding:10px;border-radius:12px;background:var(--raised);color:var(--text);border:1px solid var(--accent);max-width:200px';
+        document.body.append(drag.ghost);
+      }
+      drag.ghost.style.left = `${Math.min(event.clientX + 12, innerWidth - 210)}px`;
+      drag.ghost.style.top = `${event.clientY + 12}px`;
+      drag.target?.classList.remove('shopping-drop-active');
+      drag.target = document.elementFromPoint(event.clientX, event.clientY)?.closest('[data-drop-aisle]');
+      drag.target?.classList.add('shopping-drop-active');
+      if (event.clientY > innerHeight - 100) window.scrollBy(0, 15);
+      else if (event.clientY < 50) window.scrollBy(0, -15);
+    });
+    function finishShoppingDrag(cancelled) {
+      if (!shoppingDrag) return;
+      const drag = shoppingDrag;
+      shoppingDrag = null;
+      drag.ghost?.remove(); drag.target?.classList.remove('shopping-drop-active');
+      drag.handle.parentElement.classList.remove('shopping-dragging');
+      suppressShoppingClick = drag.moved;
+      if (!cancelled && drag.moved && drag.target) moveShoppingItem(drag.item, drag.target.dataset.dropAisle);
+    }
+    document.getElementById('shopping').addEventListener('pointerup', () => finishShoppingDrag(false));
+    document.getElementById('shopping').addEventListener('pointercancel', () => finishShoppingDrag(true));
+    document.getElementById('shopping').addEventListener('lostpointercapture', () => finishShoppingDrag(true));
+    document.addEventListener('keydown', event => { if (event.key === 'Escape') finishShoppingDrag(true); });
     document.getElementById('manual-shopping-form').addEventListener('submit', async event => {
       event.preventDefault();
       const button = event.target.querySelector('button'); button.disabled = true;
