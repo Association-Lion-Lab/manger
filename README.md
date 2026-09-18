@@ -10,7 +10,7 @@ La maquette mobile du calendrier est validée. Une première tranche fonctionnel
 
 ## Lancer localement
 
-Depuis une fiche recette, **Cuisiner cette recette** ouvre les étapes guidées et les ingrédients. Chaque étape chronométrée dispose d'un minuteur indépendant : démarrer, mettre en pause, reprendre et réinitialiser. Passer à une autre étape ne l'arrête pas. Quitter le mode cuisine annule les minuteurs ; cette première version n'émet ni son ni notification en arrière-plan. Les durées servent de repères, pas de garantie de cuisson.
+Depuis une fiche recette, **Cuisiner cette recette** ouvre les étapes guidées et les ingrédients. Chaque étape chronométrée dispose d'un minuteur indépendant : démarrer, mettre en pause, reprendre et réinitialiser. Passer à une autre étape ne l'arrête pas. Quitter le mode cuisine annule les minuteurs. « Confort de cuisine » propose un son optionnel en fin de minuteur et le maintien de l'écran allumé, selon les autorisations du navigateur. Ces options utilisent les API natives [Screen Wake Lock](https://developer.mozilla.org/en-US/docs/Web/API/Screen_Wake_Lock_API) et [Web Audio](https://developer.mozilla.org/en-US/docs/Web/API/AudioContext), sans dépendance. Les alertes peuvent être retardées en arrière-plan ; aucune notification système n'est envoyée. Les durées servent de repères, pas de garantie de cuisson.
 
 Le nombre de portions est ajustable de 1 à 100 dans la fiche et le mode cuisine : les ingrédients sont recalculés sans modifier la recette, le planning ou les courses. Les instructions rédigées et les durées ne sont pas recalculées automatiquement ; adaptez la cuisson si nécessaire. Changer les portions ne réinitialise pas les minuteurs.
 
@@ -37,6 +37,12 @@ L'application est ensuite disponible sur <http://localhost:3000>. Le volume Dock
 
 ## Principes
 
+L'interface conserve trois onglets. Les actions secondaires des recettes sont regroupées dans « Plus d'options » ; les notes et les options de cuisine sont repliées par défaut. Les contrastes des boutons principaux sont corrigés en clair et en sombre.
+
+Une photo personnelle peut être ajoutée depuis l'éditeur, dans « Photo du plat ». JPEG, PNG ou WebP jusqu'à 10 Mo : le navigateur redimensionne à 960 pixels maximum puis convertit en JPEG avant envoi (400 000 caractères maximum pour la donnée encodée). Les photos sont conservées dans SQLite, chargées séparément et copiées avec les variantes. La suppression de la photo prend effet à l'enregistrement. Aucune photographie n'est importée automatiquement depuis un site tiers.
+
+« Mon avis et mes notes » enregistre une appréciation de 1 à 5 (ou aucune note) et un commentaire de 2 000 caractères maximum, communs au foyer. Modifier une recette conserve cet avis ; dupliquer une recette ne le copie pas.
+
 Une fiche recette permet d'ajouter ou retirer un favori. « Mes favoris » dans le filtre Univers du catalogue et du choix des plats affiche uniquement ces recettes. Les favoris sont communs au foyer et persistants, sans changer les règles de régime ni les ingrédients des courses.
 
 Dans « Mon foyer », les goûts permettent d'éviter jusqu'à 50 mots ou expressions dans les noms d'ingrédients déclarés. Le filtre ignore la casse et les accents et s'applique aux suggestions ainsi qu'à la composition automatique d'une semaine. Il ne masque pas le catalogue et n'empêche pas de choisir manuellement un plat. Ce n'est pas une protection contre les allergies : ingrédients cachés, synonymes, traces et contaminations croisées ne sont pas détectés. Une liste vide efface ces préférences.
@@ -51,13 +57,23 @@ L'import internet consulte la page depuis votre serveur et lit les blocs JSON-LD
 
 La relecture est obligatoire dans l'interface. Les fractions et unités courantes sont reconnues partiellement ; les unités non reconnues sont laissées à remplir. Portions et durée absentes ou ambiguës sont signalées, avec valeurs provisoires de 2 portions et 30 min. Le régime proposé reste omnivore à vérifier, les étapes sont classées en préparation sans minuteurs automatiques, et les instructions ne sont ni traduites ni recalculées. Le lien de la source est conservé et visible dans la fiche : les recettes importées ne deviennent pas des contenus CC0 de Manger!.
 
-Cette version ne dispose pas encore d'authentification : ne l'exposez pas directement sur Internet. Utilisez un réseau de confiance ou un accès protégé en amont.
+Cette version ne dispose pas encore d'authentification : ne l'exposez pas directement sur Internet. Utilisez un réseau de confiance ou un accès protégé en amont. L'export de recettes JSON n'inclut pas les photos ni les avis du foyer ; conservez la base SQLite pour une sauvegarde complète, serveur arrêté.
 
 ## Courses et organisation
 
+« Mon placard » permet d'indiquer les quantités disponibles aujourd'hui et de les corriger ou retirer. Les courses calculées déduisent ce stock : les besoins des repas précédant la semaine affichée sont réservés en premier, pour ne pas réutiliser le même stock sur plusieurs semaines. Les repas antérieurs à la mise à jour du stock ne sont pas déduits. Le stock restant est une estimation fondée sur le planning, pas une confirmation de consommation : ajustez-le après avoir cuisiné, jeté ou racheté un aliment. Une nouvelle saisie du même aliment remplace sa quantité, elle ne s'y ajoute pas. Les articles de courses manuels restent indépendants. Dates de péremption et suggestions fondées sur le placard restent à développer.
+
+Les ingrédients calculés regroupent désormais les unités compatibles (g/kg, ml/cl/dl/l) et une liste explicite de variantes de noms (par exemple œuf/oeufs ou tomate/tomates). Ils ne confondent pas masse et volume, ni tomate et tomate concassée. Les corrections de rayon et les cases cochées suivent ces regroupements. Les synonymes non référencés et les articles ajoutés manuellement ne sont pas fusionnés.
+
 Les courses combinent les ingrédients calculés depuis le planning et des articles ajoutés manuellement pour la semaine affichée. Les ajouts peuvent être cochés, supprimés et partagés avec la liste. Leur rayon est choisi à l'ajout ; celui des ingrédients est estimé par mots-clés et peut être approximatif. Les ajouts ne sont ni fusionnés avec les ingrédients ni effacés lorsqu'un repas change.
 
-Dans les courses, « Organiser les rayons » affiche une poignée ⠿ par article. Glissez-la à la souris ou au toucher vers un rayon (les destinations restent visibles en haut), ou activez-la par toucher, Entrée ou Espace pour choisir le rayon dans une fenêtre. « Terminer » retrouve la liste épurée. Chaque correction est enregistrée immédiatement. Pour un ingrédient calculé, ce choix est retenu pour son nom exact et son unité dans toutes les semaines ; « Automatique » retire la correction. Pour un article ajouté manuellement, seul cet article est modifié. Le déplacement change le rayon, pas l'ordre des articles à l'intérieur d'un rayon.
+Dans les courses, « Organiser les rayons » affiche une poignée ⠿ par article. Glissez-la à la souris ou au toucher vers un rayon (les destinations restent visibles en haut), ou activez-la par toucher, Entrée ou Espace pour choisir le rayon dans une fenêtre. « Terminer » retrouve la liste épurée. Chaque correction est enregistrée immédiatement. Pour un ingrédient calculé, ce choix est retenu pour l'aliment et ses unités compatibles dans toutes les semaines ; « Automatique » retire la correction. Pour un article ajouté manuellement, seul cet article est modifié. Le déplacement change le rayon, pas l'ordre des articles à l'intérieur d'un rayon.
+
+## Restes et déplacements du planning
+
+Depuis un repas avec une recette commune sans variantes individuelles, « Prévoir des restes » ajoute un repas ultérieur dans un créneau libre. Les portions supplémentaires sont comptées à la date où l'on cuisine, y compris si les restes sont prévus la semaine suivante. La fiche ouverte depuis le planning affiche la quantité totale à préparer. Les régimes et suppléments individuels ne sont pas encore répartis dans ce parcours ; choisissez un repas commun sans variantes pour l'utiliser. Le choix de la date ne garantit pas la conservation du plat.
+
+Un repas source ne peut pas être remplacé ni supprimé tant que des restes lui sont liés. Retirer les restes réduit automatiquement les quantités à préparer. « Déplacer ou copier » conserve la répartition du repas et refuse les créneaux occupés. Un déplacement respecte l'ordre préparation/restes. Copier un repas cuisiné copie seulement ce repas ; pour ajouter des restes, utilisez l'action dédiée depuis la source.
 
 ## Engagements
 

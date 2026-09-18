@@ -8,7 +8,8 @@
   <style>
     :root {
       color-scheme: light dark;
-      --accent: #d94f32;
+      --accent: #b84128;
+      --on-accent: #ffffff;
       --accent-soft: #fff0eb;
       --background: #f4f1ea;
       --surface: #fffdf9;
@@ -23,6 +24,7 @@
     @media (prefers-color-scheme: dark) {
       :root {
         --accent: #ff765b;
+        --on-accent: #28241e;
         --accent-soft: #3c211c;
         --background: #171816;
         --surface: #22231f;
@@ -35,6 +37,7 @@
       }
     }
     * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
     body { margin: 0; color: var(--text); background: var(--background); }
     button, input, textarea, select { font: inherit; }
     button { color: inherit; }
@@ -54,7 +57,7 @@
     .day { min-width: 0; min-height: 58px; display: grid; place-items: center; align-content: center; gap: 3px; padding: 6px 2px; border: 0; border-radius: 15px; background: transparent; cursor: pointer; }
     .day small { color: var(--muted); font-size: 11px; text-transform: uppercase; }
     .day i { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
-    .day[aria-selected="true"] { color: #fff; background: var(--accent); }
+    .day[aria-selected="true"] { color: var(--on-accent); background: var(--accent); }
     .day[aria-selected="true"] small { color: inherit; opacity: .8; }
     .day[aria-selected="true"] i { background: currentColor; }
     .text-action { min-height: 44px; display: inline-flex; align-items: center; gap: 5px; border: 0; color: var(--accent); background: transparent; font-weight: 650; cursor: pointer; }
@@ -71,7 +74,7 @@
     .meal-copy small { color: var(--muted); font-size: 12px; }
     .primary, .secondary { width: 100%; min-height: 50px; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 16px; border-radius: 16px; font-weight: 650; cursor: pointer; }
     .primary[hidden], .secondary[hidden] { display: none; }
-    .primary { border: 0; color: #fff; background: var(--accent); }
+    .primary { border: 0; color: var(--on-accent); background: var(--accent); }
     .secondary { border: 1px solid var(--line); background: var(--raised); }
     .panel[hidden] { display: none; }
     .recipe-list, .shopping-list { display: grid; margin-top: 16px; }
@@ -81,6 +84,26 @@
     #import-catalog { margin-top: 24px; }
     .recipe-copy { display: grid; gap: 3px; }
     .recipe-copy small { color: var(--muted); }
+    .recipe { grid-template-columns: 72px minmax(0, 1fr) 16px; gap: 14px; padding: 16px 0; }
+    .recipe-cover { width: 72px; height: 72px; border-radius: 16px; object-fit: cover; background: var(--accent-soft); display: grid; place-items: center; color: var(--accent); font-size: 24px; }
+    .recipe-copy { min-width: 0; gap: 6px; line-height: 1.4; overflow-wrap: anywhere; }
+    .recipe-copy strong { font-size: 1rem; font-weight: 650; }
+    .recipe-copy small { font-size: .8125rem; }
+    .recipe-hero { width: 100%; max-height: 240px; object-fit: cover; border-radius: 18px; margin: 16px 0; }
+    .recipe-hero[hidden] { display: none; }
+    .quiet-details { margin: 12px 0; border-top: 1px solid var(--line); }
+    .quiet-details > summary { min-height: 44px; padding: 12px 0; cursor: pointer; color: var(--muted); font-size: .875rem; }
+    .quiet-details .recipe-view-actions { border-top: 0; padding-top: 4px; }
+    .subtle-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; }
+    .stock-row { width: 100%; min-height: 60px; display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 12px 0; border: 0; border-bottom: 1px solid var(--line); text-align: left; background: transparent; cursor: pointer; }
+    .stock-row span { min-width: 0; overflow-wrap: anywhere; }
+    .stock-row small { display: block; color: var(--muted); margin-top: 4px; }
+    .check-option { min-height: 44px; display: flex; align-items: center; gap: 10px; }
+    .check-option input { width: 20px; height: 20px; accent-color: var(--accent); }
+    button:focus-visible, summary:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+    .recipe:active { background: var(--accent-soft); }
+    @media (hover: hover) { .recipe:hover { background: var(--surface); } }
+    @media (prefers-reduced-transparency: reduce) { header { background: var(--surface); backdrop-filter: none; } }
     .shopping-group { margin: 22px 0; }
     .shopping-handle { touch-action: none; cursor: grab; flex-shrink: 0; }
     .shopping-handle:active { cursor: grabbing; }
@@ -227,7 +250,7 @@
 
       <section id="shopping-panel" class="panel" hidden>
         <div class="section-heading"><div><h1>Courses</h1><span id="shopping-summary" class="muted"></span></div><button id="share" class="icon-button" type="button" aria-label="Partager la liste">↗</button></div>
-        <button id="organize-shopping" class="secondary" type="button" aria-pressed="false" aria-controls="shopping">Organiser les rayons</button>
+        <div class="subtle-tools"><button id="open-pantry" class="text-action" type="button">Mon placard</button><button id="organize-shopping" class="text-action" type="button" aria-pressed="false" aria-controls="shopping">Organiser les rayons</button></div>
         <p id="organize-shopping-help" class="muted" hidden>Glisse la poignée ⠿ vers un rayon. Ou touche-la pour choisir le rayon. Les corrections sont enregistrées immédiatement.</p>
         <div id="shopping" class="shopping-list"></div>
         <details><summary>Ajouter un article</summary><form id="manual-shopping-form" class="compact-form">
@@ -279,6 +302,13 @@
       </div>
       <form id="recipe-form" class="recipe-form">
         <label class="field"><span>Nom</span><input id="recipe-title" required maxlength="120" autocomplete="off"></label>
+        <details id="recipe-photo-options" class="quiet-details"><summary>Photo du plat</summary>
+          <img id="recipe-photo-preview" class="recipe-hero" alt="Aperçu de la photo choisie" hidden>
+          <label class="field"><span>Choisir une photo</span><input id="recipe-photo-file" type="file" accept="image/jpeg,image/png,image/webp"></label>
+          <p class="muted">JPEG, PNG ou WebP, jusqu’à 10 Mo. La photo est allégée avant enregistrement.</p>
+          <button id="remove-recipe-photo" class="text-action" type="button" hidden>Retirer la photo</button>
+          <p id="recipe-photo-status" class="muted" role="status"></p>
+        </details>
         <label class="field"><span>Lien source (facultatif)</span><input id="recipe-source" type="url" maxlength="2000" placeholder="https://…"></label>
         <div class="form-grid">
           <label class="field"><span>Préparation (min)</span><input id="recipe-minutes" type="number" min="1" max="1440" value="30" required></label>
@@ -313,6 +343,7 @@
         <button id="close-recipe-view" class="icon-button" type="button" aria-label="Fermer">×</button>
       </div>
       <button id="start-cooking" class="primary" type="button">Cuisiner cette recette</button>
+      <img id="recipe-view-photo" class="recipe-hero" alt="" hidden>
       <a id="recipe-view-source" target="_blank" rel="noreferrer noopener" hidden>Voir la recette sur son site d’origine ↗</a>
       <label class="field"><span>Portions à préparer</span><input id="recipe-view-portions" type="number" min="1" max="100" step="1" required></label>
       <p class="muted">Recalcul de consultation uniquement. Les instructions et durées restent celles de la recette d’origine : adapte la cuisson si nécessaire.</p>
@@ -321,18 +352,38 @@
         <section><h3>Réalisation</h3><ol id="recipe-view-steps" class="detail-list"></ol></section>
       </div>
       <p id="recipe-view-error" class="error" role="alert" hidden></p>
-      <div class="recipe-view-actions">
-        <button id="favorite-recipe" class="secondary" style="grid-column:1 / -1" type="button" aria-pressed="false">☆ Ajouter aux favoris</button>
+      <details id="recipe-notes" class="quiet-details"><summary>Mon avis et mes notes</summary><form id="recipe-notes-form" class="recipe-form">
+        <label class="field"><span>Appréciation du foyer</span><select id="recipe-rating"><option value="0">Pas encore notée</option><option value="1">1 / 5</option><option value="2">2 / 5</option><option value="3">3 / 5</option><option value="4">4 / 5</option><option value="5">5 / 5</option></select></label>
+        <label class="field"><span>À retenir pour la prochaine fois</span><textarea id="recipe-note" maxlength="2000" placeholder="Un peu moins de sel, ajouter du citron…"></textarea></label>
+        <button class="secondary" type="submit">Enregistrer mes notes</button><p id="recipe-notes-status" class="muted" role="status"></p>
+      </form></details>
+      <button id="favorite-recipe" class="text-action" type="button" aria-pressed="false">☆ Ajouter aux favoris</button>
+      <details id="recipe-more" class="quiet-details"><summary>Plus d’options</summary><div class="recipe-view-actions">
         <button id="edit-recipe" class="secondary" type="button">Modifier</button>
         <button id="duplicate-recipe" class="secondary" type="button">Dupliquer</button>
         <button id="print-recipe" class="secondary" style="grid-column:1 / -1" type="button">Imprimer / PDF</button>
         <button id="delete-recipe" class="delete-action" type="button">Supprimer cette recette</button>
-      </div>
+      </div></details>
     </dialog>
 
+    <dialog id="pantry-dialog" aria-labelledby="pantry-title">
+      <div class="section-heading"><h2 id="pantry-title">Mon placard</h2><button id="close-pantry" class="icon-button" type="button" aria-label="Fermer le placard">×</button></div>
+      <p class="muted">Les quantités restantes sont estimées d’après les repas planifiés depuis ta dernière mise à jour. Vérifie ton stock après avoir cuisiné.</p>
+      <div id="pantry-list"></div>
+      <details id="pantry-editor" class="quiet-details"><summary>Ajouter un aliment</summary>
+        <form id="pantry-form" class="recipe-form">
+          <label class="field"><span>Aliment</span><input id="pantry-name" list="pantry-foods" maxlength="80" required autocomplete="off"></label><datalist id="pantry-foods"></datalist>
+          <div class="form-grid"><label class="field"><span>Quantité en stock aujourd’hui</span><input id="pantry-amount" type="number" min="0.01" max="1000000" step="0.01" required></label><label class="field"><span>Unité</span><input id="pantry-unit" list="pantry-units" maxlength="24" value="g" required></label></div>
+          <datalist id="pantry-units"><option value="g"><option value="kg"><option value="ml"><option value="cl"><option value="l"><option value="pièce"></datalist>
+          <button class="primary" type="submit">Enregistrer le stock</button>
+          <div class="subtle-tools"><button id="new-pantry-item" class="text-action" type="button" hidden>Ajouter un autre aliment</button><button id="delete-pantry-item" class="text-action" type="button" hidden>Retirer du placard</button></div>
+        </form>
+      </details>
+      <p id="pantry-error" class="error" role="alert" hidden></p>
+    </dialog>
     <dialog id="cooking-dialog">
       <div class="section-heading"><div><h2 id="cooking-title"></h2><span class="muted">Mode cuisine</span></div><button id="close-cooking" class="icon-button" type="button" aria-label="Quitter le mode cuisine">×</button></div>
-      <p class="muted">Les minuteurs fonctionnent tant que cette vue reste ouverte. Pas d’alarme sonore ni de notification en arrière-plan.</p>
+      <p class="muted">Garde cette vue ouverte pour les minuteurs. Les alertes peuvent être retardées si le navigateur est en arrière-plan.</p>
       <details><summary>Voir les ingrédients</summary><ul id="cooking-ingredients" class="detail-list"></ul></details>
       <label class="field"><span>Portions à préparer</span><input id="cooking-portions" type="number" min="1" max="100" step="1" required></label>
       <p id="cooking-portions-error" class="error" role="alert" hidden>Choisis entre 1 et 100 portions entières.</p>
@@ -340,6 +391,10 @@
       <p id="cooking-progress" class="muted"></p>
       <section class="detail-step" aria-labelledby="cooking-kind"><h3 id="cooking-kind"></h3><p id="cooking-instruction" style="font-size: 1.2rem; line-height: 1.65; white-space: pre-line"></p></section>
       <div id="cooking-timer-controls" class="recipe-view-actions"><button id="cooking-timer" class="secondary" type="button"></button><button id="cooking-reset" class="secondary" type="button">Réinitialiser</button></div>
+      <details class="quiet-details"><summary>Confort de cuisine</summary>
+        <label class="check-option"><input id="cooking-awake" type="checkbox">Garder l’écran allumé</label><p id="cooking-awake-status" class="muted" role="status"></p>
+        <label class="check-option"><input id="cooking-sound" type="checkbox">Son à la fin d’un minuteur</label><p id="cooking-sound-status" class="muted" role="status"></p>
+      </details>
       <p id="cooking-timers" role="status" aria-live="polite"></p>
       <div class="recipe-view-actions"><button id="cooking-back" class="secondary" type="button">Précédente</button><button id="cooking-next" class="primary" type="button">Suivante</button></div>
     </dialog>
@@ -441,6 +496,12 @@
       return Math.ceil((((target - yearStart) / 86400000) + 1) / 7);
     }
 
+    async function api(path, options) {
+      const response = await fetch(path, options);
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Impossible d’enregistrer. Réessaie.');
+      return result;
+    }
     async function load() {
       const [weekResponse, householdResponse] = await Promise.all([fetch(`/api/week?start=${key(state.weekStart)}`), fetch('/api/household')]);
       if (!weekResponse.ok || !householdResponse.ok) throw new Error('Impossible de charger la semaine');
@@ -471,8 +532,8 @@
       if (!meal) return `<button class="meal empty" type="button" data-slot="${slot}"><span class="meal-icon">＋</span><span class="meal-copy"><strong>Rien de prévu</strong><small>Ajouter un repas</small></span><span>›</span></button>`;
       const css = meal.occasion === 'date' ? 'date' : meal.location === 'home' ? '' : 'outside';
       const icon = meal.occasion === 'date' ? '♥' : meal.location === 'home' ? '♨' : '⌖';
-      const place = meal.location === 'home' ? 'Maison' : meal.location === 'restaurant' ? 'Restaurant' : 'Extérieur';
-      return `<button class="meal ${css}" type="button" data-slot="${slot}"><span class="meal-icon">${icon}</span><span class="meal-copy"><strong>${escapeHtml(meal.title)}</strong><small>${place} · ${meal.people} personne${meal.people > 1 ? 's' : ''}${meal.minutes ? ` · ${meal.minutes} min` : ''}</small></span><span>›</span></button>`;
+      const place = meal.leftoverOf ? 'Restes' : meal.location === 'home' ? 'Maison' : meal.location === 'restaurant' ? 'Restaurant' : 'Extérieur';
+      return `<button class="meal ${css}" type="button" data-slot="${slot}"><span class="meal-icon">${meal.leftoverOf ? '♻' : icon}</span><span class="meal-copy"><strong>${escapeHtml(meal.title)}</strong><small>${place} · ${meal.people} personne${meal.people > 1 ? 's' : ''}${meal.extraPortions ? ` · ${meal.people + meal.extraPortions} portions à cuisiner` : !meal.leftoverOf && meal.minutes ? ` · ${meal.minutes} min` : ''}</small></span><span>›</span></button>`;
     }
 
     function renderSchedule() {
@@ -488,9 +549,55 @@
       const category = document.getElementById('recipe-category').value;
       const filtered = state.recipes.filter(recipe => (category === '__favorites' ? recipe.favorite : !category || recipe.tags.includes(category)) && `${recipe.title} ${recipe.ingredients.map(item => item.name).join(' ')}`.toLocaleLowerCase('fr').includes(query));
       document.getElementById('recipe-count').textContent = `${filtered.length} sur ${state.recipes.length} recettes`;
-      document.getElementById('recipes').innerHTML = filtered.map(recipe => `<button class="recipe" type="button" data-edit-recipe="${recipe.id}"><span class="meal-icon">${recipe.tags.includes('rat') ? '🐀' : '♨'}</span><span class="recipe-copy"><strong>${escapeHtml(recipe.title)}</strong><small>${recipe.minutes} min · ${dietLabels[recipe.diet]} · ${recipe.steps.length} étape${recipe.steps.length > 1 ? 's' : ''}</small><small>${recipe.tags.filter(tag => recipeCategories[tag]).map(tag => recipeCategories[tag]).join(' · ')}</small></span><span>›</span></button>`).join('') || '<div class="empty-state">Aucune recette ne correspond à ces filtres.</div>';
+      document.getElementById('recipes').innerHTML = filtered.map(recipe => `<button class="recipe" type="button" data-edit-recipe="${recipe.id}">${recipe.hasPhoto ? `<img class="recipe-cover" src="/api/recipes/${recipe.id}/photo" alt="" loading="lazy">` : '<span class="recipe-cover" aria-hidden="true">♨</span>'}<span class="recipe-copy"><strong>${escapeHtml(recipe.title)}</strong><small>${recipe.minutes} min · ${dietLabels[recipe.diet]}</small></span><span aria-hidden="true">›</span></button>`).join('') || '<div class="empty-state">Aucune recette ne correspond à ces filtres.</div>';
     }
 
+    const pantryDialog = document.getElementById('pantry-dialog');
+    let pantryItems = [], pantryEditingId = null;
+    function resetPantryEditor() {
+      pantryEditingId = null; document.getElementById('pantry-form').reset();
+      document.getElementById('pantry-name').readOnly = false; document.getElementById('pantry-unit').readOnly = false;
+      document.getElementById('delete-pantry-item').hidden = true; document.getElementById('new-pantry-item').hidden = true;
+      document.querySelector('#pantry-editor summary').textContent = 'Ajouter un aliment';
+    }
+    async function loadPantry() {
+      pantryItems = await api('/api/pantry');
+      document.getElementById('pantry-list').innerHTML = pantryItems.length ? pantryItems.map(item => `<button class="stock-row" type="button" data-pantry="${item.id}"><span><strong>${escapeHtml(item.name)}</strong><small>Mis à jour le ${escapeHtml(item.recordedOn.split('-').reverse().join('/'))}</small></span><span>${formatAmount(item.remaining)} ${escapeHtml(item.unit)} <span aria-hidden="true">›</span></span></button>`).join('') : '<p class="empty-state">Ce que tu as déjà, en moins sur les courses.</p>';
+    }
+    function pantryError(error) { const node = document.getElementById('pantry-error'); node.textContent = error.message; node.hidden = false; }
+    document.getElementById('open-pantry').addEventListener('click', async () => {
+      resetPantryEditor(); document.getElementById('pantry-editor').open = false; document.getElementById('pantry-error').hidden = true;
+      document.getElementById('pantry-list').textContent = 'Chargement…';
+      const names = [...new Set(state.recipes.flatMap(recipe => recipe.ingredients.map(item => item.name)))].sort((a,b) => a.localeCompare(b, 'fr'));
+      document.getElementById('pantry-foods').innerHTML = names.map(name => `<option value="${escapeHtml(name)}">`).join('');
+      pantryDialog.showModal(); try { await loadPantry(); } catch (error) { pantryError(error); }
+    });
+    document.getElementById('close-pantry').addEventListener('click', () => pantryDialog.close());
+    document.getElementById('pantry-list').addEventListener('click', event => {
+      const button = event.target.closest('[data-pantry]'); if (!button) return;
+      const item = pantryItems.find(row => row.id === Number(button.dataset.pantry)); if (!item) return;
+      pantryEditingId = item.id;
+      document.getElementById('pantry-name').value = item.name; document.getElementById('pantry-name').readOnly = true;
+      document.getElementById('pantry-unit').value = item.unit; document.getElementById('pantry-unit').readOnly = true;
+      document.getElementById('pantry-amount').value = item.remaining || '';
+      document.getElementById('delete-pantry-item').hidden = false; document.getElementById('new-pantry-item').hidden = false;
+      document.querySelector('#pantry-editor summary').textContent = 'Mettre à jour le stock'; document.getElementById('pantry-editor').open = true;
+      document.getElementById('pantry-amount').focus();
+    });
+    document.getElementById('new-pantry-item').addEventListener('click', () => { resetPantryEditor(); document.getElementById('pantry-name').focus(); });
+    document.getElementById('pantry-form').addEventListener('submit', async event => {
+      event.preventDefault(); const button = event.submitter; if (button.disabled) return; button.disabled = true;
+      document.getElementById('pantry-error').hidden = true;
+      try {
+        await api('/api/pantry', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: document.getElementById('pantry-name').value, unit: document.getElementById('pantry-unit').value, amount: Number(document.getElementById('pantry-amount').value) }) });
+        await loadPantry(); await load(); resetPantryEditor(); document.getElementById('pantry-editor').open = false;
+      } catch (error) { pantryError(error); } finally { button.disabled = false; }
+    });
+    document.getElementById('delete-pantry-item').addEventListener('click', async event => {
+      if (!pantryEditingId) return; const button = event.currentTarget; button.disabled = true;
+      try { await api(`/api/pantry/${pantryEditingId}`, { method: 'DELETE' }); await loadPantry(); await load(); resetPantryEditor(); document.getElementById('pantry-editor').open = false; }
+      catch (error) { pantryError(error); } finally { button.disabled = false; }
+    });
     let organizingShopping = false;
     function renderShopping() {
       const summary = document.getElementById('shopping-summary');
@@ -568,8 +675,37 @@
       document.getElementById('dialog-subtitle').textContent = `${fullDayNames[state.selected]} · ${slot === 'midi' ? 'Midi' : 'Soir'}`;
       const recipeIds = [...new Set([meal.recipeId, ...(meal.dishes || []).map(dish => dish.recipeId)].filter(Boolean))];
       const view = recipeIds.map(id => choice('◉', recipeIds.length === 1 ? 'Voir la recette' : `Voir ${state.recipes.find(recipe => recipe.id === id)?.title || 'la recette'}`, 'Ingrédients et étapes de réalisation', { viewplanned: id })).join('');
-      document.getElementById('choices').innerHTML = view + choice('↻', 'Changer ce repas', 'Choisir une autre recette ou occasion', { change: 'true' }) + choice('×', 'Retirer du planning', meal.title, { remove: 'true' });
+      const leftovers = meal.recipeId && !meal.leftoverOf && !meal.hasVariants && !meal.dishes?.length ? choice('♻', 'Prévoir des restes', 'Cuisiner plus pour un prochain repas', { leftovers: meal.id }) : '';
+      document.getElementById('dialog-error').hidden = true;
+      document.getElementById('choices').innerHTML = view + leftovers + choice('↔', 'Déplacer ou copier', 'Choisir un autre jour', { placement: meal.id }) + choice('↻', 'Changer ce repas', 'Choisir une autre recette ou occasion', { change: 'true' }) + choice('×', 'Retirer du planning', meal.title, { remove: 'true' });
       dialog.showModal();
+    }
+
+    function openPlacement(sourceId) {
+      const source = state.meals.find(meal => meal.id === sourceId); if (!source) return;
+      document.getElementById('dialog-title').textContent = 'Déplacer ou copier';
+      document.getElementById('dialog-subtitle').textContent = source.title;
+      document.getElementById('choices').innerHTML = `<form id="placement-form" class="recipe-form"><label class="field"><span>Action</span><select id="placement-action"><option value="move">Déplacer ce repas</option>${source.leftoverOf ? '' : '<option value="copy">Copier ce repas</option>'}</select></label><label class="field"><span>Jour</span><input id="placement-date" type="date" value="${source.date}" required></label><label class="field"><span>Repas</span><select id="placement-slot"><option value="midi">Midi</option><option value="soir">Soir</option></select></label><button class="primary" type="submit">Valider</button></form>`;
+      document.getElementById('placement-slot').value = source.slot;
+      document.getElementById('placement-form').addEventListener('submit', async event => {
+        event.preventDefault(); const button = event.submitter; if (button.disabled) return; button.disabled = true;
+        try { await api(`/api/meals/${sourceId}/placement`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: document.getElementById('placement-action').value, date: document.getElementById('placement-date').value, slot: document.getElementById('placement-slot').value, sourceDate: source.date, sourceSlot: source.slot }) }); dialog.close(); await load(); }
+        catch (error) { const node = document.getElementById('dialog-error'); node.textContent = error.message; node.hidden = false; } finally { button.disabled = false; }
+      });
+    }
+    function openLeftovers(sourceId) {
+      const source = state.meals.find(meal => meal.id === sourceId); if (!source) return;
+      const next = new Date(`${source.date}T12:00:00`); next.setDate(next.getDate() + 1);
+      document.getElementById('dialog-title').textContent = 'Prévoir des restes';
+      document.getElementById('dialog-subtitle').textContent = source.title;
+      document.getElementById('choices').innerHTML = `<form id="leftovers-form" class="recipe-form"><label class="field"><span>Pour quel jour ?</span><input id="leftovers-date" type="date" min="${source.date}" value="${key(next)}" required></label><div class="form-grid"><label class="field"><span>Repas</span><select id="leftovers-slot"><option value="midi">Midi</option><option value="soir">Soir</option></select></label><label class="field"><span>Portions à garder</span><input id="leftovers-people" type="number" min="1" max="${100 - source.people - source.extraPortions}" value="2" required></label></div><p class="muted">Ces portions seront ajoutées aux quantités du repas où tu cuisines. Choisis une date adaptée à la conservation du plat.</p><button type="submit" class="primary">Planifier les restes</button></form>`;
+      document.getElementById('leftovers-form').addEventListener('submit', async event => {
+        event.preventDefault(); const button = event.submitter; if (button.disabled) return; button.disabled = true;
+        try {
+          await api('/api/meals/leftovers', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ sourceId, date: document.getElementById('leftovers-date').value, slot: document.getElementById('leftovers-slot').value, people: Number(document.getElementById('leftovers-people').value) }) });
+          dialog.close(); await load();
+        } catch (error) { const node = document.getElementById('dialog-error'); node.textContent = error.message; node.hidden = false; } finally { button.disabled = false; }
+      });
     }
 
     async function renderSuggestions(maxMinutes = '30') {
@@ -881,7 +1017,42 @@
       return row;
     }
 
+    function showRecipePhoto(url) {
+      const preview = document.getElementById('recipe-photo-preview');
+      preview.hidden = !url;
+      if (url) preview.src = url; else preview.removeAttribute('src');
+      document.getElementById('remove-recipe-photo').hidden = !url;
+    }
+    document.getElementById('recipe-photo-file').addEventListener('change', async event => {
+      const file = event.target.files[0]; if (!file) return;
+      const request = ++photoRequest;
+      const status = document.getElementById('recipe-photo-status');
+      photoBusy = true; status.textContent = 'Préparation de la photo…';
+      try {
+        if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 10_000_000) throw new Error('Choisis une photo JPEG, PNG ou WebP de moins de 10 Mo.');
+        const data = await new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = () => reject(new Error('Impossible de lire cette photo.')); reader.readAsDataURL(file); });
+        const image = new Image(); image.src = data; await image.decode();
+        const ratio = Math.min(1, 960 / Math.max(image.naturalWidth, image.naturalHeight));
+        const canvas = document.createElement('canvas'); canvas.width = Math.max(1, Math.round(image.naturalWidth * ratio)); canvas.height = Math.max(1, Math.round(image.naturalHeight * ratio));
+        const context = canvas.getContext('2d'); context.fillStyle = '#fff'; context.fillRect(0, 0, canvas.width, canvas.height); context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        const photo = canvas.toDataURL('image/jpeg', .7);
+        if (photo.length > 400000) throw new Error('Cette photo reste trop lourde. Choisis une image plus petite.');
+        if (request !== photoRequest || !recipeDialog.open) return;
+        recipePhoto = photo; showRecipePhoto(photo); status.textContent = 'Photo prête. Elle sera enregistrée avec la recette.';
+      } catch (error) { if (request === photoRequest) status.textContent = error.message || 'Photo illisible. Essaie un autre fichier.'; }
+      finally { if (request === photoRequest) { photoBusy = false; event.target.value = ''; } }
+    });
+    document.getElementById('remove-recipe-photo').addEventListener('click', () => {
+      photoRequest++; photoBusy = false; recipePhoto = null; showRecipePhoto('');
+      document.getElementById('recipe-photo-status').textContent = 'La photo sera retirée à l’enregistrement.';
+    });
+    let recipePhoto, recipePhotoCopyId, photoBusy = false, photoRequest = 0;
     function openRecipeEditor(recipe = null, imported = false) {
+      photoRequest++; photoBusy = false; recipePhoto = undefined; recipePhotoCopyId = recipe?.photoCopyId;
+      document.getElementById('recipe-photo-file').value = '';
+      document.getElementById('recipe-photo-status').textContent = '';
+      document.getElementById('recipe-photo-options').open = false;
+      showRecipePhoto(recipe?.hasPhoto ? `/api/recipes/${recipe.id || recipe.photoCopyId}/photo` : '');
       editingRecipeId = recipe?.id ?? null;
       document.getElementById('recipe-dialog-title').textContent = recipe ? 'Modifier la recette' : 'Nouvelle recette';
       document.getElementById('recipe-title').value = recipe?.title ?? '';
@@ -901,6 +1072,15 @@
     }
 
     function openRecipe(recipe) {
+      document.getElementById('recipe-notes').open = false;
+      document.getElementById('recipe-rating').value = recipe.rating || 0;
+      document.getElementById('recipe-note').value = recipe.note || '';
+      document.getElementById('recipe-notes-status').textContent = '';
+      document.getElementById('recipe-more').open = false;
+      const photo = document.getElementById('recipe-view-photo');
+      photo.hidden = !recipe.hasPhoto;
+      if (recipe.hasPhoto) photo.src = `/api/recipes/${recipe.id}/photo`;
+      else photo.removeAttribute('src');
       editingRecipeId = recipe.id;
       const favoriteButton = document.getElementById('favorite-recipe');
       favoriteButton.textContent = recipe.favorite ? '★ Retirer des favoris' : '☆ Ajouter aux favoris';
@@ -917,6 +1097,16 @@
       recipeViewDialog.showModal();
     }
 
+    document.getElementById('recipe-notes-form').addEventListener('submit', async event => {
+      event.preventDefault(); const button = event.submitter; if (button.disabled) return; button.disabled = true;
+      const recipeId = editingRecipeId;
+      const status = document.getElementById('recipe-notes-status');
+      try {
+        const notes = await api(`/api/recipes/${recipeId}/notes`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ rating: Number(document.getElementById('recipe-rating').value), note: document.getElementById('recipe-note').value }) });
+        const recipe = state.recipes.find(item => item.id === recipeId); if (recipe) Object.assign(recipe, notes);
+        if (editingRecipeId === recipeId) status.textContent = 'Notes enregistrées.';
+      } catch (error) { if (editingRecipeId === recipeId) status.textContent = error.message; } finally { button.disabled = false; }
+    });
     const cookingDialog = document.getElementById('cooking-dialog');
     document.getElementById('print-recipe').addEventListener('click', () => {
       const recipe = state.recipes.find(item => item.id === editingRecipeId);
@@ -935,6 +1125,35 @@
     window.addEventListener('afterprint', () => document.getElementById('recipe-print').replaceChildren());
     let cooking = null;
     let cookingInterval = null;
+    let screenLock = null, wakeRequest = 0, cookingAudio = null;
+    async function updateScreenLock() {
+      const request = ++wakeRequest;
+      if (screenLock) { const old = screenLock; screenLock = null; await old.release().catch(() => {}); }
+      const status = document.getElementById('cooking-awake-status'); status.textContent = '';
+      if (!cooking || !document.getElementById('cooking-awake').checked || document.visibilityState !== 'visible') return;
+      if (!navigator.wakeLock) { status.textContent = 'Maintien de l’écran indisponible sur ce navigateur.'; return; }
+      try {
+        const lock = await navigator.wakeLock.request('screen');
+        if (request !== wakeRequest || !cooking) { await lock.release(); return; }
+        screenLock = lock; status.textContent = 'Écran maintenu allumé.';
+        lock.addEventListener('release', () => { if (screenLock === lock) { screenLock = null; status.textContent = 'Maintien de l’écran interrompu par le navigateur.'; } });
+      } catch { if (request === wakeRequest) status.textContent = 'Le navigateur n’a pas autorisé le maintien de l’écran.'; }
+    }
+    function cookingChime() {
+      if (!document.getElementById('cooking-sound').checked || cookingAudio?.state !== 'running') return;
+      const oscillator = cookingAudio.createOscillator(), volume = cookingAudio.createGain(), now = cookingAudio.currentTime;
+      oscillator.frequency.value = 660; volume.gain.setValueAtTime(.0001, now); volume.gain.exponentialRampToValueAtTime(.12, now + .03); volume.gain.exponentialRampToValueAtTime(.0001, now + .6);
+      oscillator.connect(volume); volume.connect(cookingAudio.destination); oscillator.start(now); oscillator.stop(now + .65);
+      oscillator.onended = () => { oscillator.disconnect(); volume.disconnect(); };
+    }
+    document.getElementById('cooking-awake').addEventListener('change', updateScreenLock);
+    document.addEventListener('visibilitychange', () => { if (cooking) updateScreenLock(); });
+    document.getElementById('cooking-sound').addEventListener('change', async event => {
+      const status = document.getElementById('cooking-sound-status'); status.textContent = '';
+      if (!event.target.checked) return;
+      try { const context = cookingAudio ||= new AudioContext(); await context.resume(); if (cooking && cookingAudio === context && event.target.checked) { cookingChime(); status.textContent = 'Son activé. Vérifie le volume de ton appareil.'; } }
+      catch { event.target.checked = false; status.textContent = 'Son indisponible sur ce navigateur.'; }
+    });
 
     function scaledIngredients(recipe, portions) {
       if (!Number.isInteger(portions) || portions < 1 || portions > 100) throw new Error('Choisis entre 1 et 100 portions entières.');
@@ -972,6 +1191,7 @@
       document.getElementById('cooking-timers').textContent = cooking.timers.map((item, index) => {
         if (!item.started) return '';
         const seconds = timerSeconds(item);
+        if (seconds === 0 && !item.notified) { item.notified = true; cookingChime(); }
         return `Étape ${index + 1} : ${seconds === 0 ? 'minuteur terminé — vérifie la cuisson' : `${Math.ceil(seconds / 60)} min restantes${item.end == null ? ' · en pause' : ''}`}`;
       }).filter(Boolean).join(' · ');
     }
@@ -999,12 +1219,13 @@
       recipeViewDialog.close();
       renderCooking();
       cookingDialog.showModal();
+      updateScreenLock();
       cookingInterval = setInterval(renderCookingTimers, 1000);
     });
     document.getElementById('cooking-timer').addEventListener('click', () => {
       const timer = cooking.timers[cooking.index];
       if (timer.end != null && timerSeconds(timer) > 0) { timer.remaining = timerSeconds(timer); timer.end = null; }
-      else { if (timerSeconds(timer) === 0) timer.remaining = cooking.recipe.steps[cooking.index].minutes * 60; timer.end = Date.now() + timer.remaining * 1000; timer.started = true; }
+      else { if (timerSeconds(timer) === 0) { timer.remaining = cooking.recipe.steps[cooking.index].minutes * 60; timer.notified = false; } timer.end = Date.now() + timer.remaining * 1000; timer.started = true; }
       renderCookingTimers();
     });
     document.getElementById('cooking-reset').addEventListener('click', () => {
@@ -1017,10 +1238,15 @@
       else { cooking.index++; renderCooking(); }
     });
     document.getElementById('close-cooking').addEventListener('click', () => cookingDialog.close());
-    cookingDialog.addEventListener('close', () => { clearInterval(cookingInterval); cookingInterval = null; cooking = null; });
+    cookingDialog.addEventListener('close', () => {
+      clearInterval(cookingInterval); cookingInterval = null; cooking = null; updateScreenLock();
+      if (cookingAudio) { cookingAudio.close().catch(() => {}); cookingAudio = null; }
+      document.getElementById('cooking-sound').checked = false; document.getElementById('cooking-sound-status').textContent = '';
+    });
 
     async function saveRecipe(event) {
       event.preventDefault();
+      if (photoBusy) { document.getElementById('recipe-photo-options').open = true; return; }
       const ingredients = [...document.querySelectorAll('.ingredient-row')].map(row => ({
         name: row.querySelector('.ingredient-name').value,
         amount: Number(row.querySelector('.ingredient-amount').value),
@@ -1032,6 +1258,8 @@
         minutes: row.querySelector('.step-minutes').value === '' ? null : Number(row.querySelector('.step-minutes').value)
       }));
       const payload = {
+        ...(recipePhoto !== undefined ? { photo: recipePhoto } : {}),
+        ...(recipePhotoCopyId !== undefined ? { photoCopyId: recipePhotoCopyId } : {}),
         sourceUrl: document.getElementById('recipe-source').value,
         title: document.getElementById('recipe-title').value,
         minutes: Number(document.getElementById('recipe-minutes').value),
@@ -1090,9 +1318,18 @@
       }
       if (button.dataset.guestmode) return button.dataset.guestmode === 'recipe' ? openGuestRecipes() : openEventSetup('guests', button.dataset.guestmode);
       if (button.dataset.guestrecipe) return openEventSetup('guests', 'recipe', state.recipes.find(recipe => recipe.id === Number(button.dataset.guestrecipe)));
+      if (button.dataset.leftovers) return openLeftovers(Number(button.dataset.leftovers));
+      if (button.dataset.placement) return openPlacement(Number(button.dataset.placement));
       if (button.dataset.viewplanned) {
         dialog.close();
-        return openRecipe(state.recipes.find(recipe => recipe.id === Number(button.dataset.viewplanned)));
+        const recipe = state.recipes.find(recipe => recipe.id === Number(button.dataset.viewplanned));
+        openRecipe(recipe);
+        const meal = mealFor(state.selected, state.slot);
+        if (meal && !meal.dishes?.length) {
+          document.getElementById('recipe-view-portions').value = meal.people + (meal.extraPortions || 0);
+          renderPortions(recipe, document.getElementById('recipe-view-portions'), 'recipe-view-ingredients', 'recipe-view-error');
+        }
+        return;
       }
       if (button.dataset.change) return openAdd(state.slot);
       button.dataset.remove ? deleteMeal() : button.dataset.duo ? openDuoSetup() : saveMeal(button);
@@ -1345,7 +1582,7 @@
       const recipe = state.recipes.find(item => item.id === editingRecipeId);
       if (!recipe) return;
       recipeViewDialog.close();
-      openRecipeEditor({ ...recipe, id: null, title: `${recipe.title.slice(0, 110)} — copie` });
+      openRecipeEditor({ ...recipe, id: null, ...(recipe.hasPhoto ? { photoCopyId: recipe.id } : {}), title: `${recipe.title.slice(0, 110)} — copie` });
       document.getElementById('recipe-dialog-title').textContent = 'Créer une variante';
     });
     document.getElementById('delete-recipe').addEventListener('click', async () => {

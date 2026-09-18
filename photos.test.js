@@ -1,0 +1,32 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const { once } = require('node:events');
+const { createApp, createDatabase, recipes } = require('./server');
+
+test('photos : conservation, copie indépendante, suppression, export léger et validation', async t => {
+  const db = createDatabase(':memory:'); const server = createApp(db);
+  server.listen(0, '127.0.0.1'); await once(server, 'listening');
+  t.after(() => { server.close(); db.close(); });
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const request = (path, method, data) => fetch(base + path, { method, headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) });
+  const recipe = recipes(db)[0];
+  const photo = 'data:image/jpeg;base64,' + Buffer.from([255, 216, 255, 217]).toString('base64');
+  assert.equal((await request(`/api/recipes/${recipe.id}`, 'PUT', { ...recipe, photo })).status, 200);
+  assert.equal(recipes(db).find(r => r.id === recipe.id).hasPhoto, true);
+  const image = await fetch(`${base}/api/recipes/${recipe.id}/photo`);
+  assert.equal(image.headers.get('content-type'), 'image/jpeg');
+  assert.equal(image.headers.get('x-content-type-options'), 'nosniff');
+  assert.equal((await image.arrayBuffer()).byteLength, 4);
+  await request(`/api/recipes/${recipe.id}`, 'PUT', { ...recipe, title: 'Conservée' });
+  assert.equal((await fetch(`${base}/api/recipes/${recipe.id}/photo`)).status, 200);
+  const copy = await (await request('/api/recipes', 'POST', { ...recipe, photoCopyId: recipe.id })).json();
+  await request(`/api/recipes/${recipe.id}`, 'PUT', { ...recipe, photo: null });
+  assert.equal((await fetch(`${base}/api/recipes/${recipe.id}/photo`)).status, 404);
+  assert.equal((await fetch(`${base}/api/recipes/${copy.id}/photo`)).status, 200);
+  assert.equal((await request('/api/recipes', 'POST', { ...recipe, photo: 'data:image/svg+xml,<svg></svg>' })).status, 400);
+  assert.equal((await request('/api/recipes', 'POST', { ...recipe, photo: 'data:image/jpeg;base64,aGVsbG8=' })).status, 400);
+  const exported = await (await fetch(base + '/api/recipes/export')).json();
+  assert.equal(exported.recipes.some(r => 'hasPhoto' in r || 'photo' in r), false);
+  await request(`/api/recipes/${copy.id}`, 'DELETE');
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM recipe_photos').get().n, 0);
+});

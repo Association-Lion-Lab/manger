@@ -1,0 +1,31 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const { once } = require('node:events');
+const { createApp, createDatabase, shoppingList } = require('./server');
+
+test('restes : courses au jour de préparation, pas de double compte, créneaux et liens protégés', async t => {
+  const db = createDatabase(':memory:'); const server = createApp(db);
+  server.listen(0, '127.0.0.1'); await once(server, 'listening');
+  t.after(() => { server.close(); db.close(); });
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const post = (path, data) => fetch(base + path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) });
+  const source = { date: '2026-09-20', slot: 'soir', location: 'home', occasion: 'regular', recipeId: 1, people: 2, title: 'Bowl' };
+  assert.equal((await post('/api/meals', source)).status, 200);
+  const id = db.prepare('SELECT id FROM meals').get().id;
+  const before = shoppingList(db, '2026-09-14');
+  const input = { sourceId: id, date: '2026-09-21', slot: 'midi', people: 2 };
+  for (const bad of [{ date: '2026-09-19' }, { date: source.date, slot: source.slot }, { people: 0 }, { people: 99 }, { sourceId: 999 }]) assert.equal((await post('/api/meals/leftovers', { ...input, ...bad })).status, 400);
+  assert.equal((await post('/api/meals/leftovers', input)).status, 201);
+  assert.equal((await post('/api/meals/leftovers', input)).status, 400);
+  assert.deepEqual(shoppingList(db, '2026-09-14'), before.map(item => ({ ...item, amount: item.amount * 2 })));
+  assert.deepEqual(shoppingList(db, '2026-09-21'), []);
+  const week = await (await fetch(base + '/api/week?start=2026-09-14')).json();
+  assert.equal(week.meals[0].extraPortions, 2);
+  assert.equal((await post('/api/meals', source)).status, 400);
+  assert.equal((await fetch(base + '/api/meals?date=2026-09-20&slot=soir', { method: 'DELETE' })).status, 400);
+  const leftoverId = db.prepare('SELECT id FROM meals WHERE leftover_of = ?').get(id).id;
+  assert.equal((await post('/api/meals/leftovers', { ...input, sourceId: leftoverId, date: '2026-09-22' })).status, 400);
+  assert.equal((await fetch(base + '/api/meals?date=2026-09-21&slot=midi', { method: 'DELETE' })).status, 200);
+  assert.deepEqual(shoppingList(db, '2026-09-14'), before);
+  assert.equal((await fetch(base + '/api/meals?date=2026-09-20&slot=soir', { method: 'DELETE' })).status, 200);
+});
