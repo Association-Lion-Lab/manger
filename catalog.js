@@ -1,7 +1,25 @@
 // Original recipe descriptions: CC0-1.0. No third-party recipes or media.
+// Reviewed against the instructions below, not inferred from the presence of a cooking step.
+// Unlisted ingredients remain unknown (notably seasoning or mixed uses).
+const preparations = {
+  'Lentilles et carottes du placard': { cooked: ['lentilles vertes', 'carotte', 'oignon', 'huile d’olive', 'eau'] },
+  'Pâtes tomate et ail malin': { cooked: ['pâtes sèches sans œuf', 'tomate concassée', 'ail', 'huile d’olive'] },
+  'Risotto champignons à deux': { cooked: ['riz arborio', 'champignon', 'oignon', 'bouillon de légumes', 'huile d’olive'] },
+  'Saumon citron, riz et courgette': { cooked: ['saumon', 'riz', 'courgette', 'citron', 'huile d’olive', 'sel'] },
+  'Dahl coco de lentilles corail': { cooked: ['lentilles corail', 'lait de coco', 'tomate concassée', 'oignon', 'curry', 'huile', 'eau'] },
+  'Bœuf carottes du dimanche': { cooked: ['bœuf à braiser', 'carotte', 'oignon', 'bouillon de légumes', 'huile', 'thym'] },
+  'Tofu teriyaki maison et riz': { cooked: ['tofu ferme', 'riz', 'sauce soja', 'sucre', 'eau', 'huile', 'brocoli'] },
+  'Bol poulet et œuf façon oyakodon': { cooked: ['poulet', 'œuf', 'riz', 'oignon', 'sauce soja', 'sucre', 'eau'] },
+  'Riz sauté aux œufs et petits pois': { cooked: ['riz', 'œuf', 'petits pois surgelés', 'carotte', 'sauce soja', 'huile'] },
+  'Tofu et brocoli sautés au gingembre': { cooked: ['tofu ferme', 'brocoli', 'gingembre', 'sauce soja', 'huile', 'eau'] },
+  'Gratin de pommes de terre crémeux': { cooked: ['pomme de terre', 'crème liquide', 'lait', 'ail', 'beurre', 'sel'] },
+  'Ratatouille à la poêle': { cooked: ['aubergine', 'courgette', 'poivron', 'tomate', 'oignon', 'ail', 'huile d’olive', 'sel'] },
+  'Velouté de chou-fleur, noisettes dorées': { cooked: ['chou-fleur', 'bouillon de légumes', 'noisette'] },
+  'Carottes rôties, lentilles et sauce citron': { cooked: ['carotte', 'lentilles vertes', 'huile d’olive'], raw: ['citron'] }
+};
 const recipe = (title, minutes, diet, tags, ingredients, steps) => ({
   title, minutes, diet, tags, servings: 2,
-  ingredients: ingredients.map(([name, amount, unit]) => ({ name, amount, unit })),
+  ingredients: ingredients.map(([name, amount, unit]) => ({ name, amount, unit, preparation: preparations[title]?.cooked?.includes(name) ? 'cooked' : preparations[title]?.raw?.includes(name) ? 'raw' : 'unknown' })),
   steps: steps.map(([kind, minutes, instruction]) => ({ kind, minutes, instruction }))
 });
 

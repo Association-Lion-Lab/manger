@@ -246,7 +246,7 @@ test('une recette peut être créée puis modifiée avec ses ingrédients et ses
   assert.equal(updatedResponse.status, 200);
   const updated = await updatedResponse.json();
   assert.equal(updated.title, 'Bruschettas');
-  assert.deepEqual(updated.ingredients, [{ name: 'tomate', unit: 'pièce', amount: 2 }]);
+  assert.deepEqual(updated.ingredients, [{ name: 'tomate', unit: 'pièce', amount: 2, preparation: 'unknown' }]);
   assert.equal(updated.steps.length, 3);
   assert.deepEqual(updated.steps.map(step => step.kind), ['prep', 'cook', 'serve']);
 });

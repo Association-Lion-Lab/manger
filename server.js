@@ -5,6 +5,7 @@ const { DatabaseSync } = require('node:sqlite');
 const catalog = require('./catalog');
 const { foodName, foodKey, inUnit, groupIngredients } = require('./ingredients');
 const { downloadRecipePage, extractRecipeDraft } = require('./recipe-import');
+const { recipeTaste, tasteRank } = require('./public/tastes');
 
 const INDEX_HTML = readFileSync(join(__dirname, 'public', 'index.html'));
 const DAY_MS = 86_400_000;
@@ -127,6 +128,9 @@ function createDatabase(filename) {
     );
   `);
   if (!db.prepare('PRAGMA table_info(recipes)').all().some(column => column.name === 'source_url')) db.exec('ALTER TABLE recipes ADD COLUMN source_url TEXT');
+  if (!db.prepare('PRAGMA table_info(members)').all().some(column => column.name === 'avoided_ingredients')) db.exec("ALTER TABLE members ADD COLUMN avoided_ingredients TEXT NOT NULL DEFAULT '[]'");
+  if (!db.prepare('PRAGMA table_info(meal_dishes)').all().some(column => column.name === 'protein_id')) db.exec('ALTER TABLE meal_dishes ADD COLUMN protein_id INTEGER REFERENCES proteins(id)');
+  if (!db.prepare('PRAGMA table_info(recipe_ingredients)').all().some(column => column.name === 'preparation')) db.exec("ALTER TABLE recipe_ingredients ADD COLUMN preparation TEXT NOT NULL DEFAULT 'unknown' CHECK(preparation IN ('unknown', 'raw', 'cooked'))");
   if (!db.prepare('PRAGMA table_info(meals)').all().some(column => column.name === 'leftover_of')) db.exec('ALTER TABLE meals ADD COLUMN leftover_of INTEGER REFERENCES meals(id) ON DELETE RESTRICT');
   if (!db.prepare('PRAGMA table_info(recipes)').all().some(column => column.name === 'instructions')) {
     db.exec("ALTER TABLE recipes ADD COLUMN instructions TEXT NOT NULL DEFAULT ''");
@@ -151,6 +155,33 @@ function createDatabase(filename) {
     WHERE recipes.instructions <> ''
       AND NOT EXISTS (SELECT 1 FROM recipe_steps WHERE recipe_steps.recipe_id = recipes.id)
   `);
+  if (db.prepare('PRAGMA user_version').get().user_version < 2) {
+    // Only unchanged originals are annotated. A shared title alone is not enough.
+    const signature = recipe => JSON.stringify({
+      title: recipe.title, servings: recipe.servings, minutes: recipe.minutes,
+      ingredients: recipe.ingredients.map(({ name, amount, unit }) => ({ name, amount, unit })).sort((a, b) => a.name.localeCompare(b.name, 'fr')),
+      steps: recipe.steps.map(({ kind, instruction, minutes }) => ({ kind, instruction, minutes }))
+    });
+    const originals = new Map(catalog.map(recipe => [signature(recipe), recipe]));
+    const starters = [
+      ['Bowl pois chiches', 20, 'Mélanger les ingrédients et assaisonner selon votre goût.', [['pois chiches', 400, 'g', 'unknown'], ['tomate', 2, 'pièce', 'raw'], ['citron', 1, 'pièce', 'raw']]],
+      ['Curry coco', 35, 'Faire mijoter les ingrédients, puis servir avec le riz.', [['lait de coco', 20, 'cl', 'cooked'], ['curry', 2, 'c. à café', 'cooked'], ['riz', 160, 'g', 'cooked']]],
+      ['Gnocchis aux légumes', 25, 'Faire revenir les légumes, ajouter les gnocchis et laisser dorer.', [['gnocchis', 500, 'g', 'cooked'], ['courgette', 2, 'pièce', 'cooked'], ['oignon rouge', 1, 'pièce', 'cooked']]]
+    ];
+    for (const [title, minutes, instruction, ingredients] of starters) {
+      const recipe = { title, minutes, servings: 2, ingredients: ingredients.map(([name, amount, unit, preparation]) => ({ name, amount, unit, preparation })), steps: [{ kind: 'prep', instruction, minutes: null }] };
+      originals.set(signature(recipe), recipe);
+    }
+    const update = db.prepare("UPDATE recipe_ingredients SET preparation = ? WHERE recipe_id = ? AND preparation = 'unknown' AND ingredient_id = (SELECT id FROM ingredients WHERE name = ? AND unit = ?)");
+    db.exec('BEGIN');
+    try {
+      for (const recipe of recipes(db)) {
+        const original = originals.get(signature(recipe));
+        if (original) for (const ingredient of original.ingredients) update.run(ingredient.preparation, recipe.id, ingredient.name, ingredient.unit);
+      }
+      db.exec('PRAGMA user_version = 2; COMMIT');
+    } catch (error) { db.exec('ROLLBACK'); throw error; }
+  }
   return db;
 }
 
@@ -178,14 +209,14 @@ function seed(db) {
     ['gnocchis', 'g'], ['courgette', 'pièce'], ['oignon rouge', 'pièce']
   ];
   const recipeIngredients = [
-    [1, 1, 400], [1, 2, 2], [1, 3, 1],
-    [2, 4, 20], [2, 5, 2], [2, 6, 160],
-    [3, 7, 500], [3, 8, 2], [3, 9, 1]
+    [1, 1, 400, 'unknown'], [1, 2, 2, 'raw'], [1, 3, 1, 'raw'],
+    [2, 4, 20, 'cooked'], [2, 5, 2, 'cooked'], [2, 6, 160, 'cooked'],
+    [3, 7, 500, 'cooked'], [3, 8, 2, 'cooked'], [3, 9, 1, 'cooked']
   ];
 
   const insertRecipe = db.prepare('INSERT INTO recipes (title, minutes, servings, tags, diet, instructions) VALUES (?, ?, ?, ?, ?, ?)');
   const insertIngredient = db.prepare('INSERT INTO ingredients (name, unit) VALUES (?, ?)');
-  const linkIngredient = db.prepare('INSERT INTO recipe_ingredients (recipe_id, ingredient_id, amount) VALUES (?, ?, ?)');
+  const linkIngredient = db.prepare('INSERT INTO recipe_ingredients (recipe_id, ingredient_id, amount, preparation) VALUES (?, ?, ?, ?)');
 
   db.exec('BEGIN');
   try {
@@ -201,7 +232,7 @@ function seed(db) {
 
 function recipes(db) {
   const ingredientQuery = db.prepare(`
-    SELECT ingredients.name, ingredients.unit, recipe_ingredients.amount
+    SELECT ingredients.name, ingredients.unit, recipe_ingredients.amount, recipe_ingredients.preparation
     FROM recipe_ingredients JOIN ingredients ON ingredients.id = recipe_ingredients.ingredient_id
     WHERE recipe_ingredients.recipe_id = ? ORDER BY ingredients.name
   `);
@@ -233,7 +264,8 @@ function validateRecipe(input) {
     if (!ingredient || typeof ingredient.name !== 'string' || !ingredient.name.trim() || ingredient.name.length > 80) throw new Error('Nom d’ingrédient invalide');
     if (typeof ingredient.unit !== 'string' || !ingredient.unit.trim() || ingredient.unit.length > 24) throw new Error('Unité invalide');
     if (typeof ingredient.amount !== 'number' || !Number.isFinite(ingredient.amount) || ingredient.amount <= 0 || ingredient.amount > 1_000_000) throw new Error('Quantité invalide');
-    return { name: ingredient.name.trim().toLocaleLowerCase('fr'), unit: ingredient.unit.trim(), amount: ingredient.amount };
+    if (ingredient.preparation !== undefined && !['raw', 'cooked', 'unknown'].includes(ingredient.preparation)) throw new Error('État d’ingrédient invalide');
+    return { name: ingredient.name.trim().toLocaleLowerCase('fr'), unit: ingredient.unit.trim(), amount: ingredient.amount, preparation: ingredient.preparation ?? 'unknown' };
   });
   const duplicate = new Set(ingredients.map(ingredient => `${ingredient.name}\0${ingredient.unit}`));
   if (duplicate.size !== ingredients.length) throw new Error('Un ingrédient est présent plusieurs fois');
@@ -299,11 +331,11 @@ function saveRecipe(db, recipe, id = null) {
 
     const insertIngredient = db.prepare('INSERT INTO ingredients (name, unit) VALUES (?, ?) ON CONFLICT (name, unit) DO NOTHING');
     const findIngredient = db.prepare('SELECT id FROM ingredients WHERE name = ? AND unit = ?');
-    const linkIngredient = db.prepare('INSERT INTO recipe_ingredients (recipe_id, ingredient_id, amount) VALUES (?, ?, ?)');
+    const linkIngredient = db.prepare('INSERT INTO recipe_ingredients (recipe_id, ingredient_id, amount, preparation) VALUES (?, ?, ?, ?)');
     for (const ingredient of recipe.ingredients) {
       insertIngredient.run(ingredient.name, ingredient.unit);
       const ingredientId = findIngredient.get(ingredient.name, ingredient.unit).id;
-      linkIngredient.run(id, ingredientId, ingredient.amount);
+      linkIngredient.run(id, ingredientId, ingredient.amount, ingredient.preparation || 'unknown');
     }
     const insertStep = db.prepare('INSERT INTO recipe_steps (recipe_id, position, kind, instruction, minutes) VALUES (?, ?, ?, ?, ?)');
     for (const step of recipe.steps) insertStep.run(id, step.position, step.kind, step.instruction, step.minutes);
@@ -324,8 +356,9 @@ function meals(db, start) {
     FROM meals LEFT JOIN recipes ON recipes.id = meals.recipe_id
     WHERE date BETWEEN ? AND ? ORDER BY date, slot
   `).all(start, addDays(start, 6)).map(meal => {
-    const dishes = db.prepare('SELECT member_id AS memberId, recipe_id AS recipeId, portions, recipes.minutes FROM meal_dishes JOIN recipes ON recipes.id = meal_dishes.recipe_id WHERE meal_id = ?').all(meal.id);
-    return dishes.length ? { ...meal, minutes: Math.max(...dishes.map(dish => dish.minutes)), dishes: dishes.map(({ minutes, ...dish }) => dish) } : meal;
+    const dishes = db.prepare('SELECT member_id AS memberId, recipe_id AS recipeId, protein_id AS proteinId, portions, recipes.minutes FROM meal_dishes JOIN recipes ON recipes.id = meal_dishes.recipe_id WHERE meal_id = ?').all(meal.id);
+    const assignments = db.prepare('SELECT member_id AS memberId, protein_id AS proteinId, portions FROM meal_assignments WHERE meal_id = ?').all(meal.id);
+    return dishes.length ? { ...meal, minutes: Math.max(...dishes.map(dish => dish.minutes)), dishes: dishes.map(({ minutes, proteinId, ...dish }) => ({ ...dish, ...(proteinId == null ? {} : { proteinId }) })) } : { ...meal, assignments };
   });
 }
 
@@ -356,9 +389,14 @@ function shoppingList(db, start, end = addDays(start, 6)) {
       JOIN meals ON meals.id = meal_assignments.meal_id
       JOIN proteins ON proteins.id = meal_assignments.protein_id
       WHERE meals.date BETWEEN ? AND ?
+      UNION ALL
+      SELECT proteins.name, proteins.unit, proteins.amount * meal_dishes.portions
+      FROM meal_dishes JOIN meals ON meals.id = meal_dishes.meal_id
+      JOIN proteins ON proteins.id = meal_dishes.protein_id
+      WHERE meals.date BETWEEN ? AND ?
     )
     SELECT name, unit, SUM(amount) AS amount FROM items GROUP BY name, unit ORDER BY name
-  `).all(start, end, start, end, start, end));
+  `).all(start, end, start, end, start, end, start, end));
 }
 
 function pantry(db) {
@@ -399,7 +437,7 @@ function shoppingState(db, start) {
 function household(db) {
   return {
     avoidedIngredients: db.prepare('SELECT name FROM avoided_ingredients ORDER BY name').all().map(item => item.name),
-    members: db.prepare('SELECT id, name, diet FROM members ORDER BY name').all(),
+    members: db.prepare('SELECT id, name, diet, avoided_ingredients FROM members ORDER BY name').all().map(({ avoided_ingredients, ...member }) => ({ ...member, avoidedIngredients: JSON.parse(avoided_ingredients) })),
     proteins: db.prepare('SELECT id, name, category, amount, unit FROM proteins ORDER BY name').all()
   };
 }
@@ -419,7 +457,8 @@ function restaurantResults(elements, latitude, longitude) {
 function validateMember(input) {
   if (!input || typeof input.name !== 'string' || !input.name.trim() || input.name.length > 60) throw new Error('Nom invalide');
   if (!['vegan', 'vegetarian', 'pescetarian', 'omnivore'].includes(input.diet)) throw new Error('Régime invalide');
-  return { name: input.name.trim(), diet: input.diet };
+  if (input.avoidedIngredients !== undefined && (!Array.isArray(input.avoidedIngredients) || input.avoidedIngredients.length > 50 || input.avoidedIngredients.some(name => typeof name !== 'string' || !name.trim() || name.length > 80))) throw new Error('Préférences invalides : 50 ingrédients maximum');
+  return { name: input.name.trim(), diet: input.diet, ...(input.avoidedIngredients !== undefined ? { avoidedIngredients: [...new Set(input.avoidedIngredients.map(name => name.trim().toLocaleLowerCase('fr')))] } : {}) };
 }
 
 function validateProtein(input) {
@@ -445,9 +484,12 @@ function isDietCompatible(memberDiet, recipeDiet) {
   return rank[recipeDiet] <= rank[memberDiet];
 }
 
-function suggestions(db, start = null, maxMinutes = null) {
+function suggestions(db, start = null, maxMinutes = null, memberIds = null) {
   // ponytail: exact ingredient-name overlap; add pantry quantities only if users need finer scoring.
-  const memberDiets = db.prepare('SELECT diet FROM members').all().map(member => member.diet);
+  const home = household(db);
+  const members = memberIds === null ? home.members : home.members.filter(member => memberIds.includes(member.id));
+  if (memberIds !== null && (!Array.isArray(memberIds) || memberIds.some(id => !home.members.some(member => member.id === id)))) throw new Error('Participants inconnus');
+  const memberDiets = members.map(member => member.diet);
   const candidates = db.prepare(`
     WITH eaten AS (
       SELECT recipe_id, date FROM meals WHERE recipe_id IS NOT NULL
@@ -463,7 +505,7 @@ function suggestions(db, start = null, maxMinutes = null) {
     memberDiets.every(diet => isDietCompatible(diet, recipe.diet))
   );
   const ingredientQuery = db.prepare(`
-    SELECT ingredients.name FROM recipe_ingredients
+    SELECT ingredients.name, recipe_ingredients.preparation FROM recipe_ingredients
     JOIN ingredients ON ingredients.id = recipe_ingredients.ingredient_id
     WHERE recipe_ingredients.recipe_id = ? ORDER BY ingredients.name
   `);
@@ -472,23 +514,21 @@ function suggestions(db, start = null, maxMinutes = null) {
     SELECT recipe_id AS id FROM meals WHERE date BETWEEN ? AND ? AND recipe_id IS NOT NULL
     UNION SELECT meal_dishes.recipe_id AS id FROM meal_dishes JOIN meals ON meals.id = meal_dishes.meal_id WHERE meals.date BETWEEN ? AND ?
   `).all(start, addDays(start, 6), start, addDays(start, 6)).map(item => item.id) : []);
-  const avoided = household(db).avoidedIngredients;
-  const normalize = name => name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('fr');
-  // ponytail: mots dans les noms déclarés, pas une détection d'allergènes ou des ingrédients cachés.
-  const ranked = candidates.filter(recipe => !ingredientQuery.all(recipe.id).some(item => avoided.some(word => normalize(item.name).includes(normalize(word))))).map(recipe => ({
+  const ranked = candidates.map(recipe => ({ ...recipe, ...recipeTaste(ingredientQuery.all(recipe.id), members, home.avoidedIngredients) })).map(recipe => ({
     ...recipe,
     tags: recipe.tags.split(',').filter(Boolean),
     reusedIngredients: ingredientQuery.all(recipe.id).map(item => item.name).filter(name => plannedIngredients.has(name)),
     alreadyPlanned: plannedRecipeIds.has(recipe.id)
   })).sort((left, right) =>
+    tasteRank(left) - tasteRank(right) ||
+    Number(left.alreadyPlanned) - Number(right.alreadyPlanned) ||
     right.reusedIngredients.length - left.reusedIngredients.length ||
     Number(left.alreadyPlanned) - Number(right.alreadyPlanned) ||
     Number(Boolean(left.lastEaten)) - Number(Boolean(right.lastEaten)) ||
     String(left.lastEaten || '').localeCompare(String(right.lastEaten || '')) ||
     left.title.localeCompare(right.title, 'fr')
   );
-  const fresh = ranked.filter(recipe => !recipe.alreadyPlanned);
-  return [...fresh, ...ranked.filter(recipe => recipe.alreadyPlanned)].slice(0, 3);
+  return ranked.slice(0, 3);
 }
 
 function validateMeal(input, db) {
@@ -527,6 +567,11 @@ function validateMeal(input, db) {
     const member = db.prepare('SELECT diet FROM members WHERE id = ?').get(dish.memberId);
     const recipe = db.prepare('SELECT diet FROM recipes WHERE id = ?').get(dish.recipeId);
     if (!member || !recipe || !isDietCompatible(member.diet, recipe.diet)) throw new Error('Recette incompatible avec le régime');
+    if (dish.proteinId != null) {
+      if (!Number.isInteger(dish.proteinId)) throw new Error('Protéine invalide');
+      const protein = db.prepare('SELECT category FROM proteins WHERE id = ?').get(dish.proteinId);
+      if (!protein || !isCompatible(member.diet, protein.category)) throw new Error('Protéine incompatible avec le régime');
+    }
     return dish;
   });
   if (input.location !== 'home' && checkedDishes.length) throw new Error('Les recettes sont réservées aux repas à la maison');
@@ -564,8 +609,8 @@ function upsertMeal(db, meal, transactional = true) {
     db.prepare('DELETE FROM meal_dishes WHERE meal_id = ?').run(mealId);
     const insert = db.prepare('INSERT INTO meal_assignments (meal_id, member_id, protein_id, portions) VALUES (?, ?, ?, ?)');
     meal.assignments.forEach(assignment => insert.run(mealId, assignment.memberId, assignment.proteinId, assignment.portions));
-    const insertDish = db.prepare('INSERT INTO meal_dishes (meal_id, member_id, recipe_id, portions) VALUES (?, ?, ?, ?)');
-    meal.dishes.forEach(dish => insertDish.run(mealId, dish.memberId, dish.recipeId, dish.portions));
+    const insertDish = db.prepare('INSERT INTO meal_dishes (meal_id, member_id, recipe_id, portions, protein_id) VALUES (?, ?, ?, ?, ?)');
+    meal.dishes.forEach(dish => insertDish.run(mealId, dish.memberId, dish.recipeId, dish.portions, dish.proteinId ?? null));
     if (transactional) db.exec('COMMIT');
   } catch (error) {
     if (transactional) db.exec('ROLLBACK');
@@ -616,6 +661,10 @@ function createHandler(db, overpassUrl, communesUrl) {
   return async (request, response) => {
     const url = new URL(request.url, 'http://localhost');
     try {
+      if (request.method === 'GET' && url.pathname === '/tastes.js') {
+        response.writeHead(200, { 'Content-Type': 'text/javascript; charset=utf-8', 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-cache' });
+        return response.end(readFileSync(join(__dirname, 'public', 'tastes.js')));
+      }
       if (request.method === 'GET' && url.pathname === '/') {
         response.writeHead(200, {
           'Content-Type': 'text/html; charset=utf-8',
@@ -679,6 +728,7 @@ function createHandler(db, overpassUrl, communesUrl) {
           if (missingSteps) { draft.steps = []; result.warnings.push(`« ${draft.title} » n’a pas encore d’étapes : complète-les dans le brouillon avant d’enregistrer.`); }
           return draft;
         });
+        if (validated.some(recipe => recipe.ingredients.some(item => item.preparation === 'unknown'))) result.warnings.push('Cru/cuit non précisé pour certains ingrédients : complète « Servi » dans leurs détails si nécessaire pour les goûts du foyer. Aucune cuisson n’est déduite automatiquement.');
         return sendJson(response, 200, { recipes: validated, warnings: result.warnings });
       }
 
@@ -697,7 +747,8 @@ function createHandler(db, overpassUrl, communesUrl) {
         const maxMinutes = maxMinutesValue == null ? null : Number(maxMinutesValue);
         if (start != null && !isDateKey(start)) throw new Error('Début de semaine invalide');
         if (maxMinutes != null && (!Number.isInteger(maxMinutes) || maxMinutes < 1 || maxMinutes > 1440)) throw new Error('Temps disponible invalide');
-        return sendJson(response, 200, suggestions(db, start, maxMinutes));
+        const memberIds = url.searchParams.has('members') ? url.searchParams.get('members').split(',').filter(Boolean).map(Number) : null;
+        return sendJson(response, 200, suggestions(db, start, maxMinutes, memberIds));
       }
 
       if (request.method === 'POST' && url.pathname === '/api/week/plan') {
@@ -773,7 +824,7 @@ function createHandler(db, overpassUrl, communesUrl) {
 
       if (request.method === 'POST' && url.pathname === '/api/members') {
         const member = validateMember(await readJson(request));
-        const id = Number(db.prepare('INSERT INTO members (name, diet) VALUES (?, ?)').run(member.name, member.diet).lastInsertRowid);
+        const id = Number(db.prepare('INSERT INTO members (name, diet, avoided_ingredients) VALUES (?, ?, ?)').run(member.name, member.diet, JSON.stringify(member.avoidedIngredients || [])).lastInsertRowid);
         return sendJson(response, 201, { id, ...member });
       }
 
@@ -781,7 +832,7 @@ function createHandler(db, overpassUrl, communesUrl) {
       if (request.method === 'PUT' && memberMatch) {
         const id = Number(memberMatch[1]);
         const member = validateMember(await readJson(request));
-        if (db.prepare('UPDATE members SET name = ?, diet = ? WHERE id = ?').run(member.name, member.diet, id).changes === 0) throw new Error('Membre inconnu');
+        if (db.prepare('UPDATE members SET name = ?, diet = ?, avoided_ingredients = COALESCE(?, avoided_ingredients) WHERE id = ?').run(member.name, member.diet, member.avoidedIngredients === undefined ? null : JSON.stringify(member.avoidedIngredients), id).changes === 0) throw new Error('Membre inconnu');
         return sendJson(response, 200, { id, ...member });
       }
       if (request.method === 'DELETE' && memberMatch) {
@@ -799,14 +850,14 @@ function createHandler(db, overpassUrl, communesUrl) {
       if (request.method === 'PUT' && proteinMatch) {
         const id = Number(proteinMatch[1]);
         const protein = validateProtein(await readJson(request));
-        const diets = db.prepare('SELECT members.diet FROM meal_assignments JOIN members ON members.id = meal_assignments.member_id WHERE protein_id = ?').all(id);
+        const diets = db.prepare('SELECT members.diet FROM meal_assignments JOIN members ON members.id = meal_assignments.member_id WHERE protein_id = ? UNION ALL SELECT members.diet FROM meal_dishes JOIN members ON members.id = meal_dishes.member_id WHERE protein_id = ?').all(id, id);
         if (diets.some(member => !isCompatible(member.diet, protein.category))) throw new Error('Cette catégorie est incompatible avec un repas déjà planifié');
         if (db.prepare('UPDATE proteins SET name = ?, category = ?, amount = ?, unit = ? WHERE id = ?').run(protein.name, protein.category, protein.amount, protein.unit, id).changes === 0) throw new Error('Protéine inconnue');
         return sendJson(response, 200, { id, ...protein });
       }
       if (request.method === 'DELETE' && proteinMatch) {
         const id = Number(proteinMatch[1]);
-        if (db.prepare('SELECT 1 FROM meal_assignments WHERE protein_id = ?').get(id)) throw new Error('Cette protéine est utilisée dans le planning');
+        if (db.prepare('SELECT 1 FROM meal_assignments WHERE protein_id = ? UNION ALL SELECT 1 FROM meal_dishes WHERE protein_id = ?').get(id, id)) throw new Error('Cette protéine est utilisée dans le planning');
         if (db.prepare('DELETE FROM proteins WHERE id = ?').run(id).changes === 0) throw new Error('Protéine inconnue');
         return sendJson(response, 200, {});
       }
@@ -906,7 +957,7 @@ function createHandler(db, overpassUrl, communesUrl) {
         if (input.action === 'copy') {
           if (source.leftover_of) throw new Error('Pour prévoir plus de restes, pars du repas où tu cuisines.');
           const assignments = db.prepare('SELECT member_id AS memberId, protein_id AS proteinId, portions FROM meal_assignments WHERE meal_id = ?').all(id);
-          const dishes = db.prepare('SELECT member_id AS memberId, recipe_id AS recipeId, portions FROM meal_dishes WHERE meal_id = ?').all(id);
+          const dishes = db.prepare('SELECT member_id AS memberId, recipe_id AS recipeId, portions, protein_id AS proteinId FROM meal_dishes WHERE meal_id = ?').all(id);
           upsertMeal(db, validateMeal({ ...source, recipeId: source.recipe_id, date: input.date, slot: input.slot, assignments, dishes }, db));
         } else {
           const earlier = (a, b) => a.date < b.date || (a.date === b.date && a.slot === 'midi' && b.slot === 'soir');
