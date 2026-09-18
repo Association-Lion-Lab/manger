@@ -177,6 +177,17 @@
       .assignment { grid-template-columns: 1fr; }
     }
     @media (min-width: 620px) { main { padding-inline: 28px; } header { padding-inline: 30px; } }
+    #recipe-print { display: none; }
+    @media print {
+      @page { margin: 18mm; }
+      body:has(#recipe-print:not(:empty)) { color: #111; background: #fff; color-scheme: light; }
+      body:has(#recipe-print:not(:empty)) .app { display: none; }
+      #recipe-print:not(:empty) { display: block; font-size: 11pt; line-height: 1.5; overflow-wrap: anywhere; }
+      #recipe-print h1 { font-size: 22pt; }
+      #recipe-print h2 { margin-top: 20pt; break-after: avoid; }
+      #recipe-print li { margin-bottom: 8pt; break-inside: avoid; }
+      #recipe-print p { white-space: pre-line; }
+    }
   </style>
 </head>
 <body>
@@ -314,6 +325,7 @@
         <button id="favorite-recipe" class="secondary" style="grid-column:1 / -1" type="button" aria-pressed="false">☆ Ajouter aux favoris</button>
         <button id="edit-recipe" class="secondary" type="button">Modifier</button>
         <button id="duplicate-recipe" class="secondary" type="button">Dupliquer</button>
+        <button id="print-recipe" class="secondary" style="grid-column:1 / -1" type="button">Imprimer / PDF</button>
         <button id="delete-recipe" class="delete-action" type="button">Supprimer cette recette</button>
       </div>
     </dialog>
@@ -379,6 +391,7 @@
     </dialog>
   </div>
 
+  <article id="recipe-print"></article>
   <script>
     const state = { weekStart: monday(new Date()), selected: 0, recipes: [], meals: [], shopping: [], members: [], proteins: [], slot: 'soir', pendingRecipe: null, pendingEvent: null };
     const dayNames = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
@@ -905,6 +918,21 @@
     }
 
     const cookingDialog = document.getElementById('cooking-dialog');
+    document.getElementById('print-recipe').addEventListener('click', () => {
+      const recipe = state.recipes.find(item => item.id === editingRecipeId);
+      if (!recipe) return;
+      const portions = renderPortions(recipe, document.getElementById('recipe-view-portions'), 'recipe-view-ingredients', 'recipe-view-error');
+      if (portions == null) return;
+      document.getElementById('recipe-print').innerHTML = `
+        <p>Manger!</p><h1>${escapeHtml(recipe.title)}</h1>
+        <p>${recipe.minutes} min · ${portions} portions · ${escapeHtml(dietLabels[recipe.diet])}</p>
+        ${portions !== recipe.servings ? `<p>Quantités adaptées de ${recipe.servings} à ${portions} portions. Les instructions et les durées restent celles de la recette d’origine.</p>` : ''}
+        <h2>Ingrédients</h2><ul>${document.getElementById('recipe-view-ingredients').innerHTML}</ul>
+        <h2>Réalisation</h2><ol>${recipe.steps.map(step => `<li><strong>${escapeHtml(stepKindLabels[step.kind])}${step.minutes == null ? '' : ` · ${step.minutes} min`}</strong><p>${escapeHtml(step.instruction)}</p></li>`).join('')}</ol>
+        ${recipe.sourceUrl ? `<p>Source : ${escapeHtml(recipe.sourceUrl)}</p>` : ''}`;
+      window.print();
+    });
+    window.addEventListener('afterprint', () => document.getElementById('recipe-print').replaceChildren());
     let cooking = null;
     let cookingInterval = null;
 

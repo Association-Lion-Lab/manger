@@ -15,6 +15,7 @@ Depuis une fiche recette, **Cuisiner cette recette** ouvre les étapes guidées 
 Le nombre de portions est ajustable de 1 à 100 dans la fiche et le mode cuisine : les ingrédients sont recalculés sans modifier la recette, le planning ou les courses. Les instructions rédigées et les durées ne sont pas recalculées automatiquement ; adaptez la cuisson si nécessaire. Changer les portions ne réinitialise pas les minuteurs.
 
 Prérequis : Node.js 24 ou plus récent. Aucune dépendance n'est à installer.
+Depuis la fiche recette, « Imprimer / PDF » ouvre l'impression du navigateur : sélectionnez votre imprimante ou l'enregistrement en PDF. La fiche contient les ingrédients pour les portions choisies, les étapes et le lien source éventuel. Les durées et instructions restent celles de la recette d'origine.
 
 ```shell
 npm start
