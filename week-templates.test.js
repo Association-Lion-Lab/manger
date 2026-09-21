@@ -11,7 +11,7 @@ test('semaines types : enregistrement, application atomique et suppression', asy
   const request = (path, method = 'GET', data) => fetch(base + path, { method, headers: data ? { 'content-type': 'application/json' } : {}, body: data ? JSON.stringify(data) : undefined });
   const post = (path, data) => request(path, 'POST', data);
   const start = '2026-09-21', target = '2026-09-28';
-  assert.equal(db.prepare('PRAGMA user_version').get().user_version, 3);
+  assert.equal(db.prepare('PRAGMA user_version').get().user_version, 4);
   assert.equal((await post('/api/week-templates', { name: 'Vide', start })).status, 400);
   const member = await (await post('/api/members', { name: 'Julie', diet: 'vegetarian' })).json();
   const recipes = db.prepare('SELECT id, title FROM recipes ORDER BY id LIMIT 2').all();

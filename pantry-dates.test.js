@@ -15,6 +15,8 @@ test('placard daté : migration non destructive et réouverture', t => {
   old.exec("CREATE TABLE pantry (id INTEGER PRIMARY KEY, food_key TEXT UNIQUE, name TEXT, unit TEXT, amount REAL, recorded_on TEXT); INSERT INTO pantry VALUES (1, 'riz', 'riz', 'g', 250, '2026-01-01');"); old.close();
   let db = createDatabase(filename);
   assert.equal(db.prepare('SELECT use_by FROM pantry').get().use_by, null);
+  assert.equal(db.prepare('SELECT explicit_lot FROM pantry').get().explicit_lot, 0);
+  assert.equal(db.prepare('PRAGMA user_version').get().user_version, 4);
   db.prepare('UPDATE pantry SET use_by=?').run('2026-12-31'); db.close();
   db = createDatabase(filename);
   assert.equal(db.prepare('SELECT amount, use_by FROM pantry').get().amount, 250);

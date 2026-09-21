@@ -435,6 +435,7 @@
       <p class="muted">Les quantités restantes sont estimées d’après les repas planifiés depuis ta dernière mise à jour. Vérifie ton stock après avoir cuisiné.</p>
       <div id="pantry-list"></div>
       <details id="pantry-editor" class="quiet-details"><summary>Ajouter un aliment</summary>
+        <p class="muted">Chaque ajout crée un lot avec sa propre date. Pour corriger une quantité existante, touche sa ligne dans le placard.</p>
         <form id="pantry-form" class="recipe-form">
           <label class="field"><span>Aliment</span><input id="pantry-name" list="pantry-foods" maxlength="80" required autocomplete="off"></label><datalist id="pantry-foods"></datalist>
           <div class="form-grid"><label class="field"><span>Quantité en stock aujourd’hui</span><input id="pantry-amount" type="number" min="0.01" max="1000000" step="0.01" required></label><label class="field"><span>Unité</span><input id="pantry-unit" list="pantry-units" maxlength="24" value="g" required></label></div>
@@ -731,7 +732,7 @@
       document.getElementById('pantry-amount').value = item.remaining || '';
       document.getElementById('pantry-use-by').value = item.useBy || '';
       document.getElementById('delete-pantry-item').hidden = false; document.getElementById('new-pantry-item').hidden = false;
-      document.querySelector('#pantry-editor summary').textContent = 'Mettre à jour le stock'; document.getElementById('pantry-editor').open = true;
+      document.querySelector('#pantry-editor summary').textContent = 'Mettre à jour ce lot'; document.getElementById('pantry-editor').open = true;
       document.getElementById('pantry-amount').focus();
     });
     document.getElementById('new-pantry-item').addEventListener('click', () => { resetPantryEditor(); document.getElementById('pantry-name').focus(); });
@@ -739,7 +740,7 @@
       event.preventDefault(); const button = event.submitter; if (button.disabled) return; button.disabled = true;
       document.getElementById('pantry-error').hidden = true;
       try {
-        await api('/api/pantry', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: document.getElementById('pantry-name').value, unit: document.getElementById('pantry-unit').value, amount: Number(document.getElementById('pantry-amount').value), useBy: document.getElementById('pantry-use-by').value || null }) });
+        await api('/api/pantry', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...(pantryEditingId ? { id: pantryEditingId } : { newLot: true }), name: document.getElementById('pantry-name').value, unit: document.getElementById('pantry-unit').value, amount: Number(document.getElementById('pantry-amount').value), useBy: document.getElementById('pantry-use-by').value || null }) });
         await loadPantry(); await load(); resetPantryEditor(); document.getElementById('pantry-editor').open = false;
       } catch (error) { pantryError(error); } finally { button.disabled = false; }
     });

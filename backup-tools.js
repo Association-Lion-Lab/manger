@@ -8,7 +8,7 @@ function checkBackup(filename) {
     db.exec('PRAGMA trusted_schema=OFF');
     if (db.prepare('PRAGMA integrity_check').get().integrity_check !== 'ok' || db.prepare('PRAGMA foreign_key_check').all().length) throw new Error('Sauvegarde endommagée ou relations invalides.');
     const version = db.prepare('PRAGMA user_version').get().user_version;
-    if (version > 3) throw new Error('Sauvegarde issue d’une version plus récente de Manger. Mets l’application à jour.');
+    if (version > 4) throw new Error('Sauvegarde issue d’une version plus récente de Manger. Mets l’application à jour.');
     const tables = new Set(db.prepare("SELECT name FROM sqlite_schema WHERE type='table'").all().map(row => row.name));
     for (const name of ['recipes', 'recipe_ingredients', 'recipe_steps', 'ingredients', 'members', 'meals', 'pantry', 'proteins']) if (!tables.has(name)) throw new Error('Ce fichier ne correspond pas à une sauvegarde complète de Manger.');
     if (version >= 3 && !tables.has('week_templates')) throw new Error('Ce fichier ne correspond pas à une sauvegarde complète de Manger.');

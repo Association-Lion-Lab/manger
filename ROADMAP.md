@@ -31,7 +31,7 @@ Vérification : tests Node et parcours navigateur sur base isolée. Le rendu a �
 
 ## P2 — Améliorer l'usage quotidien
 
-- Compléter l'anti-gaspi : plusieurs lots par aliment. La recomposition après remplacement manuel est implémentée : choix manuels conservés, réservation prioritaire de leurs ingrédients, aucun enregistrement avant validation finale.
+- Anti-gaspi implémenté : plusieurs lots par aliment, dates et édition indépendantes, consommation prioritaire des dates proches, réservations partagées entre courses et suggestions. Recomposition du menu après remplacement manuel, sans enregistrement avant validation finale. Tests automatisés et navigateur passés ; validation de ce lot sur Ubuntu à effectuer.
 - Gérer les restes d'une base commune avec suppléments de protéines différents.
 - Enrichir le catalogue et valider les recettes en cuisine.
 - Permettre l'installation mobile et la consultation hors connexion.

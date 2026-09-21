@@ -5,6 +5,7 @@ const { tmpdir } = require('node:os');
 const { pipeline } = require('node:stream/promises');
 const { dirname, join } = require('node:path');
 const { DatabaseSync, backup } = require('node:sqlite');
+const { randomUUID } = require('node:crypto');
 const catalog = require('./catalog');
 const { foodName, foodKey, inUnit, groupIngredients } = require('./ingredients');
 const { downloadRecipePage, extractRecipeDraft } = require('./recipe-import');
@@ -140,6 +141,7 @@ function createDatabase(filename) {
   `);
   if (!db.prepare('PRAGMA table_info(recipes)').all().some(column => column.name === 'source_url')) db.exec('ALTER TABLE recipes ADD COLUMN source_url TEXT');
   if (!db.prepare('PRAGMA table_info(pantry)').all().some(column => column.name === 'use_by')) db.exec('ALTER TABLE pantry ADD COLUMN use_by TEXT');
+  if (!db.prepare('PRAGMA table_info(pantry)').all().some(column => column.name === 'explicit_lot')) db.exec('ALTER TABLE pantry ADD COLUMN explicit_lot INTEGER NOT NULL DEFAULT 0');
   if (!db.prepare('PRAGMA table_info(members)').all().some(column => column.name === 'avoided_ingredients')) db.exec("ALTER TABLE members ADD COLUMN avoided_ingredients TEXT NOT NULL DEFAULT '[]'");
   if (!db.prepare('PRAGMA table_info(meal_dishes)').all().some(column => column.name === 'protein_id')) db.exec('ALTER TABLE meal_dishes ADD COLUMN protein_id INTEGER REFERENCES proteins(id)');
   if (!db.prepare('PRAGMA table_info(recipe_ingredients)').all().some(column => column.name === 'preparation')) db.exec("ALTER TABLE recipe_ingredients ADD COLUMN preparation TEXT NOT NULL DEFAULT 'unknown' CHECK(preparation IN ('unknown', 'raw', 'cooked'))");
@@ -194,7 +196,7 @@ function createDatabase(filename) {
       db.exec('PRAGMA user_version = 2; COMMIT');
     } catch (error) { db.exec('ROLLBACK'); throw error; }
   }
-  if (db.prepare('PRAGMA user_version').get().user_version < 3) db.exec('PRAGMA user_version = 3');
+  if (db.prepare('PRAGMA user_version').get().user_version < 4) db.exec('PRAGMA user_version = 4');
   return db;
 }
 
@@ -421,39 +423,52 @@ function shoppingList(db, start, end = addDays(start, 6)) {
 }
 
 function pantryStocks(db) {
-  const rows = db.prepare('SELECT id, name, unit, amount, recorded_on AS recordedOn, use_by AS useBy FROM pantry ORDER BY use_by IS NULL, use_by, name').all();
+  const rows = db.prepare('SELECT id, name, unit, amount, explicit_lot AS explicitLot, recorded_on AS recordedOn, use_by AS useBy FROM pantry ORDER BY use_by IS NULL, use_by, recorded_on, id').all();
   const counts = new Map();
-  for (const row of rows) counts.set(foodKey(row), (counts.get(foodKey(row)) || 0) + 1);
-  return rows.map(row => ({ ...row, ambiguous: counts.get(foodKey(row)) > 1 }));
+  for (const row of rows.filter(row => !row.explicitLot)) counts.set(foodKey(row), (counts.get(foodKey(row)) || 0) + 1);
+  return rows.map(row => ({ ...row, ambiguous: !row.explicitLot && counts.get(foodKey(row)) > 1 }));
+}
+
+function matchingStocks(stocks, item, date) {
+  return stocks.filter(stock => !stock.ambiguous && foodKey(stock) === foodKey(item) && stock.recordedOn <= date && (!stock.useBy || stock.useBy >= date));
+}
+
+function consumeStocks(stocks, item, date) {
+  let remaining = item.amount;
+  for (const stock of matchingStocks(stocks, item, date)) {
+    const taken = Math.min(remaining, inUnit(stock, item.unit));
+    stock.amount = Math.max(0, stock.amount - inUnit({ ...item, amount: taken }, stock.unit));
+    remaining = Math.max(0, remaining - taken);
+  }
+  return item.amount - remaining;
+}
+
+function reservePantry(db, end, countFrom = null) {
+  const stocks = pantryStocks(db), covered = [];
+  const first = stocks.filter(stock => !stock.ambiguous && stock.recordedOn <= end).map(stock => stock.recordedOn).sort()[0];
+  if (!first) return { stocks, covered };
+  // Only visit planned days, rather than every day since the oldest stock.
+  const dates = db.prepare('SELECT DISTINCT date FROM meals WHERE date BETWEEN ? AND ? ORDER BY date').all(first, end);
+  for (const { date } of dates) for (const item of shoppingList(db, date, date)) {
+    const amount = consumeStocks(stocks, item, date);
+    if (countFrom && date >= countFrom && amount > 0) covered.push({ ...item, amount });
+  }
+  return { stocks, covered: groupIngredients(covered) };
 }
 
 function pantry(db) {
   const today = dateKey(new Date());
+  const remaining = new Map(reservePantry(db, addDays(today, -1)).stocks.map(item => [item.id, item.amount]));
   return pantryStocks(db).map(item => {
-    const until = item.useBy && item.useBy < today ? item.useBy : addDays(today, -1);
-    const previous = item.recordedOn <= until ? shoppingList(db, item.recordedOn, until).find(row => foodKey(row) === foodKey(item)) : null;
-    return { ...item, dateStatus: !item.useBy ? null : item.useBy < today ? 'past' : item.useBy <= addDays(today, 3) ? 'soon' : 'later', remaining: item.ambiguous ? 0 : Math.max(0, Math.round((item.amount - (previous ? inUnit(previous, item.unit) : 0)) * 100) / 100) };
+    return { ...item, dateStatus: !item.useBy ? null : item.useBy < today ? 'past' : item.useBy <= addDays(today, 3) ? 'soon' : 'later', remaining: item.ambiguous ? 0 : Math.round(remaining.get(item.id) * 100) / 100 };
   });
 }
 
 function pantryShopping(db, start) {
-  const stocks = pantryStocks(db).filter(item => !item.ambiguous);
-  // Planning is a forecast: an edited stock establishes a new quantity as of today.
-  const ranges = new Map();
-  const range = (from, to) => {
-    const key = `${from}/${to}`;
-    if (!ranges.has(key)) ranges.set(key, shoppingList(db, from, to));
-    return ranges.get(key);
-  };
+  const { covered } = reservePantry(db, addDays(start, 6), start);
   return shoppingList(db, start).map(item => {
-    const stock = stocks.find(row => foodKey(row) === foodKey(item));
-    if (!stock || stock.recordedOn > addDays(start, 6) || (stock.useBy && stock.useBy < start)) return item;
-    const prior = stock.recordedOn < start ? range(stock.recordedOn, addDays(start, -1)).find(row => foodKey(row) === foodKey(item)) : null;
-    const from = stock.recordedOn > start ? stock.recordedOn : start;
-    const until = stock.useBy && stock.useBy < addDays(start, 6) ? stock.useBy : addDays(start, 6);
-    const eligible = from <= until ? range(from, until).find(row => foodKey(row) === foodKey(item)) : null;
-    const available = Math.max(0, inUnit(stock, item.unit) - (prior ? inUnit(prior, item.unit) : 0));
-    const used = Math.min(available, eligible ? inUnit(eligible, item.unit) : 0, item.amount);
+    const stock = covered.find(row => foodKey(row) === foodKey(item));
+    const used = stock ? Math.min(item.amount, inUnit(stock, item.unit)) : 0;
     return { ...item, amount: Math.max(0, Math.round((item.amount - used) * 100) / 100), fromPantry: Math.round(used * 100) / 100 };
   }).filter(item => item.amount > 0);
 }
@@ -516,14 +531,7 @@ function isDietCompatible(memberDiet, recipeDiet) {
 }
 
 function availablePantry(db, end) {
-  const reservations = new Map();
-  return pantryStocks(db).filter(item => !item.ambiguous && item.recordedOn <= end).map(item => {
-    const until = item.useBy && item.useBy < end ? item.useBy : end;
-    const rangeKey = `${item.recordedOn}/${until}`;
-    if (!reservations.has(rangeKey)) reservations.set(rangeKey, item.recordedOn <= until ? shoppingList(db, item.recordedOn, until) : []);
-    const reserved = reservations.get(rangeKey).find(row => foodKey(row) === foodKey(item));
-    return { ...item, amount: Math.max(0, item.amount - (reserved ? inUnit(reserved, item.unit) : 0)) };
-  });
+  return reservePantry(db, end).stocks.filter(item => !item.ambiguous && item.recordedOn <= end);
 }
 
 function previewMenu(db, input) {
@@ -550,17 +558,16 @@ function previewMenu(db, input) {
   // Reserve manual choices first, including later meals, before proposing the rest.
   return [...slots].sort((a, b) => Number(b.recipeId !== undefined) - Number(a.recipeId !== undefined)).map(slot => {
     const date = addDays(input.start, slot.day);
-    const stockFor = item => stocks.find(stock => foodKey(stock) === foodKey(item) && stock.recordedOn <= date && (!stock.useBy || stock.useBy >= date));
+    const stockFor = item => matchingStocks(stocks, item, date);
     const ranked = candidates.map(recipe => {
-      const covered = recipe.needs.filter(item => { const stock = stockFor(item); return stock && inUnit(stock, item.unit) + 1e-8 >= item.amount; });
-      return { recipe, covered, soon: covered.filter(item => { const stock = stockFor(item); return stock.useBy && stock.useBy <= addDays(date, 3); }).length, reused: recipe.needs.filter(item => ingredients.has(foodName(item.name))).length };
+      const covered = recipe.needs.filter(item => stockFor(item).reduce((sum, stock) => sum + inUnit(stock, item.unit), 0) + 1e-8 >= item.amount);
+      return { recipe, covered, soon: covered.filter(item => stockFor(item).some(stock => stock.amount > 0 && stock.useBy && stock.useBy <= addDays(date, 3))).length, reused: recipe.needs.filter(item => ingredients.has(foodName(item.name))).length };
     }).sort((a, b) => ((used.get(a.recipe.id) || 0) * 2 + tasteRank(a.recipe)) - ((used.get(b.recipe.id) || 0) * 2 + tasteRank(b.recipe)) || tasteRank(a.recipe) - tasteRank(b.recipe) || b.soon - a.soon || b.covered.length - a.covered.length || b.reused - a.reused || a.recipe.title.localeCompare(b.recipe.title, 'fr'));
     const { recipe, covered } = slot.recipeId === undefined ? ranked[0] : ranked.find(item => item.recipe.id === slot.recipeId);
     used.set(recipe.id, (used.get(recipe.id) || 0) + 1);
     recipe.needs.forEach(item => {
       ingredients.add(foodName(item.name));
-      const stock = stockFor(item);
-      if (stock) stock.amount = Math.max(0, stock.amount - inUnit(item, stock.unit));
+      consumeStocks(stocks, item, date);
     });
     return { day: slot.day, slot: slot.slot, recipeId: recipe.id, pantryIngredients: covered.map(item => item.name) };
   }).sort((a, b) => a.day - b.day || a.slot.localeCompare(b.slot));
@@ -602,11 +609,10 @@ function suggestions(db, start = null, maxMinutes = null, memberIds = null, targ
     tags: recipe.tags.split(',').filter(Boolean),
     reusedIngredients: [...new Set(ingredientQuery.all(recipe.id).map(item => foodName(item.name)).filter(name => plannedIngredients.has(name)))],
     pantryIngredients: [...new Set(groupIngredients(ingredientQuery.all(recipe.id)).filter(item => {
-      const stock = stocks.find(row => foodKey(row) === foodKey(item));
-      return stock && inUnit(stock, item.unit) >= item.amount * (members.length || recipe.servings) / recipe.servings;
+      return matchingStocks(stocks, item, targetDate).reduce((sum, stock) => sum + inUnit(stock, item.unit), 0) + 1e-8 >= item.amount * (members.length || recipe.servings) / recipe.servings;
     }).map(item => item.name))],
     alreadyPlanned: plannedRecipeIds.has(recipe.id)
-  })).map(recipe => ({ ...recipe, useSoonIngredients: [...new Set(groupIngredients(ingredientQuery.all(recipe.id)).filter(item => stocks.some(stock => foodKey(stock) === foodKey(item) && stock.useBy && stock.useBy <= addDays(targetDate, 3) && inUnit(stock, item.unit) >= item.amount * (members.length || recipe.servings) / recipe.servings)).map(item => item.name))] })).sort((left, right) =>
+  })).map(recipe => ({ ...recipe, useSoonIngredients: [...new Set(groupIngredients(ingredientQuery.all(recipe.id)).filter(item => recipe.pantryIngredients.includes(item.name) && matchingStocks(stocks, item, targetDate).some(stock => stock.amount > 0 && stock.useBy && stock.useBy <= addDays(targetDate, 3))).map(item => item.name))] })).sort((left, right) =>
     tasteRank(left) - tasteRank(right) ||
     Number(left.alreadyPlanned) - Number(right.alreadyPlanned) ||
     right.useSoonIngredients.length - left.useSoonIngredients.length ||
@@ -840,16 +846,19 @@ function createHandler(db, overpassUrl, communesUrl) {
         const input = await readJson(request);
         if (!input || typeof input.name !== 'string' || !input.name.trim() || input.name.length > 80 || typeof input.unit !== 'string' || !input.unit.trim() || input.unit.length > 24 || typeof input.amount !== 'number' || !Number.isFinite(input.amount) || input.amount <= 0 || input.amount > 1000000) throw new Error('Indique un aliment, une unité et une quantité positive.');
         if (input.useBy != null && (typeof input.useBy !== 'string' || !isDateKey(input.useBy))) throw new Error('Date du placard invalide.');
+        if (input.newLot !== undefined && typeof input.newLot !== 'boolean') throw new Error('Lot invalide.');
+        if (input.id !== undefined && (!Number.isInteger(input.id) || input.id < 1 || input.newLot)) throw new Error('Lot invalide.');
         const item = { name: foodName(input.name), unit: input.unit.trim(), amount: input.amount };
         const key = foodKey(item);
-        const existing = db.prepare('SELECT id, name, unit, use_by AS useBy FROM pantry').all().filter(row => foodKey(row) === key);
+        const existing = db.prepare('SELECT id, name, unit, food_key AS storageKey, explicit_lot AS explicitLot, use_by AS useBy FROM pantry').all().filter(row => input.id !== undefined ? row.id === input.id : !input.newLot && foodKey(row) === key);
+        if (input.id !== undefined && (!existing.length || foodKey(existing[0]) !== key)) throw new Error('Lot inconnu ou aliment modifié.');
         if (existing.length > 1) throw new Error('Plusieurs stocks correspondent à cet aliment. Retire les doublons du placard puis saisis la quantité totale actuelle.');
         if (existing.length === 1) {
-          db.prepare('UPDATE pantry SET food_key=?, name=?, unit=?, amount=?, recorded_on=?, use_by=? WHERE id=?').run(key, item.name, item.unit, item.amount, dateKey(new Date()), input.useBy === undefined ? existing[0].useBy : input.useBy, existing[0].id);
+          db.prepare('UPDATE pantry SET food_key=?, name=?, unit=?, amount=?, recorded_on=?, use_by=? WHERE id=?').run(existing[0].explicitLot || input.id !== undefined ? existing[0].storageKey : key, item.name, item.unit, item.amount, dateKey(new Date()), input.useBy === undefined ? existing[0].useBy : input.useBy, existing[0].id);
           return sendJson(response, 200, pantry(db));
         }
-        if (!db.prepare('SELECT 1 FROM pantry WHERE food_key = ?').get(key) && db.prepare('SELECT COUNT(*) AS n FROM pantry').get().n >= 500) throw new Error('Le placard peut contenir 500 aliments maximum.');
-        db.prepare('INSERT INTO pantry (food_key, name, unit, amount, recorded_on, use_by) VALUES (?, ?, ?, ?, ?, ?)').run(key, item.name, item.unit, item.amount, dateKey(new Date()), input.useBy ?? null);
+        if (db.prepare('SELECT COUNT(*) AS n FROM pantry').get().n >= 500) throw new Error('Le placard peut contenir 500 lots maximum.');
+        db.prepare('INSERT INTO pantry (food_key, name, unit, amount, recorded_on, use_by, explicit_lot) VALUES (?, ?, ?, ?, ?, ?, ?)').run(input.newLot ? `lot:${randomUUID()}` : key, item.name, item.unit, item.amount, dateKey(new Date()), input.useBy ?? null, input.newLot ? 1 : 0);
         return sendJson(response, 200, pantry(db));
       }
       const pantryMatch = url.pathname.match(/^\/api\/pantry\/(\d+)$/);
