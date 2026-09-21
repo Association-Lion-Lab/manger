@@ -33,7 +33,7 @@ Vérification : tests Node et parcours navigateur sur base isolée. Le rendu a �
 ## P2 — Améliorer l'usage quotidien
 
 - Anti-gaspi implémenté : plusieurs lots par aliment, dates et édition indépendantes, consommation prioritaire des dates proches, réservations partagées entre courses et suggestions. Recomposition du menu après remplacement manuel, sans enregistrement avant validation finale. Tests automatisés et navigateur passés ; validation de ce lot sur Ubuntu à effectuer.
-- Gérer les restes d'une base commune avec suppléments de protéines différents.
+- Restes d'une base commune avec protéines différentes implémentés : sélection des personnes, portions et protéines conservées ; achats comptés au jour de préparation. Tests serveur et navigateur passés, essai utilisateur à effectuer.
 - Enrichir le catalogue et valider les recettes en cuisine.
 - Permettre l'installation mobile et la consultation hors connexion.
 - Ajouter les comptes, invitations et l'isolation des foyers. À avancer en P1 si une ouverture à plusieurs foyers ou sur Internet devient l'objectif immédiat.

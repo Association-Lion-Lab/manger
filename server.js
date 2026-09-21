@@ -403,11 +403,15 @@ function shoppingList(db, start, end = addDays(start, 6)) {
       JOIN ingredients ON ingredients.id = recipe_ingredients.ingredient_id
       WHERE meals.date BETWEEN ? AND ? AND meals.leftover_of IS NULL
       UNION ALL
-      SELECT proteins.name, proteins.unit, proteins.amount * meal_assignments.portions
+      SELECT proteins.name, proteins.unit, proteins.amount * (meal_assignments.portions + COALESCE((
+        SELECT SUM(rest_dishes.portions) FROM meals rest
+        JOIN meal_dishes rest_dishes ON rest_dishes.meal_id = rest.id
+        WHERE rest.leftover_of = meals.id AND rest_dishes.member_id = meal_assignments.member_id
+      ), 0))
       FROM meal_assignments
       JOIN meals ON meals.id = meal_assignments.meal_id
       JOIN proteins ON proteins.id = meal_assignments.protein_id
-      WHERE meals.date BETWEEN ? AND ?
+      WHERE meals.date BETWEEN ? AND ? AND meals.leftover_of IS NULL
       UNION ALL
       SELECT proteins.name, proteins.unit, proteins.amount * (meal_dishes.portions + COALESCE((
         SELECT SUM(rest_dishes.portions) FROM meals rest
@@ -1189,7 +1193,8 @@ function createHandler(db, overpassUrl, communesUrl) {
         if (!input || !Number.isSafeInteger(input.sourceId) || !isDateKey(input.date) || !['midi', 'soir'].includes(input.slot)) throw new Error('Choisis une date et un créneau valides.');
         const source = db.prepare('SELECT * FROM meals WHERE id = ?').get(input.sourceId);
         const sourceDishes = source ? db.prepare('SELECT member_id AS memberId, recipe_id AS recipeId, protein_id AS proteinId FROM meal_dishes WHERE meal_id = ?').all(source.id) : [];
-        if (!source || source.location !== 'home' || source.leftover_of || db.prepare('SELECT 1 FROM meal_assignments WHERE meal_id = ?').get(input.sourceId) || (!source.recipe_id && !sourceDishes.length)) throw new Error('Ce repas ne permet pas de prévoir des restes.');
+        if (source?.recipe_id && !sourceDishes.length) sourceDishes.push(...db.prepare('SELECT member_id AS memberId, protein_id AS proteinId FROM meal_assignments WHERE meal_id = ?').all(source.id).map(item => ({ ...item, recipeId: source.recipe_id })));
+        if (!source || source.location !== 'home' || source.leftover_of || (!source.recipe_id && !sourceDishes.length)) throw new Error('Ce repas ne permet pas de prévoir des restes.');
         if (input.date < source.date || (input.date === source.date && (source.slot === 'soir' || input.slot === 'midi'))) throw new Error('Choisis un repas après celui où tu cuisines.');
         if (db.prepare('SELECT 1 FROM meals WHERE date = ? AND slot = ?').get(input.date, input.slot)) throw new Error('Ce créneau est déjà occupé.');
         const extra = db.prepare('SELECT COALESCE(SUM(people), 0) AS n FROM meals WHERE leftover_of = ?').get(source.id).n;

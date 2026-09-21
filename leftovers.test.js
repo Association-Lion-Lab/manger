@@ -3,6 +3,34 @@ const assert = require('node:assert/strict');
 const { once } = require('node:events');
 const { createApp, createDatabase, shoppingList } = require('./server');
 
+test('restes de base commune : conserve les protéines par personne et compte tout à la préparation', async t => {
+  const db = createDatabase(':memory:'), server = createApp(db);
+  server.listen(0, '127.0.0.1'); await once(server, 'listening');
+  t.after(() => { server.close(); db.close(); });
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const post = (path, data) => fetch(base + path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) });
+  const julie = await (await post('/api/members', { name: 'Julie', diet: 'vegetarian' })).json();
+  const romain = await (await post('/api/members', { name: 'Romain', diet: 'omnivore' })).json();
+  const tofu = db.prepare("SELECT id, amount FROM proteins WHERE name='tofu'").get();
+  const chicken = db.prepare("SELECT id, amount FROM proteins WHERE name='poulet'").get();
+  const source = { date: '2026-09-20', slot: 'soir', location: 'home', occasion: 'regular', recipeId: 1, people: 2, title: 'Base commune', assignments: [{ memberId: julie.id, proteinId: tofu.id, portions: 1 }, { memberId: romain.id, proteinId: chicken.id, portions: 1 }] };
+  assert.equal((await post('/api/meals', source)).status, 200);
+  const sourceId = db.prepare('SELECT id FROM meals').get().id, before = shoppingList(db, '2026-09-14');
+  const input = { sourceId, date: '2026-09-21', slot: 'midi', dishes: [{ memberId: julie.id, portions: 2, proteinId: chicken.id }] };
+  assert.equal((await post('/api/meals/leftovers', { ...input, dishes: [] })).status, 400);
+  assert.equal((await post('/api/meals/leftovers', input)).status, 201);
+  const rest = db.prepare('SELECT id FROM meals WHERE leftover_of=?').get(sourceId);
+  assert.equal(db.prepare('SELECT protein_id FROM meal_dishes WHERE meal_id=?').get(rest.id).protein_id, tofu.id);
+  const after = shoppingList(db, '2026-09-14');
+  assert.equal(after.find(item => item.name === 'tofu').amount, tofu.amount * 3);
+  assert.equal(after.find(item => item.name === 'poulet').amount, chicken.amount);
+  assert.equal(after.find(item => item.name === 'pois chiches').amount, before.find(item => item.name === 'pois chiches').amount * 2);
+  assert.deepEqual(shoppingList(db, '2026-09-21'), []);
+  assert.equal((await post('/api/meals', source)).status, 400);
+  assert.equal((await fetch(base + '/api/meals?date=2026-09-21&slot=midi', { method: 'DELETE' })).status, 200);
+  assert.deepEqual(shoppingList(db, '2026-09-14'), before);
+});
+
 test('restes : courses au jour de préparation, pas de double compte, créneaux et liens protégés', async t => {
   const db = createDatabase(':memory:'); const server = createApp(db);
   server.listen(0, '127.0.0.1'); await once(server, 'listening');
