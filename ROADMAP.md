@@ -22,11 +22,12 @@ Vérification : tests Node et parcours navigateur sur base isolée. Le rendu a �
 
 ## P1 — Fiabiliser et préserver le travail
 
-- Enregistrer les modifications dans Git et les pousser sur Codeberg, branche development.
+- Sauvegarde Git : lot `da71f43` poussé sur Codeberg, branche development (confirmé par la sortie Git de l'utilisateur).
 - Corriger les bugs bloquants et les chevauchements ; vérifier les parcours sur téléphone réel, notamment minuteurs, son et maintien de l'écran.
 - Restauration guidée ajoutée : aperçu, confirmation, copie de récupération et transaction. Tests sur base isolée ; ne pas tester par remplacement du foyer réel.
 - Docker préparé : image locale versionnée, contrôle de santé et procédure d'installation vierge. Construction réelle et publication à faire sur une machine équipée de Docker (absent du PC de développement).
 - Tests téléphone différés jusqu'à cette installation Docker ; HTTPS nécessaire pour vérifier le maintien de l'écran et la géolocalisation.
+- Installation Ubuntu : adresse d'écoute configurable et procédure LAN/VPN et mise à jour documentées. Validation du conteneur et du téléphone sur le serveur personnel encore attendue.
 
 ## P2 — Améliorer l'usage quotidien
 

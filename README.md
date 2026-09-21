@@ -47,6 +47,42 @@ Contrôle d'une installation neuve :
 4. Lancez `docker compose -p manger-validation restart` et vérifiez que les données sont conservées.
 5. Téléchargez une sauvegarde, vérifiez son aperçu et testez sa restauration uniquement sur cette instance de validation. Arrêtez-la avec `docker compose -p manger-validation down` ; le volume reste conservé. N'ajoutez pas `-v` si vous souhaitez garder ses données.
 
+### Ubuntu : accès LAN et VPN
+
+Dans le dossier du dépôt, créez un fichier `.env` (ou modifiez celui qui existe) :
+
+```dotenv
+MANGER_BIND_ADDRESS=192.168.1.31
+MANGER_HTTP_PORT=3000
+```
+
+Remplacez cette adresse d'exemple par l'IPv4 réellement présente sur votre serveur. Réservez-la dans le DHCP du routeur pour qu'elle reste stable. `.env` est local : il n'est envoyé ni dans Git ni dans le contexte Docker. Sans configuration, le port reste publié sur `0.0.0.0`.
+
+Appliquez et contrôlez la configuration :
+
+```shell
+docker compose config
+docker compose up -d --build
+docker compose ps
+curl --fail http://192.168.1.31:3000/api/health
+```
+
+Le navigateur du téléphone utilise cette même adresse si le Wi-Fi ou le VPN permet de joindre le réseau local. Si le VPN arrive sur le routeur, le serveur n'a pas nécessairement sa propre interface VPN. Après liaison à cette IPv4, `localhost:3000` n'est plus l'adresse de contrôle du port publié ; le contrôle de santé interne au conteneur reste inchangé.
+
+Le choix de l'adresse d'écoute n'est pas une liste d'adresses clientes autorisées : toute machine pouvant atteindre cette adresse peut potentiellement accéder au service. Le filtrage LAN/VPN reste à appliquer sur votre réseau et avec des règles compatibles Docker. Une règle UFW seule ne garantit pas le filtrage des ports publiés. Voir la documentation Docker sur la [publication des ports](https://docs.docker.com/engine/network/port-publishing/) et les [pare-feu](https://docs.docker.com/engine/network/packet-filtering-firewalls/).
+
+### Mettre à jour l'installation
+
+Téléchargez d'abord une sauvegarde depuis « Mon foyer », puis, dans le même dossier et avec le même nom de projet Compose :
+
+```shell
+git pull --ff-only origin development
+docker compose up -d --build
+docker compose ps
+```
+
+Le volume et le fichier `.env` sont conservés. Changer le dossier ou le nom du projet Compose peut sélectionner un autre volume et donner l'impression d'un foyer vide. En cas d'échec du démarrage, consultez `docker compose logs --tail=80 manger`.
+
 ## Principes
 
 L'interface conserve trois onglets. Les actions secondaires des recettes sont regroupées dans « Plus d'options » ; les notes et les options de cuisine sont repliées par défaut. Les contrastes des boutons principaux sont corrigés en clair et en sombre.
