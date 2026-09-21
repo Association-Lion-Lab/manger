@@ -25,13 +25,13 @@ Vérification : tests Node et parcours navigateur sur base isolée. Le rendu a �
 - Sauvegarde Git : lot `da71f43` poussé sur Codeberg, branche development (confirmé par la sortie Git de l'utilisateur).
 - Corriger les bugs bloquants et les chevauchements ; vérifier les parcours sur téléphone réel, notamment minuteurs, son et maintien de l'écran.
 - Restauration guidée ajoutée : aperçu, confirmation, copie de récupération et transaction. Tests sur base isolée ; ne pas tester par remplacement du foyer réel.
-- Docker préparé : image locale versionnée, contrôle de santé et procédure d'installation vierge. Construction réelle et publication à faire sur une machine équipée de Docker (absent du PC de développement).
-- Tests téléphone différés jusqu'à cette installation Docker ; HTTPS nécessaire pour vérifier le maintien de l'écran et la géolocalisation.
-- Installation Ubuntu : adresse d'écoute configurable et procédure LAN/VPN et mise à jour documentées. Validation du conteneur et du téléphone sur le serveur personnel encore attendue.
+- Docker construit sur le serveur Ubuntu personnel : état healthy confirmé. Publication d'une image préconstruite encore à faire.
+- Parcours téléphone et persistance après redémarrage confirmés par l'utilisateur ; HTTPS nécessaire pour vérifier le maintien de l'écran et la géolocalisation.
+- Téléchargement et aperçu de sauvegarde confirmés par l'utilisateur sur son installation. Restauration complète testée uniquement sur base isolée.
 
 ## P2 — Améliorer l'usage quotidien
 
-- Compléter l'anti-gaspi : plusieurs lots par aliment et recomposition après remplacement manuel d'un plat. Les quantités, dates et réservations du placard sont déjà prises en compte dans les suggestions et le menu automatique.
+- Compléter l'anti-gaspi : plusieurs lots par aliment. La recomposition après remplacement manuel est implémentée : choix manuels conservés, réservation prioritaire de leurs ingrédients, aucun enregistrement avant validation finale.
 - Gérer les restes d'une base commune avec suppléments de protéines différents.
 - Enrichir le catalogue et valider les recettes en cuisine.
 - Permettre l'installation mobile et la consultation hors connexion.

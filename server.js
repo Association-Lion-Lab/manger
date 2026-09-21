@@ -542,18 +542,20 @@ function previewMenu(db, input) {
   }).sort((a, b) => a.day - b.day || a.slot.localeCompare(b.slot));
   const candidates = recipes(db).filter(recipe => recipe.minutes <= input.maxMinutes && members.every(member => isDietCompatible(member.diet, recipe.diet))).map(recipe => ({ ...recipe, ...recipeTaste(recipe.ingredients, members, home.avoidedIngredients), needs: groupIngredients(recipe.ingredients.map(item => ({ ...item, amount: item.amount * people / recipe.servings }))) }));
   if (!candidates.length) throw new Error('Aucune recette adaptée aux régimes et au temps choisi.');
+  for (const slot of slots) if (slot.recipeId !== undefined && (!Number.isInteger(slot.recipeId) || !candidates.some(recipe => recipe.id === slot.recipeId))) throw new Error('Le plat choisi ne respecte plus les critères du menu.');
   const stocks = availablePantry(db, addDays(input.start, 6));
   const ingredients = new Set(shoppingList(db, input.start).map(item => foodName(item.name))), used = new Map();
   existing.forEach(meal => [meal.recipeId, ...(meal.dishes || []).map(dish => dish.recipeId)].filter(Boolean).forEach(id => used.set(id, (used.get(id) || 0) + 1)));
   // ponytail: greedy chronological choice, not a global menu optimization.
-  return slots.map(slot => {
+  // Reserve manual choices first, including later meals, before proposing the rest.
+  return [...slots].sort((a, b) => Number(b.recipeId !== undefined) - Number(a.recipeId !== undefined)).map(slot => {
     const date = addDays(input.start, slot.day);
     const stockFor = item => stocks.find(stock => foodKey(stock) === foodKey(item) && stock.recordedOn <= date && (!stock.useBy || stock.useBy >= date));
     const ranked = candidates.map(recipe => {
       const covered = recipe.needs.filter(item => { const stock = stockFor(item); return stock && inUnit(stock, item.unit) + 1e-8 >= item.amount; });
       return { recipe, covered, soon: covered.filter(item => { const stock = stockFor(item); return stock.useBy && stock.useBy <= addDays(date, 3); }).length, reused: recipe.needs.filter(item => ingredients.has(foodName(item.name))).length };
     }).sort((a, b) => ((used.get(a.recipe.id) || 0) * 2 + tasteRank(a.recipe)) - ((used.get(b.recipe.id) || 0) * 2 + tasteRank(b.recipe)) || tasteRank(a.recipe) - tasteRank(b.recipe) || b.soon - a.soon || b.covered.length - a.covered.length || b.reused - a.reused || a.recipe.title.localeCompare(b.recipe.title, 'fr'));
-    const { recipe, covered } = ranked[0];
+    const { recipe, covered } = slot.recipeId === undefined ? ranked[0] : ranked.find(item => item.recipe.id === slot.recipeId);
     used.set(recipe.id, (used.get(recipe.id) || 0) + 1);
     recipe.needs.forEach(item => {
       ingredients.add(foodName(item.name));
@@ -561,7 +563,7 @@ function previewMenu(db, input) {
       if (stock) stock.amount = Math.max(0, stock.amount - inUnit(item, stock.unit));
     });
     return { day: slot.day, slot: slot.slot, recipeId: recipe.id, pantryIngredients: covered.map(item => item.name) };
-  });
+  }).sort((a, b) => a.day - b.day || a.slot.localeCompare(b.slot));
 }
 
 function suggestions(db, start = null, maxMinutes = null, memberIds = null, targetDate = start || dateKey(new Date())) {

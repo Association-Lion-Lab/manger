@@ -25,6 +25,15 @@ test('menu anti-gaspi : quantités, dates, réservations, régimes et aperçu sa
   const choices = await preview();
   assert.deepEqual(choices.map(item => [item.slot, item.recipeId]), [['midi', tomato], ['soir', carrot]]);
   assert.deepEqual(choices[0].pantryIngredients, ['tomate']);
+  const changed = await preview({ slots: [{ day: 0, slot: 'midi', recipeId: carrot }, { day: 0, slot: 'soir' }] });
+  assert.equal(changed[0].recipeId, carrot);
+  assert.equal(changed[1].recipeId, tomato);
+  const laterFixed = await preview({ slots: [{ day: 0, slot: 'midi' }, { day: 0, slot: 'soir', recipeId: tomato }] });
+  assert.equal(laterFixed[1].recipeId, tomato);
+  assert.ok(!laterFixed[0].pantryIngredients.includes('tomate'));
+  const bothFixed = await preview({ slots: [{ day: 0, slot: 'midi', recipeId: carrot }, { day: 0, slot: 'soir', recipeId: carrot }] });
+  assert.ok(bothFixed.every(item => item.recipeId === carrot));
+  for (const recipeId of [null, '1', 999999]) assert.equal((await post('/api/week/preview', { ...input, slots: [{ day: 0, slot: 'midi', recipeId }] })).status, 400);
   assert.deepEqual(db.prepare('SELECT * FROM pantry').all(), stocksBefore);
   assert.equal(db.prepare('SELECT COUNT(*) AS n FROM meals').get().n, 0);
   assert.equal((await preview({ people: 3 }))[0].recipeId, carrot);
@@ -43,6 +52,7 @@ test('menu anti-gaspi : quantités, dates, réservations, régimes et aperçu sa
   const member = await (await post('/api/members', { name: 'Julie', diet: 'vegan' })).json();
   const meat = await createRecipe('0 poulet', 'poulet', 'omnivore');
   assert.ok((await preview({ memberIds: [member.id] })).every(item => item.recipeId !== meat));
+  assert.equal((await post('/api/week/preview', { ...input, memberIds: [member.id], slots: [{ day: 0, slot: 'midi', recipeId: meat }] })).status, 400);
   for (const change of [{ memberIds: [] }, { memberIds: [999] }, { memberIds: [member.id, member.id] }, { start: '2026-09-22' }, { maxMinutes: 0 }, { slots: [] }, { slots: [{ day: 7, slot: 'soir' }] }, { slots: [{ day: 2, slot: 'soir' }] }, { slots: [input.slots[0], input.slots[0]] }]) {
     assert.equal((await post('/api/week/preview', { ...input, memberIds: [member.id], ...change })).status, 400);
   }

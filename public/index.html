@@ -1099,12 +1099,33 @@
         }
       });
       document.getElementById('confirm-week').insertAdjacentHTML('beforebegin', '<div id="compose-taste-notices" aria-live="polite"></div>');
-      document.getElementById('compose-taste-notices').insertAdjacentHTML('beforebegin', '<p class="muted">Le choix initial tient compte du placard estimé et des dates indiquées, après réservation des repas déjà prévus. Changer un plat ne recompose pas les autres ; les courses seront recalculées à la validation.</p>');
+      document.getElementById('compose-taste-notices').insertAdjacentHTML('beforebegin', '<p class="muted">Tes choix manuels sont conservés. Les autres plats sont recalculés selon le placard et les ingrédients réutilisables.</p><p id="compose-update-status" class="muted" role="status"></p>');
       const updateNotices = () => {
         const selected = [...new Set([...output.querySelectorAll('[data-compose-recipe]')].map(select => Number(select.value)))].map(id => candidates.find(recipe => recipe.id === id)).filter(recipe => tasteRank(recipe));
         document.getElementById('compose-taste-notices').innerHTML = selected.map(recipe => `<p class="muted">${escapeHtml(recipe.title)} — ${escapeHtml(tasteNotice(recipe))}.</p>`).join('');
       };
-      output.querySelectorAll('[data-compose-recipe]').forEach(select => select.addEventListener('change', updateNotices));
+      const manualChoices = new Map();
+      output.querySelectorAll('[data-compose-recipe]').forEach(select => select.addEventListener('change', async () => {
+        const index = Number(select.dataset.composeRecipe), previous = manualChoices.get(index);
+        manualChoices.set(index, Number(select.value));
+        const controls = [...output.querySelectorAll('select, button')], status = output.querySelector('#compose-update-status');
+        controls.forEach(control => control.disabled = true); button.disabled = true;
+        status.textContent = 'Recalcul des autres plats…';
+        try {
+          const result = await api('/api/week/preview', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ start: key(state.weekStart), maxMinutes: Number(document.getElementById('compose-minutes').value), memberIds: members.map(member => member.id), people, slots: choices.map((item, i) => ({ day: item.day, slot: item.slot, ...(manualChoices.has(i) ? { recipeId: manualChoices.get(i) } : {}) })) }) });
+          if (version !== menuPreviewVersion || !output.isConnected || !dialog.open) return;
+          if (result.length !== choices.length || result.some((item, i) => item.day !== choices[i].day || item.slot !== choices[i].slot || !candidates.some(recipe => recipe.id === item.recipeId))) throw new Error('Le catalogue a changé. Relance la proposition de menu.');
+          choices = result;
+          output.querySelectorAll('[data-compose-recipe]').forEach((control, i) => control.value = choices[i].recipeId);
+          status.textContent = 'Menu recalculé. Tes choix manuels sont conservés.';
+          updateNotices();
+        } catch (error) {
+          if (version !== menuPreviewVersion || !output.isConnected || !dialog.open) return;
+          if (previous === undefined) manualChoices.delete(index); else manualChoices.set(index, previous);
+          select.value = choices[index].recipeId;
+          status.textContent = 'Recalcul impossible. Le menu précédent est conservé. Réessaie de changer le plat.';
+        } finally { controls.forEach(control => control.disabled = false); button.disabled = false; }
+      }));
       updateNotices();
     }
 
