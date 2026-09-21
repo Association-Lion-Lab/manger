@@ -1,9 +1,4 @@
-// Only explicit aliases are merged: "tomate" and "tomate concassée" remain distinct.
-const aliases = { oeufs: 'œuf', oeuf: 'œuf', œufs: 'œuf', tomates: 'tomate', courgettes: 'courgette', carottes: 'carotte', oignons: 'oignon', citrons: 'citron', pommes: 'pomme', 'pommes de terre': 'pomme de terre' };
-function foodName(name) {
-  const value = name.trim().toLocaleLowerCase('fr').replace(/\s+/g, ' ');
-  return aliases[value] || value;
-}
+const { foodName } = require('./public/food-names');
 function unitInfo(unit) {
   const value = unit.trim().toLocaleLowerCase('fr');
   const units = { g: ['g', 1], gramme: ['g', 1], grammes: ['g', 1], kg: ['g', 1000], ml: ['ml', 1], cl: ['ml', 10], dl: ['ml', 100], l: ['ml', 1000], litre: ['ml', 1000], litres: ['ml', 1000], pièce: ['pièce', 1], pièces: ['pièce', 1] };

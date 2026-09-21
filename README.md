@@ -35,6 +35,18 @@ docker compose up -d --build
 
 L'application est ensuite disponible sur <http://localhost:3000>. Le volume Docker `manger-data` conserve la base SQLite entre les mises à jour.
 
+Cette commande construit localement l'image `manger:0.1.0` ; aucune image préconstruite n'est encore publiée. Docker Engine et le module Compose sont nécessaires. La construction Docker reste à valider sur une machine équipée.
+
+Pour le téléphone, connecté au même réseau de confiance, ouvrez `http://ADRESSE_IP_DU_SERVEUR:3000`. Autorisez ce port uniquement sur votre réseau privé. `MANGER_HTTP_PORT` permet de choisir un autre port hôte si nécessaire. La géolocalisation et le maintien de l'écran nécessitent HTTPS sur téléphone : Docker seul ne les active pas. La recherche par ville reste disponible en HTTP.
+
+Contrôle d'une installation neuve :
+
+1. Dans une copie du dépôt sur une machine Docker, lancez `docker compose -p manger-validation up -d --build` (port 3000 libre).
+2. Vérifiez `docker compose -p manger-validation ps` : le service doit devenir `healthy`. `GET /api/health` répond avec le statut et la version, sans donnée privée.
+3. Depuis le téléphone, créez une recette et un repas, puis vérifiez les courses.
+4. Lancez `docker compose -p manger-validation restart` et vérifiez que les données sont conservées.
+5. Téléchargez une sauvegarde, vérifiez son aperçu et testez sa restauration uniquement sur cette instance de validation. Arrêtez-la avec `docker compose -p manger-validation down` ; le volume reste conservé. N'ajoutez pas `-v` si vous souhaitez garder ses données.
+
 ## Principes
 
 L'interface conserve trois onglets. Les actions secondaires des recettes sont regroupées dans « Plus d'options » ; les notes et les options de cuisine sont repliées par défaut. Les contrastes des boutons principaux sont corrigés en clair et en sombre.
@@ -59,11 +71,42 @@ L'import internet consulte la page depuis votre serveur et lit les blocs JSON-LD
 
 La relecture est obligatoire dans l'interface. Les fractions et unités courantes sont reconnues partiellement ; les unités non reconnues sont laissées à remplir. Portions et durée absentes ou ambiguës sont signalées, avec valeurs provisoires de 2 portions et 30 min. Le régime proposé reste omnivore à vérifier, les étapes sont classées en préparation sans minuteurs automatiques, et les instructions ne sont ni traduites ni recalculées. Le lien de la source est conservé et visible dans la fiche : les recettes importées ne deviennent pas des contenus CC0 de Manger!.
 
-Cette version ne dispose pas encore d'authentification : ne l'exposez pas directement sur Internet. Utilisez un réseau de confiance ou un accès protégé en amont. L'export de recettes JSON n'inclut pas les photos ni les avis du foyer ; conservez la base SQLite pour une sauvegarde complète, serveur arrêté.
+Cette version ne dispose pas encore d'authentification : ne l'exposez pas directement sur Internet. Utilisez un réseau de confiance ou un accès protégé en amont. L'export de recettes JSON n'inclut pas les photos ni les avis du foyer ; utilisez la sauvegarde complète ci-dessous.
+
+## Sauvegarder le foyer
+
+Dans « Mon foyer », ouvrez « Sauvegarde du foyer » pour télécharger une copie SQLite complète, y compris les recettes, photos, profils, planning, placard et courses. La copie peut être créée pendant le fonctionnement du serveur. Un seul téléchargement de sauvegarde peut être préparé à la fois.
+
+Ce fichier contient vos données privées et n'est pas chiffré. Conservez-le dans un emplacement protégé ; le dépôt de code ne sauvegarde pas vos données personnelles. N'utilisez que des sauvegardes provenant de votre instance de confiance.
+
+« Restaurer une sauvegarde » accepte un fichier SQLite de 32 Mo maximum, de la même version de schéma que l'instance. La vérification affiche le nombre de recettes, personnes et repas sans modifier le foyer. Une confirmation explicite remplace ensuite toutes les données. Avant ce remplacement, une copie complète de récupération est créée dans `recovery/`, à côté de la base active (dans le volume Docker). Si sa création échoue, aucune restauration n'est effectuée. Une erreur pendant le remplacement annule la transaction. Ces copies privées ne sont pas supprimées automatiquement ; surveillez l'espace disque et conservez aussi une sauvegarde sur un autre appareil.
+
+L'aperçu expire après dix minutes. Les requêtes concurrentes sont refusées pendant la restauration ; rechargez les autres appareils après l'opération. Pour les fichiers plus volumineux ou d'anciennes versions, utilisez l'outil ci-dessous.
+
+Pour vérifier un fichier puis le restaurer vers un **nouveau fichier**, depuis le dossier de l'application :
+
+```shell
+node backup-tools.js check sauvegarde.db
+node backup-tools.js restore sauvegarde.db data/manger-restaure.db
+```
+
+La vérification contrôle l'intégrité SQLite, les relations et les tables principales ; elle ne garantit pas la fiabilité d'un fichier inconnu. La restauration refuse toute destination existante et ne change pas la base active. Arrêtez ensuite Manger et configurez `MANGER_DB` avec le chemin du nouveau fichier avant de relancer le serveur. Gardez l'ancienne base jusqu'à vérification de vos données. Il n'y a pas encore de restauration depuis l'interface.
 
 ## Courses et organisation
 
-« Mon placard » permet d'indiquer les quantités disponibles aujourd'hui et de les corriger ou retirer. Les courses calculées déduisent ce stock : les besoins des repas précédant la semaine affichée sont réservés en premier, pour ne pas réutiliser le même stock sur plusieurs semaines. Les repas antérieurs à la mise à jour du stock ne sont pas déduits. Le stock restant est une estimation fondée sur le planning, pas une confirmation de consommation : ajustez-le après avoir cuisiné, jeté ou racheté un aliment. Une nouvelle saisie du même aliment remplace sa quantité, elle ne s'y ajoute pas. Les articles de courses manuels restent indépendants. Dates de péremption et suggestions fondées sur le placard restent à développer.
+Les courses se rafraîchissent automatiquement toutes les 15 secondes quand leur onglet est visible, ainsi qu'à son ouverture et au retour dans l'application. Deux appareils connectés à la même instance et à la même semaine voient ainsi les cases, ajouts, suppressions et changements de quantités sans recharger la page. La saisie d'un article est conservée. Le rafraîchissement attend pendant le rangement des rayons, une fenêtre ouverte ou une action en cours, et ignore les réponses rendues obsolètes par une action locale. En cas de coupure réseau, la dernière liste reste affichée et la lecture est retentée ; les écritures ne sont pas mises en attente hors connexion. Deux modifications concurrentes de la même case suivent le dernier enregistrement reçu par le serveur. Cette synchronisation ne crée pas de comptes ni d'isolation entre foyers.
+
+### Saisie souple des aliments
+
+Les comparaisons du placard et les regroupements des courses ignorent la casse et les espaces superflus. Un vocabulaire local reconnaît les pluriels et variantes accentuées courants (concombres, poireaux, œufs/oeufs…), sans retirer systématiquement le « s » : pois, radis, maïs restent intacts. Les préparations distinctes, comme tomate et tomate concassée ou tofu et tofu fumé, ne sont pas fusionnées. Ce vocabulaire n'est pas exhaustif.
+
+Lors de la saisie d'un ingrédient de recette, d'un aliment du placard ou d'un article de courses, « Tu voulais dire… » propose jusqu'à trois noms proches, issus du vocabulaire et des recettes/du placard chargés. Cliquer sur une proposition remplace le champ ; ignorer la suggestion conserve la saisie. Cette aide utilise une comparaison orthographique locale, pas un modèle d'IA générative, et n'envoie aucune donnée à un service externe. Elle ne corrige pas rétroactivement les recettes ni les imports sans relecture et ne constitue pas un contrôle des allergies.
+
+Les anciens stocks désormais équivalents ne sont pas additionnés ni effacés automatiquement. S'ils sont en doublon, le placard les signale et les calculs les ignorent jusqu'à correction : retirer les doublons, puis renseigner la quantité totale réellement disponible. Une entrée unique avec un ancien pluriel est mise à jour sans créer un deuxième stock.
+
+« Mon placard » permet d'indiquer les quantités disponibles aujourd'hui et de les corriger ou retirer. Les courses calculées déduisent ce stock : les besoins des repas précédant la semaine affichée sont réservés en premier, pour ne pas réutiliser le même stock sur plusieurs semaines. Les repas antérieurs à la mise à jour du stock ne sont pas déduits. Le stock restant est une estimation fondée sur le planning, pas une confirmation de consommation : ajustez-le après avoir cuisiné, jeté ou racheté un aliment. Une nouvelle saisie du même aliment remplace sa quantité, elle ne s'y ajoute pas. Les articles de courses manuels restent indépendants.
+
+La date facultative « À utiliser d’ici le » est un repère personnel, jamais une durée de conservation calculée. Le placard affiche « À utiliser bientôt » jusqu'à trois jours avant cette date, puis « Date dépassée · à vérifier ». Il ne supprime aucun aliment. Les courses ne déduisent le stock que pour les repas prévus au plus tard à cette date, incluse. Les suggestions utilisent la date du repas choisi et privilégient, à préférences et variété égales, les ingrédients suffisants dont cette date approche. Une date ne garantit pas la sécurité alimentaire : vérifiez les indications de l'emballage. Cette version gère une seule quantité et une seule date par aliment/unité compatible, pas plusieurs lots.
 
 Les ingrédients calculés regroupent désormais les unités compatibles (g/kg, ml/cl/dl/l) et une liste explicite de variantes de noms (par exemple œuf/oeufs ou tomate/tomates). Ils ne confondent pas masse et volume, ni tomate et tomate concassée. Les corrections de rayon et les cases cochées suivent ces regroupements. Les synonymes non référencés et les articles ajoutés manuellement ne sont pas fusionnés.
 
@@ -73,7 +116,7 @@ Dans les courses, « Organiser les rayons » affiche une poignée ⠿ par articl
 
 ## Restes et déplacements du planning
 
-Depuis un repas avec une recette commune sans variantes individuelles, « Prévoir des restes » ajoute un repas ultérieur dans un créneau libre. Les portions supplémentaires sont comptées à la date où l'on cuisine, y compris si les restes sont prévus la semaine suivante. La fiche ouverte depuis le planning affiche la quantité totale à préparer. Les régimes et suppléments individuels ne sont pas encore répartis dans ce parcours ; choisissez un repas commun sans variantes pour l'utiliser. Le choix de la date ne garantit pas la conservation du plat.
+Depuis un repas commun ou un repas avec un plat différent par personne, « Prévoir des restes » ajoute un repas ultérieur dans un créneau libre. Pour des assiettes individuelles, choisissez les personnes concernées et le nombre de portions à conserver pour chacune ; leur recette et leur supplément éventuel sont maintenus. Les portions supplémentaires sont comptées à la date où l'on cuisine, y compris si les restes sont prévus la semaine suivante, et ne sont pas comptées une seconde fois le jour où elles sont mangées. La fiche ouverte depuis le planning affiche les assiettes prévues. Les variantes de protéine autour d'une même recette commune ne sont pas encore réparties dans ce parcours. Le choix de la date ne garantit pas la conservation du plat.
 
 Un repas source ne peut pas être remplacé ni supprimé tant que des restes lui sont liés. Retirer les restes réduit automatiquement les quantités à préparer. « Déplacer ou copier » conserve la répartition du repas et refuse les créneaux occupés. Un déplacement respecte l'ordre préparation/restes. Copier un repas cuisiné copie seulement ce repas ; pour ajouter des restes, utilisez l'action dédiée depuis la source.
 
@@ -118,10 +161,12 @@ Un date n'est donc pas un type de repas fermé : il peut avoir lieu au restauran
 
 La version `0.1` n'utilise pas d'IA. Son classement est déterministe et explicable :
 
-1. favoriser les recettes qui réutilisent les ingrédients déjà prévus dans la semaine ;
+1. respecter les régimes et le temps disponible, puis classer selon les goûts des participants sans exclure les préparations inconnues ;
 2. proposer les recettes non encore planifiées avant les répétitions ;
-3. pénaliser les plats mangés récemment ;
-4. départager les égalités par ordre alphabétique.
+3. favoriser les aliments du placard, puis les ingrédients déjà prévus dans la semaine ;
+4. pénaliser les plats mangés récemment et départager les égalités par ordre alphabétique.
+
+« Proposer le prochain repas » indique « Placard estimé » ou « À utiliser bientôt » lorsqu'un ingrédient dispose d'une quantité suffisante pour les participants (une portion chacun, ou les portions d'origine sans profil sélectionné). Les repas enregistrés depuis la saisie du stock jusqu'à la fin de la semaine consultée, limitée par la date facultative du stock, sont réservés avant ce calcul, y compris les suppléments et les portions destinées aux restes. Un stock saisi après la date du repas n'est pas proposé. Les unités compatibles sont converties ; masse et volume restent distincts. Ce repère ne garantit ni un plat complet sans courses, ni la fraîcheur des aliments. Les propositions sont des alternatives : leur affichage ne réserve aucun stock.
 
 Les allergies, préférences et contraintes de matériel enrichiront ce classement lorsqu'elles seront enregistrables dans les profils.
 
@@ -137,9 +182,15 @@ En cas de géolocalisation indisponible, saisissez une ville ou un code postal f
 
 ## Composer sa semaine
 
+« Plus d’options → Réutiliser une autre semaine » permet de choisir une semaine passée ou future, de consulter ses repas puis de les copier vers la semaine affichée. « Mes semaines types » enregistre jusqu'à 30 semaines sous un nom court et les rend disponibles même après avoir modifié le planning d'origine. Les plats par personne et suppléments sont conservés.
+
+Aucun créneau occupé n'est remplacé : au moindre conflit, aucun repas n'est ajouté. Les restes sont reliés à leur nouvelle préparation uniquement si celle-ci appartient à la semaine enregistrée ; une semaine contenant des restes préparés ailleurs est refusée. Les courses sont recalculées, sans copier les articles manuels ni les cases cochées. Supprimer une semaine type ne supprime aucun repas du calendrier.
+
 Dans Semaine, « Compose ma semaine » propose un menu pour les créneaux libres sélectionnés. Choisissez le temps maximum et les participants (une portion chacun), ou le nombre de personnes si aucun foyer n'est configuré. La base commune respecte les régimes des participants ; cette première version n'ajoute pas de supplément de protéine. Les variantes par personne restent disponibles dans l'ajout manuel.
 
-L'aperçu ne modifie rien : chaque plat peut être remplacé avant validation. Le classement privilégie la variété, puis les ingrédients communs avec les courses de la semaine et les plats proposés. Ce rapprochement par noms n'est ni une estimation de prix ni un calcul de stock. Un catalogue limité peut entraîner des répétitions. Modifier les critères invalide l'aperçu.
+Le choix initial privilégie ensuite les quantités suffisantes du placard, en commençant par celles dont la date approche, puis les ingrédients réutilisés entre les repas. Les repas déjà planifiés sont réservés avant le calcul et chaque proposition réserve virtuellement son stock pour les suivantes : la même quantité n'est donc pas promise deux fois dans l'aperçu. Un stock n'est utilisé qu'entre sa date de saisie et sa date facultative. Les doublons ambigus et les unités incompatibles sont ignorés. Cette logique reste une estimation anti-gaspi, pas une optimisation globale ni une garantie de fraîcheur.
+
+L'aperçu ne modifie rien : chaque plat peut être remplacé avant validation. Un remplacement manuel ne recompose pas automatiquement les autres choix ; les courses et le placard estimé sont recalculés à la validation. Un catalogue limité peut entraîner des répétitions. Modifier les critères invalide l'aperçu.
 
 La validation ajoute tous les repas et met à jour les courses. Si un créneau a été rempli entre-temps, aucun repas du menu n'est enregistré : fermez le formulaire et recomposez. Les repas existants ne sont jamais remplacés par cet outil.
 
@@ -149,7 +200,7 @@ Depuis une fiche, « Dupliquer » ouvre une copie dans l'éditeur avec ses ingr�
 
 Dans Recettes, le bouton d'import ajoute 14 recettes originales avec ingrédients quantifiés et étapes de préparation, cuisson et service. L'import conserve les recettes existantes et ignore les titres déjà présents. Les recettes importées restent modifiables et alimentent les suggestions et la liste de courses.
 
-La recherche porte sur le nom et les ingrédients. Les univers sont combinables dans l'éditeur : Recettes du rat (budget), Recettes de date, Plats mijotés, Japon, Chine, Terroir français et Côté chef. « Budget » ne garantit pas un prix ; « Côté chef » désigne une inspiration soignée, sans attribution à un chef connu. Les recettes n'ont pas encore été validées par des essais en cuisine.
+La recherche porte sur le nom et les ingrédients, dans le catalogue et le choix des plats. Elle ignore casse et accents, reconnaît les pluriels connus et cherche des noms proches en cas d'absence de résultat exact. Elle ne modifie pas les recettes et reste une aide orthographique locale, pas une garantie de correspondance alimentaire. Les univers sont combinables dans l'éditeur : Recettes du rat (budget), Recettes de date, Plats mijotés, Japon, Chine, Terroir français et Côté chef. « Budget » ne garantit pas un prix ; « Côté chef » désigne une inspiration soignée, sans attribution à un chef connu. Les recettes n'ont pas encore été validées par des essais en cuisine.
 
 Huit univers supplémentaires sont disponibles : Express (30 min maximum), Batch cooking, À emporter, Doudou food, Méditerranée, Italie, Inde et Mexique. Ils se choisissent dans l'éditeur et le filtre de recettes. Les prochains imports du catalogue incluent les nouvelles étiquettes pertinentes ; les recettes déjà importées restent inchangées et peuvent être classées manuellement. Mexique est disponible pour vos créations, sans recette dédiée dans ce premier catalogue. Les étiquettes de conservation ne remplacent pas les précautions de refroidissement, de transport et de réchauffage.
 

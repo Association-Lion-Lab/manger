@@ -29,3 +29,32 @@ test('restes : courses au jour de préparation, pas de double compte, créneaux 
   assert.deepEqual(shoppingList(db, '2026-09-14'), before);
   assert.equal((await fetch(base + '/api/meals?date=2026-09-20&slot=soir', { method: 'DELETE' })).status, 200);
 });
+
+test('restes individuels : seules les assiettes choisies sont recuisinées et affichées', async t => {
+  const db = createDatabase(':memory:'); const server = createApp(db);
+  server.listen(0, '127.0.0.1'); await once(server, 'listening');
+  t.after(() => { server.close(); db.close(); });
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const post = (path, data) => fetch(base + path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) });
+  const julie = await (await post('/api/members', { name: 'Julie', diet: 'vegetarian' })).json();
+  const romain = await (await post('/api/members', { name: 'Romain', diet: 'omnivore' })).json();
+  const recipes = db.prepare('SELECT id FROM recipes ORDER BY id LIMIT 2').all();
+  const tofu = db.prepare("SELECT id FROM proteins WHERE name='tofu'").get();
+  const source = { date: '2026-09-20', slot: 'soir', location: 'home', occasion: 'regular', people: 2, recipeId: null, title: 'Deux assiettes', assignments: [], dishes: [{ memberId: julie.id, recipeId: recipes[0].id, proteinId: tofu.id, portions: 1 }, { memberId: romain.id, recipeId: recipes[1].id, portions: 1 }] };
+  assert.equal((await post('/api/meals', source)).status, 200);
+  const sourceId = db.prepare('SELECT id FROM meals').get().id;
+  const input = { sourceId, date: '2026-09-21', slot: 'midi', dishes: [{ memberId: julie.id, portions: 2 }] };
+  for (const dishes of [[], [{ memberId: 999, portions: 1 }], [{ memberId: julie.id, portions: 0 }], [{ memberId: julie.id, portions: 1 }, { memberId: julie.id, portions: 1 }]]) assert.equal((await post('/api/meals/leftovers', { ...input, dishes })).status, 400);
+  assert.equal((await post('/api/meals/leftovers', input)).status, 201);
+  const sourceWeek = await (await fetch(base + '/api/week?start=2026-09-14')).json();
+  const restWeek = await (await fetch(base + '/api/week?start=2026-09-21')).json();
+  assert.equal(sourceWeek.meals[0].extraPortions, 2);
+  assert.equal(restWeek.meals[0].leftoverOf, sourceId);
+  assert.deepEqual(restWeek.meals[0].dishes, [{ memberId: julie.id, recipeId: recipes[0].id, portions: 2, proteinId: tofu.id }]);
+  assert.equal(shoppingList(db, '2026-09-14').find(item => item.name === 'pois chiches').amount, 600);
+  assert.equal(shoppingList(db, '2026-09-14').find(item => item.name === 'tofu').amount, 360);
+  assert.deepEqual(shoppingList(db, '2026-09-21'), []);
+  assert.equal((await fetch(base + '/api/meals?date=2026-09-20&slot=soir', { method: 'DELETE' })).status, 400);
+  assert.equal((await fetch(base + '/api/meals?date=2026-09-21&slot=midi', { method: 'DELETE' })).status, 200);
+  assert.equal((await fetch(base + '/api/meals?date=2026-09-20&slot=soir', { method: 'DELETE' })).status, 200);
+});

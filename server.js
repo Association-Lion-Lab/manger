@@ -1,11 +1,15 @@
 const { createServer } = require('node:http');
-const { readFileSync, mkdirSync } = require('node:fs');
+const { readFileSync, mkdirSync, createReadStream } = require('node:fs');
+const { mkdtemp, rm, stat } = require('node:fs/promises');
+const { tmpdir } = require('node:os');
+const { pipeline } = require('node:stream/promises');
 const { dirname, join } = require('node:path');
-const { DatabaseSync } = require('node:sqlite');
+const { DatabaseSync, backup } = require('node:sqlite');
 const catalog = require('./catalog');
 const { foodName, foodKey, inUnit, groupIngredients } = require('./ingredients');
 const { downloadRecipePage, extractRecipeDraft } = require('./recipe-import');
 const { recipeTaste, tasteRank } = require('./public/tastes');
+const { createRestore } = require('./restore');
 
 const INDEX_HTML = readFileSync(join(__dirname, 'public', 'index.html'));
 const DAY_MS = 86_400_000;
@@ -126,8 +130,16 @@ function createDatabase(filename) {
       recipe_id INTEGER PRIMARY KEY REFERENCES recipes(id) ON DELETE CASCADE,
       rating INTEGER NOT NULL CHECK(rating BETWEEN 0 AND 5), note TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS week_templates (
+      id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL UNIQUE,
+      source_start TEXT NOT NULL,
+      meals_json TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
   `);
   if (!db.prepare('PRAGMA table_info(recipes)').all().some(column => column.name === 'source_url')) db.exec('ALTER TABLE recipes ADD COLUMN source_url TEXT');
+  if (!db.prepare('PRAGMA table_info(pantry)').all().some(column => column.name === 'use_by')) db.exec('ALTER TABLE pantry ADD COLUMN use_by TEXT');
   if (!db.prepare('PRAGMA table_info(members)').all().some(column => column.name === 'avoided_ingredients')) db.exec("ALTER TABLE members ADD COLUMN avoided_ingredients TEXT NOT NULL DEFAULT '[]'");
   if (!db.prepare('PRAGMA table_info(meal_dishes)').all().some(column => column.name === 'protein_id')) db.exec('ALTER TABLE meal_dishes ADD COLUMN protein_id INTEGER REFERENCES proteins(id)');
   if (!db.prepare('PRAGMA table_info(recipe_ingredients)').all().some(column => column.name === 'preparation')) db.exec("ALTER TABLE recipe_ingredients ADD COLUMN preparation TEXT NOT NULL DEFAULT 'unknown' CHECK(preparation IN ('unknown', 'raw', 'cooked'))");
@@ -182,6 +194,7 @@ function createDatabase(filename) {
       db.exec('PRAGMA user_version = 2; COMMIT');
     } catch (error) { db.exec('ROLLBACK'); throw error; }
   }
+  if (db.prepare('PRAGMA user_version').get().user_version < 3) db.exec('PRAGMA user_version = 3');
   return db;
 }
 
@@ -376,13 +389,17 @@ function shoppingList(db, start, end = addDays(start, 6)) {
         AND NOT EXISTS (SELECT 1 FROM meal_dishes WHERE meal_dishes.meal_id = meals.id)
       UNION ALL
       SELECT ingredients.name, ingredients.unit,
-             recipe_ingredients.amount * meal_dishes.portions / recipes.servings AS amount
+             recipe_ingredients.amount * (meal_dishes.portions + COALESCE((
+               SELECT SUM(rest_dishes.portions) FROM meals rest
+               JOIN meal_dishes rest_dishes ON rest_dishes.meal_id = rest.id
+               WHERE rest.leftover_of = meals.id AND rest_dishes.member_id = meal_dishes.member_id
+             ), 0)) / recipes.servings AS amount
       FROM meal_dishes
       JOIN meals ON meals.id = meal_dishes.meal_id
       JOIN recipes ON recipes.id = meal_dishes.recipe_id
       JOIN recipe_ingredients ON recipe_ingredients.recipe_id = recipes.id
       JOIN ingredients ON ingredients.id = recipe_ingredients.ingredient_id
-      WHERE meals.date BETWEEN ? AND ?
+      WHERE meals.date BETWEEN ? AND ? AND meals.leftover_of IS NULL
       UNION ALL
       SELECT proteins.name, proteins.unit, proteins.amount * meal_assignments.portions
       FROM meal_assignments
@@ -390,25 +407,37 @@ function shoppingList(db, start, end = addDays(start, 6)) {
       JOIN proteins ON proteins.id = meal_assignments.protein_id
       WHERE meals.date BETWEEN ? AND ?
       UNION ALL
-      SELECT proteins.name, proteins.unit, proteins.amount * meal_dishes.portions
+      SELECT proteins.name, proteins.unit, proteins.amount * (meal_dishes.portions + COALESCE((
+        SELECT SUM(rest_dishes.portions) FROM meals rest
+        JOIN meal_dishes rest_dishes ON rest_dishes.meal_id = rest.id
+        WHERE rest.leftover_of = meals.id AND rest_dishes.member_id = meal_dishes.member_id
+      ), 0))
       FROM meal_dishes JOIN meals ON meals.id = meal_dishes.meal_id
       JOIN proteins ON proteins.id = meal_dishes.protein_id
-      WHERE meals.date BETWEEN ? AND ?
+      WHERE meals.date BETWEEN ? AND ? AND meals.leftover_of IS NULL
     )
     SELECT name, unit, SUM(amount) AS amount FROM items GROUP BY name, unit ORDER BY name
   `).all(start, end, start, end, start, end, start, end));
 }
 
+function pantryStocks(db) {
+  const rows = db.prepare('SELECT id, name, unit, amount, recorded_on AS recordedOn, use_by AS useBy FROM pantry ORDER BY use_by IS NULL, use_by, name').all();
+  const counts = new Map();
+  for (const row of rows) counts.set(foodKey(row), (counts.get(foodKey(row)) || 0) + 1);
+  return rows.map(row => ({ ...row, ambiguous: counts.get(foodKey(row)) > 1 }));
+}
+
 function pantry(db) {
   const today = dateKey(new Date());
-  return db.prepare('SELECT id, name, unit, amount, recorded_on AS recordedOn FROM pantry ORDER BY name').all().map(item => {
-    const previous = item.recordedOn < today ? shoppingList(db, item.recordedOn, addDays(today, -1)).find(row => foodKey(row) === foodKey(item)) : null;
-    return { ...item, remaining: Math.max(0, Math.round((item.amount - (previous ? inUnit(previous, item.unit) : 0)) * 100) / 100) };
+  return pantryStocks(db).map(item => {
+    const until = item.useBy && item.useBy < today ? item.useBy : addDays(today, -1);
+    const previous = item.recordedOn <= until ? shoppingList(db, item.recordedOn, until).find(row => foodKey(row) === foodKey(item)) : null;
+    return { ...item, dateStatus: !item.useBy ? null : item.useBy < today ? 'past' : item.useBy <= addDays(today, 3) ? 'soon' : 'later', remaining: item.ambiguous ? 0 : Math.max(0, Math.round((item.amount - (previous ? inUnit(previous, item.unit) : 0)) * 100) / 100) };
   });
 }
 
 function pantryShopping(db, start) {
-  const stocks = db.prepare('SELECT name, unit, amount, recorded_on AS recordedOn FROM pantry').all();
+  const stocks = pantryStocks(db).filter(item => !item.ambiguous);
   // Planning is a forecast: an edited stock establishes a new quantity as of today.
   const ranges = new Map();
   const range = (from, to) => {
@@ -418,9 +447,11 @@ function pantryShopping(db, start) {
   };
   return shoppingList(db, start).map(item => {
     const stock = stocks.find(row => foodKey(row) === foodKey(item));
-    if (!stock || stock.recordedOn > addDays(start, 6)) return item;
+    if (!stock || stock.recordedOn > addDays(start, 6) || (stock.useBy && stock.useBy < start)) return item;
     const prior = stock.recordedOn < start ? range(stock.recordedOn, addDays(start, -1)).find(row => foodKey(row) === foodKey(item)) : null;
-    const eligible = range(stock.recordedOn > start ? stock.recordedOn : start, addDays(start, 6)).find(row => foodKey(row) === foodKey(item));
+    const from = stock.recordedOn > start ? stock.recordedOn : start;
+    const until = stock.useBy && stock.useBy < addDays(start, 6) ? stock.useBy : addDays(start, 6);
+    const eligible = from <= until ? range(from, until).find(row => foodKey(row) === foodKey(item)) : null;
     const available = Math.max(0, inUnit(stock, item.unit) - (prior ? inUnit(prior, item.unit) : 0));
     const used = Math.min(available, eligible ? inUnit(eligible, item.unit) : 0, item.amount);
     return { ...item, amount: Math.max(0, Math.round((item.amount - used) * 100) / 100), fromPantry: Math.round(used * 100) / 100 };
@@ -484,8 +515,57 @@ function isDietCompatible(memberDiet, recipeDiet) {
   return rank[recipeDiet] <= rank[memberDiet];
 }
 
-function suggestions(db, start = null, maxMinutes = null, memberIds = null) {
-  // ponytail: exact ingredient-name overlap; add pantry quantities only if users need finer scoring.
+function availablePantry(db, end) {
+  const reservations = new Map();
+  return pantryStocks(db).filter(item => !item.ambiguous && item.recordedOn <= end).map(item => {
+    const until = item.useBy && item.useBy < end ? item.useBy : end;
+    const rangeKey = `${item.recordedOn}/${until}`;
+    if (!reservations.has(rangeKey)) reservations.set(rangeKey, item.recordedOn <= until ? shoppingList(db, item.recordedOn, until) : []);
+    const reserved = reservations.get(rangeKey).find(row => foodKey(row) === foodKey(item));
+    return { ...item, amount: Math.max(0, item.amount - (reserved ? inUnit(reserved, item.unit) : 0)) };
+  });
+}
+
+function previewMenu(db, input) {
+  if (!input || !isDateKey(input.start) || new Date(`${input.start}T12:00:00Z`).getUTCDay() !== 1 || !Number.isInteger(input.maxMinutes) || input.maxMinutes < 1 || input.maxMinutes > 1440 || !Array.isArray(input.memberIds) || !Array.isArray(input.slots) || !input.slots.length || input.slots.length > 14) throw new Error('Critères du menu invalides.');
+  const home = household(db);
+  if (new Set(input.memberIds).size !== input.memberIds.length || input.memberIds.some(id => !Number.isInteger(id) || !home.members.some(member => member.id === id))) throw new Error('Participants inconnus.');
+  const members = home.members.filter(member => input.memberIds.includes(member.id));
+  const people = members.length || input.people;
+  if ((home.members.length && !members.length) || !Number.isInteger(people) || people < 1 || people > 100) throw new Error('Choisis au moins une personne.');
+  const existing = meals(db, input.start), seen = new Set();
+  const slots = input.slots.map(item => {
+    if (!item || !Number.isInteger(item.day) || item.day < 0 || item.day > 6 || !['midi', 'soir'].includes(item.slot)) throw new Error('Créneau invalide.');
+    const key = `${item.day}/${item.slot}`;
+    if (seen.has(key) || existing.some(meal => meal.date === addDays(input.start, item.day) && meal.slot === item.slot)) throw new Error('Créneau déjà occupé ou répété. Recharge le planning.');
+    seen.add(key); return item;
+  }).sort((a, b) => a.day - b.day || a.slot.localeCompare(b.slot));
+  const candidates = recipes(db).filter(recipe => recipe.minutes <= input.maxMinutes && members.every(member => isDietCompatible(member.diet, recipe.diet))).map(recipe => ({ ...recipe, ...recipeTaste(recipe.ingredients, members, home.avoidedIngredients), needs: groupIngredients(recipe.ingredients.map(item => ({ ...item, amount: item.amount * people / recipe.servings }))) }));
+  if (!candidates.length) throw new Error('Aucune recette adaptée aux régimes et au temps choisi.');
+  const stocks = availablePantry(db, addDays(input.start, 6));
+  const ingredients = new Set(shoppingList(db, input.start).map(item => foodName(item.name))), used = new Map();
+  existing.forEach(meal => [meal.recipeId, ...(meal.dishes || []).map(dish => dish.recipeId)].filter(Boolean).forEach(id => used.set(id, (used.get(id) || 0) + 1)));
+  // ponytail: greedy chronological choice, not a global menu optimization.
+  return slots.map(slot => {
+    const date = addDays(input.start, slot.day);
+    const stockFor = item => stocks.find(stock => foodKey(stock) === foodKey(item) && stock.recordedOn <= date && (!stock.useBy || stock.useBy >= date));
+    const ranked = candidates.map(recipe => {
+      const covered = recipe.needs.filter(item => { const stock = stockFor(item); return stock && inUnit(stock, item.unit) + 1e-8 >= item.amount; });
+      return { recipe, covered, soon: covered.filter(item => { const stock = stockFor(item); return stock.useBy && stock.useBy <= addDays(date, 3); }).length, reused: recipe.needs.filter(item => ingredients.has(foodName(item.name))).length };
+    }).sort((a, b) => ((used.get(a.recipe.id) || 0) * 2 + tasteRank(a.recipe)) - ((used.get(b.recipe.id) || 0) * 2 + tasteRank(b.recipe)) || tasteRank(a.recipe) - tasteRank(b.recipe) || b.soon - a.soon || b.covered.length - a.covered.length || b.reused - a.reused || a.recipe.title.localeCompare(b.recipe.title, 'fr'));
+    const { recipe, covered } = ranked[0];
+    used.set(recipe.id, (used.get(recipe.id) || 0) + 1);
+    recipe.needs.forEach(item => {
+      ingredients.add(foodName(item.name));
+      const stock = stockFor(item);
+      if (stock) stock.amount = Math.max(0, stock.amount - inUnit(item, stock.unit));
+    });
+    return { day: slot.day, slot: slot.slot, recipeId: recipe.id, pantryIngredients: covered.map(item => item.name) };
+  });
+}
+
+function suggestions(db, start = null, maxMinutes = null, memberIds = null, targetDate = start || dateKey(new Date())) {
+  // Stock is an estimate: reserve existing meals through the suggested week before ranking.
   const home = household(db);
   const members = memberIds === null ? home.members : home.members.filter(member => memberIds.includes(member.id));
   if (memberIds !== null && (!Array.isArray(memberIds) || memberIds.some(id => !home.members.some(member => member.id === id)))) throw new Error('Participants inconnus');
@@ -505,11 +585,12 @@ function suggestions(db, start = null, maxMinutes = null, memberIds = null) {
     memberDiets.every(diet => isDietCompatible(diet, recipe.diet))
   );
   const ingredientQuery = db.prepare(`
-    SELECT ingredients.name, recipe_ingredients.preparation FROM recipe_ingredients
+    SELECT ingredients.name, ingredients.unit, recipe_ingredients.amount, recipe_ingredients.preparation FROM recipe_ingredients
     JOIN ingredients ON ingredients.id = recipe_ingredients.ingredient_id
     WHERE recipe_ingredients.recipe_id = ? ORDER BY ingredients.name
   `);
   const plannedIngredients = new Set(start ? shoppingList(db, start).map(item => item.name) : []);
+  const stocks = availablePantry(db, start ? addDays(start, 6) : targetDate).filter(item => item.recordedOn <= targetDate && (!item.useBy || item.useBy >= targetDate));
   const plannedRecipeIds = new Set(start ? db.prepare(`
     SELECT recipe_id AS id FROM meals WHERE date BETWEEN ? AND ? AND recipe_id IS NOT NULL
     UNION SELECT meal_dishes.recipe_id AS id FROM meal_dishes JOIN meals ON meals.id = meal_dishes.meal_id WHERE meals.date BETWEEN ? AND ?
@@ -517,13 +598,18 @@ function suggestions(db, start = null, maxMinutes = null, memberIds = null) {
   const ranked = candidates.map(recipe => ({ ...recipe, ...recipeTaste(ingredientQuery.all(recipe.id), members, home.avoidedIngredients) })).map(recipe => ({
     ...recipe,
     tags: recipe.tags.split(',').filter(Boolean),
-    reusedIngredients: ingredientQuery.all(recipe.id).map(item => item.name).filter(name => plannedIngredients.has(name)),
+    reusedIngredients: [...new Set(ingredientQuery.all(recipe.id).map(item => foodName(item.name)).filter(name => plannedIngredients.has(name)))],
+    pantryIngredients: [...new Set(groupIngredients(ingredientQuery.all(recipe.id)).filter(item => {
+      const stock = stocks.find(row => foodKey(row) === foodKey(item));
+      return stock && inUnit(stock, item.unit) >= item.amount * (members.length || recipe.servings) / recipe.servings;
+    }).map(item => item.name))],
     alreadyPlanned: plannedRecipeIds.has(recipe.id)
-  })).sort((left, right) =>
+  })).map(recipe => ({ ...recipe, useSoonIngredients: [...new Set(groupIngredients(ingredientQuery.all(recipe.id)).filter(item => stocks.some(stock => foodKey(stock) === foodKey(item) && stock.useBy && stock.useBy <= addDays(targetDate, 3) && inUnit(stock, item.unit) >= item.amount * (members.length || recipe.servings) / recipe.servings)).map(item => item.name))] })).sort((left, right) =>
     tasteRank(left) - tasteRank(right) ||
     Number(left.alreadyPlanned) - Number(right.alreadyPlanned) ||
+    right.useSoonIngredients.length - left.useSoonIngredients.length ||
+    right.pantryIngredients.length - left.pantryIngredients.length ||
     right.reusedIngredients.length - left.reusedIngredients.length ||
-    Number(left.alreadyPlanned) - Number(right.alreadyPlanned) ||
     Number(Boolean(left.lastEaten)) - Number(Boolean(right.lastEaten)) ||
     String(left.lastEaten || '').localeCompare(String(right.lastEaten || '')) ||
     left.title.localeCompare(right.title, 'fr')
@@ -618,6 +704,26 @@ function upsertMeal(db, meal, transactional = true) {
   }
 }
 
+function copyMealSet(db, source, sourceStart, targetStart) {
+  if (!Array.isArray(source) || !source.length) throw new Error('Cette semaine ne contient aucun repas.');
+  if (source.some(meal => meal.leftoverOf && !source.some(parent => parent.id === meal.leftoverOf))) throw new Error('Cette semaine contient des restes préparés une autre semaine. Copie ces repas séparément depuis leur préparation.');
+  const offset = Math.round((new Date(`${targetStart}T12:00:00Z`) - new Date(`${sourceStart}T12:00:00Z`)) / DAY_MS);
+  const copied = source.map(meal => validateMeal({ ...meal, date: addDays(meal.date, offset) }, db));
+  db.exec('BEGIN');
+  try {
+    for (const meal of copied) if (db.prepare('SELECT 1 FROM meals WHERE date=? AND slot=?').get(meal.date, meal.slot)) throw new Error('Un créneau de destination est déjà occupé. Aucun repas n’a été ajouté.');
+    const ids = new Map();
+    copied.forEach((meal, index) => {
+      upsertMeal(db, meal, false);
+      const id = db.prepare('SELECT id FROM meals WHERE date=? AND slot=?').get(meal.date, meal.slot).id;
+      ids.set(source[index].id, id);
+      if (source[index].leftoverOf) db.prepare('UPDATE meals SET leftover_of=? WHERE id=?').run(ids.get(source[index].leftoverOf), id);
+    });
+    db.exec('COMMIT');
+  } catch (error) { db.exec('ROLLBACK'); throw error; }
+  return copied.length;
+}
+
 function sendJson(response, status, value) {
   const body = Buffer.from(JSON.stringify(value));
   response.writeHead(status, {
@@ -658,12 +764,52 @@ async function readJson(request, maxSize = 32_768) {
 
 function createHandler(db, overpassUrl, communesUrl) {
   let importingUrl = false;
+  let backingUp = false;
+  const restoration = createRestore(db);
+  let restoring = false, activeRequests = 0;
   return async (request, response) => {
+    if (restoring) return sendJson(response, 503, { error: 'Restauration en cours. Réessaie dans un instant.' });
+    activeRequests++;
     const url = new URL(request.url, 'http://localhost');
     try {
-      if (request.method === 'GET' && url.pathname === '/tastes.js') {
+      if (request.method === 'POST' && ['/api/restore/preview', '/api/restore/apply'].includes(url.pathname)) {
+        if (request.headers['x-manger-restore'] !== '1') return sendJson(response, 403, { error: 'Utilise la restauration dans Mon foyer.' });
+        if (activeRequests !== 1) return sendJson(response, 409, { error: 'Une opération est en cours. Réessaie dans un instant.' });
+        restoring = true;
+        try {
+          const result = url.pathname.endsWith('/preview') ? await restoration.preview(request) : await restoration.apply((await readJson(request))?.token);
+          return sendJson(response, 200, result);
+        } finally { restoring = false; }
+      }
+      if (request.method === 'GET' && url.pathname === '/api/health') {
+        db.prepare('SELECT 1').get();
+        return sendJson(response, 200, { status: 'ok', version: require('./package.json').version });
+      }
+      if (request.method === 'GET' && url.pathname === '/api/backup') {
+        if (request.headers['x-manger-backup'] !== '1') return sendJson(response, 403, { error: 'Utilise le bouton Sauvegarde dans Mon foyer.' });
+        if (backingUp) return sendJson(response, 409, { error: 'Une sauvegarde est déjà en cours. Réessaie dans un instant.' });
+        backingUp = true;
+        let folder;
+        try {
+          folder = await mkdtemp(join(tmpdir(), 'manger-backup-'));
+          const filename = join(folder, 'manger.db');
+          await backup(db, filename);
+          const info = await stat(filename);
+          response.writeHead(200, { 'Content-Type': 'application/vnd.sqlite3', 'Content-Length': info.size, 'Content-Disposition': `attachment; filename="manger-${dateKey(new Date())}.db"`, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
+          await pipeline(createReadStream(filename), response);
+        } catch {
+          if (!response.headersSent && !response.destroyed) sendJson(response, 503, { error: 'Sauvegarde indisponible. Réessaie dans un instant.' });
+          else response.destroy();
+        } finally {
+          try { if (folder) await rm(folder, { recursive: true, force: true }); }
+          catch { console.error('Impossible de nettoyer un fichier temporaire de sauvegarde.'); }
+          finally { backingUp = false; }
+        }
+        return;
+      }
+      if (request.method === 'GET' && ['/tastes.js', '/food-names.js'].includes(url.pathname)) {
         response.writeHead(200, { 'Content-Type': 'text/javascript; charset=utf-8', 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-cache' });
-        return response.end(readFileSync(join(__dirname, 'public', 'tastes.js')));
+        return response.end(readFileSync(join(__dirname, 'public', url.pathname.slice(1))));
       }
       if (request.method === 'GET' && url.pathname === '/') {
         response.writeHead(200, {
@@ -677,6 +823,11 @@ function createHandler(db, overpassUrl, communesUrl) {
         return;
       }
 
+      if (request.method === 'GET' && url.pathname === '/api/shopping') {
+        const start = url.searchParams.get('start');
+        if (!isDateKey(start)) return sendJson(response, 400, { error: 'Début de semaine invalide' });
+        return sendJson(response, 200, shoppingState(db, start));
+      }
       if (request.method === 'GET' && url.pathname === '/api/week') {
         const start = url.searchParams.get('start');
         if (!isDateKey(start)) return sendJson(response, 400, { error: 'Début de semaine invalide' });
@@ -686,10 +837,17 @@ function createHandler(db, overpassUrl, communesUrl) {
       if (request.method === 'POST' && url.pathname === '/api/pantry') {
         const input = await readJson(request);
         if (!input || typeof input.name !== 'string' || !input.name.trim() || input.name.length > 80 || typeof input.unit !== 'string' || !input.unit.trim() || input.unit.length > 24 || typeof input.amount !== 'number' || !Number.isFinite(input.amount) || input.amount <= 0 || input.amount > 1000000) throw new Error('Indique un aliment, une unité et une quantité positive.');
+        if (input.useBy != null && (typeof input.useBy !== 'string' || !isDateKey(input.useBy))) throw new Error('Date du placard invalide.');
         const item = { name: foodName(input.name), unit: input.unit.trim(), amount: input.amount };
         const key = foodKey(item);
+        const existing = db.prepare('SELECT id, name, unit, use_by AS useBy FROM pantry').all().filter(row => foodKey(row) === key);
+        if (existing.length > 1) throw new Error('Plusieurs stocks correspondent à cet aliment. Retire les doublons du placard puis saisis la quantité totale actuelle.');
+        if (existing.length === 1) {
+          db.prepare('UPDATE pantry SET food_key=?, name=?, unit=?, amount=?, recorded_on=?, use_by=? WHERE id=?').run(key, item.name, item.unit, item.amount, dateKey(new Date()), input.useBy === undefined ? existing[0].useBy : input.useBy, existing[0].id);
+          return sendJson(response, 200, pantry(db));
+        }
         if (!db.prepare('SELECT 1 FROM pantry WHERE food_key = ?').get(key) && db.prepare('SELECT COUNT(*) AS n FROM pantry').get().n >= 500) throw new Error('Le placard peut contenir 500 aliments maximum.');
-        db.prepare('INSERT INTO pantry (food_key, name, unit, amount, recorded_on) VALUES (?, ?, ?, ?, ?) ON CONFLICT(food_key) DO UPDATE SET name=excluded.name, unit=excluded.unit, amount=excluded.amount, recorded_on=excluded.recorded_on').run(key, item.name, item.unit, item.amount, dateKey(new Date()));
+        db.prepare('INSERT INTO pantry (food_key, name, unit, amount, recorded_on, use_by) VALUES (?, ?, ?, ?, ?, ?)').run(key, item.name, item.unit, item.amount, dateKey(new Date()), input.useBy ?? null);
         return sendJson(response, 200, pantry(db));
       }
       const pantryMatch = url.pathname.match(/^\/api\/pantry\/(\d+)$/);
@@ -746,9 +904,55 @@ function createHandler(db, overpassUrl, communesUrl) {
         const maxMinutesValue = url.searchParams.get('maxMinutes');
         const maxMinutes = maxMinutesValue == null ? null : Number(maxMinutesValue);
         if (start != null && !isDateKey(start)) throw new Error('Début de semaine invalide');
+        const targetDate = url.searchParams.get('date') || start || dateKey(new Date());
+        if (!isDateKey(targetDate) || (start && (targetDate < start || targetDate > addDays(start, 6)))) throw new Error('Date de suggestion invalide');
         if (maxMinutes != null && (!Number.isInteger(maxMinutes) || maxMinutes < 1 || maxMinutes > 1440)) throw new Error('Temps disponible invalide');
         const memberIds = url.searchParams.has('members') ? url.searchParams.get('members').split(',').filter(Boolean).map(Number) : null;
-        return sendJson(response, 200, suggestions(db, start, maxMinutes, memberIds));
+        return sendJson(response, 200, suggestions(db, start, maxMinutes, memberIds, targetDate));
+      }
+
+      if (request.method === 'POST' && url.pathname === '/api/week/preview') {
+        return sendJson(response, 200, previewMenu(db, await readJson(request)));
+      }
+
+      if (request.method === 'GET' && url.pathname === '/api/week-templates') {
+        return sendJson(response, 200, db.prepare('SELECT id, name, created_at AS createdAt, json_array_length(meals_json) AS mealCount FROM week_templates ORDER BY name COLLATE NOCASE').all());
+      }
+      if (request.method === 'POST' && url.pathname === '/api/week-templates') {
+        const input = await readJson(request), name = typeof input?.name === 'string' ? input.name.trim() : '';
+        if (!name || name.length > 60 || !isDateKey(input.start) || new Date(`${input.start}T12:00:00Z`).getUTCDay() !== 1) throw new Error('Nom ou semaine type invalide.');
+        const source = meals(db, input.start);
+        if (!source.length) throw new Error('Cette semaine ne contient aucun repas.');
+        if (source.some(meal => meal.leftoverOf && !source.some(parent => parent.id === meal.leftoverOf))) throw new Error('Cette semaine contient des restes préparés une autre semaine.');
+        if (db.prepare('SELECT COUNT(*) AS n FROM week_templates').get().n >= 30) throw new Error('Tu peux conserver 30 semaines types maximum.');
+        try {
+          const result = db.prepare('INSERT INTO week_templates (name, source_start, meals_json, created_at) VALUES (?, ?, ?, ?)').run(name, input.start, JSON.stringify(source), new Date().toISOString());
+          return sendJson(response, 201, { id: Number(result.lastInsertRowid), name, mealCount: source.length });
+        } catch (error) {
+          if (error.code === 'ERR_SQLITE_ERROR' && /UNIQUE/.test(error.message)) throw new Error('Une semaine type porte déjà ce nom.');
+          throw error;
+        }
+      }
+      const templateApply = url.pathname.match(/^\/api\/week-templates\/(\d+)\/apply$/);
+      if (request.method === 'POST' && templateApply) {
+        const input = await readJson(request), targetStart = input?.targetStart;
+        if (!isDateKey(targetStart) || new Date(`${targetStart}T12:00:00Z`).getUTCDay() !== 1) throw new Error('Semaine de destination invalide.');
+        const template = db.prepare('SELECT source_start AS sourceStart, meals_json AS mealsJson FROM week_templates WHERE id=?').get(Number(templateApply[1]));
+        if (!template) throw new Error('Semaine type inconnue.');
+        return sendJson(response, 200, { added: copyMealSet(db, JSON.parse(template.mealsJson), template.sourceStart, targetStart) });
+      }
+      const templateDelete = url.pathname.match(/^\/api\/week-templates\/(\d+)$/);
+      if (request.method === 'DELETE' && templateDelete) {
+        if (!db.prepare('DELETE FROM week_templates WHERE id=?').run(Number(templateDelete[1])).changes) throw new Error('Semaine type inconnue.');
+        return sendJson(response, 200, { ok: true });
+      }
+
+      if (request.method === 'POST' && url.pathname === '/api/week/copy') {
+        const input = await readJson(request);
+        if (!input || !isDateKey(input.sourceStart) || !isDateKey(input.targetStart) || input.sourceStart === input.targetStart || [input.sourceStart, input.targetStart].some(date => new Date(`${date}T12:00:00Z`).getUTCDay() !== 1)) throw new Error('Choisis deux semaines différentes, commençant un lundi.');
+        const source = meals(db, input.sourceStart);
+        if (input.sourceSnapshot !== JSON.stringify(source)) throw new Error('La semaine source a changé. Recharge son aperçu.');
+        return sendJson(response, 200, { added: copyMealSet(db, source, input.sourceStart, input.targetStart) });
       }
 
       if (request.method === 'POST' && url.pathname === '/api/week/plan') {
@@ -970,14 +1174,32 @@ function createHandler(db, overpassUrl, communesUrl) {
       }
       if (request.method === 'POST' && url.pathname === '/api/meals/leftovers') {
         const input = await readJson(request);
-        if (!input || !Number.isSafeInteger(input.sourceId) || !isDateKey(input.date) || !['midi', 'soir'].includes(input.slot) || !Number.isInteger(input.people) || input.people < 1 || input.people > 100) throw new Error('Choisis une date, un créneau et un nombre de portions valide.');
+        if (!input || !Number.isSafeInteger(input.sourceId) || !isDateKey(input.date) || !['midi', 'soir'].includes(input.slot)) throw new Error('Choisis une date et un créneau valides.');
         const source = db.prepare('SELECT * FROM meals WHERE id = ?').get(input.sourceId);
-        if (!source || source.location !== 'home' || !source.recipe_id || source.leftover_of || db.prepare('SELECT 1 FROM meal_dishes WHERE meal_id = ? UNION SELECT 1 FROM meal_assignments WHERE meal_id = ?').get(input.sourceId, input.sourceId)) throw new Error('Les restes se prévoient depuis une recette commune sans variantes individuelles.');
+        const sourceDishes = source ? db.prepare('SELECT member_id AS memberId, recipe_id AS recipeId, protein_id AS proteinId FROM meal_dishes WHERE meal_id = ?').all(source.id) : [];
+        if (!source || source.location !== 'home' || source.leftover_of || db.prepare('SELECT 1 FROM meal_assignments WHERE meal_id = ?').get(input.sourceId) || (!source.recipe_id && !sourceDishes.length)) throw new Error('Ce repas ne permet pas de prévoir des restes.');
         if (input.date < source.date || (input.date === source.date && (source.slot === 'soir' || input.slot === 'midi'))) throw new Error('Choisis un repas après celui où tu cuisines.');
         if (db.prepare('SELECT 1 FROM meals WHERE date = ? AND slot = ?').get(input.date, input.slot)) throw new Error('Ce créneau est déjà occupé.');
         const extra = db.prepare('SELECT COALESCE(SUM(people), 0) AS n FROM meals WHERE leftover_of = ?').get(source.id).n;
-        if (source.people + extra + input.people > 100) throw new Error('Limite de 100 portions cuisinées par repas.');
-        db.prepare('INSERT INTO meals (date, slot, location, occasion, people, recipe_id, title, leftover_of) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run(input.date, input.slot, 'home', 'regular', input.people, source.recipe_id, source.title, source.id);
+        let dishes = [], people = input.people;
+        if (sourceDishes.length) {
+          if (!Array.isArray(input.dishes) || !input.dishes.length || input.dishes.length > sourceDishes.length) throw new Error('Choisis au moins une assiette à conserver.');
+          const seen = new Set();
+          dishes = input.dishes.map(dish => {
+            const original = sourceDishes.find(item => item.memberId === dish?.memberId);
+            if (!original || seen.has(dish.memberId) || !Number.isInteger(dish.portions) || dish.portions < 1 || dish.portions > 20) throw new Error('Assiettes de restes invalides.');
+            seen.add(dish.memberId); return { ...original, portions: dish.portions };
+          });
+          people = dishes.reduce((sum, dish) => sum + dish.portions, 0);
+        } else if (!Number.isInteger(people) || people < 1 || people > 100) throw new Error('Choisis un nombre de portions valide.');
+        if (source.people + extra + people > 100) throw new Error('Limite de 100 portions cuisinées par repas.');
+        db.exec('BEGIN');
+        try {
+          const result = db.prepare('INSERT INTO meals (date, slot, location, occasion, people, recipe_id, title, leftover_of) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run(input.date, input.slot, 'home', 'regular', people, sourceDishes.length ? null : source.recipe_id, source.title, source.id);
+          const insert = db.prepare('INSERT INTO meal_dishes (meal_id, member_id, recipe_id, portions, protein_id) VALUES (?, ?, ?, ?, ?)');
+          dishes.forEach(dish => insert.run(Number(result.lastInsertRowid), dish.memberId, dish.recipeId, dish.portions, dish.proteinId));
+          db.exec('COMMIT');
+        } catch (error) { db.exec('ROLLBACK'); throw error; }
         return sendJson(response, 201, {});
       }
       if (request.method === 'POST' && url.pathname === '/api/meals') {
@@ -998,7 +1220,7 @@ function createHandler(db, overpassUrl, communesUrl) {
       sendJson(response, 404, { error: 'Introuvable' });
     } catch (error) {
       sendJson(response, 400, { error: error.message });
-    }
+    } finally { activeRequests--; }
   };
 }
 

@@ -1,0 +1,44 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const { once } = require('node:events');
+const { createApp, createDatabase } = require('./server');
+
+test('copie hebdomadaire : répartitions, protéines, restes locaux, conflits et aperçu périmé', async t => {
+  const db = createDatabase(':memory:'); const server = createApp(db);
+  server.listen(0, '127.0.0.1'); await once(server, 'listening'); t.after(() => { server.close(); db.close(); });
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const post = (path, data) => fetch(base + path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) });
+  const week = async start => (await (await fetch(`${base}/api/week?start=${start}`)).json());
+  const member = await (await post('/api/members', { name: 'Test', diet: 'omnivore' })).json();
+  const recipeId = db.prepare('SELECT id FROM recipes LIMIT 1').get().id;
+  const proteinId = db.prepare("SELECT id FROM proteins WHERE name='tofu'").get().id;
+  const sourceStart = '2026-10-05', targetStart = '2026-10-12';
+  assert.equal((await post('/api/meals', { date: sourceStart, slot: 'midi', location: 'home', occasion: 'regular', people: 1, title: 'Assiette', dishes: [{ memberId: member.id, recipeId, proteinId, portions: 1 }] })).status, 200);
+  assert.equal((await post('/api/meals', { date: sourceStart, slot: 'soir', location: 'home', occasion: 'regular', people: 2, title: 'Plat commun', recipeId })).status, 200);
+  const sourceId = db.prepare("SELECT id FROM meals WHERE date=? AND slot='soir'").get(sourceStart).id;
+  assert.equal((await post('/api/meals/leftovers', { sourceId, date: '2026-10-06', slot: 'midi', people: 1 })).status, 201);
+  assert.equal((await post('/api/meals', { date: '2026-10-07', slot: 'soir', location: 'restaurant', occasion: 'date', people: 2, title: 'Sortie' })).status, 200);
+  const original = await week(sourceStart);
+  const payload = { sourceStart, targetStart, sourceSnapshot: JSON.stringify(original.meals) };
+  assert.equal((await post('/api/week/copy', payload)).status, 200);
+  const copy = await week(targetStart);
+  assert.equal(copy.meals.length, 4);
+  assert.equal(copy.meals[0].dishes[0].proteinId, proteinId);
+  assert.equal(copy.meals[2].leftoverOf, copy.meals[1].id);
+  assert.notEqual(copy.meals[2].leftoverOf, sourceId);
+  assert.deepEqual(copy.shopping, original.shopping);
+  assert.equal((await post('/api/week/copy', payload)).status, 400);
+  assert.equal((await week(targetStart)).meals.length, 4);
+  assert.equal((await post('/api/week/copy', { ...payload, targetStart: '2026-10-13' })).status, 400);
+  // A late conflict rolls back all slots, not just the conflicting one.
+  await post('/api/meals', { date: '2026-10-21', slot: 'soir', location: 'outside', occasion: 'regular', people: 1, title: 'Occupé' });
+  assert.equal((await post('/api/week/copy', { ...payload, targetStart: '2026-10-19' })).status, 400);
+  assert.equal((await week('2026-10-19')).meals.length, 1);
+  db.prepare("UPDATE meals SET title='Modifié' WHERE id=?").run(sourceId);
+  assert.equal((await post('/api/week/copy', { ...payload, targetStart: '2026-10-26' })).status, 400);
+  assert.equal((await week('2026-10-26')).meals.length, 0);
+  await post('/api/meals/leftovers', { sourceId, date: '2026-10-15', slot: 'midi', people: 1 });
+  const external = await week(targetStart);
+  assert.equal((await post('/api/week/copy', { sourceStart: targetStart, targetStart: '2026-10-26', sourceSnapshot: JSON.stringify(external.meals) })).status, 400);
+  assert.equal((await week('2026-10-26')).meals.length, 0);
+});

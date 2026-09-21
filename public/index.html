@@ -80,6 +80,12 @@
     .text-action { min-height: 44px; display: inline-flex; align-items: center; gap: 5px; border: 0; color: var(--accent); background: transparent; font-weight: 650; cursor: pointer; }
     .schedule { display: grid; gap: 20px; margin: 22px 0 28px; }
     .week-actions { display: grid; gap: 10px; }
+    .week-actions > details > button + button { margin-top: 10px; }
+    #template-list { margin-top: 24px; }
+    #template-list .assignment { grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 18px 0; }
+    #template-list .assignment > span { min-width: 0; overflow-wrap: anywhere; }
+    #template-list .subtle-tools { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    #template-list .text-action { justify-content: center; min-width: 0; padding: 10px 8px; border: 1px solid var(--line); border-radius: 12px; overflow-wrap: anywhere; }
     #export-calendar { background: transparent; border-color: transparent; color: var(--muted); font-weight: 500; }
     .slot-label, .group-title { display: block; margin: 0 4px 9px; color: var(--muted); font-size: 12px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; }
     .meal { width: 100%; min-height: 88px; display: grid; grid-template-columns: 44px minmax(0, 1fr) 16px; align-items: center; gap: 14px; padding: 18px; text-align: left; border: 1px solid var(--line); border-radius: 22px; background: var(--surface); box-shadow: var(--shadow); cursor: pointer; }
@@ -221,15 +227,20 @@
     .compact-form .primary { min-height: 46px; }
     .field select { width: 100%; min-width: 0; min-height: 48px; padding: 12px 14px; color: var(--text); border: 1px solid var(--line); border-radius: 14px; background: var(--field); }
     .assignment { display: grid; grid-template-columns: minmax(0, 1fr) 130px; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--line); }
-    .assignment label { display: flex; align-items: center; gap: 8px; }
+    .assignment label { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .assignment label > span { min-width: 0; overflow-wrap: anywhere; }
     .assignment strong, .assignment small { display: block; }
-    .assignment input { width: 20px; height: 20px; accent-color: var(--accent); }
+    .assignment input[type="checkbox"] { width: 20px; height: 20px; flex-shrink: 0; accent-color: var(--accent); }
+    [data-leftover-dish] > .field { display: grid; gap: 6px; }
     .assignment select { width: 100%; min-width: 0; min-height: 44px; padding: 8px 10px; color: var(--text); border: 1px solid var(--line); border-radius: 11px; background: var(--raised); }
     .dish-assignment { grid-template-columns: minmax(0, 1fr); gap: 14px; padding: 18px 0 22px; }
     .dish-assignment > label:first-child { min-height: 44px; }
     .dish-assignment > .field { display: grid; align-items: stretch; gap: 6px; min-width: 0; }
     .dish-assignment .field select { min-height: 50px; padding: 12px 14px; border-radius: 14px; background: var(--field); font-size: 16px; }
     .error { color: var(--error); }
+    .connection-error { margin: 18px 0; padding: 18px; border: 1px solid color-mix(in srgb, var(--error) 45%, var(--line)); border-radius: 18px; color: var(--error); background: color-mix(in srgb, var(--error) 8%, transparent); }
+    .connection-error p { margin: 6px 0 0; }
+    .connection-error code { padding: 2px 5px; border-radius: 5px; color: var(--text); background: var(--field); }
     @media (prefers-reduced-motion: no-preference) {
       button { transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease; }
       dialog[open] { animation: sheet-appear .18s ease-out; }
@@ -284,7 +295,11 @@
         <div class="week-actions">
           <button id="suggest" class="primary" type="button">✦ Proposer le prochain repas</button>
           <button id="compose-week" class="secondary" type="button">✦ Compose ma semaine</button>
-          <button id="export-calendar" class="secondary" type="button">⇩ Exporter la semaine</button>
+          <details class="quiet-details"><summary>Plus d’options</summary>
+            <button id="week-templates" class="secondary" type="button">Mes semaines types</button>
+            <button id="copy-week" class="secondary" type="button">Réutiliser une autre semaine</button>
+            <button id="export-calendar" class="secondary" type="button">⇩ Exporter la semaine</button>
+          </details>
         </div>
       </section>
 
@@ -424,6 +439,8 @@
           <label class="field"><span>Aliment</span><input id="pantry-name" list="pantry-foods" maxlength="80" required autocomplete="off"></label><datalist id="pantry-foods"></datalist>
           <div class="form-grid"><label class="field"><span>Quantité en stock aujourd’hui</span><input id="pantry-amount" type="number" min="0.01" max="1000000" step="0.01" required></label><label class="field"><span>Unité</span><input id="pantry-unit" list="pantry-units" maxlength="24" value="g" required></label></div>
           <datalist id="pantry-units"><option value="g"><option value="kg"><option value="ml"><option value="cl"><option value="l"><option value="pièce"></datalist>
+          <label class="field"><span>À utiliser d’ici le (facultatif)</span><input id="pantry-use-by" type="date" aria-describedby="pantry-date-help"></label>
+          <small id="pantry-date-help" class="muted">Repère personnel, pas une garantie de conservation. Vérifie les indications de l’emballage. Après cette date, ce stock n’est plus déduit des repas suivants.</small>
           <button class="primary" type="submit">Enregistrer le stock</button>
           <div class="subtle-tools"><button id="new-pantry-item" class="text-action" type="button" hidden>Ajouter un autre aliment</button><button id="delete-pantry-item" class="text-action" type="button" hidden>Retirer du placard</button></div>
         </form>
@@ -494,13 +511,89 @@
         </form>
         <p id="household-error" class="error" role="alert" hidden></p>
       </section>
+      <details class="quiet-details">
+        <summary>Sauvegarde du foyer</summary>
+        <p class="muted">Télécharge toutes tes données, photos comprises, dans un fichier SQLite. Garde une copie sur un autre appareil : elle contient les données personnelles du foyer et n’est pas chiffrée.</p>
+        <button id="download-backup" class="secondary" type="button">Télécharger la sauvegarde complète</button>
+        <p id="backup-status" class="muted" role="status"></p>
+        <details class="quiet-details"><summary>Restaurer une sauvegarde</summary>
+          <form id="restore-form" class="recipe-form">
+            <label class="field"><span>Sauvegarde du foyer · 32 Mo maximum</span><input id="restore-file" type="file" accept=".db,.sqlite,.sqlite3" required></label>
+            <button class="secondary" type="submit">Vérifier le fichier</button>
+          </form>
+          <div id="restore-preview" role="status"></div>
+        </details>
+      </details>
     </dialog>
   </div>
 
   <article id="recipe-print"></article>
   <script src="/tastes.js"></script>
+  <script src="/food-names.js"></script>
   <script>
+    let restoreToken = null;
+    const restoreOutput = document.getElementById('restore-preview');
+    document.getElementById('restore-file').addEventListener('change', () => { restoreToken = null; restoreOutput.replaceChildren(); });
+    document.getElementById('restore-form').addEventListener('submit', async event => {
+      event.preventDefault();
+      const fileInput = document.getElementById('restore-file'), file = fileInput.files[0], button = event.submitter;
+      restoreToken = null; restoreOutput.textContent = 'Vérification…'; button.disabled = true; fileInput.disabled = true;
+      try {
+        if (!file || file.size > 32 * 1024 * 1024) throw new Error('Choisis un fichier de 32 Mo maximum.');
+        const response = await fetch('/api/restore/preview', { method: 'POST', headers: { 'X-Manger-Restore': '1', 'Content-Type': 'application/octet-stream' }, body: file });
+        const result = await response.json(); if (!response.ok) throw new Error(result.error);
+        restoreToken = result.token;
+        restoreOutput.innerHTML = `<p>${result.recipes} recettes · ${result.members} personnes · ${result.meals} repas.</p><p class="muted">La restauration remplacera le foyer actuel. Une copie de récupération sera conservée sur le serveur. Les autres appareils devront recharger la page.</p><button id="confirm-restore" class="secondary" type="button">Restaurer ce foyer…</button>`;
+        document.getElementById('confirm-restore').addEventListener('click', async event => {
+          if (!restoreToken || !confirm('Remplacer toutes les données actuelles par cette sauvegarde ?')) return;
+          event.currentTarget.disabled = true; button.disabled = true; fileInput.disabled = true;
+          try {
+            const response = await fetch('/api/restore/apply', { method: 'POST', headers: { 'X-Manger-Restore': '1', 'Content-Type': 'application/json' }, body: JSON.stringify({ token: restoreToken }) });
+            const result = await response.json(); if (!response.ok) throw new Error(result.error);
+            location.reload();
+          } catch (error) { restoreToken = null; restoreOutput.textContent = error.message; button.disabled = false; fileInput.disabled = false; }
+        });
+      } catch (error) { restoreOutput.textContent = error.message; }
+      finally { button.disabled = false; fileInput.disabled = false; }
+    });
+    document.getElementById('download-backup').addEventListener('click', async event => {
+      const button = event.currentTarget, status = document.getElementById('backup-status');
+      if (button.disabled) return;
+      button.disabled = true; status.textContent = 'Préparation de la sauvegarde…';
+      try {
+        const response = await fetch('/api/backup', { headers: { 'X-Manger-Backup': '1' }, cache: 'no-store' });
+        if (!response.ok) throw new Error((await response.json()).error || 'Sauvegarde indisponible.');
+        const url = URL.createObjectURL(await response.blob());
+        const link = document.createElement('a'); link.href = url; link.download = `manger-${new Date().toISOString().slice(0, 10)}.db`;
+        document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 60000);
+        status.textContent = 'Téléchargement lancé. Vérifie que le fichier est bien enregistré.';
+      } catch (error) { status.textContent = error.message || 'Téléchargement interrompu. Réessaie.'; }
+      finally { button.disabled = false; }
+    });
     const state = { weekStart: monday(new Date()), selected: 0, recipes: [], meals: [], shopping: [], members: [], proteins: [], slot: 'soir', pendingRecipe: null, pendingEvent: null };
+    // Suggestions stay local and never replace a value without an explicit click.
+    let foodHint;
+    document.addEventListener('input', event => {
+      const input = event.target;
+      if (!input.matches('.ingredient-name, #pantry-name, #manual-name')) return;
+      foodHint?.remove();
+      if (input.readOnly) return;
+      const known = [...state.recipes.flatMap(recipe => recipe.ingredients.map(item => item.name)), ...pantryItems.map(item => item.name)];
+      const suggestions = MangerFoodNames.foodSuggestions(input.value, known);
+      if (!suggestions.length) return;
+      foodHint = document.createElement('div'); foodHint.className = 'subtle-tools'; foodHint.style.gridColumn = '1 / -1';
+      const message = document.createElement('span'); message.className = 'muted'; message.role = 'status'; message.textContent = 'Tu voulais dire…'; foodHint.append(message);
+      for (const name of suggestions) {
+        const button = document.createElement('button'); button.type = 'button'; button.className = 'text-action'; button.textContent = name;
+        button.setAttribute('aria-label', `Utiliser ${name}`);
+        button.addEventListener('click', () => { input.value = name; foodHint?.remove(); input.dispatchEvent(new Event('change', { bubbles: true })); input.focus(); });
+        foodHint.append(button);
+      }
+      const row = input.closest('.ingredient-row');
+      if (row) row.append(foodHint); else input.closest('.field').after(foodHint);
+    });
+    document.addEventListener('close', () => foodHint?.remove(), true);
+    document.addEventListener('reset', () => foodHint?.remove(), true);
     const dayNames = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
     const fullDayNames = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
     const monthNames = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
@@ -554,11 +647,15 @@
       if (!response.ok) throw new Error(result.error || 'Impossible d’enregistrer. Réessaie.');
       return result;
     }
+    let shoppingSyncVersion = 0, pendingLoads = 0;
     async function load() {
-      const [weekResponse, householdResponse] = await Promise.all([fetch(`/api/week?start=${key(state.weekStart)}`), fetch('/api/household')]);
-      if (!weekResponse.ok || !householdResponse.ok) throw new Error('Impossible de charger la semaine');
-      Object.assign(state, await weekResponse.json(), await householdResponse.json());
-      render();
+      shoppingSyncVersion++; pendingLoads++;
+      try {
+        const [weekResponse, householdResponse] = await Promise.all([fetch(`/api/week?start=${key(state.weekStart)}`), fetch('/api/household')]);
+        if (!weekResponse.ok || !householdResponse.ok) throw new Error('Impossible de charger la semaine');
+        Object.assign(state, await weekResponse.json(), await householdResponse.json());
+        render();
+      } finally { pendingLoads--; shoppingSyncVersion++; }
     }
 
     function render() {
@@ -599,7 +696,7 @@
     function renderRecipes() {
       const query = document.getElementById('recipe-search').value.trim().toLocaleLowerCase('fr');
       const category = document.getElementById('recipe-category').value;
-      const filtered = state.recipes.filter(recipe => (category === '__favorites' ? recipe.favorite : !category || recipe.tags.includes(category)) && `${recipe.title} ${recipe.ingredients.map(item => item.name).join(' ')}`.toLocaleLowerCase('fr').includes(query));
+      const filtered = MangerFoodNames.searchRecipes(state.recipes.filter(recipe => category === '__favorites' ? recipe.favorite : !category || recipe.tags.includes(category)), query);
       document.getElementById('recipe-count').textContent = `${filtered.length} sur ${state.recipes.length} recettes`;
       document.getElementById('recipes').innerHTML = filtered.map(recipe => `<button class="recipe" type="button" data-edit-recipe="${recipe.id}">${recipe.hasPhoto ? `<img class="recipe-cover" src="/api/recipes/${recipe.id}/photo" alt="" loading="lazy">` : '<span class="recipe-cover" aria-hidden="true">♨</span>'}<span class="recipe-copy"><strong>${escapeHtml(recipe.title)}</strong><small>${recipe.minutes} min · ${dietLabels[recipe.diet]}</small></span><span aria-hidden="true">›</span></button>`).join('') || '<div class="empty-state">Aucune recette ne correspond à ces filtres.</div>';
     }
@@ -614,7 +711,7 @@
     }
     async function loadPantry() {
       pantryItems = await api('/api/pantry');
-      document.getElementById('pantry-list').innerHTML = pantryItems.length ? pantryItems.map(item => `<button class="stock-row" type="button" data-pantry="${item.id}"><span><strong>${escapeHtml(item.name)}</strong><small>Mis à jour le ${escapeHtml(item.recordedOn.split('-').reverse().join('/'))}</small></span><span>${formatAmount(item.remaining)} ${escapeHtml(item.unit)} <span aria-hidden="true">›</span></span></button>`).join('') : '<p class="empty-state">Ce que tu as déjà, en moins sur les courses.</p>';
+      document.getElementById('pantry-list').innerHTML = pantryItems.length ? pantryItems.map(item => `<button class="stock-row" type="button" data-pantry="${item.id}"><span><strong>${escapeHtml(item.name)}</strong><small>${item.ambiguous ? 'Doublon à vérifier · non déduit des courses' : item.useBy ? `${item.dateStatus === 'past' ? 'Date dépassée · à vérifier' : item.dateStatus === 'soon' ? 'À utiliser bientôt' : 'À utiliser d’ici le'} · ${escapeHtml(item.useBy.split('-').reverse().join('/'))}` : `Mis à jour le ${escapeHtml(item.recordedOn.split('-').reverse().join('/'))}`}</small></span><span>${formatAmount(item.ambiguous ? item.amount : item.remaining)} ${escapeHtml(item.unit)} <span aria-hidden="true">›</span></span></button>`).join('') : '<p class="empty-state">Ce que tu as déjà, en moins sur les courses.</p>';
     }
     function pantryError(error) { const node = document.getElementById('pantry-error'); node.textContent = error.message; node.hidden = false; }
     document.getElementById('open-pantry').addEventListener('click', async () => {
@@ -632,6 +729,7 @@
       document.getElementById('pantry-name').value = item.name; document.getElementById('pantry-name').readOnly = true;
       document.getElementById('pantry-unit').value = item.unit; document.getElementById('pantry-unit').readOnly = true;
       document.getElementById('pantry-amount').value = item.remaining || '';
+      document.getElementById('pantry-use-by').value = item.useBy || '';
       document.getElementById('delete-pantry-item').hidden = false; document.getElementById('new-pantry-item').hidden = false;
       document.querySelector('#pantry-editor summary').textContent = 'Mettre à jour le stock'; document.getElementById('pantry-editor').open = true;
       document.getElementById('pantry-amount').focus();
@@ -641,7 +739,7 @@
       event.preventDefault(); const button = event.submitter; if (button.disabled) return; button.disabled = true;
       document.getElementById('pantry-error').hidden = true;
       try {
-        await api('/api/pantry', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: document.getElementById('pantry-name').value, unit: document.getElementById('pantry-unit').value, amount: Number(document.getElementById('pantry-amount').value) }) });
+        await api('/api/pantry', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: document.getElementById('pantry-name').value, unit: document.getElementById('pantry-unit').value, amount: Number(document.getElementById('pantry-amount').value), useBy: document.getElementById('pantry-use-by').value || null }) });
         await loadPantry(); await load(); resetPantryEditor(); document.getElementById('pantry-editor').open = false;
       } catch (error) { pantryError(error); } finally { button.disabled = false; }
     });
@@ -651,6 +749,40 @@
       catch (error) { pantryError(error); } finally { button.disabled = false; }
     });
     let organizingShopping = false;
+    let shoppingSyncRunning = false, shoppingInteraction = false;
+    function canSyncShopping() {
+      return !document.hidden && !document.getElementById('shopping-panel').hidden && !organizingShopping && !shoppingInteraction && !pendingLoads && !document.querySelector('dialog[open], #shopping-panel :disabled');
+    }
+    async function syncShopping() {
+      if (shoppingSyncRunning || !canSyncShopping()) return;
+      shoppingSyncRunning = true;
+      const version = shoppingSyncVersion, start = key(state.weekStart);
+      try {
+        const response = await fetch(`/api/shopping?start=${start}`, { cache: 'no-store', signal: AbortSignal.timeout(10000) });
+        if (!response.ok) throw new Error('Courses indisponibles');
+        const shopping = await response.json();
+        if (version !== shoppingSyncVersion || start !== key(state.weekStart) || !canSyncShopping() || JSON.stringify(shopping) === JSON.stringify(state.shopping)) return;
+        const focused = document.activeElement;
+        const index = focused?.dataset.shopping;
+        const selected = index === undefined ? null : state.shopping[Number(index)];
+        const removeId = focused?.dataset.removeShopping;
+        state.shopping = shopping; renderShopping();
+        if (selected) {
+          const next = shopping.findIndex(item => selected.manualId ? item.manualId === selected.manualId : !item.manualId && item.name === selected.name && item.unit === selected.unit);
+          if (next >= 0) document.querySelector(`[data-shopping="${next}"]`)?.focus({ preventScroll: true });
+          else document.getElementById('organize-shopping').focus({ preventScroll: true });
+        }
+        if (removeId) (document.querySelector(`[data-remove-shopping="${removeId}"]`) || document.getElementById('organize-shopping')).focus({ preventScroll: true });
+      } catch { /* Keep the current list on a temporary network failure; retry on the next tick. */ }
+      finally { shoppingSyncRunning = false; }
+    }
+    for (const type of ['pointerdown', 'keydown', 'change', 'submit']) document.getElementById('shopping-panel').addEventListener(type, () => { shoppingSyncVersion++; }, true);
+    for (const type of ['pointerdown', 'keydown']) document.getElementById('shopping').addEventListener(type, () => { shoppingInteraction = true; }, true);
+    for (const type of ['pointerup', 'pointercancel', 'keyup', 'blur']) window.addEventListener(type, () => { if (shoppingInteraction) { shoppingInteraction = false; shoppingSyncVersion++; } });
+    setInterval(syncShopping, 15000);
+    document.addEventListener('visibilitychange', syncShopping);
+    window.addEventListener('focus', syncShopping);
+    window.addEventListener('online', syncShopping);
     function renderShopping() {
       const summary = document.getElementById('shopping-summary');
       const container = document.getElementById('shopping');
@@ -729,7 +861,7 @@
       document.getElementById('dialog-subtitle').textContent = `${fullDayNames[state.selected]} · ${slot === 'midi' ? 'Midi' : 'Soir'}`;
       const recipeIds = [...new Set([meal.recipeId, ...(meal.dishes || []).map(dish => dish.recipeId)].filter(Boolean))];
       const view = recipeIds.map(id => choice('◉', recipeIds.length === 1 ? 'Voir la recette' : `Voir ${state.recipes.find(recipe => recipe.id === id)?.title || 'la recette'}`, meal.dishes?.length ? meal.dishes.filter(dish => dish.recipeId === id).map(dish => `${state.members.find(member => member.id === dish.memberId)?.name || 'Personne'} · ${dish.portions} portion(s)`).join(', ') : 'Ingrédients et étapes de réalisation', { viewplanned: id })).join('');
-      const leftovers = meal.recipeId && !meal.leftoverOf && !meal.hasVariants && !meal.dishes?.length ? choice('♻', 'Prévoir des restes', 'Cuisiner plus pour un prochain repas', { leftovers: meal.id }) : '';
+      const leftovers = !meal.leftoverOf && !meal.hasVariants && (meal.recipeId || meal.dishes?.length) ? choice('♻', 'Prévoir des restes', meal.dishes?.length ? 'Choisir les assiettes à conserver' : 'Cuisiner plus pour un prochain repas', { leftovers: meal.id }) : '';
       document.getElementById('dialog-error').hidden = true;
       const plates = state.members.length && meal.location === 'home' && meal.occasion === 'regular' && !meal.leftoverOf && !meal.extraPortions ? choice('⋈', meal.dishes?.length ? 'Modifier les plats de chacun' : 'Un plat par personne', 'Choisir une recette pour chaque personne', { editplates: 'true' }) : '';
       document.getElementById('choices').innerHTML = view + plates + leftovers + choice('↔', 'Déplacer ou copier', 'Choisir un autre jour', { placement: meal.id }) + choice('↻', 'Changer ce repas', 'Choisir une autre recette ou occasion', { change: 'true' }) + choice('×', 'Retirer du planning', meal.title, { remove: 'true' });
@@ -753,11 +885,13 @@
       const next = new Date(`${source.date}T12:00:00`); next.setDate(next.getDate() + 1);
       document.getElementById('dialog-title').textContent = 'Prévoir des restes';
       document.getElementById('dialog-subtitle').textContent = source.title;
-      document.getElementById('choices').innerHTML = `<form id="leftovers-form" class="recipe-form"><label class="field"><span>Pour quel jour ?</span><input id="leftovers-date" type="date" min="${source.date}" value="${key(next)}" required></label><div class="form-grid"><label class="field"><span>Repas</span><select id="leftovers-slot"><option value="midi">Midi</option><option value="soir">Soir</option></select></label><label class="field"><span>Portions à garder</span><input id="leftovers-people" type="number" min="1" max="${100 - source.people - source.extraPortions}" value="2" required></label></div><p class="muted">Ces portions seront ajoutées aux quantités du repas où tu cuisines. Choisis une date adaptée à la conservation du plat.</p><button type="submit" class="primary">Planifier les restes</button></form>`;
+      const dishes = source.dishes?.length ? `<div><span class="muted">Quelles assiettes conserver ?</span>${source.dishes.map(dish => { const member = state.members.find(item => item.id === dish.memberId), recipe = state.recipes.find(item => item.id === dish.recipeId); return `<div class="assignment" data-leftover-dish="${dish.memberId}"><label><input type="checkbox" checked><span><strong>${escapeHtml(member?.name || 'Personne')}</strong><small class="muted">${escapeHtml(recipe?.title || 'Recette')}</small></span></label><label class="field"><span>Portions</span><input data-leftover-portions type="number" min="1" max="20" value="1" required></label></div>`; }).join('')}</div>` : `<label class="field"><span>Portions à garder</span><input id="leftovers-people" type="number" min="1" max="${100 - source.people - source.extraPortions}" value="2" required></label>`;
+      document.getElementById('choices').innerHTML = `<form id="leftovers-form" class="recipe-form"><label class="field"><span>Pour quel jour ?</span><input id="leftovers-date" type="date" min="${source.date}" value="${key(next)}" required></label><div class="form-grid"><label class="field"><span>Repas</span><select id="leftovers-slot"><option value="midi">Midi</option><option value="soir">Soir</option></select></label>${source.dishes?.length ? '' : dishes}</div>${source.dishes?.length ? dishes : ''}<p class="muted">Ces portions seront ajoutées aux quantités du repas où tu cuisines. Choisis une date adaptée à la conservation de chaque plat.</p><button type="submit" class="primary">Planifier les restes</button></form>`;
       document.getElementById('leftovers-form').addEventListener('submit', async event => {
         event.preventDefault(); const button = event.submitter; if (button.disabled) return; button.disabled = true;
         try {
-          await api('/api/meals/leftovers', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ sourceId, date: document.getElementById('leftovers-date').value, slot: document.getElementById('leftovers-slot').value, people: Number(document.getElementById('leftovers-people').value) }) });
+          const dishes = [...document.querySelectorAll('[data-leftover-dish]')].filter(row => row.querySelector('input[type="checkbox"]').checked).map(row => ({ memberId: Number(row.dataset.leftoverDish), portions: Number(row.querySelector('[data-leftover-portions]').value) }));
+          await api('/api/meals/leftovers', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ sourceId, date: document.getElementById('leftovers-date').value, slot: document.getElementById('leftovers-slot').value, people: Number(document.getElementById('leftovers-people')?.value), dishes }) });
           dialog.close(); await load();
         } catch (error) { const node = document.getElementById('dialog-error'); node.textContent = error.message; node.hidden = false; } finally { button.disabled = false; }
       });
@@ -781,11 +915,11 @@
       if (state.members.length && !memberIds.length) { target.innerHTML = '<p class="muted">Choisis au moins une personne pour recevoir des idées.</p>'; return; }
       target.textContent = 'Recherche de plats…';
       try {
-      const suggestions = await api(`/api/suggestions?start=${key(state.weekStart)}&members=${memberIds.join(',')}${maxMinutes ? `&maxMinutes=${maxMinutes}` : ''}`);
+      const suggestions = await api(`/api/suggestions?start=${key(state.weekStart)}&date=${key(dateAt(state.selected))}&members=${memberIds.join(',')}${maxMinutes ? `&maxMinutes=${maxMinutes}` : ''}`);
       if (version !== suggestionRequest || !target.isConnected || !dialog.open) return;
       const recipes = suggestions.map(recipe => {
-        const detail = `${recipe.minutes} min · ${tasteNotice(recipe) || (recipe.reusedIngredients.length ? `Anti-gaspi · réutilise ${recipe.reusedIngredients.join(', ')}` : recipe.lastEaten ? 'à refaire' : 'nouveau cette semaine')}`;
-        return choice(recipe.reusedIngredients.length ? '♻' : '✦', recipe.title, detail, { recipe: recipe.id, suggest: 'true' });
+        const detail = `${recipe.minutes} min · ${tasteNotice(recipe) || (recipe.useSoonIngredients?.length ? `À utiliser bientôt · ${recipe.useSoonIngredients.join(', ')}` : recipe.pantryIngredients?.length ? `Placard estimé · ${recipe.pantryIngredients.join(', ')}` : recipe.reusedIngredients.length ? `Anti-gaspi · réutilise ${recipe.reusedIngredients.join(', ')}` : recipe.lastEaten ? 'à refaire' : 'nouveau cette semaine')}`;
+        return choice(recipe.pantryIngredients?.length || recipe.reusedIngredients.length ? '♻' : '✦', recipe.title, detail, { recipe: recipe.id, suggest: 'true' });
       }).join('') || '<div class="empty-state">Aucune recette ne correspond à ce temps et aux régimes des participants.</div>';
       target.innerHTML = recipes + (memberIds.length > 1 ? choice('⋈', 'Deux recettes coordonnées', 'Une recette compatible par personne', { duo: 'true' }) : '');
       } catch (error) {
@@ -839,6 +973,75 @@
       renderPickerRecipes();
     }
 
+    document.getElementById('copy-week').addEventListener('click', () => {
+      const targetStart = key(state.weekStart), previous = new Date(state.weekStart); previous.setDate(previous.getDate() - 7);
+      document.getElementById('dialog-title').textContent = 'Réutiliser une semaine';
+      document.getElementById('dialog-subtitle').textContent = `Vers la semaine du ${targetStart.split('-').reverse().join('/')}`;
+      document.getElementById('dialog-error').hidden = true;
+      document.getElementById('choices').innerHTML = `<form id="copy-week-form" class="recipe-form"><label class="field"><span>Une date dans la semaine à reprendre</span><input id="copy-week-date" type="date" value="${key(previous)}" required></label><button class="secondary" type="submit">Voir les repas à copier</button><div id="copy-week-preview" aria-live="polite"></div></form>`;
+      let request = 0;
+      const dateInput = document.getElementById('copy-week-date'), output = document.getElementById('copy-week-preview');
+      dateInput.addEventListener('input', () => { request++; output.replaceChildren(); });
+      document.getElementById('copy-week-form').addEventListener('submit', async event => {
+        event.preventDefault(); const version = ++request; output.textContent = 'Chargement…';
+        const sourceStart = key(monday(new Date(`${dateInput.value}T12:00:00`)));
+        try {
+          if (sourceStart === targetStart) throw new Error('Choisis une autre semaine.');
+          const source = (await api(`/api/week?start=${sourceStart}`)).meals;
+          if (version !== request || !output.isConnected) return;
+          if (!source.length) throw new Error('Cette semaine ne contient aucun repas.');
+          output.innerHTML = `<p class="muted">${source.length} repas. Même répartition par personne et mêmes suppléments. Aucun créneau occupé ne sera remplacé. Les restes prévus hors de cette semaine ne sont pas copiés.</p><ul>${source.map(meal => `<li>${escapeHtml(meal.date.split('-').reverse().join('/'))} · ${meal.slot === 'midi' ? 'Midi' : 'Soir'} : ${escapeHtml(meal.title)}${meal.leftoverOf ? ' · restes' : ''}</li>`).join('')}</ul><button id="confirm-copy-week" class="primary" type="button">Copier ces ${source.length} repas</button>`;
+          document.getElementById('confirm-copy-week').addEventListener('click', async event => {
+            const button = event.currentTarget; if (button.disabled) return; button.disabled = true; dateInput.disabled = true;
+            try {
+              await api('/api/week/copy', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ sourceStart, targetStart, sourceSnapshot: JSON.stringify(source) }) });
+              dialog.close(); await load();
+            } catch (error) { const message = document.getElementById('dialog-error'); message.textContent = error.message; message.hidden = false; }
+            finally { button.disabled = false; dateInput.disabled = false; }
+          });
+        } catch (error) { if (version === request && output.isConnected) output.textContent = error.message; }
+      });
+      dialog.showModal();
+    });
+
+    document.getElementById('week-templates').addEventListener('click', async () => {
+      const targetStart = key(state.weekStart);
+      document.getElementById('dialog-title').textContent = 'Mes semaines types';
+      document.getElementById('dialog-subtitle').textContent = `Semaine affichée · ${targetStart.split('-').reverse().join('/')}`;
+      document.getElementById('dialog-error').hidden = true;
+      document.getElementById('choices').innerHTML = `<form id="template-form" class="recipe-form"><label class="field"><span>Nom de cette semaine type</span><input id="template-name" maxlength="60" placeholder="Semaine rapide, vacances…" required></label><button class="secondary" type="submit">Enregistrer la semaine affichée</button></form><div id="template-list" aria-live="polite">Chargement…</div>`;
+      const list = document.getElementById('template-list');
+      const showError = error => { const node = document.getElementById('dialog-error'); node.textContent = error.message; node.hidden = false; };
+      const refresh = async () => {
+        const templates = await api('/api/week-templates');
+        list.innerHTML = templates.length ? templates.map(template => `<div class="assignment"><span><strong>${escapeHtml(template.name)}</strong><small class="muted">${template.mealCount} repas</small></span><div class="subtle-tools"><button class="text-action" type="button" data-template-use="${template.id}">Ajouter ici</button><button class="text-action" type="button" data-template-delete="${template.id}" data-template-name="${escapeHtml(template.name)}">Supprimer</button></div></div>`).join('') : '<p class="empty-state">Enregistre une semaine réussie pour la réutiliser plus tard.</p>';
+      };
+      document.getElementById('template-form').addEventListener('submit', async event => {
+        event.preventDefault(); const button = event.submitter; button.disabled = true; document.getElementById('dialog-error').hidden = true;
+        try {
+          await api('/api/week-templates', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: document.getElementById('template-name').value, start: targetStart }) });
+          document.getElementById('template-name').value = ''; await refresh();
+        } catch (error) { showError(error); }
+        finally { button.disabled = false; }
+      });
+      list.addEventListener('click', async event => {
+        const use = event.target.closest('[data-template-use]'), remove = event.target.closest('[data-template-delete]');
+        if (!use && !remove) return;
+        event.target.disabled = true; document.getElementById('dialog-error').hidden = true;
+        try {
+          if (use) {
+            await api(`/api/week-templates/${use.dataset.templateUse}/apply`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ targetStart }) });
+            dialog.close(); await load();
+          } else if (confirm(`Supprimer la semaine type « ${remove.dataset.templateName} » ?`)) {
+            await api(`/api/week-templates/${remove.dataset.templateDelete}`, { method: 'DELETE' }); await refresh();
+          }
+        } catch (error) { showError(error); }
+        finally { if (event.target.isConnected) event.target.disabled = false; }
+      });
+      dialog.showModal();
+      try { await refresh(); } catch (error) { showError(error); list.textContent = ''; }
+    });
+
     function openWeekComposer() {
       document.getElementById('dialog-title').textContent = 'Compose ma semaine';
       document.getElementById('dialog-subtitle').textContent = 'Un aperçu avant de remplir les créneaux libres.';
@@ -850,7 +1053,8 @@
       if (!dialog.open) dialog.showModal();
     }
 
-    function previewWeek() {
+    let menuPreviewVersion = 0;
+    async function previewWeek() {
       const rank = { vegan: 0, vegetarian: 1, pescetarian: 2, omnivore: 3 };
       const members = [...document.querySelectorAll('[data-compose-member]:checked')].map(input => state.members.find(member => member.id === Number(input.dataset.composeMember)));
       const people = members.length || Number(document.getElementById('compose-people')?.value);
@@ -859,18 +1063,23 @@
       const candidates = state.recipes.filter(recipe => recipe.minutes <= Number(document.getElementById('compose-minutes').value) && members.every(member => rank[recipe.diet] <= rank[member.diet])).map(recipe => ({ ...recipe, ...recipeTaste(recipe.ingredients, members, state.avoidedIngredients || []) })).sort((a, b) => tasteRank(a) - tasteRank(b));
       if (!Number.isInteger(people) || people < 1 || people > 100 || !slots.length) { output.innerHTML = '<p class="error">Choisissez au moins une personne et un créneau libre.</p>'; return; }
       if (!candidates.length) { output.innerHTML = '<p class="error">Aucune recette adaptée aux régimes et au temps choisi. Augmentez le temps disponible ou ajoutez une recette.</p>'; return; }
-      // ponytail: exact name overlap, not a guarantee of savings or ingredient quantities.
-      const ingredients = new Set(state.shopping.map(item => item.name));
-      const used = new Map();
-      state.meals.forEach(meal => [meal.recipeId, ...(meal.dishes || []).map(dish => dish.recipeId)].filter(Boolean).forEach(id => used.set(id, (used.get(id) || 0) + 1)));
-      const choices = slots.map(input => {
-        // Taste is a preference, not a ban; an unknown dish can beat a repeated dish.
-        const ranked = [...candidates].sort((a, b) => ((used.get(a.id) || 0) * 2 + tasteRank(a)) - ((used.get(b.id) || 0) * 2 + tasteRank(b)) || tasteRank(a) - tasteRank(b) || b.ingredients.filter(item => ingredients.has(item.name)).length - a.ingredients.filter(item => ingredients.has(item.name)).length || a.title.localeCompare(b.title, 'fr'));
-        const recipe = ranked[0];
-        used.set(recipe.id, (used.get(recipe.id) || 0) + 1);
-        recipe.ingredients.forEach(item => ingredients.add(item.name));
-        return { day: Number(input.dataset.composeDay), slot: input.value, recipeId: recipe.id };
-      });
+      const version = ++menuPreviewVersion, button = document.getElementById('preview-week');
+      button.disabled = true;
+      output.textContent = 'Composition du menu…';
+      let choices;
+      try {
+        const response = await fetch('/api/week/preview', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ start: key(state.weekStart), maxMinutes: Number(document.getElementById('compose-minutes').value), memberIds: members.map(member => member.id), people, slots: slots.map(input => ({ day: Number(input.dataset.composeDay), slot: input.value })) }) });
+        const result = await response.json();
+        if (version !== menuPreviewVersion || !output.isConnected || !dialog.open) return;
+        if (!response.ok) throw new Error(result.error || 'Menu indisponible. Réessaie.');
+        if (result.some(item => !candidates.some(recipe => recipe.id === item.recipeId))) throw new Error('Le catalogue a changé. Ferme cette fenêtre et recharge la page.');
+        choices = result;
+      } catch (error) {
+        if (version === menuPreviewVersion && output.isConnected && dialog.open) {
+          output.textContent = error.message === 'Failed to fetch' ? 'Connexion indisponible. Réessaie quand le serveur est accessible.' : error.message;
+        }
+        return;
+      } finally { button.disabled = false; }
       output.innerHTML = `<h2 style="margin:20px 0 10px">Ton menu · ${choices.length} repas</h2><p class="muted">Change un plat avant de valider. Une base commune, sans supplément de protéine ; les quantités s’adaptent aux participants. Des répétitions restent possibles si le catalogue est limité.</p>${choices.map((item, index) => `<label class="field" style="margin-bottom:14px"><span>${fullDayNames[item.day]} · ${item.slot === 'midi' ? 'Midi' : 'Soir'}</span><select data-compose-recipe="${index}">${candidates.map(recipe => `<option value="${recipe.id}"${recipe.id === item.recipeId ? ' selected' : ''}>${escapeHtml(recipe.title)} · ${recipe.minutes} min</option>`).join('')}</select></label>`).join('')}<button id="confirm-week" class="primary" type="button">Ajouter ces repas au planning</button>`;
       document.getElementById('confirm-week').addEventListener('click', async event => {
         event.target.disabled = true;
@@ -890,6 +1099,7 @@
         }
       });
       document.getElementById('confirm-week').insertAdjacentHTML('beforebegin', '<div id="compose-taste-notices" aria-live="polite"></div>');
+      document.getElementById('compose-taste-notices').insertAdjacentHTML('beforebegin', '<p class="muted">Le choix initial tient compte du placard estimé et des dates indiquées, après réservation des repas déjà prévus. Changer un plat ne recompose pas les autres ; les courses seront recalculées à la validation.</p>');
       const updateNotices = () => {
         const selected = [...new Set([...output.querySelectorAll('[data-compose-recipe]')].map(select => Number(select.value)))].map(id => candidates.find(recipe => recipe.id === id)).filter(recipe => tasteRank(recipe));
         document.getElementById('compose-taste-notices').innerHTML = selected.map(recipe => `<p class="muted">${escapeHtml(recipe.title)} — ${escapeHtml(tasteNotice(recipe))}.</p>`).join('');
@@ -907,7 +1117,7 @@
       const category = document.getElementById('picker-category').value;
       const container = document.getElementById('picker-recipes');
       if (!document.querySelector('#picker-category option[value="__favorites"]')) document.getElementById('picker-category').insertAdjacentHTML('beforeend', '<option value="__favorites">★ Mes favoris</option>');
-      container.innerHTML = state.recipes.filter(recipe => (category === '__favorites' ? recipe.favorite : !category || recipe.tags.includes(category)) && `${recipe.title} ${recipe.ingredients.map(item => item.name).join(' ')}`.toLocaleLowerCase('fr').includes(query)).map(recipe => choice(recipe.favorite ? '★' : '♨', recipe.title, `${recipe.minutes} min · ${dietLabels[recipe.diet]}`, { [container.dataset.mode]: recipe.id })).join('') || '<p class="empty-state">Aucun plat trouvé. Changez le mot recherché ou l’univers.</p>';
+      container.innerHTML = MangerFoodNames.searchRecipes(state.recipes.filter(recipe => category === '__favorites' ? recipe.favorite : !category || recipe.tags.includes(category)), query).map(recipe => choice(recipe.favorite ? '★' : '♨', recipe.title, `${recipe.minutes} min · ${dietLabels[recipe.diet]}`, { [container.dataset.mode]: recipe.id })).join('') || '<p class="empty-state">Aucun plat trouvé. Changez le mot recherché ou l’univers.</p>';
     }
 
     function openEventSetup(occasion, mode = 'standard', recipe = null) {
@@ -1448,6 +1658,7 @@
     });
     document.getElementById('choices').addEventListener('change', event => {
       if (event.target.matches('#compose-minutes, #compose-people, [data-compose-member], [data-compose-day]')) {
+        menuPreviewVersion++;
         document.getElementById('compose-preview').replaceChildren();
         document.getElementById('dialog-error').hidden = true;
       }
@@ -1456,7 +1667,7 @@
       if (event.target.id === 'picker-category') renderPickerRecipes();
     });
     document.getElementById('choices').addEventListener('input', event => {
-      if (event.target.id === 'compose-people') document.getElementById('compose-preview').replaceChildren();
+      if (event.target.id === 'compose-people') { menuPreviewVersion++; document.getElementById('compose-preview').replaceChildren(); }
       if (event.target.id === 'picker-search') renderPickerRecipes();
     });
     document.getElementById('previous-week').addEventListener('click', async () => { state.weekStart.setDate(state.weekStart.getDate() - 7); state.selected = 0; await load(); });
@@ -1467,6 +1678,8 @@
       document.querySelectorAll('nav button').forEach(item => { item.classList.toggle('active', item === button); item.toggleAttribute('aria-current', item === button); });
       document.querySelectorAll('.panel').forEach(panel => { panel.hidden = true; });
       document.getElementById(`${button.dataset.panel}-panel`).hidden = false;
+      shoppingSyncVersion++;
+      if (button.dataset.panel === 'shopping') syncShopping();
     });
     document.getElementById('organize-shopping').addEventListener('click', event => {
       organizingShopping = !organizingShopping;
@@ -1474,6 +1687,7 @@
       event.target.setAttribute('aria-pressed', String(organizingShopping));
       document.getElementById('organize-shopping-help').hidden = !organizingShopping;
       renderShopping();
+      if (!organizingShopping) syncShopping();
     });
     document.getElementById('share').addEventListener('click', async () => {
       const text = state.shopping.filter(item => !item.checked).map(item => `- ${shoppingText(item)}`).join('\n');
@@ -1830,7 +2044,10 @@
     }
 
     load().catch(error => {
-      document.getElementById('schedule').innerHTML = `<p class="error" role="alert">${escapeHtml(error.message)}</p>`;
+      const message = location.protocol === 'file:'
+        ? 'Manger doit être ouvert depuis son serveur (http://localhost:3000), pas comme un fichier HTML direct.'
+        : (error.message || 'Impossible de joindre le serveur Manger.');
+      document.getElementById('schedule').innerHTML = `<div class="connection-error" role="alert"><strong>Connexion au serveur impossible</strong><p>${escapeHtml(message)}</p><p class="muted">Lance <code>npm start</code> ou <code>docker compose up -d</code>, puis ouvre l’adresse HTTP affichée.</p></div>`;
     });
   </script>
 </body>

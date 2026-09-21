@@ -9,6 +9,8 @@
   },
   "scripts": {
     "start": "node server.js",
-    "test": "node --test"
+    "test": "node --test",
+    "backup:check": "node backup-tools.js check",
+    "backup:restore": "node backup-tools.js restore"
   }
 }
