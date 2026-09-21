@@ -17,6 +17,7 @@ Contrainte produit : trois onglets, actions dans leur contexte, options secondai
 - Recherche de recettes tolérant accents, pluriels connus et petites fautes en l'absence de correspondance exacte.
 - Menu automatique anti-gaspi : quantités et dates du placard, réservations existantes et consommation virtuelle chronologique de l'aperçu.
 - Semaines types nommées : enregistrement, application sans écrasement et suppression indépendante du calendrier.
+- Filtre anti-gaspi automatique : basiques et épices reconnus exclus des scores et des mentions de réutilisation ; ingrédients et courses inchangés.
 
 Vérification : tests Node et parcours navigateur sur base isolée. Le rendu a été contrôlé à 320, 390 et 760 px, en clair et en sombre. L'audio et le maintien de l'écran ont été contrôlés avec des API simulées ; un essai sur téléphone reste nécessaire.
 

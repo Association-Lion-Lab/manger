@@ -220,6 +220,8 @@ En cas de géolocalisation indisponible, saisissez une ville ou un code postal f
 
 ## Composer sa semaine
 
+Le score anti-gaspi ignore automatiquement les basiques reconnus : sel, poivre, huiles, beurre, vinaigres, sucre, farine, eau, épices courantes et certains condiments. Ils ne donnent aucun bonus de stock disponible, de date proche ou de réutilisation entre recettes. Les légumes, viandes, poissons, œufs et autres ingrédients restent pris en compte, ainsi que le riz et les pâtes. Les herbes fraîches restent utiles ; les versions explicitement séchées ou en poudre sont ignorées pour ce score. Ce vocabulaire local n'est pas exhaustif : un nom inconnu reste pris en compte. Le filtre concerne seulement les propositions, jamais les quantités des recettes, les réservations du placard ou les courses ; la présence d'un basique chez vous n'est pas supposée.
+
 « Plus d’options → Réutiliser une autre semaine » permet de choisir une semaine passée ou future, de consulter ses repas puis de les copier vers la semaine affichée. « Mes semaines types » enregistre jusqu'à 30 semaines sous un nom court et les rend disponibles même après avoir modifié le planning d'origine. Les plats par personne et suppléments sont conservés.
 
 Aucun créneau occupé n'est remplacé : au moindre conflit, aucun repas n'est ajouté. Les restes sont reliés à leur nouvelle préparation uniquement si celle-ci appartient à la semaine enregistrée ; une semaine contenant des restes préparés ailleurs est refusée. Les courses sont recalculées, sans copier les articles manuels ni les cases cochées. Supprimer une semaine type ne supprime aucun repas du calendrier.

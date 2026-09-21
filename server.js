@@ -7,7 +7,7 @@ const { dirname, join } = require('node:path');
 const { DatabaseSync, backup } = require('node:sqlite');
 const { randomUUID } = require('node:crypto');
 const catalog = require('./catalog');
-const { foodName, foodKey, inUnit, groupIngredients } = require('./ingredients');
+const { foodName, foodKey, inUnit, groupIngredients, isAntiWasteIngredient } = require('./ingredients');
 const { downloadRecipePage, extractRecipeDraft } = require('./recipe-import');
 const { recipeTaste, tasteRank } = require('./public/tastes');
 const { createRestore } = require('./restore');
@@ -560,8 +560,9 @@ function previewMenu(db, input) {
     const date = addDays(input.start, slot.day);
     const stockFor = item => matchingStocks(stocks, item, date);
     const ranked = candidates.map(recipe => {
-      const covered = recipe.needs.filter(item => stockFor(item).reduce((sum, stock) => sum + inUnit(stock, item.unit), 0) + 1e-8 >= item.amount);
-      return { recipe, covered, soon: covered.filter(item => stockFor(item).some(stock => stock.amount > 0 && stock.useBy && stock.useBy <= addDays(date, 3))).length, reused: recipe.needs.filter(item => ingredients.has(foodName(item.name))).length };
+      const relevant = recipe.needs.filter(item => isAntiWasteIngredient(item.name));
+      const covered = relevant.filter(item => stockFor(item).reduce((sum, stock) => sum + inUnit(stock, item.unit), 0) + 1e-8 >= item.amount);
+      return { recipe, covered, soon: covered.filter(item => stockFor(item).some(stock => stock.amount > 0 && stock.useBy && stock.useBy <= addDays(date, 3))).length, reused: relevant.filter(item => ingredients.has(foodName(item.name))).length };
     }).sort((a, b) => ((used.get(a.recipe.id) || 0) * 2 + tasteRank(a.recipe)) - ((used.get(b.recipe.id) || 0) * 2 + tasteRank(b.recipe)) || tasteRank(a.recipe) - tasteRank(b.recipe) || b.soon - a.soon || b.covered.length - a.covered.length || b.reused - a.reused || a.recipe.title.localeCompare(b.recipe.title, 'fr'));
     const { recipe, covered } = slot.recipeId === undefined ? ranked[0] : ranked.find(item => item.recipe.id === slot.recipeId);
     used.set(recipe.id, (used.get(recipe.id) || 0) + 1);
@@ -607,9 +608,9 @@ function suggestions(db, start = null, maxMinutes = null, memberIds = null, targ
   const ranked = candidates.map(recipe => ({ ...recipe, ...recipeTaste(ingredientQuery.all(recipe.id), members, home.avoidedIngredients) })).map(recipe => ({
     ...recipe,
     tags: recipe.tags.split(',').filter(Boolean),
-    reusedIngredients: [...new Set(ingredientQuery.all(recipe.id).map(item => foodName(item.name)).filter(name => plannedIngredients.has(name)))],
+    reusedIngredients: [...new Set(ingredientQuery.all(recipe.id).map(item => foodName(item.name)).filter(name => isAntiWasteIngredient(name) && plannedIngredients.has(name)))],
     pantryIngredients: [...new Set(groupIngredients(ingredientQuery.all(recipe.id)).filter(item => {
-      return matchingStocks(stocks, item, targetDate).reduce((sum, stock) => sum + inUnit(stock, item.unit), 0) + 1e-8 >= item.amount * (members.length || recipe.servings) / recipe.servings;
+      return isAntiWasteIngredient(item.name) && matchingStocks(stocks, item, targetDate).reduce((sum, stock) => sum + inUnit(stock, item.unit), 0) + 1e-8 >= item.amount * (members.length || recipe.servings) / recipe.servings;
     }).map(item => item.name))],
     alreadyPlanned: plannedRecipeIds.has(recipe.id)
   })).map(recipe => ({ ...recipe, useSoonIngredients: [...new Set(groupIngredients(ingredientQuery.all(recipe.id)).filter(item => recipe.pantryIngredients.includes(item.name) && matchingStocks(stocks, item, targetDate).some(stock => stock.amount > 0 && stock.useBy && stock.useBy <= addDays(targetDate, 3))).map(item => item.name))] })).sort((left, right) =>
