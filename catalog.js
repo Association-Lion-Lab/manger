@@ -2,6 +2,10 @@
 // Reviewed against the instructions below, not inferred from the presence of a cooking step.
 // Unlisted ingredients remain unknown (notably seasoning or mixed uses).
 const preparations = {
+  'Chili doux aux haricots rouges': { cooked: ['haricots rouges cuits égouttés', 'tomate concassée', 'poivron', 'oignon', 'huile d’olive', 'cumin', 'eau'] },
+  'Tacos de champignons et haricots noirs': { cooked: ['tortillas de maïs', 'champignon', 'haricots noirs cuits égouttés', 'oignon', 'huile d’olive', 'paprika'], raw: ['citron vert'] },
+  'Velouté de poireaux et pommes de terre': { cooked: ['poireau', 'pomme de terre', 'oignon', 'huile d’olive', 'eau'] },
+  'Pâtes au brocoli, citron et pois chiches': { cooked: ['pâtes sèches sans œuf', 'brocoli', 'pois chiches cuits égouttés', 'ail', 'huile d’olive'], raw: ['citron'] },
   'Lentilles et carottes du placard': { cooked: ['lentilles vertes', 'carotte', 'oignon', 'huile d’olive', 'eau'] },
   'Pâtes tomate et ail malin': { cooked: ['pâtes sèches sans œuf', 'tomate concassée', 'ail', 'huile d’olive'] },
   'Risotto champignons à deux': { cooked: ['riz arborio', 'champignon', 'oignon', 'bouillon de légumes', 'huile d’olive'] },
@@ -24,6 +28,18 @@ const recipe = (title, minutes, diet, tags, ingredients, steps) => ({
 });
 
 module.exports = [
+  recipe('Chili doux aux haricots rouges', 30, 'vegan', ['mexique', 'rat', 'express', 'batch', 'mijote'],
+    [['haricots rouges cuits égouttés', 400, 'g'], ['tomate concassée', 400, 'g'], ['poivron', 1, 'pièce'], ['oignon', 1, 'pièce'], ['huile d’olive', 1, 'c. à soupe'], ['cumin', 1, 'c. à café'], ['eau', 100, 'ml'], ['sel', 1, 'pincée']],
+    [['prep', 8, 'Rincer et égoutter les haricots déjà cuits. Éplucher et émincer l’oignon. Retirer les graines du poivron et le couper en petits dés.'], ['cook', 7, 'Faire chauffer l’huile dans une sauteuse. Faire revenir l’oignon et le poivron à feu moyen en remuant ; ajouter le cumin pendant la dernière minute.'], ['cook', 15, 'Ajouter les tomates, l’eau, les haricots et le sel. Faire mijoter à petit feu, partiellement couvert, en remuant régulièrement. Les dés de poivron doivent être tendres ; prolonger si nécessaire et ajouter un peu d’eau si la sauce accroche. Servir chaud.']]),
+  recipe('Tacos de champignons et haricots noirs', 25, 'vegan', ['mexique', 'express', 'date'],
+    [['tortillas de maïs', 6, 'pièce'], ['champignon', 250, 'g'], ['haricots noirs cuits égouttés', 250, 'g'], ['oignon', 1, 'pièce'], ['citron vert', 1, 'pièce'], ['huile d’olive', 1, 'c. à soupe'], ['paprika', 1, 'c. à café'], ['sel', 1, 'pincée']],
+    [['prep', 8, 'Nettoyer et émincer les champignons. Éplucher et émincer l’oignon. Rincer et égoutter les haricots déjà cuits. Couper le citron vert en quartiers.'], ['cook', 12, 'Chauffer l’huile dans une poêle et attendrir l’oignon 3 minutes. Ajouter les champignons et cuire 6 minutes en remuant, jusqu’à évaporation de leur eau. Ajouter les haricots, le paprika et le sel ; réchauffer 3 minutes à feu doux.'], ['serve', 5, 'Réchauffer les tortillas dans une poêle sèche selon les indications du paquet. Répartir la garniture entre les six tortillas et servir avec les quartiers de citron à presser dessus.']]),
+  recipe('Velouté de poireaux et pommes de terre', 40, 'vegan', ['terroir', 'rat', 'comfort', 'batch'],
+    [['poireau', 2, 'pièce'], ['pomme de terre', 300, 'g'], ['oignon', 1, 'pièce'], ['huile d’olive', 1, 'c. à soupe'], ['eau', 700, 'ml'], ['sel', 2, 'pincée'], ['poivre', 1, 'pincée']],
+    [['prep', 10, 'Retirer les racines et les parties abîmées des poireaux. Les fendre, rincer soigneusement entre les feuilles et les émincer. Éplucher les pommes de terre et les couper en petits cubes. Émincer l’oignon.'], ['cook', 5, 'Faire chauffer l’huile dans une casserole. Attendrir l’oignon et les poireaux à feu moyen en remuant, sans les laisser brunir.'], ['cook', 20, 'Ajouter les pommes de terre, l’eau, le sel et le poivre. Porter à frémissement puis cuire à couvert, jusqu’à ce que les pommes de terre s’écrasent facilement à la fourchette.'], ['serve', 5, 'Couper le feu. Mixer au mixeur plongeant en maintenant sa tête immergée pour éviter les projections. Ajuster la texture avec un peu d’eau chaude et servir.']]),
+  recipe('Pâtes au brocoli, citron et pois chiches', 25, 'vegan', ['italie', 'mediterranee', 'express'],
+    [['pâtes sèches sans œuf', 180, 'g'], ['brocoli', 300, 'g'], ['pois chiches cuits égouttés', 200, 'g'], ['ail', 2, 'gousse'], ['citron', 1, 'pièce'], ['huile d’olive', 1, 'c. à soupe'], ['sel', 2, 'pincée']],
+    [['prep', 8, 'Mettre une grande casserole d’eau à chauffer. Rincer le brocoli et le couper en petits bouquets ; peler la tige tendre et la couper finement. Hacher l’ail. Rincer et égoutter les pois chiches déjà cuits.'], ['cook', 12, 'Saler l’eau et cuire les pâtes selon leur paquet. Ajouter le brocoli dans la même casserole pour les 5 dernières minutes. En parallèle, faire revenir l’ail dans l’huile une minute à feu doux puis ajouter les pois chiches et une louche d’eau de cuisson. Réchauffer doucement.'], ['serve', 5, 'Réserver une tasse d’eau de cuisson puis égoutter les pâtes et le brocoli. Mélanger avec les pois chiches et le jus d’un demi-citron. Ajouter un peu d’eau réservée pour lier ; servir avec le reste du citron en quartiers.']]),
   recipe('Lentilles et carottes du placard', 45, 'vegan', ['rat', 'mijote', 'batch', 'emporter'],
     [['lentilles vertes', 180, 'g'], ['carotte', 2, 'pièce'], ['oignon', 1, 'pièce'], ['huile d’olive', 1, 'c. à soupe'], ['eau', 700, 'ml'], ['sel', 1, 'pincée']],
     [['prep', 10, 'Rincer les lentilles. Éplucher et couper les carottes en petits dés, puis émincer l’oignon.'], ['cook', 5, 'Faire revenir l’oignon et les carottes dans l’huile à feu moyen.'], ['cook', 30, 'Ajouter les lentilles et l’eau. Laisser frémir à couvert jusqu’à ce que les lentilles soient tendres, en ajoutant un peu d’eau si nécessaire. Saler en fin de cuisson.']]),

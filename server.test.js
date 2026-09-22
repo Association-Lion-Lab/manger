@@ -93,7 +93,7 @@ test('un date à la maison conserve sa recette et ajoute les ingrédients aux co
   assert.ok(shoppingList(db, '2026-09-14').some(item => item.name === 'pois chiches' && item.amount === 400));
 });
 
-test('le catalogue importe 14 recettes complètes sans doublon ni remplacement', async t => {
+test('le catalogue importe 18 recettes complètes sans doublon ni remplacement', async t => {
   const db = createDatabase(':memory:');
   const server = createApp(db);
   server.listen(0, '127.0.0.1');
@@ -103,10 +103,10 @@ test('le catalogue importe 14 recettes complètes sans doublon ni remplacement',
   const initial = await (await fetch(`${base}/api/week?start=2026-09-14`)).json();
   const imported = await fetch(`${base}/api/catalog/import`, { method: 'POST' });
   assert.equal(imported.status, 200);
-  assert.deepEqual(await imported.json(), { added: 14 });
+  assert.deepEqual(await imported.json(), { added: 18 });
   assert.deepEqual(await (await fetch(`${base}/api/catalog/import`, { method: 'POST' })).json(), { added: 0 });
   const final = await (await fetch(`${base}/api/week?start=2026-09-14`)).json();
-  assert.equal(final.recipes.length, initial.recipes.length + 14);
+  assert.equal(final.recipes.length, initial.recipes.length + 18);
   for (const recipe of initial.recipes) assert.deepEqual(final.recipes.find(item => item.id === recipe.id), recipe);
   const recipes = final.recipes.filter(recipe => !initial.recipes.some(item => item.id === recipe.id));
   for (const recipe of recipes) {
@@ -115,7 +115,7 @@ test('le catalogue importe 14 recettes complètes sans doublon ni remplacement',
     assert.ok(recipe.minutes > 0);
   }
   for (const tag of ['rat', 'date', 'mijote', 'japon', 'chine', 'terroir', 'chef']) assert.ok(recipes.some(recipe => recipe.tags.includes(tag)));
-  for (const tag of ['express', 'batch', 'emporter', 'comfort', 'mediterranee', 'italie', 'inde']) assert.ok(recipes.some(recipe => recipe.tags.includes(tag)));
+  for (const tag of ['express', 'batch', 'emporter', 'comfort', 'mediterranee', 'italie', 'inde', 'mexique']) assert.ok(recipes.some(recipe => recipe.tags.includes(tag)));
   assert.ok(recipes.filter(recipe => recipe.tags.includes('express')).every(recipe => recipe.minutes <= 30));
 });
 
