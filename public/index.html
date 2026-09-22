@@ -6,6 +6,9 @@
   <meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#101012" media="(prefers-color-scheme: dark)">
   <title>Manger! — On mange quoi cette semaine ?</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icon-180.png">
   <style>
     :root {
       color-scheme: light dark;
@@ -325,6 +328,12 @@
         </form></details>
         <p class="muted">Les ajouts restent dans cette semaine. Le rangement automatique des ingrédients est indicatif.</p>
         <p id="shopping-error" class="error" role="alert" hidden></p>
+        <details class="quiet-details"><summary>Courses hors connexion</summary>
+          <p class="muted">Garde la dernière liste consultée sur cet appareil, en lecture seule. Accessible aux personnes utilisant ce navigateur. Une nouvelle semaine consultée remplace la copie précédente.</p>
+          <button id="enable-offline" class="secondary" type="button">Garder une copie sur cet appareil</button>
+          <a href="/offline.html">Consulter la copie enregistrée</a>
+          <p id="offline-status" class="muted" role="status"></p>
+        </details>
       </section>
     </main>
 
@@ -656,6 +665,7 @@
         if (!weekResponse.ok || !householdResponse.ok) throw new Error('Impossible de charger la semaine');
         Object.assign(state, await weekResponse.json(), await householdResponse.json());
         render();
+        saveOfflineShopping();
       } finally { pendingLoads--; shoppingSyncVersion++; }
     }
 
@@ -762,7 +772,9 @@
         const response = await fetch(`/api/shopping?start=${start}`, { cache: 'no-store', signal: AbortSignal.timeout(10000) });
         if (!response.ok) throw new Error('Courses indisponibles');
         const shopping = await response.json();
-        if (version !== shoppingSyncVersion || start !== key(state.weekStart) || !canSyncShopping() || JSON.stringify(shopping) === JSON.stringify(state.shopping)) return;
+        if (version !== shoppingSyncVersion || start !== key(state.weekStart) || !canSyncShopping()) return;
+        saveOfflineShopping(shopping);
+        if (JSON.stringify(shopping) === JSON.stringify(state.shopping)) return;
         const focused = document.activeElement;
         const index = focused?.dataset.shopping;
         const selected = index === undefined ? null : state.shopping[Number(index)];
@@ -2066,6 +2078,27 @@
       document.getElementById('household-error').hidden = true;
     }
 
+    function saveOfflineShopping(items = state.shopping) {
+      try {
+        if (localStorage.getItem('manger-offline-enabled') !== 'yes') return;
+        localStorage.setItem('manger-shopping-offline-v1', JSON.stringify({ week: key(state.weekStart), savedAt: new Date().toISOString(), items: items.map(item => ({ text: shoppingText(item), checked: item.checked })) }));
+        document.getElementById('offline-status').textContent = 'Copie à jour sur cet appareil · ' + new Date().toLocaleTimeString('fr-FR');
+      } catch { document.getElementById('offline-status').textContent = 'Stockage indisponible : copie non mise à jour.'; }
+    }
+    document.getElementById('enable-offline').addEventListener('click', async event => {
+      const button = event.currentTarget; button.disabled = true;
+      try {
+        if (!isSecureContext || !('serviceWorker' in navigator)) throw new Error('HTTPS est nécessaire pour activer les courses hors connexion sur ce téléphone.');
+        await navigator.serviceWorker.register('/sw.js');
+        let timeout;
+        try { await Promise.race([navigator.serviceWorker.ready, new Promise((_, reject) => { timeout = setTimeout(() => reject(new Error('Préparation hors connexion interrompue. Vérifie ta connexion et réessaie.')), 15000); })]); }
+        finally { clearTimeout(timeout); }
+        await load();
+        localStorage.setItem('manger-offline-enabled', 'yes');
+        saveOfflineShopping();
+      } catch (error) { document.getElementById('offline-status').textContent = error.message; }
+      finally { button.disabled = false; }
+    });
     load().catch(error => {
       const message = location.protocol === 'file:'
         ? 'Manger doit être ouvert depuis son serveur (http://localhost:3000), pas comme un fichier HTML direct.'

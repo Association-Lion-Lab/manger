@@ -85,6 +85,16 @@ Le volume et le fichier `.env` sont conservés. Changer le dossier ou le nom du 
 
 ## Principes
 
+### Courses hors connexion et écran d'accueil
+
+Depuis une adresse HTTPS reconnue par le téléphone, ouvrez Courses → Courses hors connexion → « Garder une copie sur cet appareil ». L'activation est volontaire. La dernière semaine chargée est conservée avec ses quantités, les cases déjà cochées et l'heure de mise à jour ; consulter une autre semaine remplace cette copie. Les lectures réussies du serveur actualisent la copie. Elle reste consultable en lecture seule quand le serveur ou le réseau est inaccessible, même après rechargement. Les recettes, photos, profils et sauvegardes ne sont pas mis en cache. Le bouton « Effacer la copie sur cet appareil » supprime la liste locale et désactive son actualisation, sans toucher au serveur.
+
+La copie est accessible aux personnes utilisant ce navigateur ; elle peut être ancienne et le navigateur peut supprimer son stockage. Vérifiez qu'elle est disponible avant de partir. Aucune modification hors connexion n'est envoyée plus tard. Revenez à Manger une fois connecté pour modifier ou cocher les courses.
+
+Le manifeste et les icônes permettent l'ajout à l'écran d'accueil depuis le menu du navigateur compatible (sur iPhone, le menu de partage de Safari). Activez la copie depuis le mode installé si son stockage est distinct de celui du navigateur. L'installation et le stockage restent gérés par le navigateur. HTTPS est requis pour le service worker, sauf en développement sur localhost : `http://192.168.1.31:3000` et un VPN seuls ne suffisent pas. Voir [le fonctionnement des service workers](https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API/Using_Service_Workers). La mise en place HTTPS sur le serveur personnel et la validation iOS/Android réelles restent à effectuer.
+
+Le service worker ne conserve que la page de secours `/offline.html` ; les données de courses sont enregistrées séparément dans le stockage local après consentement. Les API et les écritures ne sont jamais interceptées. Lors d'une modification de la page de secours, incrémentez la version du cache dans `public/sw.js`.
+
 L'interface conserve trois onglets. Les actions secondaires des recettes sont regroupées dans « Plus d'options » ; les notes et les options de cuisine sont repliées par défaut. Les contrastes des boutons principaux sont corrigés en clair et en sombre.
 
 Une photo personnelle peut être ajoutée depuis l'éditeur, dans « Photo du plat ». JPEG, PNG ou WebP jusqu'à 10 Mo : le navigateur redimensionne à 960 pixels maximum puis convertit en JPEG avant envoi (400 000 caractères maximum pour la donnée encodée). Les photos sont conservées dans SQLite, chargées séparément et copiées avec les variantes. La suppression de la photo prend effet à l'enregistrement. Aucune photographie n'est importée automatiquement depuis un site tiers.

@@ -35,7 +35,7 @@ Vérification : tests Node et parcours navigateur sur base isolée. Le rendu a �
 - Anti-gaspi implémenté : plusieurs lots par aliment, dates et édition indépendantes, consommation prioritaire des dates proches, réservations partagées entre courses et suggestions. Recomposition du menu après remplacement manuel, sans enregistrement avant validation finale. Tests automatisés et navigateur passés ; validation de ce lot sur Ubuntu à effectuer.
 - Restes d'une base commune avec protéines différentes implémentés : sélection des personnes, portions et protéines conservées ; achats comptés au jour de préparation. Tests serveur et navigateur passés, essai utilisateur à effectuer.
 - Catalogue porté à 18 recettes, dont quatre nouvelles recettes végétales et deux dans l'univers Mexique. Poursuivre la variété et valider les recettes en cuisine (essais culinaires non effectués).
-- Permettre l'installation mobile et la consultation hors connexion.
+- Courses hors connexion implémentées en lecture seule, sur activation explicite : dernière liste, horodatage, effacement local. Manifeste et icônes d'installation ajoutés. Rechargement sans réseau testé dans Chromium ; HTTPS et essai réel iOS/Android à effectuer. Recettes hors connexion et écritures différées non implémentées.
 - Ajouter les comptes, invitations et l'isolation des foyers. À avancer en P1 si une ouverture à plusieurs foyers ou sur Internet devient l'objectif immédiat.
 
 ## P3 — Évolutions différées
