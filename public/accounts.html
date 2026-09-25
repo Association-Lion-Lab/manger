@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Mon compte · Manger!</title>
+<style>
+:root{color-scheme:light dark;--bg:#f5f5f7;--surface:#fff;--text:#202024;--muted:#62626c;--border:#d8d8de;--accent:#ff7258}
+@media(prefers-color-scheme:dark){:root{--bg:#101012;--surface:#202024;--text:#f5f5f7;--muted:#b7b7c0;--border:#414149}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:17px/1.5 system-ui,sans-serif}main{max-width:520px;margin:0 auto;padding:32px 20px calc(32px + env(safe-area-inset-bottom))}header{margin-bottom:32px}.brand{font-weight:850;font-size:26px;letter-spacing:-1px}.brand span{color:var(--accent)}h1{font-size:28px;letter-spacing:-.6px;margin:8px 0}h2{font-size:20px;margin:0 0 16px}p{margin:8px 0 20px}.muted,small{color:var(--muted)}small{font-size:14px}section{background:var(--surface);padding:24px;border:1px solid var(--border);border-radius:24px;margin-bottom:20px}form,label{display:grid;gap:8px}form{gap:18px}input,select,button,.button{font:inherit;min-width:0;border:1px solid var(--border);border-radius:12px;padding:12px;min-height:48px;background:var(--bg);color:var(--text)}button,.button{cursor:pointer;font-weight:650;text-align:center;text-decoration:none}.primary{background:var(--accent);border-color:var(--accent);color:#171719}button:disabled{opacity:.5;cursor:wait}a{color:inherit}a.button{display:block;margin-bottom:20px}:focus-visible{outline:3px solid var(--accent);outline-offset:3px}[hidden]{display:none!important}#message{overflow-wrap:anywhere}#people{list-style:none;padding:0;margin:0 0 24px}#people li{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0;border-bottom:1px solid var(--border)}#people strong{overflow-wrap:anywhere}#people small{display:block}.row-actions{display:flex;gap:8px;flex-wrap:wrap}code{font-size:13px;overflow-wrap:anywhere}.check{display:flex;align-items:center;gap:12px}.check input{min-height:24px;width:24px}.quiet{width:100%}@media(max-width:360px){section{padding:18px}#people li{align-items:stretch;flex-direction:column}}
+</style></head><body><main>
+<header><div class="brand">Manger<span>!</span></div><h1 id="title">Connexion</h1><p class="muted" id="intro">Ta connexion personnelle, les repas du foyer.</p></header>
+<p id="message" role="status" aria-live="polite"></p>
+<section id="login" hidden><form id="login-form">
+<label>Identifiant<input name="username" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="40" required></label>
+<label>Mot de passe<input name="password" type="password" autocomplete="current-password" maxlength="256" required></label>
+<button class="primary">Se connecter</button></form>
+<p class="muted" style="margin-top:20px">Demande un accès à l’administrateur du foyer.</p>
+<details><summary>Premier accès ou mot de passe oublié ?</summary><p><small>Depuis le terminal du serveur, l’administrateur peut créer un compte :</small></p><code>docker compose exec manger node accounts.js create-admin romain</code><p><small>Pour récupérer un compte existant : remplace <code>create-admin</code> par <code>reset-password</code> et utilise son identifiant.</small></p></details></section>
+<div id="account" hidden><a class="button" href="/">Revenir aux repas</a>
+<section><h2>Mot de passe</h2><form id="password-form">
+<label>Mot de passe actuel<input name="current" type="password" autocomplete="current-password" required maxlength="256"></label>
+<label>Nouveau mot de passe<input name="password" type="password" autocomplete="new-password" required minlength="12" maxlength="256" aria-describedby="password-help"></label>
+<small id="password-help">12 caractères minimum. Ce changement déconnecte tous tes appareils.</small>
+<button class="primary">Changer le mot de passe</button></form></section>
+<section id="admin" hidden><h2>Accès au foyer</h2><p class="muted">Ces comptes partagent les recettes, le planning et les courses. Les personnes à table se gèrent toujours dans « Mon foyer ».</p><ul id="people"></ul>
+<form id="create-form"><label>Nouvel identifiant<input name="username" autocomplete="off" autocapitalize="none" spellcheck="false" required minlength="3" maxlength="40" pattern="[a-zA-Z0-9][a-zA-Z0-9._\-]{2,39}"></label>
+<label>Mot de passe initial<input name="password" type="password" autocomplete="new-password" required minlength="12" maxlength="256"></label>
+<label class="check"><input name="admin" type="checkbox">Administrateur</label><small>Un administrateur gère les accès, les sauvegardes et la restauration.</small><button class="primary">Créer l’accès</button></form></section>
+<button id="logout" class="quiet">Se déconnecter</button><p><small>La déconnexion efface les courses hors connexion de ce navigateur.</small></p></div>
+<p id="http-warning" hidden><small>Connexion HTTP : utilise uniquement ton réseau de confiance ou ton VPN. Les comptes ne chiffrent pas les échanges ; HTTPS reste à configurer.</small></p>
+</main><script>
+const $ = id => document.getElementById(id); let me;
+function clearOffline(broadcast=true){try{localStorage.removeItem('manger-shopping-offline-v1');localStorage.removeItem('manger-offline-enabled');if(broadcast)localStorage.setItem('manger-auth-change', String(Date.now()));}catch{}}
+async function api(path, method='GET', data){const res=await fetch(path,{method,headers: data ? {'Content-Type':'application/json'} : {},body:data ? JSON.stringify(data):undefined});const value=await res.json();if(!res.ok)throw new Error(value.error||'Action impossible.');return value;}
+async function run(button, task){button.disabled=true;$('message').textContent='';try{await task();}catch(error){$('message').textContent=error.message;}finally{button.disabled=false;}}
+function form(id, action){$(id).addEventListener('submit',event=>{event.preventDefault();run(event.submitter,()=>action(Object.fromEntries(new FormData(event.target))));});}
+form('login-form',async data=>{await api('/api/account/login','POST',data);clearOffline();location.replace('/');});
+form('password-form',async data=>{await api('/api/account/password','POST',data);clearOffline();location.replace('/login');});
+form('create-form',async data=>{await api('/api/accounts','POST',{...data,admin:data.admin==='on'});$('create-form').reset();await people();$('message').textContent='Accès créé. Transmets le mot de passe à cette personne par un moyen privé.';});
+$('logout').onclick=event=>run(event.target,async()=>{await api('/api/account/logout','POST',{});clearOffline();location.replace('/login');});
+async function people(){const users=await api('/api/accounts');$('people').replaceChildren();for(const user of users){const li=document.createElement('li'),label=document.createElement('div'),name=document.createElement('strong'),detail=document.createElement('small');name.textContent=user.username;detail.textContent=`${user.admin?'Administrateur':'Membre'} · ${user.active?'Actif':'Désactivé'}`;label.append(name,detail);li.append(label);if(user.id!==me.id){const button=document.createElement('button');button.textContent=user.active?'Désactiver':'Réactiver';button.setAttribute('aria-label',`${button.textContent} ${user.username}`);button.onclick=()=>run(button,async()=>{if(user.active&&!confirm(`Désactiver l’accès de ${user.username} et déconnecter ses appareils ?`))return;await api(`/api/accounts/${user.id}`,'PUT',{active:!user.active});await people();});li.append(button);}$('people').append(li);}}
+$('http-warning').hidden=location.protocol==='https:';
+(async()=>{try{const response=await fetch('/api/account');if(response.status===401){clearOffline(false);$('login').hidden=false;return;}if(!response.ok)throw new Error('Connexion au serveur impossible. Recharge la page.');me=await response.json();$('title').textContent='Mon compte';$('intro').textContent=me.username;$('account').hidden=false;$('admin').hidden=!me.admin;if(me.admin)await people();}catch(error){$('message').textContent=error.message;}})();
+addEventListener('pageshow',event=>{if(event.persisted)location.reload();});
+addEventListener('storage',event=>{if(event.key==='manger-auth-change')location.reload();});
+</script></body></html>

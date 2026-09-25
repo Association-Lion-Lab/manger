@@ -117,11 +117,40 @@ L'import internet consulte la page depuis votre serveur et lit les blocs JSON-LD
 
 La relecture est obligatoire dans l'interface. Les fractions et unités courantes sont reconnues partiellement ; les unités non reconnues sont laissées à remplir. Portions et durée absentes ou ambiguës sont signalées, avec valeurs provisoires de 2 portions et 30 min. Le régime proposé reste omnivore à vérifier, les étapes sont classées en préparation sans minuteurs automatiques, et les instructions ne sont ni traduites ni recalculées. Le lien de la source est conservé et visible dans la fiche : les recettes importées ne deviennent pas des contenus CC0 de Manger!.
 
-Cette version ne dispose pas encore d'authentification : ne l'exposez pas directement sur Internet. Utilisez un réseau de confiance ou un accès protégé en amont. L'export de recettes JSON n'inclut pas les photos ni les avis du foyer ; utilisez la sauvegarde complète ci-dessous.
+La connexion est obligatoire depuis l'ajout des comptes. Restez sur un réseau de confiance ou votre VPN : sans HTTPS, identifiants et sessions circulent sans chiffrement HTTP. Les comptes ne constituent pas une autorisation d'exposer cette version directement sur Internet. L'export de recettes JSON n'inclut pas les photos ni les avis du foyer ; utilisez la sauvegarde ci-dessous.
+
+### Comptes du foyer
+
+Une instance héberge **un seul foyer partagé**. Chaque accès possède un identifiant et un mot de passe ; les recettes, goûts des personnes, repas et courses existants sont conservés. Un accès n'ajoute pas automatiquement une personne à table. Les invitations par courriel et plusieurs foyers isolés ne sont pas encore disponibles.
+
+Après la mise à jour, créez le premier administrateur depuis le serveur (aucune inscription publique, aucun mot de passe par défaut) :
+
+```sh
+cd ~/services/manger
+git pull --ff-only origin development
+docker compose up -d --build
+docker compose exec manger node accounts.js create-admin romain
+```
+
+La dernière commande affiche un mot de passe aléatoire : conservez-le dans votre gestionnaire, ne le collez pas dans une discussion. Ouvrez ensuite l'application et connectez-vous. Dans **Mon foyer → Mon compte et les accès au foyer**, un administrateur crée ou désactive les accès. Chaque personne peut modifier son mot de passe et se déconnecter. Les membres partagent les fonctions du foyer ; sauvegarde complète, restauration et administration des accès sont réservées aux administrateurs. La désactivation coupe les sessions, sans supprimer les repas. Votre propre accès ne peut pas être désactivé depuis cet écran.
+
+Pour récupérer un accès perdu, depuis le terminal du serveur :
+
+```sh
+docker compose exec manger node accounts.js reset-password romain
+```
+
+Un nouveau mot de passe est généré, l'accès est réactivé et ses anciennes sessions sont révoquées. En local sans Docker, utilisez `node accounts.js create-admin romain` ou `node accounts.js reset-password romain` avec le même `MANGER_DB` que le serveur.
+
+Les mots de passe sont hachés avec scrypt et un sel aléatoire ; les sessions durent sept jours maximum. Une modification du mot de passe révoque toutes les sessions de ce compte. Les tentatives sont limitées sur quinze minutes (8 par identifiant, 20 par adresse réseau et 60 globalement), sans faire confiance aux en-têtes de proxy. Les mutations vérifient l'origine ; les clients automatisés authentifiés doivent fournir l'en-tête `Origin` de l'instance. Le paramètre serveur `MANGER_SECURE_COOKIE=1` est réservé à un futur déploiement HTTPS correctement configuré, pas à l'accès HTTP actuel.
+
+Les accès sont stockés dans **`accounts.db` à côté de `manger.db`**, dans le même volume Docker. La sauvegarde/restauration du foyer ne contient et ne remplace pas les comptes. Pour une copie complète de l'installation, sauvegardez le volume Docker serveur arrêté, ou recréez les accès sur une nouvelle installation. Protégez cette copie : elle contient des données privées et des secrets de session.
+
+La déconnexion et le changement d'accès effacent la copie locale des courses dans ce navigateur, y compris via les autres onglets ouverts. Une copie hors connexion déjà téléchargée reste lisible hors réseau jusqu'à son effacement local : désactiver un compte à distance ne peut pas effacer un téléphone déconnecté. N'activez donc pas les courses hors connexion sur un appareil partagé non fiable.
 
 ## Sauvegarder le foyer
 
-Dans « Mon foyer », ouvrez « Sauvegarde du foyer » pour télécharger une copie SQLite complète, y compris les recettes, photos, profils, planning, placard et courses. La copie peut être créée pendant le fonctionnement du serveur. Un seul téléchargement de sauvegarde peut être préparé à la fois.
+Dans « Mon foyer », un administrateur peut ouvrir « Sauvegarde du foyer » pour télécharger une copie SQLite des données du foyer, y compris les recettes, photos, profils, planning, placard et courses, mais pas les comptes de connexion. La copie peut être créée pendant le fonctionnement du serveur. Un seul téléchargement de sauvegarde peut être préparé à la fois.
 
 Ce fichier contient vos données privées et n'est pas chiffré. Conservez-le dans un emplacement protégé ; le dépôt de code ne sauvegarde pas vos données personnelles. N'utilisez que des sauvegardes provenant de votre instance de confiance.
 

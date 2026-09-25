@@ -486,6 +486,7 @@
         <div><h2>Mon foyer</h2><span class="muted">Des goûts différents, une seule tablée.</span></div>
         <button id="close-household" class="icon-button" type="button" aria-label="Fermer">×</button>
       </div>
+      <p><a href="/account">Mon compte et les accès au foyer →</a></p>
       <details id="legacy-preferences" class="quiet-details" hidden>
         <summary>Anciens goûts communs à vérifier</summary>
         <form id="preferences-form">
@@ -522,7 +523,7 @@
         <p id="household-error" class="error" role="alert" hidden></p>
       </section>
       <details class="quiet-details">
-        <summary>Sauvegarde du foyer</summary>
+        <summary id="backup-summary">Sauvegarde du foyer</summary>
         <p class="muted">Télécharge toutes tes données, photos comprises, dans un fichier SQLite. Garde une copie sur un autre appareil : elle contient les données personnelles du foyer et n’est pas chiffrée.</p>
         <button id="download-backup" class="secondary" type="button">Télécharger la sauvegarde complète</button>
         <p id="backup-status" class="muted" role="status"></p>
@@ -541,6 +542,20 @@
   <script src="/tastes.js"></script>
   <script src="/food-names.js"></script>
   <script>
+    const originalFetch = window.fetch.bind(window);
+    function clearOfflineAccount() {
+      try { localStorage.removeItem('manger-shopping-offline-v1'); localStorage.removeItem('manger-offline-enabled'); } catch {}
+    }
+    window.fetch = async (...args) => {
+      const response = await originalFetch(...args);
+      if (response.status === 401) { clearOfflineAccount(); location.replace('/login'); throw new Error('Session terminée. Reconnecte-toi.'); }
+      return response;
+    };
+    addEventListener('storage', event => { if (event.key === 'manger-auth-change') { clearOfflineAccount(); location.replace('/login'); } });
+    addEventListener('pageshow', event => { if (event.persisted) location.reload(); });
+    fetch('/api/account').then(async response => {
+      if (response.ok) document.getElementById('backup-summary').closest('details').hidden = !(await response.json()).admin;
+    }).catch(() => {});
     let restoreToken = null;
     const restoreOutput = document.getElementById('restore-preview');
     document.getElementById('restore-file').addEventListener('change', () => { restoreToken = null; restoreOutput.replaceChildren(); });
