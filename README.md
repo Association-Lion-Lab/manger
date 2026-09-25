@@ -121,6 +121,8 @@ La connexion est obligatoire depuis l'ajout des comptes. Restez sur un réseau d
 
 ### Comptes du foyer
 
+Dans « Mon compte → Connexion sur d’autres appareils », **Déconnecter tous mes appareils** révoque toutes les sessions de votre compte, y compris celle utilisée, après confirmation. Le mot de passe reste inchangé et les autres membres restent connectés. Les anciennes sessions sont refusées dès leur prochaine requête au serveur ; cette action ne peut pas effacer une copie hors connexion sur un appareil déconnecté.
+
 Une instance héberge **un seul foyer partagé**. Chaque accès possède un identifiant et un mot de passe ; les recettes, goûts des personnes, repas et courses existants sont conservés. Un accès n'ajoute pas automatiquement une personne à table. Les invitations par courriel et plusieurs foyers isolés ne sont pas encore disponibles.
 
 Après la mise à jour, créez le premier administrateur depuis le serveur (aucune inscription publique, aucun mot de passe par défaut) :

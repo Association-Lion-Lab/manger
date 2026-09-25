@@ -119,6 +119,11 @@ function protectAccounts(db, handler, { secure = false } = {}) {
         cookie(res, '', 0);
         return json(res, 200, { ok: true });
       }
+      if (req.method === 'POST' && path === '/api/account/logout-all') {
+        db.prepare('DELETE FROM sessions WHERE account_id=?').run(user.id);
+        cookie(res, '', 0);
+        return json(res, 200, { ok: true });
+      }
       if (req.method === 'POST' && path === '/api/account/password') {
         const data = await body(req);
         if (busy >= 2 || !throttle(req, user.username)) return json(res, 429, { error: 'Trop de tentatives. Réessaie dans 15 minutes.' });

@@ -71,6 +71,24 @@ test('login attempts are bounded, unknown accounts give the same error', async t
   assert.equal((await request('/api/account/login','POST',{username:'admin',password:'long-password-admin'})).status,429);
 });
 
+test('logout-all revokes only the current account, requires authentication and same origin', async t => {
+  const { request, login, member } = await fixture(t);
+  const first = await login(), second = await login();
+  const other = await login('julie', 'long-password-member');
+  assert.equal((await request('/api/account/logout-all','POST',{})).status,401);
+  assert.equal((await request('/api/account/logout-all','GET',undefined,first)).status,404);
+  assert.equal((await request('/api/account/logout-all','POST',{},first,'https://evil.example')).status,403);
+  assert.equal((await request('/api/account','GET',undefined,second)).status,200);
+  // A supplied account ID cannot target another person's sessions.
+  const result = await request('/api/account/logout-all','POST',{accountId:member},first);
+  assert.equal(result.status,200);assert.match(result.headers.get('set-cookie'),/Max-Age=0/);
+  for (const cookie of [first,second]) assert.equal((await request('/api/account','GET',undefined,cookie)).status,401);
+  assert.equal((await request('/api/account','GET',undefined,other)).status,200);
+  await login(); // The password and account remain usable.
+  assert.equal((await request('/api/account/logout-all','POST',{},other)).status,200);
+  assert.equal((await request('/api/account','GET',undefined,other)).status,401);
+});
+
 test('production boot requires login, CLI bootstraps and recovers persistent accounts', async () => {
   const { mkdtempSync, rmSync } = require('node:fs');
   const { tmpdir } = require('node:os'); const { join } = require('node:path');
