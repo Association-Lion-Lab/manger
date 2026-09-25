@@ -1,0 +1,14 @@
+# Optional: copy to compose.override.yaml only after preparing ./tls/server (see HTTPS.md).
+services:
+  manger:
+    environment:
+      MANGER_TLS_CERT: /etc/manger-tls/server.crt
+      MANGER_TLS_KEY: /etc/manger-tls/server.key
+      MANGER_TLS_CA: /etc/manger-tls/ca.crt
+    volumes:
+      - type: bind
+        source: ./tls/server
+        target: /etc/manger-tls
+        read_only: true
+        bind:
+          create_host_path: false

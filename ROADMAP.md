@@ -27,7 +27,7 @@ Vérification : tests Node et parcours navigateur sur base isolée. Le rendu a �
 - Corriger les bugs bloquants et les chevauchements ; vérifier les parcours sur téléphone réel, notamment minuteurs, son et maintien de l'écran.
 - Restauration guidée ajoutée : aperçu, confirmation, copie de récupération et transaction. Tests sur base isolée ; ne pas tester par remplacement du foyer réel.
 - Docker construit sur le serveur Ubuntu personnel : état healthy confirmé. Publication d'une image préconstruite encore à faire.
-- Parcours téléphone et persistance après redémarrage confirmés par l'utilisateur ; HTTPS nécessaire pour vérifier le maintien de l'écran et la géolocalisation.
+- Parcours téléphone et persistance après redémarrage confirmés par l'utilisateur. HTTPS natif optionnel préparé : certificats locaux, cookies Secure, contrôle Docker avec validation TLS et guide `HTTPS.md`. Tests locaux passés ; activation Ubuntu et confiance des certificats sur téléphone encore à effectuer pour vérifier maintien de l'écran et géolocalisation.
 - Téléchargement et aperçu de sauvegarde confirmés par l'utilisateur sur son installation. Restauration complète testée uniquement sur base isolée.
 
 ## P2 — Améliorer l'usage quotidien
@@ -36,7 +36,7 @@ Vérification : tests Node et parcours navigateur sur base isolée. Le rendu a �
 - Restes d'une base commune avec protéines différentes implémentés : sélection des personnes, portions et protéines conservées ; achats comptés au jour de préparation. Tests serveur et navigateur passés, essai utilisateur à effectuer.
 - Catalogue porté à 18 recettes, dont quatre nouvelles recettes végétales et deux dans l'univers Mexique. Poursuivre la variété et valider les recettes en cuisine (essais culinaires non effectués).
 - Courses hors connexion implémentées en lecture seule, sur activation explicite : dernière liste, horodatage, effacement local. Manifeste et icônes d'installation ajoutés. Rechargement sans réseau testé dans Chromium ; HTTPS et essai réel iOS/Android à effectuer. Recettes hors connexion et écritures différées non implémentées.
-- Comptes pour un foyer partagé : connexion individuelle, administrateur, création/désactivation, changement et récupération du mot de passe. Invitations et isolation de plusieurs foyers restent à développer. HTTPS auto-signé demandé pour le serveur Ubuntu sans domaine : à préparer avec la confiance du certificat sur les téléphones, avant d'utiliser les fonctions nécessitant HTTPS.
+- Comptes pour un foyer partagé : connexion individuelle, administrateur, création/désactivation, changement et récupération du mot de passe. Invitations et isolation de plusieurs foyers restent à développer. HTTPS auto-signé préparé dans le lot P1 ; rien n'est activé automatiquement sur le serveur distant.
 
 ## P3 — Évolutions différées
 

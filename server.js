@@ -1,4 +1,6 @@
 const { createServer } = require('node:http');
+const { createServer: createHttpsServer } = require('node:https');
+const { tlsOptions } = require('./tls');
 const { readFileSync, mkdirSync, createReadStream } = require('node:fs');
 const { mkdtemp, rm, stat } = require('node:fs/promises');
 const { tmpdir } = require('node:os');
@@ -1248,12 +1250,13 @@ function createHandler(db, overpassUrl, communesUrl) {
 }
 
 // Supplying a database is the isolated core-test harness; production always opens accounts.
-function createApp(database, overpassUrl = process.env.MANGER_OVERPASS_URL || 'https://overpass-api.de/api/interpreter', communesUrl = process.env.MANGER_COMMUNES_URL || 'https://geo.api.gouv.fr/communes', accounts) {
+function createApp(database, overpassUrl = process.env.MANGER_OVERPASS_URL || 'https://overpass-api.de/api/interpreter', communesUrl = process.env.MANGER_COMMUNES_URL || 'https://geo.api.gouv.fr/communes', accounts, tls = tlsOptions()) {
   const production = database === undefined;
   database ||= createDatabase(process.env.MANGER_DB || join(__dirname, 'data', 'manger.db'));
   if (production) accounts = openAccounts();
   const handler = createHandler(database, overpassUrl, communesUrl);
-  const server = createServer(accounts ? protectAccounts(accounts, handler, { secure: process.env.MANGER_SECURE_COOKIE === '1' }) : handler);
+  const protectedHandler = accounts ? protectAccounts(accounts, handler, { secure: Boolean(tls) || process.env.MANGER_SECURE_COOKIE === '1' }) : handler;
+  const server = tls ? createHttpsServer(tls, protectedHandler) : createServer(protectedHandler);
   if (production) server.on('close', () => { accounts.close(); database.close(); });
   return server;
 }
@@ -1261,7 +1264,7 @@ function createApp(database, overpassUrl = process.env.MANGER_OVERPASS_URL || 'h
 if (require.main === module) {
   const port = Number(process.env.MANGER_PORT || 3000);
   const server = createApp();
-  server.listen(port, '0.0.0.0', () => console.log(`Manger! écoute sur http://localhost:${port}`));
+  server.listen(port, '0.0.0.0', () => console.log(`Manger! écoute sur ${server.setSecureContext ? 'https' : 'http'}://localhost:${server.address().port}`));
 }
 
 module.exports = { addDays, calendar, createApp, createDatabase, dateKey, household, isCompatible, isDietCompatible, isDateKey, recipes, restaurantResults, saveRecipe, shoppingList, suggestions, validateMeal, validateMember, validateProtein, validateRecipe };

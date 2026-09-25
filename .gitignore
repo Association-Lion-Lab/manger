@@ -1,2 +1,5 @@
 /data/
 /.env
+/tls/
+/compose.override.yaml
+*.key

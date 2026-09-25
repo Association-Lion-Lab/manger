@@ -117,7 +117,7 @@ L'import internet consulte la page depuis votre serveur et lit les blocs JSON-LD
 
 La relecture est obligatoire dans l'interface. Les fractions et unités courantes sont reconnues partiellement ; les unités non reconnues sont laissées à remplir. Portions et durée absentes ou ambiguës sont signalées, avec valeurs provisoires de 2 portions et 30 min. Le régime proposé reste omnivore à vérifier, les étapes sont classées en préparation sans minuteurs automatiques, et les instructions ne sont ni traduites ni recalculées. Le lien de la source est conservé et visible dans la fiche : les recettes importées ne deviennent pas des contenus CC0 de Manger!.
 
-La connexion est obligatoire depuis l'ajout des comptes. Restez sur un réseau de confiance ou votre VPN : sans HTTPS, identifiants et sessions circulent sans chiffrement HTTP. Les comptes ne constituent pas une autorisation d'exposer cette version directement sur Internet. L'export de recettes JSON n'inclut pas les photos ni les avis du foyer ; utilisez la sauvegarde ci-dessous.
+La connexion est obligatoire depuis l'ajout des comptes. Restez sur un réseau de confiance ou votre VPN : sans HTTPS, identifiants et sessions circulent sans chiffrement HTTP. Le [mode HTTPS local optionnel](HTTPS.md) fonctionne sans domaine ni reverse proxy, avec une autorité locale à installer sur les appareils. Une mise à jour seule ne l'active pas. Les comptes ne constituent pas une autorisation d'exposer cette version directement sur Internet. L'export de recettes JSON n'inclut pas les photos ni les avis du foyer ; utilisez la sauvegarde ci-dessous.
 
 ### Comptes du foyer
 
@@ -142,7 +142,7 @@ docker compose exec manger node accounts.js reset-password admin
 
 Un nouveau mot de passe est généré, l'accès est réactivé et ses anciennes sessions sont révoquées. En local sans Docker, utilisez `node accounts.js create-admin admin` ou `node accounts.js reset-password admin` avec le même `MANGER_DB` que le serveur.
 
-Les mots de passe sont hachés avec scrypt et un sel aléatoire ; les sessions durent sept jours maximum. Une modification du mot de passe révoque toutes les sessions de ce compte. Les tentatives sont limitées sur quinze minutes (8 par identifiant, 20 par adresse réseau et 60 globalement), sans faire confiance aux en-têtes de proxy. Les mutations vérifient l'origine ; les clients automatisés authentifiés doivent fournir l'en-tête `Origin` de l'instance. Le paramètre serveur `MANGER_SECURE_COOKIE=1` est réservé à un futur déploiement HTTPS correctement configuré, pas à l'accès HTTP actuel.
+Les mots de passe sont hachés avec scrypt et un sel aléatoire ; les sessions durent sept jours maximum. Une modification du mot de passe révoque toutes les sessions de ce compte. Les tentatives sont limitées sur quinze minutes (8 par identifiant, 20 par adresse réseau et 60 globalement), sans faire confiance aux en-têtes de proxy. Les mutations vérifient l'origine ; les clients automatisés authentifiés doivent fournir l'en-tête `Origin` de l'instance. Le mode HTTPS natif active automatiquement les cookies `Secure` ; ne définissez pas `MANGER_SECURE_COOKIE=1` sur un accès HTTP.
 
 Les accès sont stockés dans **`accounts.db` à côté de `manger.db`**, dans le même volume Docker. La sauvegarde/restauration du foyer ne contient et ne remplace pas les comptes. Pour une copie complète de l'installation, sauvegardez le volume Docker serveur arrêté, ou recréez les accès sur une nouvelle installation. Protégez cette copie : elle contient des données privées et des secrets de session.
 

@@ -5,7 +5,7 @@ LABEL org.opencontainers.image.title="Manger!" \
       org.opencontainers.image.licenses="AGPL-3.0-or-later"
 
 WORKDIR /app
-COPY --chown=node:node package.json server.js accounts.js catalog.js recipe-import.js ingredients.js backup-tools.js restore.js ./
+COPY --chown=node:node package.json server.js accounts.js tls.js healthcheck.js catalog.js recipe-import.js ingredients.js backup-tools.js restore.js ./
 COPY --chown=node:node public ./public
 RUN mkdir /data && chown node:node /data
 
@@ -15,5 +15,5 @@ EXPOSE 3000
 VOLUME ["/data"]
 
 USER node
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 CMD node -e "fetch('http://127.0.0.1:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 CMD node healthcheck.js
 CMD ["node", "server.js"]
