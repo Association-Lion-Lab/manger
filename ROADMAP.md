@@ -36,7 +36,7 @@ Vérification : tests Node et parcours navigateur sur base isolée. Le rendu a �
 - Restes d'une base commune avec protéines différentes implémentés : sélection des personnes, portions et protéines conservées ; achats comptés au jour de préparation. Tests serveur et navigateur passés, essai utilisateur à effectuer.
 - Catalogue porté à 18 recettes, dont quatre nouvelles recettes végétales et deux dans l'univers Mexique. Poursuivre la variété et valider les recettes en cuisine (essais culinaires non effectués).
 - Courses et recettes hors connexion implémentées en lecture seule, sur activation explicite : dernière liste et jusqu'à 20 recettes choisies avec portions, ingrédients, étapes et horodatage. Effacement local et à la déconnexion. Manifeste et icônes d'installation ajoutés. Coupure réseau testée dans Chromium ; essai réel iOS/Android à effectuer. Photos, minuteurs et écritures différées hors connexion non implémentés.
-- Comptes pour un foyer partagé : connexion individuelle, administrateur, création/désactivation, changement et récupération du mot de passe, déconnexion de tous ses appareils. Invitations et isolation de plusieurs foyers restent à développer. HTTPS auto-signé préparé dans le lot P1 ; rien n'est activé automatiquement sur le serveur distant.
+- Comptes pour un foyer partagé : connexion individuelle, administrateur, création/désactivation, changement et récupération du mot de passe, déconnexion de tous ses appareils. Invitation par lien privé ajoutée : 24 h, usage unique, révocable, compte membre uniquement. L'envoi par courriel et l'isolation de plusieurs foyers restent à développer. HTTPS auto-signé préparé dans le lot P1 ; rien n'est activé automatiquement sur le serveur distant.
 
 ## P3 — Évolutions différées
 

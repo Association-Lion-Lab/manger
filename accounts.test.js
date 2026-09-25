@@ -89,6 +89,71 @@ test('logout-all revokes only the current account, requires authentication and s
   assert.equal((await request('/api/account','GET',undefined,other)).status,401);
 });
 
+test('private invitations are administrator-only, hashed, single-use and create members only', async t => {
+  const { request, login, accounts } = await fixture(t);
+  const owner = await login(), member = await login('julie', 'long-password-member');
+  const endpoint = '/api/accounts/invitation';
+  for (const method of ['POST', 'DELETE']) {
+    assert.equal((await request(endpoint, method, {}, undefined)).status, 401);
+    assert.equal((await request(endpoint, method, {}, member)).status, 403);
+    assert.equal((await request(endpoint, method, {}, owner, 'https://evil.example')).status, 403);
+  }
+  const created = await request(endpoint, 'POST', {}, owner);
+  assert.equal(created.status, 201);
+  assert.equal(created.headers.get('cache-control'), 'no-store');
+  assert.equal(created.headers.get('referrer-policy'), 'no-referrer');
+  const { token, expires } = await created.json();
+  assert.match(token, /^[a-f0-9]{64}$/);
+  assert.ok(expires > Date.now() && expires <= Date.now() + 86400000);
+  assert.notEqual(accounts.prepare('SELECT token FROM invitations').get().token, token);
+  const value = { token, username: 'invitee', password: 'long-password-invitee', admin: true };
+  assert.equal((await request('/api/account/join', 'POST', value, owner)).status, 409);
+  assert.equal((await request('/api/account/join', 'POST', value, undefined, 'https://evil.example')).status, 403);
+  assert.equal((await request('/api/account/join', 'POST', { ...value, password: 'short' })).status, 400);
+  assert.equal((await request('/api/account/join', 'POST', { ...value, username: 'admin' })).status, 400);
+  const accepted = await request('/api/account/join', 'POST', value);
+  assert.equal(accepted.status, 201);
+  assert.equal(accepted.headers.get('set-cookie'), null);
+  assert.equal(accounts.prepare('SELECT admin FROM accounts WHERE username=?').get('invitee').admin, 0);
+  assert.equal(accounts.prepare('SELECT count(*) AS n FROM invitations').get().n, 0);
+  assert.equal((await request('/api/account/join', 'POST', { ...value, username: 'replay' })).status, 400);
+  const guest = await login('invitee', value.password);
+  assert.equal((await request('/api/household', 'GET', undefined, guest)).status, 200);
+  assert.equal((await request('/api/accounts', 'GET', undefined, guest)).status, 403);
+});
+
+test('replacement, revocation, expiry and creator deactivation invalidate invitations', async t => {
+  const { request, login, accounts, admin } = await fixture(t);
+  const owner = await login();
+  const issue = async () => (await (await request('/api/accounts/invitation', 'POST', {}, owner)).json()).token;
+  const accept = token => request('/api/account/join', 'POST', { token, username: 'invitee', password: 'long-password-invitee' });
+  const first = await issue(), second = await issue();
+  assert.notEqual(first, second);
+  assert.equal((await accept(first)).status, 400);
+  assert.equal((await request('/api/accounts/invitation', 'DELETE', {}, owner)).status, 200);
+  assert.equal((await accept(second)).status, 400);
+  const expired = await issue();
+  accounts.exec('UPDATE invitations SET expires=0');
+  assert.equal((await accept(expired)).status, 400);
+  const disabled = await issue();
+  await createAccount(accounts, 'secondadmin', 'long-password-second', true);
+  const other = await login('secondadmin', 'long-password-second');
+  assert.equal((await request(`/api/accounts/${admin}`, 'PUT', { active: false }, other)).status, 200);
+  assert.equal((await request(`/api/accounts/${admin}`, 'PUT', { active: true }, other)).status, 200);
+  assert.equal((await accept(disabled)).status, 400);
+  assert.equal(accounts.prepare('SELECT count(*) AS n FROM accounts').get().n, 3);
+});
+
+test('concurrent invitation acceptance creates exactly one account', async t => {
+  const { request, login, accounts } = await fixture(t);
+  const owner = await login();
+  const { token } = await (await request('/api/accounts/invitation', 'POST', {}, owner)).json();
+  const results = await Promise.all(['inviteone', 'invitetwo'].map(username => request('/api/account/join', 'POST', { token, username, password: 'long-password-invitee' })));
+  assert.deepEqual(results.map(res => res.status).sort(), [201, 400]);
+  assert.equal(accounts.prepare('SELECT count(*) AS n FROM accounts').get().n, 3);
+  assert.equal(accounts.prepare('SELECT count(*) AS n FROM invitations').get().n, 0);
+});
+
 test('production boot requires login, CLI bootstraps and recovers persistent accounts', async () => {
   const { mkdtempSync, rmSync } = require('node:fs');
   const { tmpdir } = require('node:os'); const { join } = require('node:path');

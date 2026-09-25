@@ -34,7 +34,8 @@ function openAccounts(filename = accountPath()) {
   db.exec(`PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;
     CREATE TABLE IF NOT EXISTS accounts(id INTEGER PRIMARY KEY, username TEXT NOT NULL UNIQUE, password TEXT NOT NULL, admin INTEGER NOT NULL DEFAULT 0, active INTEGER NOT NULL DEFAULT 1);
     CREATE TABLE IF NOT EXISTS sessions(token TEXT PRIMARY KEY, account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE, expires INTEGER NOT NULL);
-    CREATE TABLE IF NOT EXISTS attempts(key TEXT PRIMARY KEY, count INTEGER NOT NULL, expires INTEGER NOT NULL);`);
+    CREATE TABLE IF NOT EXISTS attempts(key TEXT PRIMARY KEY, count INTEGER NOT NULL, expires INTEGER NOT NULL);
+    CREATE TABLE IF NOT EXISTS invitations(id INTEGER PRIMARY KEY CHECK(id=1), token TEXT NOT NULL UNIQUE, creator INTEGER NOT NULL REFERENCES accounts(id), expires INTEGER NOT NULL);`);
   return db;
 }
 async function createAccount(db, name, password, admin = false) {
@@ -76,6 +77,7 @@ function protectAccounts(db, handler, { secure = false } = {}) {
   return async (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Referrer-Policy', 'no-referrer');
     let path;
     try { path = new URL(req.url, 'http://localhost').pathname; } catch { return json(res, 400, { error: 'Adresse invalide.' }); }
     try {
@@ -106,6 +108,29 @@ function protectAccounts(db, handler, { secure = false } = {}) {
           db.prepare('INSERT INTO sessions VALUES(?,?,?)').run(hash(token), user.id, Date.now() + 7 * DAY);
           cookie(res, token, 7 * 86400);
           return json(res, 200, { ok: true });
+        } finally { busy--; }
+      }
+      if (req.method === 'POST' && path === '/api/account/join') {
+        if (session(req)) return json(res, 409, { error: 'Tu es déjà connecté. Ouvre le lien sur l’appareil du nouveau membre.' });
+        const data = await body(req);
+        if (busy >= 2 || !throttle(req, String(data.username || '').trim().toLowerCase().slice(0,256))) return json(res, 429, { error: 'Trop de tentatives. Réessaie dans 15 minutes.' });
+        const token = typeof data.token === 'string' && /^[a-f0-9]{64}$/.test(data.token) ? hash(data.token) : '';
+        const invitation = () => db.prepare('SELECT i.id FROM invitations i JOIN accounts a ON a.id=i.creator WHERE i.token=? AND i.expires>? AND a.active=1 AND a.admin=1').get(token, Date.now());
+        if (!invitation()) return json(res, 400, { error: 'Invitation expirée, utilisée ou annulée. Demande un nouveau lien.' });
+        const name = username(data.username);
+        busy++;
+        try {
+          const encoded = await passwordHash(data.password);
+          db.exec('BEGIN IMMEDIATE');
+          try {
+            // Check again under the write lock after hashing: exactly one concurrent acceptance wins.
+            if (!invitation()) throw new Error('Invitation expirée, utilisée ou annulée. Demande un nouveau lien.');
+            if (db.prepare('SELECT 1 FROM accounts WHERE username=?').get(name)) throw new Error('Cet identifiant existe déjà. Choisis-en un autre.');
+            db.prepare('INSERT INTO accounts(username,password,admin) VALUES(?,?,0)').run(name, encoded);
+            db.prepare('DELETE FROM invitations WHERE token=?').run(token);
+            db.exec('COMMIT');
+          } catch (error) { db.exec('ROLLBACK'); throw error; }
+          return json(res, 201, { ok: true });
         } finally { busy--; }
       }
       const user = session(req);
@@ -140,6 +165,15 @@ function protectAccounts(db, handler, { secure = false } = {}) {
       }
       const adminRoute = path.startsWith('/api/accounts') || path === '/api/backup' || path.startsWith('/api/restore/');
       if (adminRoute && !user.admin) return json(res, 403, { error: 'Cette action est réservée à l’administrateur.' });
+      if (path === '/api/accounts/invitation' && req.method === 'POST') {
+        const token = randomBytes(32).toString('hex'), expires = Date.now() + DAY;
+        db.prepare('INSERT INTO invitations(id,token,creator,expires) VALUES(1,?,?,?) ON CONFLICT(id) DO UPDATE SET token=excluded.token,creator=excluded.creator,expires=excluded.expires').run(hash(token), user.id, expires);
+        return json(res, 201, { token, expires });
+      }
+      if (path === '/api/accounts/invitation' && req.method === 'DELETE') {
+        db.exec('DELETE FROM invitations');
+        return json(res, 200, { ok: true });
+      }
       if (req.method === 'GET' && path === '/api/accounts') return json(res, 200, db.prepare('SELECT id,username,admin,active FROM accounts ORDER BY username').all());
       if (req.method === 'POST' && path === '/api/accounts') {
         const data = await body(req);
@@ -161,6 +195,7 @@ function protectAccounts(db, handler, { secure = false } = {}) {
         if (typeof data.active !== 'boolean') throw new Error('État invalide.');
         if (!db.prepare('SELECT 1 FROM accounts WHERE id=?').get(id)) return json(res, 404, { error: 'Compte introuvable.' });
         db.prepare('UPDATE accounts SET active=? WHERE id=?').run(data.active ? 1 : 0, id);
+        if (!data.active) db.prepare('DELETE FROM invitations WHERE creator=?').run(id);
         db.prepare('DELETE FROM sessions WHERE account_id=?').run(id);
         return json(res, 200, { ok: true });
       }

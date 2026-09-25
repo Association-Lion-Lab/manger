@@ -129,6 +129,10 @@ Dans « Mon compte → Connexion sur d’autres appareils », **Déconnecter tou
 
 Une instance héberge **un seul foyer partagé**. Chaque accès possède un identifiant et un mot de passe ; les recettes, goûts des personnes, repas et courses existants sont conservés. Un accès n'ajoute pas automatiquement une personne à table. Les invitations par courriel et plusieurs foyers isolés ne sont pas encore disponibles.
 
+Dans **Mon compte → Accès au foyer → Inviter par lien privé**, un administrateur peut créer un lien valable **24 heures pour une seule inscription**. La personne invitée choisit son identifiant et son mot de passe, puis se connecte : son compte est toujours membre, jamais administrateur. Elle accède aux données partagées du foyer. Un nouveau lien remplace le précédent ; « Annuler le lien en cours » révoque l'invitation sans désactiver les comptes déjà créés. Désactiver l'administrateur qui l'a créée annule aussi son invitation.
+
+Transmettez ce lien uniquement au destinataire : toute personne qui le possède peut l'utiliser tant qu'il est valide. Le destinataire doit accéder au serveur par le réseau local ou le VPN, et faire confiance au certificat si HTTPS est configuré. Le secret est dans le fragment du lien (non envoyé lors du chargement de la page), retiré de la barre d'adresse à l'ouverture et stocké haché côté serveur. Rechargez depuis le lien original si vous quittez le formulaire avant l'inscription. Aucun courriel n'est envoyé. Sans HTTPS, l'inscription reste non chiffrée comme la connexion.
+
 Après la mise à jour, créez le premier administrateur depuis le serveur (aucune inscription publique, aucun mot de passe par défaut) :
 
 ```sh
