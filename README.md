@@ -85,9 +85,13 @@ Le volume et le fichier `.env` sont conservés. Changer le dossier ou le nom du 
 
 ## Principes
 
-### Courses hors connexion et écran d'accueil
+### Courses, recettes hors connexion et écran d'accueil
 
-Depuis une adresse HTTPS reconnue par le téléphone, ouvrez Courses → Courses hors connexion → « Garder une copie sur cet appareil ». L'activation est volontaire. La dernière semaine chargée est conservée avec ses quantités, les cases déjà cochées et l'heure de mise à jour ; consulter une autre semaine remplace cette copie. Les lectures réussies du serveur actualisent la copie. Elle reste consultable en lecture seule quand le serveur ou le réseau est inaccessible, même après rechargement. Les recettes, photos, profils et sauvegardes ne sont pas mis en cache. Le bouton « Effacer la copie sur cet appareil » supprime la liste locale et désactive son actualisation, sans toucher au serveur.
+Depuis une adresse HTTPS reconnue par le téléphone, ouvrez Courses → Courses hors connexion → « Garder une copie sur cet appareil ». L'activation est volontaire. La dernière semaine chargée est conservée avec ses quantités, les cases déjà cochées et l'heure de mise à jour ; consulter une autre semaine remplace cette copie. Les lectures réussies du serveur actualisent la copie. Elle reste consultable en lecture seule quand le serveur ou le réseau est inaccessible, même après rechargement. Photos, profils et sauvegardes ne sont pas mis en cache. Le bouton « Effacer toutes les copies sur cet appareil » supprime les copies de courses et de recettes et désactive l'actualisation des courses, sans toucher au serveur.
+
+Dans une fiche recette, ouvrez **« Cette recette hors connexion » → « Garder cette recette sur cet appareil »**. La copie conserve le titre, les ingrédients recalculés pour les portions affichées, les étapes avec leurs durées d'origine et le lien source éventuel. Elle n'ajoute pas les suppléments de protéines d'un repas. Jusqu'à 20 recettes peuvent être conservées (1 million de caractères au total, sous réserve du quota du navigateur) ; enregistrer à nouveau la même recette remplace sa copie. Les recettes ne s'actualisent **pas automatiquement** : refaites une copie après modification. Les photos, notes privées, minuteurs et modifications hors ligne ne font pas partie de cette consultation.
+
+Le lien « Voir mes recettes enregistrées » ouvre la page hors connexion commune aux recettes et aux courses. Chaque recette porte sa date de copie et peut être retirée indépendamment. Une erreur de stockage préserve les copies déjà présentes. Le serveur reste la source de référence : une copie peut rester ancienne même après suppression ou restauration d'une recette en ligne.
 
 La copie est accessible aux personnes utilisant ce navigateur ; elle peut être ancienne et le navigateur peut supprimer son stockage. Vérifiez qu'elle est disponible avant de partir. Aucune modification hors connexion n'est envoyée plus tard. Revenez à Manger une fois connecté pour modifier ou cocher les courses.
 
@@ -148,7 +152,7 @@ Les mots de passe sont hachés avec scrypt et un sel aléatoire ; les sessions d
 
 Les accès sont stockés dans **`accounts.db` à côté de `manger.db`**, dans le même volume Docker. La sauvegarde/restauration du foyer ne contient et ne remplace pas les comptes. Pour une copie complète de l'installation, sauvegardez le volume Docker serveur arrêté, ou recréez les accès sur une nouvelle installation. Protégez cette copie : elle contient des données privées et des secrets de session.
 
-La déconnexion et le changement d'accès effacent la copie locale des courses dans ce navigateur, y compris via les autres onglets ouverts. Une copie hors connexion déjà téléchargée reste lisible hors réseau jusqu'à son effacement local : désactiver un compte à distance ne peut pas effacer un téléphone déconnecté. N'activez donc pas les courses hors connexion sur un appareil partagé non fiable.
+La déconnexion et le changement d'accès effacent les copies locales des courses et recettes dans ce navigateur, y compris via les autres onglets ouverts. Une copie hors connexion déjà téléchargée reste lisible hors réseau jusqu'à son effacement local : désactiver un compte à distance ne peut pas effacer un téléphone déconnecté. N'activez donc pas le mode hors connexion sur un appareil partagé non fiable.
 
 ## Sauvegarder le foyer
 

@@ -431,6 +431,11 @@
         <button class="secondary" type="submit">Enregistrer mes notes</button><p id="recipe-notes-status" class="muted" role="status"></p>
       </form></details>
       <button id="favorite-recipe" class="text-action" type="button" aria-pressed="false">☆ Ajouter aux favoris</button>
+      <details id="recipe-offline" class="quiet-details"><summary>Cette recette hors connexion</summary>
+        <p class="muted">Garde les ingrédients pour les portions affichées et les étapes, sans photo. Jusqu’à 20 recettes sur cet appareil, accessibles aux personnes utilisant ce navigateur. Une nouvelle copie remplace l’ancienne pour cette recette.</p>
+        <button id="save-offline-recipe" class="secondary" type="button">Garder cette recette sur cet appareil</button>
+        <a href="/offline.html#recipes">Voir mes recettes enregistrées</a><p id="offline-recipe-status" class="muted" role="status"></p>
+      </details>
       <details id="recipe-more" class="quiet-details"><summary>Plus d’options</summary><div class="recipe-view-actions">
         <button id="edit-recipe" class="secondary" type="button">Modifier</button>
         <button id="duplicate-recipe" class="secondary" type="button">Dupliquer</button>
@@ -541,10 +546,11 @@
   <article id="recipe-print"></article>
   <script src="/tastes.js"></script>
   <script src="/food-names.js"></script>
+  <script src="/offline-recipes.js"></script>
   <script>
     const originalFetch = window.fetch.bind(window);
     function clearOfflineAccount() {
-      try { localStorage.removeItem('manger-shopping-offline-v1'); localStorage.removeItem('manger-offline-enabled'); } catch {}
+      try { localStorage.removeItem('manger-shopping-offline-v1'); localStorage.removeItem('manger-offline-enabled'); localStorage.removeItem('manger-recipes-offline-v1'); } catch {}
     }
     window.fetch = async (...args) => {
       const response = await originalFetch(...args);
@@ -1433,6 +1439,8 @@
     }
 
     function openRecipe(recipe) {
+      document.getElementById('recipe-offline').open = false;
+      document.getElementById('offline-recipe-status').textContent = '';
       document.getElementById('recipe-notes').open = false;
       document.getElementById('recipe-rating').value = recipe.rating || 0;
       document.getElementById('recipe-note').value = recipe.note || '';
@@ -2100,14 +2108,49 @@
         document.getElementById('offline-status').textContent = 'Copie à jour sur cet appareil · ' + new Date().toLocaleTimeString('fr-FR');
       } catch { document.getElementById('offline-status').textContent = 'Stockage indisponible : copie non mise à jour.'; }
     }
+    async function prepareOffline() {
+      if (!isSecureContext || !('serviceWorker' in navigator)) throw new Error('HTTPS est nécessaire pour activer le mode hors connexion sur ce téléphone.');
+      let timeout;
+      try {
+        await Promise.race([(async () => {
+          const registration = await navigator.serviceWorker.register('/sw.js');
+          await registration.update();
+          const worker = registration.installing || registration.waiting || registration.active;
+          if (worker && worker.state !== 'activated') await new Promise((resolve, reject) => {
+            const changed = () => {
+              if (!['activated', 'redundant'].includes(worker.state)) return;
+              worker.removeEventListener('statechange', changed);
+              worker.state === 'activated' ? resolve() : reject(new Error('Préparation hors connexion échouée. Réessaie en ligne.'));
+            };
+            worker.addEventListener('statechange', changed); changed();
+          });
+          await navigator.serviceWorker.ready;
+        })(), new Promise((_, reject) => { timeout = setTimeout(() => reject(new Error('Préparation hors connexion interrompue. Vérifie ta connexion et réessaie.')), 15000); })]);
+      } finally { clearTimeout(timeout); }
+    }
+    document.getElementById('save-offline-recipe').addEventListener('click', async event => {
+      const button = event.currentTarget, status = document.getElementById('offline-recipe-status'); button.disabled = true; status.textContent = 'Préparation de la copie…';
+      try {
+        const recipe = state.recipes.find(item => item.id === editingRecipeId);
+        if (!recipe) throw new Error('Rouvre la recette avant de réessayer.');
+        const portions = Number(document.getElementById('recipe-view-portions').value);
+        const snapshot = { id: recipe.id, title: recipe.title, minutes: recipe.minutes, portions, savedAt: new Date().toISOString(),
+          ingredients: scaledIngredients(recipe, portions).map(recipeIngredientText),
+          steps: recipe.steps.map(step => ({ label: `${stepKindLabels[step.kind]}${step.minutes == null ? '' : ` · ${step.minutes} min`}`, text: step.instruction })),
+          sourceUrl: recipe.sourceUrl || '' };
+        const accountChange = localStorage.getItem('manger-auth-change');
+        await prepareOffline();
+        const response = await fetch('/api/account');
+        if (!response.ok || accountChange !== localStorage.getItem('manger-auth-change')) throw new Error('La connexion au compte a changé. Reconnecte-toi avant d’enregistrer une copie.');
+        offlineRecipes.save(localStorage, snapshot);
+        status.textContent = `Recette enregistrée pour ${portions} portions. Mets à jour cette copie après toute modification de la recette.`;
+      } catch (error) { status.textContent = error.name === 'QuotaExceededError' ? 'Stockage plein. Retire des copies hors connexion puis réessaie.' : error.message; }
+      finally { button.disabled = false; }
+    });
     document.getElementById('enable-offline').addEventListener('click', async event => {
       const button = event.currentTarget; button.disabled = true;
       try {
-        if (!isSecureContext || !('serviceWorker' in navigator)) throw new Error('HTTPS est nécessaire pour activer les courses hors connexion sur ce téléphone.');
-        await navigator.serviceWorker.register('/sw.js');
-        let timeout;
-        try { await Promise.race([navigator.serviceWorker.ready, new Promise((_, reject) => { timeout = setTimeout(() => reject(new Error('Préparation hors connexion interrompue. Vérifie ta connexion et réessaie.')), 15000); })]); }
-        finally { clearTimeout(timeout); }
+        await prepareOffline();
         await load();
         localStorage.setItem('manger-offline-enabled', 'yes');
         saveOfflineShopping();

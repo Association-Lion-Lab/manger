@@ -828,7 +828,7 @@ function createHandler(db, overpassUrl, communesUrl) {
         response.writeHead(200, { 'Content-Type': offlineAssets[url.pathname] + '; charset=utf-8', 'Cache-Control': 'no-cache', 'X-Content-Type-Options': 'nosniff' });
         return response.end(readFileSync(join(__dirname, 'public', url.pathname.slice(1))));
       }
-      if (request.method === 'GET' && ['/tastes.js', '/food-names.js'].includes(url.pathname)) {
+      if (request.method === 'GET' && ['/tastes.js', '/food-names.js', '/offline-recipes.js'].includes(url.pathname)) {
         response.writeHead(200, { 'Content-Type': 'text/javascript; charset=utf-8', 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-cache' });
         return response.end(readFileSync(join(__dirname, 'public', url.pathname.slice(1))));
       }
