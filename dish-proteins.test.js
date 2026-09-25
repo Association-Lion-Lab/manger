@@ -7,15 +7,15 @@ test('protéine facultative par assiette : courses, régime, copie, édition et 
  t.after(() => { server.close(); db.close(); });
  const base = `http://127.0.0.1:${server.address().port}`;
  const send = (path, method, data) => fetch(base + path, { method, headers: { 'content-type': 'application/json' }, body: data === undefined ? undefined : JSON.stringify(data) });
- const romain = await (await send('/api/members', 'POST', { name: 'Romain', diet: 'omnivore' })).json();
+ const admin = await (await send('/api/members', 'POST', { name: 'Admin', diet: 'omnivore' })).json();
  const julie = await (await send('/api/members', 'POST', { name: 'Julie', diet: 'vegetarian' })).json();
  const chicken = db.prepare("SELECT * FROM proteins WHERE name='poulet'").get();
  const tofu = db.prepare("SELECT * FROM proteins WHERE name='tofu'").get();
- const meal = { date: '2026-09-21', slot: 'midi', location: 'home', occasion: 'regular', title: 'Deux assiettes', people: 2, recipeId: null, assignments: [], dishes: [{ memberId: romain.id, recipeId: 1, portions: 2, proteinId: chicken.id }, { memberId: julie.id, recipeId: 3, portions: 1 }] };
+ const meal = { date: '2026-09-21', slot: 'midi', location: 'home', occasion: 'regular', title: 'Deux assiettes', people: 2, recipeId: null, assignments: [], dishes: [{ memberId: admin.id, recipeId: 1, portions: 2, proteinId: chicken.id }, { memberId: julie.id, recipeId: 3, portions: 1 }] };
  assert.equal((await send('/api/meals', 'POST', meal)).status, 200);
  assert.equal(shoppingList(db, meal.date).find(item => item.name === 'poulet').amount, chicken.amount * 2);
  const week = await (await fetch(base + '/api/week?start=' + meal.date)).json(); const saved = week.meals[0];
- assert.equal(saved.dishes.find(d => d.memberId === romain.id).proteinId, chicken.id);
+ assert.equal(saved.dishes.find(d => d.memberId === admin.id).proteinId, chicken.id);
  assert.equal(saved.dishes.find(d => d.memberId === julie.id).proteinId, undefined);
  for (const proteinId of [chicken.id, 99999, '1']) assert.equal((await send('/api/meals', 'POST', { ...meal, dishes: [{ ...meal.dishes[1], proteinId }] })).status, 400);
  assert.equal((await send(`/api/proteins/${chicken.id}`, 'DELETE')).status, 400);

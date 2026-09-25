@@ -12,7 +12,7 @@
 <label>Mot de passe<input name="password" type="password" autocomplete="current-password" maxlength="256" required></label>
 <button class="primary">Se connecter</button></form>
 <p class="muted" style="margin-top:20px">Demande un accès à l’administrateur du foyer.</p>
-<details><summary>Premier accès ou mot de passe oublié ?</summary><p><small>Depuis le terminal du serveur, l’administrateur peut créer un compte :</small></p><code>docker compose exec manger node accounts.js create-admin romain</code><p><small>Pour récupérer un compte existant : remplace <code>create-admin</code> par <code>reset-password</code> et utilise son identifiant.</small></p></details></section>
+<details><summary>Premier accès ou mot de passe oublié ?</summary><p><small>Depuis le terminal du serveur, l’administrateur peut créer un compte :</small></p><code>docker compose exec manger node accounts.js create-admin admin</code><p><small>Pour récupérer un compte existant : remplace <code>create-admin</code> par <code>reset-password</code> et utilise son identifiant.</small></p></details></section>
 <div id="account" hidden><a class="button" href="/">Revenir aux repas</a>
 <section><h2>Mot de passe</h2><form id="password-form">
 <label>Mot de passe actuel<input name="current" type="password" autocomplete="current-password" required maxlength="256"></label>

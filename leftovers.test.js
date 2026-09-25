@@ -10,10 +10,10 @@ test('restes de base commune : conserve les protéines par personne et compte to
   const base = `http://127.0.0.1:${server.address().port}`;
   const post = (path, data) => fetch(base + path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) });
   const julie = await (await post('/api/members', { name: 'Julie', diet: 'vegetarian' })).json();
-  const romain = await (await post('/api/members', { name: 'Romain', diet: 'omnivore' })).json();
+  const admin = await (await post('/api/members', { name: 'Admin', diet: 'omnivore' })).json();
   const tofu = db.prepare("SELECT id, amount FROM proteins WHERE name='tofu'").get();
   const chicken = db.prepare("SELECT id, amount FROM proteins WHERE name='poulet'").get();
-  const source = { date: '2026-09-20', slot: 'soir', location: 'home', occasion: 'regular', recipeId: 1, people: 2, title: 'Base commune', assignments: [{ memberId: julie.id, proteinId: tofu.id, portions: 1 }, { memberId: romain.id, proteinId: chicken.id, portions: 1 }] };
+  const source = { date: '2026-09-20', slot: 'soir', location: 'home', occasion: 'regular', recipeId: 1, people: 2, title: 'Base commune', assignments: [{ memberId: julie.id, proteinId: tofu.id, portions: 1 }, { memberId: admin.id, proteinId: chicken.id, portions: 1 }] };
   assert.equal((await post('/api/meals', source)).status, 200);
   const sourceId = db.prepare('SELECT id FROM meals').get().id, before = shoppingList(db, '2026-09-14');
   const input = { sourceId, date: '2026-09-21', slot: 'midi', dishes: [{ memberId: julie.id, portions: 2, proteinId: chicken.id }] };
@@ -65,10 +65,10 @@ test('restes individuels : seules les assiettes choisies sont recuisinées et af
   const base = `http://127.0.0.1:${server.address().port}`;
   const post = (path, data) => fetch(base + path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) });
   const julie = await (await post('/api/members', { name: 'Julie', diet: 'vegetarian' })).json();
-  const romain = await (await post('/api/members', { name: 'Romain', diet: 'omnivore' })).json();
+  const admin = await (await post('/api/members', { name: 'Admin', diet: 'omnivore' })).json();
   const recipes = db.prepare('SELECT id FROM recipes ORDER BY id LIMIT 2').all();
   const tofu = db.prepare("SELECT id FROM proteins WHERE name='tofu'").get();
-  const source = { date: '2026-09-20', slot: 'soir', location: 'home', occasion: 'regular', people: 2, recipeId: null, title: 'Deux assiettes', assignments: [], dishes: [{ memberId: julie.id, recipeId: recipes[0].id, proteinId: tofu.id, portions: 1 }, { memberId: romain.id, recipeId: recipes[1].id, portions: 1 }] };
+  const source = { date: '2026-09-20', slot: 'soir', location: 'home', occasion: 'regular', people: 2, recipeId: null, title: 'Deux assiettes', assignments: [], dishes: [{ memberId: julie.id, recipeId: recipes[0].id, proteinId: tofu.id, portions: 1 }, { memberId: admin.id, recipeId: recipes[1].id, portions: 1 }] };
   assert.equal((await post('/api/meals', source)).status, 200);
   const sourceId = db.prepare('SELECT id FROM meals').get().id;
   const input = { sourceId, date: '2026-09-21', slot: 'midi', dishes: [{ memberId: julie.id, portions: 2 }] };

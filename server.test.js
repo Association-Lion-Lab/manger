@@ -309,7 +309,7 @@ test('deux recettes coordonnées respectent les régimes et alimentent les cours
 
 test('les suggestions respectent le temps disponible et tout le foyer', () => {
   const db = createDatabase(':memory:');
-  db.prepare("INSERT INTO members (name, diet) VALUES ('Julie', 'pescetarian'), ('Romain', 'omnivore')").run();
+  db.prepare("INSERT INTO members (name, diet) VALUES ('Julie', 'pescetarian'), ('Admin', 'omnivore')").run();
   db.prepare("UPDATE recipes SET diet = 'omnivore' WHERE title = 'Curry coco'").run();
 
   assert.deepEqual(suggestions(db, null, 24).map(recipe => recipe.title), ['Bowl pois chiches']);

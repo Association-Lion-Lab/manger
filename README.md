@@ -129,7 +129,7 @@ Après la mise à jour, créez le premier administrateur depuis le serveur (aucu
 cd ~/services/manger
 git pull --ff-only origin development
 docker compose up -d --build
-docker compose exec manger node accounts.js create-admin romain
+docker compose exec manger node accounts.js create-admin admin
 ```
 
 La dernière commande affiche un mot de passe aléatoire : conservez-le dans votre gestionnaire, ne le collez pas dans une discussion. Ouvrez ensuite l'application et connectez-vous. Dans **Mon foyer → Mon compte et les accès au foyer**, un administrateur crée ou désactive les accès. Chaque personne peut modifier son mot de passe et se déconnecter. Les membres partagent les fonctions du foyer ; sauvegarde complète, restauration et administration des accès sont réservées aux administrateurs. La désactivation coupe les sessions, sans supprimer les repas. Votre propre accès ne peut pas être désactivé depuis cet écran.
@@ -137,10 +137,10 @@ La dernière commande affiche un mot de passe aléatoire : conservez-le dans vot
 Pour récupérer un accès perdu, depuis le terminal du serveur :
 
 ```sh
-docker compose exec manger node accounts.js reset-password romain
+docker compose exec manger node accounts.js reset-password admin
 ```
 
-Un nouveau mot de passe est généré, l'accès est réactivé et ses anciennes sessions sont révoquées. En local sans Docker, utilisez `node accounts.js create-admin romain` ou `node accounts.js reset-password romain` avec le même `MANGER_DB` que le serveur.
+Un nouveau mot de passe est généré, l'accès est réactivé et ses anciennes sessions sont révoquées. En local sans Docker, utilisez `node accounts.js create-admin admin` ou `node accounts.js reset-password admin` avec le même `MANGER_DB` que le serveur.
 
 Les mots de passe sont hachés avec scrypt et un sel aléatoire ; les sessions durent sept jours maximum. Une modification du mot de passe révoque toutes les sessions de ce compte. Les tentatives sont limitées sur quinze minutes (8 par identifiant, 20 par adresse réseau et 60 globalement), sans faire confiance aux en-têtes de proxy. Les mutations vérifient l'origine ; les clients automatisés authentifiés doivent fournir l'en-tête `Origin` de l'instance. Le paramètre serveur `MANGER_SECURE_COOKIE=1` est réservé à un futur déploiement HTTPS correctement configuré, pas à l'accès HTTP actuel.
 

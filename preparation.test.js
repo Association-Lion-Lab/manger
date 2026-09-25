@@ -35,7 +35,7 @@ test('état par recette : validation, édition, export/import, courses inchangé
   assert.equal(ingredientTaste({ name: 'tomate crue', preparation: 'unknown' }, 'tomate crue'), 'check');
   assert.equal(ingredientTaste({ name: 'tomate', preparation: 'cooked' }, 'tomate crue'), 'clear');
   assert.equal(ingredientTaste({ name: 'tomate', preparation: 'raw' }, 'tomate crue'), 'avoid');
-  assert.deepEqual(recipeTaste(updated.ingredients, [{ name: 'Romain', avoidedIngredients: ['tomate crue'] }]).reviewFor, ['Romain']);
+  assert.deepEqual(recipeTaste(updated.ingredients, [{ name: 'Admin', avoidedIngredients: ['tomate crue'] }]).reviewFor, ['Admin']);
 });
 
 test('migration : annote les originaux, jamais une recette modifiée ou un état déjà choisi', () => {
