@@ -1,8 +1,8 @@
 # Proposition de refonte de Manger!
 
-Statut : **maquette validée ; première intégration mobile sur `development`**. La navigation Semaine / Recettes / Courses / Compte, les assiettes séparées, les thèmes Potager / Ardoise / Prune et les cartes de recettes sont intégrés. Les photos ne s'affichent que lorsqu'une recette en possède réellement une. Les captures Jow fournies en septembre 2026 servent de référence pour la lisibilité et le parcours guidé, pas de modèle à reproduire écran par écran. Référence publique : https://jow.fr/pages/misc/jow-comment-ca-marche.
+Statut : **maquette validée ; première intégration mobile sur `development`**. La navigation Semaine / Recettes / Courses / Compte, les assiettes séparées, les thèmes Potager / Ardoise / Prune, les cartes de recettes et l'action « Planifier ce repas » sont intégrés. Les photos ne s'affichent que lorsqu'une recette en possède réellement une. Les captures Jow fournies en septembre 2026 servent de référence pour la lisibilité et le parcours guidé, pas de modèle à reproduire écran par écran. Référence publique : https://jow.fr/pages/misc/jow-comment-ca-marche.
 
-À poursuivre : contrôle humain sur iPhone Safari et Android après déploiement, finition de la fiche recette et des filtres de découverte, puis vraie adaptation tablette/PC. Les tests locaux ne valident pas ces environnements distants.
+À poursuivre : contrôle humain sur iPhone Safari et Android après déploiement, finition des filtres de découverte et de la fiche, puis vraie adaptation tablette/PC. Les tests locaux ne valident pas ces environnements distants.
 
 ## Intention
 
