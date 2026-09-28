@@ -4,6 +4,7 @@
 :root{color-scheme:light dark;font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f5f7;color:#1d1d1f}body{max-width:620px;margin:auto;padding:28px 20px}h1{font-size:28px;margin-bottom:6px}p{color:#68686d}ul{padding:0;list-style:none}li{padding:16px 0;border-bottom:1px solid #aaa5;overflow-wrap:anywhere}.done{text-decoration:line-through;opacity:.65}a,button{display:block;padding:14px 18px;margin-top:14px;border:1px solid #aaa6;border-radius:16px;text-align:center;color:inherit;background:transparent;font:inherit}a{background:#b84128;color:white;text-decoration:none}button{width:100%;cursor:pointer}@media(prefers-color-scheme:dark){:root{background:#101012;color:#f5f5f7}p{color:#aaaab2}a{background:#ff765b;color:#201a18}}
 details{border:1px solid #aaa6;border-radius:20px;padding:16px;margin:14px 0}summary{cursor:pointer;min-height:44px;font-weight:650;overflow-wrap:anywhere}h2{margin-top:32px}h3{font-size:18px}ol{padding-left:24px}li p{color:inherit;white-space:pre-wrap}small{display:block;margin-top:8px}button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid #b84128;outline-offset:4px}.source{background:transparent;color:inherit}*{box-sizing:border-box}
 .timer-controls{display:flex;flex-wrap:wrap;gap:8px}.timer-controls button{flex:1 1 140px;min-height:48px;margin-top:8px}.timer-value{font-variant-numeric:tabular-nums}.timer-notice:empty{display:none}
+.recipe-photo{display:block;width:100%;max-height:220px;object-fit:cover;border-radius:16px;margin:16px 0}
 </style></head><body><h1>Hors connexion</h1><p>Copies locales · lecture seule · elles peuvent être anciennes.</p><h2>Courses enregistrées</h2><p id="status" role="status"></p><ul id="items"></ul>
 <section id="recipes" aria-labelledby="recipes-heading"><h2 id="recipes-heading" tabindex="-1">Recettes enregistrées</h2><p id="recipes-status" role="status"></p><div id="recipe-copies"></div></section>
 <a href="/">Revenir à Manger</a><button id="clear" type="button">Effacer toutes les copies sur cet appareil</button>
@@ -38,6 +39,7 @@ function showRecipes() {
     for (const recipe of recipes) {
       const card = document.createElement('details'), summary = element('summary', recipe.title);
       summary.append(element('small', `${recipe.minutes} min · ${recipe.portions} portions`)); card.append(summary);
+      if (recipe.photo) { const photo = document.createElement('img'); photo.className = 'recipe-photo'; photo.src = recipe.photo; photo.alt = `Photo de ${recipe.title}`; card.append(photo); }
       card.append(element('p', `Copie du ${new Date(recipe.savedAt).toLocaleString('fr-FR')}. Instructions et durées d’origine : adapte la cuisson aux portions choisies.`));
       if (recipe.steps.some(step => step.minutes > 0)) card.append(element('small', 'Minuteurs locaux, sans son ni alarme garantie en arrière-plan. Garde cette page ouverte ; recharger ou modifier les copies les remet à zéro.'));
       else if (recipe.steps.some(step => !Object.hasOwn(step, 'minutes'))) card.append(element('small', 'Pour obtenir les minuteurs, enregistre à nouveau cette recette depuis sa fiche en ligne.'));

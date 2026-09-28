@@ -7,7 +7,8 @@
       && Number.isFinite(recipe.minutes) && recipe.minutes >= 0 && text(recipe.savedAt) && Number.isFinite(Date.parse(recipe.savedAt))
       && Array.isArray(recipe.ingredients) && recipe.ingredients.length <= 200 && recipe.ingredients.every(text)
       && Array.isArray(recipe.steps) && recipe.steps.length <= 200 && recipe.steps.every(step => step && text(step.label) && text(step.text)
-        && (step.minutes == null || (Number.isInteger(step.minutes) && step.minutes >= 0 && step.minutes <= 1440)));
+        && (step.minutes == null || (Number.isInteger(step.minutes) && step.minutes >= 0 && step.minutes <= 1440)))
+      && (recipe.photo === undefined || (typeof recipe.photo === 'string' && recipe.photo.length <= 120000 && /^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/.test(recipe.photo)));
   }
   function read(storage) {
     const raw = storage.getItem(KEY);

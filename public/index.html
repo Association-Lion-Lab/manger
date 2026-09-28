@@ -432,7 +432,8 @@
       </form></details>
       <button id="favorite-recipe" class="text-action" type="button" aria-pressed="false">☆ Ajouter aux favoris</button>
       <details id="recipe-offline" class="quiet-details"><summary>Cette recette hors connexion</summary>
-        <p class="muted">Garde les ingrédients pour les portions affichées et les étapes, sans photo. Jusqu’à 20 recettes sur cet appareil, accessibles aux personnes utilisant ce navigateur. Une nouvelle copie remplace l’ancienne pour cette recette.</p>
+        <p class="muted">Garde les ingrédients pour les portions affichées et les étapes. Jusqu’à 20 recettes sur cet appareil, accessibles aux personnes utilisant ce navigateur. Une nouvelle copie remplace l’ancienne pour cette recette.</p>
+        <label id="offline-photo-option" class="check-option" hidden><input id="offline-photo" type="checkbox">Inclure une petite photo sur cet appareil</label>
         <button id="save-offline-recipe" class="secondary" type="button">Garder cette recette sur cet appareil</button>
         <a href="/offline.html#recipes">Voir mes recettes enregistrées</a><p id="offline-recipe-status" class="muted" role="status"></p>
       </details>
@@ -1441,6 +1442,8 @@
     function openRecipe(recipe) {
       document.getElementById('recipe-offline').open = false;
       document.getElementById('offline-recipe-status').textContent = '';
+      document.getElementById('offline-photo-option').hidden = !recipe.hasPhoto;
+      document.getElementById('offline-photo').checked = false;
       document.getElementById('recipe-notes').open = false;
       document.getElementById('recipe-rating').value = recipe.rating || 0;
       document.getElementById('recipe-note').value = recipe.note || '';
@@ -2133,6 +2136,7 @@
       try {
         const recipe = state.recipes.find(item => item.id === editingRecipeId);
         if (!recipe) throw new Error('Rouvre la recette avant de réessayer.');
+        const includePhoto = recipe.hasPhoto && document.getElementById('offline-photo').checked;
         const portions = Number(document.getElementById('recipe-view-portions').value);
         const snapshot = { id: recipe.id, title: recipe.title, minutes: recipe.minutes, portions, savedAt: new Date().toISOString(),
           ingredients: scaledIngredients(recipe, portions).map(recipeIngredientText),
@@ -2140,10 +2144,22 @@
           sourceUrl: recipe.sourceUrl || '' };
         const accountChange = localStorage.getItem('manger-auth-change');
         await prepareOffline();
+        if (includePhoto) {
+          const response = await fetch(`/api/recipes/${recipe.id}/photo`, { cache: 'no-store' }).catch(() => { throw new Error('Photo indisponible. Vérifie ta connexion ou décoche la photo.'); });
+          if (!response.ok || response.headers.get('content-type')?.split(';')[0] !== 'image/jpeg') throw new Error('Photo indisponible. Décoche la photo et réessaie.');
+          const blob = await response.blob();
+          const data = await new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = () => reject(new Error('Impossible de lire la photo.')); reader.readAsDataURL(blob); });
+          const image = new Image(); image.src = data; await image.decode().catch(() => { throw new Error('Photo illisible. Décoche la photo et réessaie.'); });
+          const ratio = Math.min(1, 480 / Math.max(image.naturalWidth, image.naturalHeight));
+          const canvas = document.createElement('canvas'); canvas.width = Math.max(1, Math.round(image.naturalWidth * ratio)); canvas.height = Math.max(1, Math.round(image.naturalHeight * ratio));
+          canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+          snapshot.photo = canvas.toDataURL('image/jpeg', .65);
+          if (snapshot.photo.length > 120000) throw new Error('Photo trop volumineuse. Décoche la photo et réessaie.');
+        }
         const response = await fetch('/api/account');
-        if (!response.ok || accountChange !== localStorage.getItem('manger-auth-change')) throw new Error('La connexion au compte a changé. Reconnecte-toi avant d’enregistrer une copie.');
+        if (!response.ok || accountChange !== localStorage.getItem('manger-auth-change') || editingRecipeId !== recipe.id) throw new Error('La recette ou le compte a changé. Rouvre la recette avant d’enregistrer une copie.');
         offlineRecipes.save(localStorage, snapshot);
-        status.textContent = `Recette enregistrée pour ${portions} portions. Mets à jour cette copie après toute modification de la recette.`;
+        status.textContent = `Recette enregistrée pour ${portions} portions${snapshot.photo ? ' avec sa photo' : ''}. Mets à jour cette copie après toute modification de la recette.`;
       } catch (error) { status.textContent = error.name === 'QuotaExceededError' ? 'Stockage plein. Retire des copies hors connexion puis réessaie.' : error.message; }
       finally { button.disabled = false; }
     });

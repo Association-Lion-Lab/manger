@@ -34,3 +34,13 @@ test('offline step durations are optional for old copies and bounded; timers use
  assert.equal(seconds({end:61000,remaining:60},60500),1);
  assert.equal(seconds({end:61000,remaining:60},90000),0);
 });
+
+test('optional local photo is bounded, safe to render and removed with its recipe',()=>{
+ const store=storage(), photo='data:image/jpeg;base64,/9j/2Q==';
+ offline.save(store,{...recipe(1),photo});
+ assert.equal(offline.read(store)[0].photo,photo);
+ for(const invalid of ['javascript:alert(1)','data:image/svg+xml;base64,PHN2Zz4=','data:image/jpeg;base64,not base64','data:image/jpeg;base64,'+'A'.repeat(120000)])
+   assert.throws(()=>offline.save(store,{...recipe(2),photo:invalid}));
+ assert.equal(offline.read(store).length,1);
+ offline.remove(store,1);assert.deepEqual(offline.read(store),[]);
+});
