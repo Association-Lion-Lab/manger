@@ -3,28 +3,35 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#101012" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#f7f8f3" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#111916" media="(prefers-color-scheme: dark)">
   <title>Manger! — On mange quoi cette semaine ?</title>
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/icon-180.png">
+  <script>
+    try {
+      const appearance = JSON.parse(localStorage.getItem('manger-appearance-v1') || '{}');
+      document.documentElement.dataset.accent = ['potager', 'ardoise', 'prune'].includes(appearance.accent) ? appearance.accent : 'potager';
+      document.documentElement.dataset.mode = ['light', 'dark'].includes(appearance.mode) ? appearance.mode : (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    } catch { document.documentElement.dataset.mode = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
+  </script>
   <style>
     :root {
       color-scheme: light dark;
-      --accent: #b84128;
+      --accent: #1b6b4a;
       --on-accent: #ffffff;
-      --accent-soft: #fff0eb;
-      --background: #f5f5f7;
+      --accent-soft: #e5f2e9;
+      --background: #f7f8f3;
       --surface: #ffffff;
       --raised: #ffffff;
-      --text: #1d1d1f;
-      --muted: #68686d;
-      --line: #dedee3;
-      --field: #f5f5f7;
+      --text: #1c2a22;
+      --muted: #56645a;
+      --line: #dce5dc;
+      --field: #f0f3ed;
       --error: #b42318;
       --shadow: 0 2px 8px #16162b04, 0 12px 32px #16162b05;
-      --glass: rgb(255 255 255 / .76);
+      --glass: rgb(247 248 243 / .86);
       --glass-edge: rgb(255 255 255 / .95);
       --glass-sheen: rgb(255 255 255 / .65);
       --green: #287257;
@@ -33,27 +40,31 @@
       font-size: 16px;
       line-height: 1.5;
     }
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --accent: #ff765b;
-        --on-accent: #201a18;
-        --accent-soft: #352320;
-        --background: #101012;
-        --surface: #1c1c1f;
-        --raised: #232326;
-        --text: #f5f5f7;
-        --muted: #aaaab2;
-        --line: #38383e;
-        --field: #28282c;
-        --error: #ff938a;
-        --shadow: 0 2px 8px #00000012, 0 12px 32px #00000018;
-        --glass: rgb(35 35 40 / .82);
-        --glass-edge: rgb(255 255 255 / .18);
-        --glass-sheen: rgb(255 255 255 / .08);
-        --green: #6fd0a7;
-        --purple: #c99bea;
-      }
+    :root[data-mode="dark"] {
+      color-scheme: dark;
+      --accent: #7bd5a2;
+      --on-accent: #10231a;
+      --accent-soft: #253d2f;
+      --background: #111916;
+      --surface: #1b2821;
+      --raised: #25352b;
+      --text: #f4f7f2;
+      --muted: #b6c7bb;
+      --line: #33463a;
+      --field: #25352b;
+      --error: #ff938a;
+      --shadow: 0 2px 8px #00000012, 0 12px 32px #00000018;
+      --glass: rgb(17 25 22 / .88);
+      --glass-edge: rgb(255 255 255 / .16);
+      --glass-sheen: rgb(255 255 255 / .07);
+      --green: #7bd5a2;
+      --purple: #e1a9bb;
     }
+    :root[data-mode="light"] { color-scheme: light; }
+    :root[data-accent="ardoise"] { --accent: #3b5f9b; --accent-soft: #e8eef9; }
+    :root[data-accent="prune"] { --accent: #8b4b56; --accent-soft: #f8ebef; }
+    :root[data-mode="dark"][data-accent="ardoise"] { --accent: #a5c2fc; --on-accent: #142342; --accent-soft: #293b54; }
+    :root[data-mode="dark"][data-accent="prune"] { --accent: #e1a9bb; --on-accent: #31151f; --accent-soft: #46313b; }
     * { box-sizing: border-box; }
     [hidden] { display: none !important; }
     body { margin: 0; color: var(--text); background: var(--background); }
@@ -144,10 +155,10 @@
     .shopping-item input { width: 20px; height: 20px; accent-color: var(--accent); }
     .shopping-item input:checked + span { color: var(--muted); text-decoration: line-through; }
     .empty-state { padding: 34px 12px; text-align: center; color: var(--muted); }
-    nav { position: fixed; z-index: 3; inset: auto 0 calc(14px + env(safe-area-inset-bottom)); width: min(calc(100% - 32px), 410px); margin: auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 6px; border: 1px solid var(--line); border-radius: 26px; background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(24px); box-shadow: 0 8px 32px #00000014; }
+    nav { position: fixed; z-index: 3; inset: auto 0 0; width: min(100%, 760px); margin: auto; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 6px 12px calc(8px + env(safe-area-inset-bottom)); border: 1px solid var(--line); border-bottom: 0; border-radius: 20px 20px 0 0; background: color-mix(in srgb, var(--background) 92%, transparent); backdrop-filter: blur(24px); box-shadow: 0 -8px 32px #0000000a; }
     nav button { min-height: 56px; display: grid; place-items: center; align-content: center; gap: 3px; border: 0; border-radius: 20px; color: var(--muted); background: transparent; cursor: pointer; font-size: 12px; font-weight: 600; }
     nav button span:first-child { font-size: 19px; }
-    nav button.active { color: var(--accent); background: var(--accent-soft); }
+    nav button.active { color: var(--accent); background: transparent; }
     /* Glass is reserved for floating controls; reading surfaces stay opaque. */
     @supports (backdrop-filter: blur(20px)) {
       nav, header > .icon-button, .toolbar > .icon-button {
@@ -156,7 +167,7 @@
         backdrop-filter: blur(24px) saturate(150%);
         box-shadow: inset 0 1px 0 var(--glass-edge), inset 0 -1px 0 #00000008, 0 8px 28px #00000012;
       }
-      nav button.active { box-shadow: inset 0 1px 0 var(--glass-edge), 0 1px 4px #00000008; }
+      nav button.active { box-shadow: none; }
     }
     dialog { width: min(calc(100% - 32px), 560px); max-height: calc(100dvh - 40px); margin: auto; padding: 28px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; color: var(--text); border: 1px solid var(--line); border-radius: 28px; background: var(--surface); box-shadow: 0 24px 100px #00000030; }
     dialog::backdrop { background: rgb(10 10 16 / .45); }
@@ -244,6 +255,68 @@
     .connection-error { margin: 18px 0; padding: 18px; border: 1px solid color-mix(in srgb, var(--error) 45%, var(--line)); border-radius: 18px; color: var(--error); background: color-mix(in srgb, var(--error) 8%, transparent); }
     .connection-error p { margin: 6px 0 0; }
     .connection-error code { padding: 2px 5px; border-radius: 5px; color: var(--text); background: var(--field); }
+    .app { box-shadow: 0 12px 60px #0000000a; }
+    header { padding: 18px 24px 12px; }
+    .brand { font-size: 23px; }
+    main { padding: 18px 24px calc(110px + env(safe-area-inset-bottom)); }
+    h1 { font-size: clamp(26px, 7vw, 31px); font-weight: 750; line-height: 1.12; }
+    h2 { font-weight: 700; }
+    .section-kicker { display: block; color: var(--accent); font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+    .page-title { max-width: 340px; margin-top: 9px; }
+    .page-subtitle { margin: 7px 0 0; font-size: 14px; }
+    #week-panel .toolbar { margin-top: 22px; }
+    .toolbar h2 { font-size: 18px; }
+    .days { margin: 22px 0 24px; padding: 0; border: 0; background: transparent; }
+    .day { min-height: 62px; }
+    .day[aria-selected="true"] { background: var(--accent); }
+    .schedule { gap: 17px; margin: 18px 0 24px; }
+    .slot-label { margin-bottom: 8px; color: var(--text); font-size: 15px; letter-spacing: 0; text-transform: none; }
+    .meal { box-shadow: none; }
+    .meal.photo { position: relative; display: block; height: 225px; padding: 0; overflow: hidden; border: 0; background: var(--surface); }
+    .meal.photo > img { display: block; width: 100%; height: 100%; object-fit: cover; }
+    .meal.photo::after { content: ""; position: absolute; inset: 30% 0 0; background: linear-gradient(transparent, #07140be8); pointer-events: none; }
+    .meal.photo .meal-copy { position: absolute; z-index: 1; inset: auto 18px 17px; color: #fff; }
+    .meal.photo .meal-copy strong { font-size: 21px; line-height: 1.15; }
+    .meal.photo .meal-copy small { color: #e9f7e9; }
+    .split-meal { padding: 5px 12px; border: 1px solid var(--line); border-radius: 22px; background: var(--surface); }
+    .split-dish { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 82px; padding: 9px 2px; border: 0; border-bottom: 1px solid var(--line); background: transparent; text-align: left; cursor: pointer; }
+    .split-dish:last-child { border-bottom: 0; }
+    .split-dish .recipe-cover { width: 58px; height: 58px; flex: none; border-radius: 13px; font-size: 20px; }
+    .split-dish .meal-copy { flex: 1; }
+    .split-dish .meal-copy strong { font-size: 14px; line-height: 1.2; }
+    .split-dish .meal-copy small:first-child { color: var(--muted); font-size: 11px; }
+    .split-dish .meal-copy small:last-child { color: var(--muted); font-size: 12px; }
+    .recipe-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 13px; }
+    .recipe { min-width: 0; min-height: 0; display: block; padding: 0; overflow: hidden; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+    .recipe-cover { width: 100%; height: auto; aspect-ratio: 1; border-radius: 18px; object-fit: cover; }
+    .recipe-copy { padding: 8px 2px 0; }
+    .recipe.featured { grid-column: 1 / -1; position: relative; height: 265px; border-radius: 23px; background: var(--surface); }
+    .recipe.featured .recipe-cover { height: 100%; border-radius: 0; }
+    .recipe.featured .recipe-copy { position: absolute; inset: auto 0 0; padding: 55px 18px 18px; color: #fff; background: linear-gradient(transparent, #07140bea); }
+    .recipe.featured .recipe-copy strong { font-size: 23px; line-height: 1.15; }
+    .recipe.featured .recipe-copy small { color: #e9f7e9; }
+    .recipe-filters { margin: 22px 0 16px; gap: 10px; }
+    #recipe-search { min-height: 54px; border-radius: 17px; background: var(--surface); }
+    .shopping-group { margin: 14px 0; padding: 8px 16px; box-shadow: none; }
+    .shopping-group .group-title { margin: 12px 0 3px; color: var(--text); font-size: 16px; letter-spacing: 0; text-transform: none; }
+    .shopping-progress { height: 7px; margin: 18px 0 5px; overflow: hidden; border-radius: 99px; background: var(--accent-soft); }
+    .shopping-progress span { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
+    .account-hero, .account-group { border: 1px solid var(--line); border-radius: 22px; background: var(--surface); }
+    .account-hero { display: flex; align-items: center; gap: 14px; min-height: 96px; margin-top: 24px; padding: 16px; color: var(--text); text-decoration: none; }
+    .account-avatar { width: 52px; height: 52px; flex: none; display: grid; place-items: center; border-radius: 17px; color: var(--on-accent); background: var(--accent); }
+    .account-avatar svg { width: 27px; height: 27px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+    .account-hero > span:nth-child(2), .account-group button > span:nth-child(2), .account-group a > span:nth-child(2), .account-settings label > span:nth-child(2) { min-width: 0; flex: 1; }
+    .account-hero strong, .account-group strong { display: block; font-size: 15px; }
+    .account-hero small, .account-group small { display: block; color: var(--muted); font-size: 12px; }
+    .account-hero > span:last-child, .account-group button > span:last-child, .account-group a > span:last-child { margin-left: auto; color: var(--muted); font-size: 22px; }
+    .account-heading { margin: 28px 0 12px; font-size: 19px; }
+    .account-group { padding: 2px 16px; }
+    .account-group > button, .account-group > a, .account-settings > label { display: flex; align-items: center; gap: 13px; width: 100%; min-height: 68px; padding: 9px 0; border: 0; border-bottom: 1px solid var(--line); color: var(--text); background: transparent; text-align: left; text-decoration: none; cursor: pointer; }
+    .account-group > :last-child { border-bottom: 0; }
+    .account-symbol { width: 39px; height: 39px; flex: none; display: grid; place-items: center; border-radius: 13px; color: var(--accent); background: var(--accent-soft); font-size: 20px; }
+    .account-settings > label { flex-wrap: wrap; cursor: default; }
+    .account-settings select { flex: 1 1 100%; min-height: 44px; margin-left: 52px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 12px; color: var(--text); background: var(--field); }
+    .account-footnote { margin: 22px 4px; color: var(--muted); font-size: 12px; }
     @media (prefers-reduced-motion: no-preference) {
       button { transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease; }
       dialog[open] { animation: sheet-appear .18s ease-out; }
@@ -261,7 +334,7 @@
       .assignment { grid-template-columns: 1fr; }
     }
     @media (min-width: 620px) { main { padding: 36px 32px 130px; } header { padding-inline: 32px; } .recipe-filters { grid-template-columns: 1.5fr 1fr; } }
-    @media (max-width: 359px) { main { padding-inline: 14px; } .days { gap: 0; padding: 4px; } .meal { padding: 14px; gap: 10px; } .recipe { grid-template-columns: 56px minmax(0, 1fr) 12px; gap: 10px; padding: 12px; } .recipe-cover { width: 56px; height: 56px; } }
+    @media (max-width: 359px) { main { padding-inline: 14px; } .days { gap: 0; padding: 0; } .meal { padding: 14px; gap: 10px; } .meal.photo { padding: 0; } .recipe-list { gap: 18px 10px; } .recipe { padding: 0; } .recipe-cover { width: 100%; height: auto; } .split-dish .recipe-cover { width: 52px; height: 52px; } }
     #recipe-print { display: none; }
     @media print {
       @page { margin: 18mm; }
@@ -278,15 +351,18 @@
 <body>
   <div class="app">
     <header>
-      <div><div class="brand">Manger<span>!</span></div><div class="tagline">On mange quoi cette semaine ?</div></div>
+      <div><div class="brand">Manger<span>!</span></div><div class="tagline">Ma cuisine, mes choix</div></div>
       <button id="household-button" class="icon-button" type="button" aria-label="Gérer le foyer"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2M16 5a3 3 0 0 1 0 6m2 3a5 5 0 0 1 3 4v2"/></svg></button>
     </header>
 
     <main>
       <section id="week-panel" class="panel">
+        <span class="section-kicker">Ma semaine</span>
+        <h1 class="page-title">On mange quoi cette semaine ?</h1>
+        <p class="muted page-subtitle">Les repas du foyer, sans casse-tête.</p>
         <div class="toolbar">
           <button id="previous-week" class="icon-button" type="button" aria-label="Semaine précédente">‹</button>
-          <div><h1 id="week-title"></h1><span id="week-number" class="muted"></span></div>
+          <div><h2 id="week-title"></h2><span id="week-number" class="muted"></span></div>
           <button id="next-week" class="icon-button" type="button" aria-label="Semaine suivante">›</button>
         </div>
         <div id="days" class="days" role="tablist" aria-label="Jours de la semaine"></div>
@@ -307,7 +383,8 @@
       </section>
 
       <section id="recipes-panel" class="panel" hidden>
-        <div class="section-heading"><div><h1>Mes recettes</h1><span id="recipe-count" class="muted"></span></div><div style="display:flex;gap:8px"><button id="import-recipes" class="icon-button" type="button" aria-label="Importer une recette">⇩</button><button id="new-recipe" class="icon-button" type="button" aria-label="Ajouter une recette">＋</button></div></div>
+        <span class="section-kicker">À découvrir</span>
+        <div class="section-heading"><div><h1>Des idées pour avoir faim.</h1><span id="recipe-count" class="muted"></span></div><div style="display:flex;gap:8px"><button id="import-recipes" class="icon-button" type="button" aria-label="Importer une recette">⇩</button><button id="new-recipe" class="icon-button" type="button" aria-label="Ajouter une recette">＋</button></div></div>
         <div id="recipes" class="recipe-list"></div>
         <button id="import-catalog" class="secondary" type="button">＋ Ajouter les recettes manquantes du catalogue</button>
         <p id="catalog-status" class="muted" role="status"></p>
@@ -315,7 +392,9 @@
       </section>
 
       <section id="shopping-panel" class="panel" hidden>
-        <div class="section-heading"><div><h1>Courses</h1><span id="shopping-summary" class="muted"></span></div><button id="share" class="icon-button" type="button" aria-label="Partager la liste">↗</button></div>
+        <span class="section-kicker">Ma semaine</span>
+        <div class="section-heading"><div><h1>Mes courses</h1><span id="shopping-summary" class="muted"></span></div><button id="share" class="icon-button" type="button" aria-label="Partager la liste">↗</button></div>
+        <div class="shopping-progress" aria-hidden="true"><span id="shopping-progress-bar"></span></div>
         <div class="subtle-tools"><button id="open-pantry" class="text-action" type="button">Mon placard</button><button id="organize-shopping" class="text-action" type="button" aria-pressed="false" aria-controls="shopping">Organiser les rayons</button></div>
         <p id="organize-shopping-help" class="muted" hidden>Glisse la poignée ⠿ vers un rayon. Ou touche-la pour choisir le rayon. Les corrections sont enregistrées immédiatement.</p>
         <div id="shopping" class="shopping-list"></div>
@@ -335,12 +414,32 @@
           <p id="offline-status" class="muted" role="status"></p>
         </details>
       </section>
+
+      <section id="account-panel" class="panel" hidden>
+        <span class="section-kicker">Ton espace</span>
+        <h1>Manger à ta façon.</h1>
+        <p class="muted">Ton compte, ton foyer, tes préférences.</p>
+        <a class="account-hero" href="/account"><span class="account-avatar" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 21c.5-4.2 3.1-6.5 7.5-6.5s7 2.3 7.5 6.5"/></svg></span><span><strong id="account-name">Mon compte</strong><small>Identité et sécurité</small></span><span aria-hidden="true">›</span></a>
+        <h2 class="account-heading">Mon foyer</h2>
+        <div class="account-group">
+          <button id="account-household" type="button"><span class="account-symbol" aria-hidden="true">♧</span><span><strong>Personnes du foyer</strong><small>Repas partagés ou séparés</small></span><span aria-hidden="true">›</span></button>
+          <button id="account-tastes" type="button"><span class="account-symbol" aria-hidden="true">♡</span><span><strong>Goûts et régimes</strong><small>Les préférences de chacun</small></span><span aria-hidden="true">›</span></button>
+          <a id="account-invite" href="/account" hidden><span class="account-symbol" aria-hidden="true">＋</span><span><strong>Inviter une personne</strong><small>Gérer les accès au foyer</small></span><span aria-hidden="true">›</span></a>
+        </div>
+        <h2 class="account-heading">Préférences</h2>
+        <div class="account-group account-settings">
+          <label><span class="account-symbol" aria-hidden="true">◉</span><span><strong>Couleur</strong><small>Choisie pour cet appareil</small></span><select id="theme-accent" aria-label="Couleur de l'application"><option value="potager">Potager</option><option value="ardoise">Ardoise</option><option value="prune">Prune</option></select></label>
+          <label><span class="account-symbol" aria-hidden="true">◐</span><span><strong>Apparence</strong><small>Suit le téléphone par défaut</small></span><select id="theme-mode" aria-label="Apparence de l'application"><option value="system">Automatique</option><option value="light">Claire</option><option value="dark">Sombre</option></select></label>
+        </div>
+        <p class="account-footnote">Les couleurs restent sur cet appareil. Les données du foyer restent sur ton serveur.</p>
+      </section>
     </main>
 
     <nav aria-label="Navigation principale">
       <button class="active" type="button" data-panel="week" aria-current="page"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="4"/><path d="M7 3v4m10-4v4M3 11h18m-13 4h2m4 0h2m-8 3h2"/></svg><span>Semaine</span></button>
       <button type="button" data-panel="recipes"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6v15M3 4c3-1 6 0 9 2 3-2 6-3 9-2v15c-3-1-6 0-9 2-3-2-6-3-9-2Z"/></svg><span>Recettes</span></button>
       <button type="button" data-panel="shopping"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 3-4 7m12-7 4 7M2 10h20l-2 10H4Zm7 4v3m6-3v3"/></svg><span>Courses</span></button>
+      <button type="button" data-panel="account"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 21c.5-4.2 3.1-6.5 7.5-6.5s7 2.3 7.5 6.5"/></svg><span>Compte</span></button>
     </nav>
 
     <dialog id="meal-dialog">
@@ -410,13 +509,13 @@
 
     <dialog id="recipe-view-dialog">
       <div class="handle"></div>
+      <img id="recipe-view-photo" class="recipe-hero" alt="" hidden>
       <div class="section-heading">
         <div><h2 id="recipe-view-title"></h2><span id="recipe-view-meta" class="muted"></span></div>
         <button id="close-recipe-view" class="icon-button" type="button" aria-label="Fermer">×</button>
       </div>
       <p id="recipe-taste-warning" class="muted" hidden></p>
       <button id="start-cooking" class="primary" type="button">Cuisiner cette recette</button>
-      <img id="recipe-view-photo" class="recipe-hero" alt="" hidden>
       <a id="recipe-view-source" target="_blank" rel="noreferrer noopener" hidden>Voir la recette sur son site d’origine ↗</a>
       <label class="field"><span>Portions à préparer</span><input id="recipe-view-portions" type="number" min="1" max="100" step="1" required></label>
       <p class="muted">Recalcul de consultation uniquement. Les instructions et durées restent celles de la recette d’origine : adapte la cuisson si nécessaire.</p>
@@ -561,7 +660,11 @@
     addEventListener('storage', event => { if (event.key === 'manger-auth-change') { clearOfflineAccount(); location.replace('/login'); } });
     addEventListener('pageshow', event => { if (event.persisted) location.reload(); });
     fetch('/api/account').then(async response => {
-      if (response.ok) document.getElementById('backup-summary').closest('details').hidden = !(await response.json()).admin;
+      if (!response.ok) return;
+      const account = await response.json();
+      document.getElementById('backup-summary').closest('details').hidden = !account.admin;
+      document.getElementById('account-invite').hidden = !account.admin;
+      document.getElementById('account-name').textContent = account.username;
     }).catch(() => {});
     let restoreToken = null;
     const restoreOutput = document.getElementById('restore-preview');
@@ -715,7 +818,13 @@
       const css = meal.occasion === 'date' ? 'date' : meal.location === 'home' ? '' : 'outside';
       const icon = meal.occasion === 'date' ? '♥' : meal.location === 'home' ? '♨' : '⌖';
       const place = meal.leftoverOf ? 'Restes' : meal.location === 'home' ? 'Maison' : meal.location === 'restaurant' ? 'Restaurant' : 'Extérieur';
-      return `<button class="meal ${css}" type="button" data-slot="${slot}"><span class="meal-icon">${meal.leftoverOf ? '♻' : icon}</span><span class="meal-copy"><strong>${escapeHtml(meal.title)}</strong><small>${place} · ${meal.people} personne${meal.people > 1 ? 's' : ''}${meal.extraPortions ? ` · ${meal.people + meal.extraPortions} portions à cuisiner` : !meal.leftoverOf && meal.minutes ? ` · ${meal.minutes} min` : ''}</small></span><span>›</span></button>`;
+      const dishRecipes = (meal.dishes || []).map(dish => ({ dish, recipe: state.recipes.find(recipe => recipe.id === dish.recipeId), member: state.members.find(member => member.id === dish.memberId) }));
+      if (new Set(dishRecipes.map(({ dish }) => dish.recipeId)).size > 1) {
+        return `<div class="split-meal" role="group" aria-label="${slot === 'midi' ? 'Midi' : 'Soir'} · ${dishRecipes.length} recettes">${dishRecipes.map(({ dish, recipe, member }) => `<button class="split-dish" type="button" data-slot="${slot}">${recipe?.hasPhoto ? `<img class="recipe-cover" src="/api/recipes/${recipe.id}/photo" alt="" loading="lazy">` : '<span class="recipe-cover" aria-hidden="true">♨</span>'}<span class="meal-copy"><small>${escapeHtml(member?.name || 'Personne')}</small><strong>${escapeHtml(recipe?.title || meal.title)}</strong><small>${recipe?.minutes || meal.minutes || '—'} min${dish.proteinId ? ` · ${escapeHtml(state.proteins.find(protein => protein.id === dish.proteinId)?.name || 'Supplément')}` : ''}</small></span><span aria-hidden="true">›</span></button>`).join('')}</div>`;
+      }
+      const singleRecipe = state.recipes.find(recipe => recipe.id === (meal.recipeId || dishRecipes[0]?.dish.recipeId));
+      if (singleRecipe?.hasPhoto && !meal.leftoverOf && meal.location === 'home' && meal.occasion === 'regular') return `<button class="meal photo" type="button" data-slot="${slot}"><img src="/api/recipes/${singleRecipe.id}/photo" alt="" loading="lazy"><span class="meal-copy"><strong>${escapeHtml(singleRecipe.title)}</strong><small>${place} · ${meal.people} personne${meal.people > 1 ? 's' : ''} · ${meal.minutes || singleRecipe.minutes} min</small></span></button>`;
+      return `<button class="meal ${css}" type="button" data-slot="${slot}"><span class="meal-icon">${meal.leftoverOf ? '♻' : icon}</span><span class="meal-copy"><strong>${escapeHtml(dishRecipes.length ? singleRecipe?.title || meal.title : meal.title)}</strong><small>${place} · ${meal.people} personne${meal.people > 1 ? 's' : ''}${meal.extraPortions ? ` · ${meal.people + meal.extraPortions} portions à cuisiner` : !meal.leftoverOf && meal.minutes ? ` · ${meal.minutes} min` : ''}</small></span><span>›</span></button>`;
     }
 
     function renderSchedule() {
@@ -731,7 +840,9 @@
       const category = document.getElementById('recipe-category').value;
       const filtered = MangerFoodNames.searchRecipes(state.recipes.filter(recipe => category === '__favorites' ? recipe.favorite : !category || recipe.tags.includes(category)), query);
       document.getElementById('recipe-count').textContent = `${filtered.length} sur ${state.recipes.length} recettes`;
-      document.getElementById('recipes').innerHTML = filtered.map(recipe => `<button class="recipe" type="button" data-edit-recipe="${recipe.id}">${recipe.hasPhoto ? `<img class="recipe-cover" src="/api/recipes/${recipe.id}/photo" alt="" loading="lazy">` : '<span class="recipe-cover" aria-hidden="true">♨</span>'}<span class="recipe-copy"><strong>${escapeHtml(recipe.title)}</strong><small>${recipe.minutes} min · ${dietLabels[recipe.diet]}</small></span><span aria-hidden="true">›</span></button>`).join('') || '<div class="empty-state">Aucune recette ne correspond à ces filtres.</div>';
+      const featured = !query && !category && filtered.find(recipe => recipe.hasPhoto);
+      const ordered = featured ? [featured, ...filtered.filter(recipe => recipe.id !== featured.id)] : filtered;
+      document.getElementById('recipes').innerHTML = ordered.map(recipe => `<button class="recipe${recipe.id === featured?.id ? ' featured' : ''}" type="button" data-edit-recipe="${recipe.id}">${recipe.hasPhoto ? `<img class="recipe-cover" src="/api/recipes/${recipe.id}/photo" alt="" loading="lazy">` : '<span class="recipe-cover" aria-hidden="true">♨</span>'}<span class="recipe-copy"><strong>${escapeHtml(recipe.title)}</strong><small>${recipe.minutes} min · ${dietLabels[recipe.diet]}</small></span></button>`).join('') || '<div class="empty-state">Aucune recette ne correspond à ces filtres.</div>';
     }
 
     const pantryDialog = document.getElementById('pantry-dialog');
@@ -823,6 +934,7 @@
       const container = document.getElementById('shopping');
       const remaining = state.shopping.filter(item => !item.checked).length;
       summary.textContent = `${remaining} à acheter · ${state.shopping.length} au total`;
+      document.getElementById('shopping-progress-bar').style.width = `${state.shopping.length ? Math.round((state.shopping.length - remaining) / state.shopping.length * 100) : 0}%`;
       const checkedOpen = container.querySelector('#shopping-checked')?.open || false;
       const renderGroups = rows => {
         const groups = new Map();
@@ -1740,6 +1852,22 @@
     });
     document.getElementById('previous-week').addEventListener('click', async () => { state.weekStart.setDate(state.weekStart.getDate() - 7); state.selected = 0; await load(); });
     document.getElementById('next-week').addEventListener('click', async () => { state.weekStart.setDate(state.weekStart.getDate() + 7); state.selected = 0; await load(); });
+    const accentSelect = document.getElementById('theme-accent');
+    const modeSelect = document.getElementById('theme-mode');
+    let savedAppearance = {};
+    try { savedAppearance = JSON.parse(localStorage.getItem('manger-appearance-v1') || '{}'); } catch {}
+    accentSelect.value = ['potager', 'ardoise', 'prune'].includes(savedAppearance.accent) ? savedAppearance.accent : 'potager';
+    modeSelect.value = ['system', 'light', 'dark'].includes(savedAppearance.mode) ? savedAppearance.mode : 'system';
+    function applyAppearance() {
+      document.documentElement.dataset.accent = accentSelect.value;
+      document.documentElement.dataset.mode = modeSelect.value === 'system' ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : modeSelect.value;
+      try { localStorage.setItem('manger-appearance-v1', JSON.stringify({ accent: accentSelect.value, mode: modeSelect.value })); } catch {}
+    }
+    accentSelect.addEventListener('change', applyAppearance);
+    modeSelect.addEventListener('change', applyAppearance);
+    matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (modeSelect.value === 'system') applyAppearance(); });
+    document.getElementById('account-household').addEventListener('click', () => document.getElementById('household-button').click());
+    document.getElementById('account-tastes').addEventListener('click', () => { document.getElementById('household-button').click(); document.getElementById('member-name').focus(); });
     document.querySelector('nav').addEventListener('click', event => {
       const button = event.target.closest('[data-panel]');
       if (!button) return;
@@ -1748,6 +1876,7 @@
       document.getElementById(`${button.dataset.panel}-panel`).hidden = false;
       shoppingSyncVersion++;
       if (button.dataset.panel === 'shopping') syncShopping();
+      window.scrollTo(0, 0);
     });
     document.getElementById('organize-shopping').addEventListener('click', event => {
       organizingShopping = !organizingShopping;

@@ -1,6 +1,8 @@
 # Proposition de refonte de Manger!
 
-Statut : **direction à valider, aucune interface modifiée**. Les captures Jow fournies en septembre 2026 servent de référence pour la lisibilité, l'importance des photos et le parcours guidé, pas de modèle à reproduire écran par écran. Référence publique : https://jow.fr/pages/misc/jow-comment-ca-marche.
+Statut : **maquette validée ; première intégration mobile sur `development`**. La navigation Semaine / Recettes / Courses / Compte, les assiettes séparées, les thèmes Potager / Ardoise / Prune et les cartes de recettes sont intégrés. Les photos ne s'affichent que lorsqu'une recette en possède réellement une. Les captures Jow fournies en septembre 2026 servent de référence pour la lisibilité et le parcours guidé, pas de modèle à reproduire écran par écran. Référence publique : https://jow.fr/pages/misc/jow-comment-ca-marche.
+
+À poursuivre : contrôle humain sur iPhone Safari et Android après déploiement, finition de la fiche recette et des filtres de découverte, puis vraie adaptation tablette/PC. Les tests locaux ne valident pas ces environnements distants.
 
 ## Intention
 
@@ -22,7 +24,7 @@ Sur téléphone, répondre vite à « On mange quoi ? », puis passer du repas p
 4. **Courses** : quantités et rayons au premier plan, articles cochés repliés, partage accessible, placard en action secondaire. Garder le suivi utilisable d'une main.
 5. **Foyer** : profils et goûts par personne, réglages peu fréquents hors de la navigation principale. Une configuration guidée et facultative peut aider un nouveau foyer à saisir régimes et exclusions ; demander les équipements seulement si les recettes savent réellement en tenir compte.
 
-Navigation compacte : **Semaine · Recettes · Courses**, avec le foyer depuis l'en-tête. Tablette/PC : mêmes contenus, disposition adaptée plus tard ; ne pas agrandir simplement les cartes mobiles.
+Navigation compacte validée : **Semaine · Recettes · Courses · Compte**. Le foyer reste accessible depuis l'en-tête et l'onglet Compte. Tablette/PC : mêmes contenus, disposition adaptée plus tard ; ne pas agrandir simplement les cartes mobiles.
 
 Schéma compact pour la découverte des recettes :
 
@@ -71,4 +73,4 @@ Sur grand écran, la photo et la fiche peuvent se placer côte à côte, avec un
 - Les photos culinaires doivent provenir des utilisateurs ou d'une source réutilisable avec droits vérifiés ; aucune photo Jow ni lien direct vers ses médias. Sans photo, montrer un substitut cohérent plutôt qu'une image trompeuse.
 - Ne pas ajouter un tutoriel obligatoire, un onglet « Plus », des animations gratuites ou des options de thème dans chaque écran. Une transition courte à l'ouverture de la fiche suffit si elle aide à suivre le contexte ; respecter la réduction des animations.
 
-La première décision à valider avec l'utilisateur est une **maquette mobile**, pas ce document ni une implémentation. Les équipements et données nutritionnelles demanderaient un chantier fonctionnel séparé avant d'apparaître dans la fiche.
+La maquette mobile a été validée avant l'intégration. Les équipements et données nutritionnelles demanderaient un chantier fonctionnel séparé avant d'apparaître dans la fiche.

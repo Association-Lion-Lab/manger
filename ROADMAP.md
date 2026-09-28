@@ -41,7 +41,7 @@ Vérification : tests Node et parcours navigateur sur base isolée. Le rendu a �
 
 ## P3 — Évolutions différées
 
-- Préparer une refonte mobile complète de l'expérience Semaine, Recettes, Courses et Foyer, inspirée par la clarté de Jow avec une identité Manger! originale. Direction proposée et limites dans [DESIGN-REFONTE.md](DESIGN-REFONTE.md) ; maquettes et validation utilisateur avant tout changement d'interface.
+- Terminer la refonte mobile de Semaine, Recettes, Courses et Compte : première intégration de la maquette validée effectuée sur `development` (navigation, thèmes et assiettes distinctes). Restent la validation iPhone/Android sur serveur, la finition de la fiche et des filtres de recettes. Direction et limites dans [DESIGN-REFONTE.md](DESIGN-REFONTE.md).
 - Concevoir les interfaces tablette et PC : exploiter la largeur pour le planning et les recettes, adapter la navigation au tactile et au clavier/souris. Les contrôles actuels de largeur ne constituent pas encore ces interfaces.
 - Revoir « Plus d’options », jugé peu pratique, et rendre les fonctions fréquentes plus accessibles sans surcharger l'écran.
 - Ajouter le coût indicatif des recettes et de la semaine à partir de prix renseignés.
