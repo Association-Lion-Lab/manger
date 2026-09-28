@@ -93,7 +93,7 @@ test('un date à la maison conserve sa recette et ajoute les ingrédients aux co
   assert.ok(shoppingList(db, '2026-09-14').some(item => item.name === 'pois chiches' && item.amount === 400));
 });
 
-test('le catalogue importe 18 recettes complètes sans doublon ni remplacement', async t => {
+test('le catalogue importe 26 recettes complètes sans doublon ni remplacement', async t => {
   const db = createDatabase(':memory:');
   const server = createApp(db);
   server.listen(0, '127.0.0.1');
@@ -103,10 +103,10 @@ test('le catalogue importe 18 recettes complètes sans doublon ni remplacement',
   const initial = await (await fetch(`${base}/api/week?start=2026-09-14`)).json();
   const imported = await fetch(`${base}/api/catalog/import`, { method: 'POST' });
   assert.equal(imported.status, 200);
-  assert.deepEqual(await imported.json(), { added: 18 });
+  assert.deepEqual(await imported.json(), { added: 26 });
   assert.deepEqual(await (await fetch(`${base}/api/catalog/import`, { method: 'POST' })).json(), { added: 0 });
   const final = await (await fetch(`${base}/api/week?start=2026-09-14`)).json();
-  assert.equal(final.recipes.length, initial.recipes.length + 18);
+  assert.equal(final.recipes.length, initial.recipes.length + 26);
   for (const recipe of initial.recipes) assert.deepEqual(final.recipes.find(item => item.id === recipe.id), recipe);
   const recipes = final.recipes.filter(recipe => !initial.recipes.some(item => item.id === recipe.id));
   for (const recipe of recipes) {
@@ -117,6 +117,10 @@ test('le catalogue importe 18 recettes complètes sans doublon ni remplacement',
   for (const tag of ['rat', 'date', 'mijote', 'japon', 'chine', 'terroir', 'chef']) assert.ok(recipes.some(recipe => recipe.tags.includes(tag)));
   for (const tag of ['express', 'batch', 'emporter', 'comfort', 'mediterranee', 'italie', 'inde', 'mexique']) assert.ok(recipes.some(recipe => recipe.tags.includes(tag)));
   assert.ok(recipes.filter(recipe => recipe.tags.includes('express')).every(recipe => recipe.minutes <= 30));
+  assert.equal(recipes.find(recipe => recipe.title === 'Chakchouka douce aux pois chiches').diet, 'vegetarian');
+  assert.equal(recipes.find(recipe => recipe.title === 'Cabillaud citron et poireaux au four').diet, 'pescetarian');
+  assert.equal(recipes.find(recipe => recipe.title === 'Poulet aux poivrons et tomates').diet, 'omnivore');
+  assert.equal(recipes.find(recipe => recipe.title === 'Gnocchis poêlés aux courgettes et tomates').ingredients.find(item => item.name === 'tomate concassée').preparation, 'cooked');
 });
 
 test('la migration corrige le régime des gnocchis dans une base existante', t => {
