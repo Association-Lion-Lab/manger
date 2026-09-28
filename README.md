@@ -201,6 +201,8 @@ Les ingrédients calculés regroupent désormais les unités compatibles (g/kg, 
 
 Les courses combinent les ingrédients calculés depuis le planning et des articles ajoutés manuellement pour la semaine affichée. Les ajouts peuvent être cochés, supprimés et partagés avec la liste. Leur rayon est choisi à l'ajout ; celui des ingrédients est estimé par mots-clés et peut être approximatif. Les ajouts ne sont ni fusionnés avec les ingrédients ni effacés lorsqu'un repas change.
 
+Les articles cochés se rangent dans « Déjà dans le panier », replié par défaut pour garder la liste courte sur téléphone. Ouvrez cette section pour décocher un article ; le mode « Organiser les rayons » continue d'afficher tous les articles.
+
 Dans les courses, « Organiser les rayons » affiche une poignée ⠿ par article. Glissez-la à la souris ou au toucher vers un rayon (les destinations restent visibles en haut), ou activez-la par toucher, Entrée ou Espace pour choisir le rayon dans une fenêtre. « Terminer » retrouve la liste épurée. Chaque correction est enregistrée immédiatement. Pour un ingrédient calculé, ce choix est retenu pour l'aliment et ses unités compatibles dans toutes les semaines ; « Automatique » retire la correction. Pour un article ajouté manuellement, seul cet article est modifié. Le déplacement change le rayon, pas l'ordre des articles à l'intérieur d'un rayon.
 
 ## Restes et déplacements du planning

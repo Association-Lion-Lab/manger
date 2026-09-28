@@ -823,13 +823,20 @@
       const container = document.getElementById('shopping');
       const remaining = state.shopping.filter(item => !item.checked).length;
       summary.textContent = `${remaining} à acheter · ${state.shopping.length} au total`;
-      const groups = new Map();
-      state.shopping.forEach((item, index) => {
-        const aisle = shoppingAisle(item);
-        if (!groups.has(aisle)) groups.set(aisle, []);
-        groups.get(aisle).push(`<div style="display:flex;gap:8px;align-items:center"><label class="shopping-item" style="flex:1;min-width:0"><input type="checkbox" data-shopping="${index}"${item.checked ? ' checked' : ''}><span>${escapeHtml(shoppingText(item))}${item.manualId ? ' · ajouté' : ''}</span></label>${item.manualId ? `<button type="button" class="icon-button" data-remove-shopping="${item.manualId}" aria-label="Supprimer ${escapeHtml(item.name)}">×</button>` : ''}</div>`);
-      });
-      container.innerHTML = groups.size ? [...groups].sort(([a], [b]) => a.localeCompare(b, 'fr')).map(([aisle, items]) => `<section class="shopping-group"><h2 class="group-title">${escapeHtml(aisle)}</h2>${items.join('')}</section>`).join('') : '<div class="empty-state">Planifiez une recette ou ajoutez un article à acheter.</div>';
+      const checkedOpen = container.querySelector('#shopping-checked')?.open || false;
+      const renderGroups = rows => {
+        const groups = new Map();
+        rows.forEach(({ item, index }) => {
+          const aisle = shoppingAisle(item);
+          if (!groups.has(aisle)) groups.set(aisle, []);
+          groups.get(aisle).push(`<div style="display:flex;gap:8px;align-items:center"><label class="shopping-item" style="flex:1;min-width:0"><input type="checkbox" data-shopping="${index}"${item.checked ? ' checked' : ''}><span>${escapeHtml(shoppingText(item))}${item.manualId ? ' · ajouté' : ''}</span></label>${item.manualId ? `<button type="button" class="icon-button" data-remove-shopping="${item.manualId}" aria-label="Supprimer ${escapeHtml(item.name)}">×</button>` : ''}</div>`);
+        });
+        return [...groups].sort(([a], [b]) => a.localeCompare(b, 'fr')).map(([aisle, items]) => `<section class="shopping-group"><h2 class="group-title">${escapeHtml(aisle)}</h2>${items.join('')}</section>`).join('');
+      };
+      const rows = state.shopping.map((item, index) => ({ item, index }));
+      const active = organizingShopping ? rows : rows.filter(({ item }) => !item.checked);
+      const checked = organizingShopping ? [] : rows.filter(({ item }) => item.checked);
+      container.innerHTML = state.shopping.length ? `${active.length ? renderGroups(active) : '<div class="empty-state">Tout est coché.</div>'}${checked.length ? `<details id="shopping-checked" class="quiet-details"${checkedOpen ? ' open' : ''}><summary>Déjà dans le panier · ${checked.length}</summary>${renderGroups(checked)}</details>` : ''}` : '<div class="empty-state">Planifiez une recette ou ajoutez un article à acheter.</div>';
       if (organizingShopping) container.querySelectorAll('[data-shopping]').forEach(input => {
         const index = Number(input.dataset.shopping);
         const item = state.shopping[index];
