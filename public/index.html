@@ -851,11 +851,11 @@
       const place = meal.leftoverOf ? 'Restes' : meal.location === 'home' ? 'Maison' : meal.location === 'restaurant' ? 'Restaurant' : 'Extérieur';
       const dishRecipes = (meal.dishes || []).map(dish => ({ dish, recipe: state.recipes.find(recipe => recipe.id === dish.recipeId), member: state.members.find(member => member.id === dish.memberId) }));
       if (new Set(dishRecipes.map(({ dish }) => dish.recipeId)).size > 1) {
-        return `<div class="split-meal" role="group" aria-label="${slot === 'midi' ? 'Midi' : 'Soir'} · ${dishRecipes.length} recettes">${dishRecipes.map(({ dish, recipe, member }) => `<button class="split-dish" type="button" data-slot="${slot}">${recipe?.hasPhoto ? `<img class="recipe-cover" src="/api/recipes/${recipe.id}/photo" alt="" loading="lazy">` : '<span class="recipe-cover" aria-hidden="true">♨</span>'}<span class="meal-copy"><small>${escapeHtml(member?.name || 'Personne')}</small><strong>${escapeHtml(recipe?.title || meal.title)}</strong><small>${recipe?.minutes || meal.minutes || '—'} min${dish.proteinId ? ` · ${escapeHtml(state.proteins.find(protein => protein.id === dish.proteinId)?.name || 'Supplément')}` : ''}</small></span><span aria-hidden="true">›</span></button>`).join('')}</div>`;
+        return `<div class="split-meal" role="group" aria-label="${slot === 'midi' ? 'Midi' : 'Soir'} · ${dishRecipes.length} recettes">${dishRecipes.map(({ dish, recipe, member }) => `<button class="split-dish" type="button" data-slot="${slot}">${recipe ? recipeCover(recipe) : '<span class="recipe-cover" aria-hidden="true">♨</span>'}<span class="meal-copy"><small>${escapeHtml(member?.name || 'Personne')}</small><strong>${escapeHtml(recipe?.title || meal.title)}</strong><small>${recipe?.minutes || meal.minutes || '—'} min${dish.proteinId ? ` · ${escapeHtml(state.proteins.find(protein => protein.id === dish.proteinId)?.name || 'Supplément')}` : ''}</small></span><span aria-hidden="true">›</span></button>`).join('')}</div>`;
       }
       const singleRecipe = state.recipes.find(recipe => recipe.id === (meal.recipeId || dishRecipes[0]?.dish.recipeId));
       if (singleRecipe?.hasPhoto && !meal.leftoverOf && meal.location === 'home' && meal.occasion === 'regular') return `<button class="meal photo" type="button" data-slot="${slot}"><img src="/api/recipes/${singleRecipe.id}/photo" alt="" loading="lazy"><span class="meal-copy"><strong>${escapeHtml(singleRecipe.title)}</strong><small>${place} · ${meal.people} personne${meal.people > 1 ? 's' : ''} · ${meal.minutes || singleRecipe.minutes} min</small></span></button>`;
-      return `<button class="meal ${css}" type="button" data-slot="${slot}"><span class="meal-icon">${meal.leftoverOf ? '♻' : icon}</span><span class="meal-copy"><strong>${escapeHtml(dishRecipes.length ? singleRecipe?.title || meal.title : meal.title)}</strong><small>${place} · ${meal.people} personne${meal.people > 1 ? 's' : ''}${meal.extraPortions ? ` · ${meal.people + meal.extraPortions} portions à cuisiner` : !meal.leftoverOf && meal.minutes ? ` · ${meal.minutes} min` : ''}</small></span><span>›</span></button>`;
+      return `<button class="meal ${css}" type="button" data-slot="${slot}"><span class="meal-icon">${meal.leftoverOf ? '♻' : singleRecipe && meal.location === 'home' && meal.occasion === 'regular' ? recipeIcon(singleRecipe) : icon}</span><span class="meal-copy"><strong>${escapeHtml(dishRecipes.length ? singleRecipe?.title || meal.title : meal.title)}</strong><small>${place} · ${meal.people} personne${meal.people > 1 ? 's' : ''}${meal.extraPortions ? ` · ${meal.people + meal.extraPortions} portions à cuisiner` : !meal.leftoverOf && meal.minutes ? ` · ${meal.minutes} min` : ''}</small></span><span>›</span></button>`;
     }
 
     function renderSchedule() {
@@ -866,11 +866,15 @@
       document.getElementById('schedule').innerHTML = `<div><span class="slot-label">Midi</span>${mealMarkup('midi', midi)}</div><div><span class="slot-label">Soir</span>${mealMarkup('soir', soir)}</div>`;
     }
 
-    function recipeCover(recipe) {
-      if (recipe.hasPhoto) return `<img class="recipe-cover" src="/api/recipes/${recipe.id}/photo" alt="" loading="lazy">`;
+    function recipeIcon(recipe) {
       const icons = { japon: '🍜', chine: '🥟', mijote: '🍲', italie: '🍝', inde: '🍛', mexique: '🌮', mediterranee: '🫒', emporter: '🥡', terroir: '🥘' };
       const category = (recipe.tags || []).find(tag => icons[tag]);
-      return `<span class="recipe-cover" aria-hidden="true">${icons[category] || (recipe.diet === 'vegan' || recipe.diet === 'vegetarian' ? '🥗' : '🍽️')}</span>`;
+      return icons[category] || (recipe.diet === 'vegan' || recipe.diet === 'vegetarian' ? '🥗' : '🍽️');
+    }
+
+    function recipeCover(recipe) {
+      if (recipe.hasPhoto) return `<img class="recipe-cover" src="/api/recipes/${recipe.id}/photo" alt="" loading="lazy">`;
+      return `<span class="recipe-cover" aria-hidden="true">${recipeIcon(recipe)}</span>`;
     }
 
     function recipeFavoriteButton(recipe) {
