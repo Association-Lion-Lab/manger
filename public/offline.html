@@ -3,12 +3,19 @@
 <style>
 :root{color-scheme:light dark;font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f5f7;color:#1d1d1f}body{max-width:620px;margin:auto;padding:28px 20px}h1{font-size:28px;margin-bottom:6px}p{color:#68686d}ul{padding:0;list-style:none}li{padding:16px 0;border-bottom:1px solid #aaa5;overflow-wrap:anywhere}.done{text-decoration:line-through;opacity:.65}a,button{display:block;padding:14px 18px;margin-top:14px;border:1px solid #aaa6;border-radius:16px;text-align:center;color:inherit;background:transparent;font:inherit}a{background:#b84128;color:white;text-decoration:none}button{width:100%;cursor:pointer}@media(prefers-color-scheme:dark){:root{background:#101012;color:#f5f5f7}p{color:#aaaab2}a{background:#ff765b;color:#201a18}}
 details{border:1px solid #aaa6;border-radius:20px;padding:16px;margin:14px 0}summary{cursor:pointer;min-height:44px;font-weight:650;overflow-wrap:anywhere}h2{margin-top:32px}h3{font-size:18px}ol{padding-left:24px}li p{color:inherit;white-space:pre-wrap}small{display:block;margin-top:8px}button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid #b84128;outline-offset:4px}.source{background:transparent;color:inherit}*{box-sizing:border-box}
+.timer-controls{display:flex;flex-wrap:wrap;gap:8px}.timer-controls button{flex:1 1 140px;min-height:48px;margin-top:8px}.timer-value{font-variant-numeric:tabular-nums}.timer-notice:empty{display:none}
 </style></head><body><h1>Hors connexion</h1><p>Copies locales · lecture seule · elles peuvent être anciennes.</p><h2>Courses enregistrées</h2><p id="status" role="status"></p><ul id="items"></ul>
 <section id="recipes" aria-labelledby="recipes-heading"><h2 id="recipes-heading" tabindex="-1">Recettes enregistrées</h2><p id="recipes-status" role="status"></p><div id="recipe-copies"></div></section>
 <a href="/">Revenir à Manger</a><button id="clear" type="button">Effacer toutes les copies sur cet appareil</button>
 <script src="/offline-recipes.js"></script>
 <script>
 const list = document.getElementById('items'), status = document.getElementById('status');
+let timers = [];
+function timerSeconds(timer, now = Date.now()) {
+  return timer.end == null ? timer.remaining : Math.max(0, Math.ceil((timer.end - now) / 1000));
+}
+setInterval(() => timers.forEach(update => update()), 1000);
+document.addEventListener('visibilitychange', () => timers.forEach(update => update()));
 function show() {
   list.replaceChildren();
   try {
@@ -22,6 +29,7 @@ function show() {
   } catch { status.textContent = 'Copie indisponible sur cet appareil.'; }
 }
 function showRecipes() {
+  timers = [];
   const container = document.getElementById('recipe-copies'), message = document.getElementById('recipes-status'); container.replaceChildren();
   const element = (tag, text) => { const node = document.createElement(tag); node.textContent = text; return node; };
   try {
@@ -31,10 +39,38 @@ function showRecipes() {
       const card = document.createElement('details'), summary = element('summary', recipe.title);
       summary.append(element('small', `${recipe.minutes} min · ${recipe.portions} portions`)); card.append(summary);
       card.append(element('p', `Copie du ${new Date(recipe.savedAt).toLocaleString('fr-FR')}. Instructions et durées d’origine : adapte la cuisson aux portions choisies.`));
+      if (recipe.steps.some(step => step.minutes > 0)) card.append(element('small', 'Minuteurs locaux, sans son ni alarme garantie en arrière-plan. Garde cette page ouverte ; recharger ou modifier les copies les remet à zéro.'));
+      else if (recipe.steps.some(step => !Object.hasOwn(step, 'minutes'))) card.append(element('small', 'Pour obtenir les minuteurs, enregistre à nouveau cette recette depuis sa fiche en ligne.'));
       card.append(element('h3', 'Ingrédients')); const ingredients = document.createElement('ul');
       for (const ingredient of recipe.ingredients) ingredients.append(element('li', ingredient)); card.append(ingredients);
       card.append(element('h3', 'Réalisation')); const steps = document.createElement('ol');
-      for (const step of recipe.steps) { const row = document.createElement('li'); row.append(element('strong', step.label), element('p', step.text)); steps.append(row); } card.append(steps);
+      for (const [index, step] of recipe.steps.entries()) {
+        const row = document.createElement('li'); row.append(element('strong', step.label), element('p', step.text));
+        if (step.minutes > 0) {
+          const timer = { remaining: step.minutes * 60, end: null, started: false };
+          const value = element('p', ''), notice = element('p', ''), controls = document.createElement('div');
+          value.className = 'timer-value'; notice.className = 'timer-notice'; notice.setAttribute('role', 'status'); controls.className = 'timer-controls';
+          const toggle = element('button', ''), reset = element('button', 'Réinitialiser'); toggle.type = reset.type = 'button';
+          reset.setAttribute('aria-label', `Réinitialiser le minuteur de l’étape ${index + 1}`);
+          const update = () => {
+            const seconds = timerSeconds(timer);
+            value.textContent = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}${timer.started && timer.end == null ? ' · en pause' : ''}`;
+            toggle.textContent = seconds === 0 ? 'Relancer' : timer.end != null ? 'Pause' : timer.started ? 'Reprendre' : 'Démarrer le minuteur';
+            toggle.setAttribute('aria-label', `${toggle.textContent} · étape ${index + 1}`);
+            const message = timer.started && seconds === 0 ? 'Minuteur terminé — vérifie la cuisson.' : '';
+            if (notice.textContent !== message) notice.textContent = message;
+          };
+          toggle.onclick = () => {
+            const seconds = timerSeconds(timer);
+            if (timer.end != null && seconds > 0) { timer.remaining = seconds; timer.end = null; }
+            else { if (seconds === 0) timer.remaining = step.minutes * 60; timer.end = Date.now() + timer.remaining * 1000; timer.started = true; }
+            update();
+          };
+          reset.onclick = () => { timer.remaining = step.minutes * 60; timer.end = null; timer.started = false; update(); };
+          timers.push(update); update(); controls.append(toggle, reset); row.append(value, controls, notice);
+        }
+        steps.append(row);
+      } card.append(steps);
       if (recipe.sourceUrl) { try { const url = new URL(recipe.sourceUrl); if (['https:', 'http:'].includes(url.protocol)) { const source = element('a', 'Site d’origine · connexion nécessaire'); source.href = url.href; source.rel = 'noreferrer noopener'; source.className = 'source'; card.append(source); } } catch {} }
       const remove = element('button', 'Retirer cette copie'); remove.type = 'button'; remove.setAttribute('aria-label', `Retirer la copie de ${recipe.title}`);
       remove.onclick = () => { try { offlineRecipes.remove(localStorage, recipe.id); showRecipes(); document.getElementById('recipes-heading').focus(); } catch { message.textContent = 'Impossible de retirer cette copie.'; } }; card.append(remove); container.append(card);
@@ -42,7 +78,10 @@ function showRecipes() {
   } catch { message.textContent = 'Copies de recettes indisponibles. Tu peux les effacer puis les enregistrer à nouveau en ligne.'; }
 }
 document.getElementById('clear').onclick = () => { try { localStorage.removeItem('manger-shopping-offline-v1'); localStorage.removeItem('manger-offline-enabled'); localStorage.removeItem('manger-recipes-offline-v1'); show(); showRecipes(); } catch { status.textContent = 'Impossible d’effacer les copies.'; } };
-addEventListener('storage', () => { show(); showRecipes(); });
+addEventListener('storage', event => {
+  if (event.key === null || event.key === 'manger-shopping-offline-v1') show();
+  if (event.key === null || event.key === offlineRecipes.KEY || event.key === 'manger-auth-change') showRecipes();
+});
 addEventListener('pageshow', () => { show(); showRecipes(); });
 show(); showRecipes();
 </script></body></html>

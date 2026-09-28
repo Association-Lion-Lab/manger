@@ -6,7 +6,8 @@
       && Number.isInteger(recipe.portions) && recipe.portions >= 1 && recipe.portions <= 100
       && Number.isFinite(recipe.minutes) && recipe.minutes >= 0 && text(recipe.savedAt) && Number.isFinite(Date.parse(recipe.savedAt))
       && Array.isArray(recipe.ingredients) && recipe.ingredients.length <= 200 && recipe.ingredients.every(text)
-      && Array.isArray(recipe.steps) && recipe.steps.length <= 200 && recipe.steps.every(step => step && text(step.label) && text(step.text));
+      && Array.isArray(recipe.steps) && recipe.steps.length <= 200 && recipe.steps.every(step => step && text(step.label) && text(step.text)
+        && (step.minutes == null || (Number.isInteger(step.minutes) && step.minutes >= 0 && step.minutes <= 1440)));
   }
   function read(storage) {
     const raw = storage.getItem(KEY);

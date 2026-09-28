@@ -2136,7 +2136,7 @@
         const portions = Number(document.getElementById('recipe-view-portions').value);
         const snapshot = { id: recipe.id, title: recipe.title, minutes: recipe.minutes, portions, savedAt: new Date().toISOString(),
           ingredients: scaledIngredients(recipe, portions).map(recipeIngredientText),
-          steps: recipe.steps.map(step => ({ label: `${stepKindLabels[step.kind]}${step.minutes == null ? '' : ` · ${step.minutes} min`}`, text: step.instruction })),
+          steps: recipe.steps.map(step => ({ label: `${stepKindLabels[step.kind]}${step.minutes == null ? '' : ` · ${step.minutes} min`}`, text: step.instruction, minutes: step.minutes ?? null })),
           sourceUrl: recipe.sourceUrl || '' };
         const accountChange = localStorage.getItem('manger-auth-change');
         await prepareOffline();
