@@ -42,7 +42,7 @@ Navigation Semaine / Recettes / Courses
 
 Identité par défaut « **Potager** » : fond clair `#F7F8F3`, surface `#FFFFFF`, texte `#1C2A22`, texte secondaire `#56645A`, accent `#1B6B4A`, séparateur `#DCE5DC`. Le texte principal sur fond clair atteint environ **14,0:1** ; le texte secondaire **5,9:1** ; le blanc sur l'accent **6,5:1**.
 
-Mode sombre correspondant : fond `#111916`, surface `#1B2821`, texte `#F4F7F2`, secondaire `#B6C7BB`, accent `#7BD5A2`, séparateur `#33463A`. Le texte principal sur fond sombre atteint environ **16,6:1** ; le texte secondaire **10,1:1** ; le texte foncé `#10231A` sur l'accent **9,3:1**. Ces valeurs concernent les couleurs pleines citées, pas les photos ou les superpositions ; celles-ci seront contrôlées sur les maquettes réelles.
+Mode sombre neutre : fond `#111113`, surface `#1D1D20`, texte `#F4F4F5`, secondaire `#BCBCC2`, séparateur `#3B3B40`. Seul l'accent choisi apporte de la couleur ; les surfaces, champs et fonds de cartes restent gris-noir. La lisibilité des photos et superpositions doit être contrôlée sur les écrans réels.
 
 À terme, trois accents présélectionnés maximum, sans roue chromatique ni réglage par composant : **Potager** `#1B6B4A`, **Ardoise** `#3B5F9B`, **Prune** `#8B4B56` en mode clair (blanc sur chacun : au moins **6,3:1**). Chaque accent devra avoir sa variante sombre validée. Le choix d'accent ne change ni les couleurs d'alerte, ni les régimes, ni les informations de sécurité. Il peut rester local à l'appareil pour ne pas modifier la vue des autres membres du foyer.
 

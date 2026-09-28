@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f7f8f3" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#111916" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#111113" media="(prefers-color-scheme: dark)">
   <title>Manger! — On mange quoi cette semaine ?</title>
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
@@ -43,18 +43,18 @@
     :root[data-mode="dark"] {
       color-scheme: dark;
       --accent: #7bd5a2;
-      --on-accent: #10231a;
-      --accent-soft: #253d2f;
-      --background: #111916;
-      --surface: #1b2821;
-      --raised: #25352b;
-      --text: #f4f7f2;
-      --muted: #b6c7bb;
-      --line: #33463a;
-      --field: #25352b;
+      --on-accent: #111113;
+      --accent-soft: #29292d;
+      --background: #111113;
+      --surface: #1d1d20;
+      --raised: #29292d;
+      --text: #f4f4f5;
+      --muted: #bcbcc2;
+      --line: #3b3b40;
+      --field: #29292d;
       --error: #ff938a;
       --shadow: 0 2px 8px #00000012, 0 12px 32px #00000018;
-      --glass: rgb(17 25 22 / .88);
+      --glass: rgb(17 17 19 / .88);
       --glass-edge: rgb(255 255 255 / .16);
       --glass-sheen: rgb(255 255 255 / .07);
       --green: #7bd5a2;
@@ -63,8 +63,8 @@
     :root[data-mode="light"] { color-scheme: light; }
     :root[data-accent="ardoise"] { --accent: #3b5f9b; --accent-soft: #e8eef9; }
     :root[data-accent="prune"] { --accent: #8b4b56; --accent-soft: #f8ebef; }
-    :root[data-mode="dark"][data-accent="ardoise"] { --accent: #a5c2fc; --on-accent: #142342; --accent-soft: #293b54; }
-    :root[data-mode="dark"][data-accent="prune"] { --accent: #e1a9bb; --on-accent: #31151f; --accent-soft: #46313b; }
+    :root[data-mode="dark"][data-accent="ardoise"] { --accent: #a5c2fc; --on-accent: #111113; --accent-soft: #29292d; }
+    :root[data-mode="dark"][data-accent="prune"] { --accent: #e1a9bb; --on-accent: #111113; --accent-soft: #29292d; }
     * { box-sizing: border-box; }
     [hidden] { display: none !important; }
     body { margin: 0; color: var(--text); background: var(--background); }
@@ -274,7 +274,7 @@
     .meal { box-shadow: none; }
     .meal.photo { position: relative; display: block; height: 225px; padding: 0; overflow: hidden; border: 0; background: var(--surface); }
     .meal.photo > img { display: block; width: 100%; height: 100%; object-fit: cover; }
-    .meal.photo::after { content: ""; position: absolute; inset: 30% 0 0; background: linear-gradient(transparent, #07140be8); pointer-events: none; }
+    .meal.photo::after { content: ""; position: absolute; inset: 30% 0 0; background: linear-gradient(transparent, #0b0b0de8); pointer-events: none; }
     .meal.photo .meal-copy { position: absolute; z-index: 1; inset: auto 18px 17px; color: #fff; }
     .meal.photo .meal-copy strong { font-size: 21px; line-height: 1.15; }
     .meal.photo .meal-copy small { color: #e9f7e9; }
@@ -286,13 +286,13 @@
     .split-dish .meal-copy strong { font-size: 14px; line-height: 1.2; }
     .split-dish .meal-copy small:first-child { color: var(--muted); font-size: 11px; }
     .split-dish .meal-copy small:last-child { color: var(--muted); font-size: 12px; }
-    .recipe-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 13px; }
-    .recipe { min-width: 0; min-height: 0; display: block; padding: 0; overflow: hidden; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+    .recipe-list { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 22px 13px; }
+    .recipe { min-width: 0; min-height: 0; display: flex; flex-direction: column; align-items: stretch; padding: 0; overflow: hidden; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
     .recipe-cover { width: 100%; height: auto; aspect-ratio: 1; border-radius: 18px; object-fit: cover; }
     .recipe-copy { padding: 8px 2px 0; }
     .recipe.featured { grid-column: 1 / -1; position: relative; height: 265px; border-radius: 23px; background: var(--surface); }
     .recipe.featured .recipe-cover { height: 100%; border-radius: 0; }
-    .recipe.featured .recipe-copy { position: absolute; inset: auto 0 0; padding: 55px 18px 18px; color: #fff; background: linear-gradient(transparent, #07140bea); }
+    .recipe.featured .recipe-copy { position: absolute; inset: auto 0 0; padding: 55px 18px 18px; color: #fff; background: linear-gradient(transparent, #0b0b0dea); }
     .recipe.featured .recipe-copy strong { font-size: 23px; line-height: 1.15; }
     .recipe.featured .recipe-copy small { color: #e9f7e9; }
     .recipe-filters { margin: 22px 0 16px; gap: 10px; }
