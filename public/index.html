@@ -116,16 +116,8 @@
     .secondary { border: 1px solid var(--line); background: var(--raised); }
     .panel[hidden] { display: none; }
     .recipe-list, .shopping-list { display: grid; margin-top: 20px; }
-    .recipe-list { gap: 12px; }
-    .recipe { width: 100%; min-height: 104px; display: grid; grid-template-columns: 72px minmax(0, 1fr) 16px; align-items: center; gap: 16px; padding: 14px; text-align: left; color: inherit; border: 1px solid var(--line); border-radius: 22px; background: var(--surface); box-shadow: var(--shadow); cursor: pointer; }
-    .recipe .meal-icon { font-size: 17px; }
     #import-catalog { margin-top: 24px; }
-    .recipe-copy { display: grid; gap: 3px; }
-    .recipe-copy small { color: var(--muted); }
     .recipe-cover { width: 72px; height: 72px; border-radius: 16px; object-fit: cover; background: var(--accent-soft); display: grid; place-items: center; color: var(--accent); font-size: 24px; }
-    .recipe-copy { min-width: 0; gap: 6px; line-height: 1.4; overflow-wrap: anywhere; }
-    .recipe-copy strong { font-size: 1rem; font-weight: 650; }
-    .recipe-copy small { font-size: .8125rem; }
     .recipe-hero { width: 100%; max-height: 240px; object-fit: cover; border-radius: 18px; margin: 16px 0; }
     .recipe-hero[hidden] { display: none; }
     .quiet-details { margin: 12px 0; border-top: 1px solid var(--line); }
@@ -180,7 +172,6 @@
     .choices > div:has(> a) { border: 1px solid var(--line); border-radius: 18px; overflow: hidden; background: var(--raised); }
     .choices > div:has(> a) .choice { border: 0; border-radius: 0; }
     .choices > div > a { display: block; padding: 8px 12px; color: var(--accent); font-size: 13px; text-decoration: none; border-top: 1px solid var(--line); }
-    .recipe-filters { display: grid; gap: 14px; margin: 26px 0 18px; }
     .category-options { display: flex; flex-wrap: wrap; gap: 8px; }
     .category-options label { position: relative; display: flex; max-width: 100%; cursor: pointer; }
     .category-options label > input { position: absolute; width: 1px; height: 1px; min-height: 0; padding: 0; border: 0; margin: 0; overflow: hidden; clip-path: inset(50%); }
@@ -286,17 +277,45 @@
     .split-dish .meal-copy strong { font-size: 14px; line-height: 1.2; }
     .split-dish .meal-copy small:first-child { color: var(--muted); font-size: 11px; }
     .split-dish .meal-copy small:last-child { color: var(--muted); font-size: 12px; }
-    .recipe-list { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 22px 13px; }
-    .recipe { min-width: 0; min-height: 0; display: flex; flex-direction: column; align-items: stretch; padding: 0; overflow: hidden; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
-    .recipe-cover { width: 100%; height: auto; aspect-ratio: 1; border-radius: 18px; object-fit: cover; }
-    .recipe-copy { padding: 8px 2px 0; }
-    .recipe.featured { grid-column: 1 / -1; position: relative; height: 265px; border-radius: 23px; background: var(--surface); }
-    .recipe.featured .recipe-cover { height: 100%; border-radius: 0; }
-    .recipe.featured .recipe-copy { position: absolute; inset: auto 0 0; padding: 55px 18px 18px; color: #fff; background: linear-gradient(transparent, #0b0b0dea); }
-    .recipe.featured .recipe-copy strong { font-size: 23px; line-height: 1.15; }
-    .recipe.featured .recipe-copy small { color: #e9f7e9; }
-    .recipe-filters { margin: 22px 0 16px; gap: 10px; }
-    #recipe-search { min-height: 54px; border-radius: 17px; background: var(--surface); }
+    .recipe-page-heading { display: flex; align-items: center; gap: 12px; min-height: 76px; }
+    .recipe-page-heading-copy { min-width: 0; flex: 1; }
+    .recipe-page-heading h1 { margin: 4px 0; font-size: clamp(23px, 6vw, 30px); overflow-wrap: anywhere; }
+    .recipe-page-actions { display: flex; flex: none; gap: 7px; }
+    .recipe-search-field { display: flex; align-items: center; gap: 10px; min-height: 54px; margin: 20px 0 26px; padding: 0 16px; border: 1px solid var(--line); border-radius: 18px; color: var(--accent); background: var(--surface); }
+    .recipe-search-field:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+    #recipe-search { width: 100%; min-width: 0; min-height: 52px; padding: 0; border: 0; outline: 0; color: var(--text); background: transparent; font-size: 16px; }
+    #recipe-search::placeholder { color: var(--muted); opacity: 1; }
+    .recipe-block-heading { margin: 28px 0 16px; }
+    .recipe-block-heading h2 { font-size: 20px; }
+    .recipe-spotlight { display: flex; gap: 14px; margin: 0 -24px; padding: 0 24px 10px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }
+    .recipe-spotlight::-webkit-scrollbar { display: none; }
+    .spotlight-card { flex: 0 0 min(78vw, 310px); min-height: 340px; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 22px 18px 20px; border: 1px solid var(--line); border-radius: 25px; background: color-mix(in srgb, var(--accent) 9%, var(--surface)); scroll-snap-align: center; }
+    .spotlight-card .recipe-cover { width: 186px; height: 186px; flex: none; border-radius: 50%; box-shadow: 0 15px 25px #00000018; }
+    .spotlight-card .recipe-main { min-height: 0; display: grid; justify-items: center; align-content: start; gap: 13px; width: 100%; padding: 0; border: 0; background: transparent; text-align: center; cursor: pointer; }
+    .spotlight-card strong { font-size: 20px; line-height: 1.2; }
+    .spotlight-card .recipe-add { margin-top: auto; }
+    .browse-categories { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .browse-category { min-width: 0; min-height: 112px; display: grid; place-items: center; align-content: center; gap: 4px; padding: 12px 6px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); text-align: center; cursor: pointer; }
+    .browse-category-icon { font-size: 28px; line-height: 1.2; }
+    .browse-category strong { font-size: 13px; line-height: 1.2; overflow-wrap: anywhere; }
+    .browse-category small { color: var(--muted); font-size: 11px; }
+    .browse-more { margin: 12px 0 30px; }
+    .browse-more summary { display: grid; place-items: center; min-height: 44px; color: var(--accent); font-size: 14px; font-weight: 700; cursor: pointer; }
+    .browse-more .browse-categories { margin-top: 12px; }
+    .recipe-list { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; gap: 60px 13px; padding-top: 44px; }
+    .recipe { position: relative; min-width: 0; min-height: 260px; display: flex; flex-direction: column; align-items: stretch; gap: 12px; padding: 90px 11px 11px; border: 1px solid var(--line); border-radius: 22px; background: var(--surface); box-shadow: none; }
+    .recipe-main { width: 100%; min-width: 0; display: grid; justify-items: center; gap: 8px; padding: 0; border: 0; background: transparent; text-align: center; cursor: pointer; }
+    .recipe .recipe-cover { position: absolute; top: -44px; left: 50%; width: min(calc(100% - 18px), 130px); height: auto; aspect-ratio: 1; border-radius: 50%; transform: translateX(-50%); box-shadow: 0 10px 22px #00000018; }
+    .recipe .recipe-cover:not(img), .spotlight-card .recipe-cover:not(img) { border: 8px solid var(--surface); background: radial-gradient(circle at 40% 35%, var(--accent-soft), var(--raised)); font-size: 52px; }
+    .recipe .recipe-copy { width: 100%; min-width: 0; display: grid; gap: 10px; padding: 0; text-align: center; overflow-wrap: anywhere; }
+    .recipe .recipe-copy strong { min-height: 2.5em; font-size: 15px; line-height: 1.25; font-weight: 650; }
+    .recipe-badges { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; }
+    .recipe-badges small { padding: 4px 7px; border-radius: 8px; color: var(--muted); background: var(--field); font-size: 11px; line-height: 1.2; }
+    .recipe-card-actions { display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-top: auto; }
+    .recipe-favorite { width: 44px; height: 44px; flex: none; border: 0; border-radius: 50%; color: var(--muted); background: transparent; font-size: 26px; cursor: pointer; }
+    .recipe-favorite[aria-pressed="true"] { color: var(--accent); }
+    .recipe-add { min-height: 44px; padding: 8px 13px; border: 0; border-radius: 99px; color: var(--on-accent); background: var(--accent); font-size: 13px; font-weight: 700; white-space: nowrap; cursor: pointer; }
+    .recipe-list .empty-state { grid-column: 1 / -1; }
     .shopping-group { margin: 14px 0; padding: 8px 16px; box-shadow: none; }
     .shopping-group .group-title { margin: 12px 0 3px; color: var(--text); font-size: 16px; letter-spacing: 0; text-transform: none; }
     .shopping-progress { height: 7px; margin: 18px 0 5px; overflow: hidden; border-radius: 99px; background: var(--accent-soft); }
@@ -333,8 +352,8 @@
       .step-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 44px; }
       .assignment { grid-template-columns: 1fr; }
     }
-    @media (min-width: 620px) { main { padding: 36px 32px 130px; } header { padding-inline: 32px; } .recipe-filters { grid-template-columns: 1.5fr 1fr; } }
-    @media (max-width: 359px) { main { padding-inline: 14px; } .days { gap: 0; padding: 0; } .meal { padding: 14px; gap: 10px; } .meal.photo { padding: 0; } .recipe-list { gap: 18px 10px; } .recipe { padding: 0; } .recipe-cover { width: 100%; height: auto; } .split-dish .recipe-cover { width: 52px; height: 52px; } }
+    @media (min-width: 620px) { main { padding: 36px 32px 130px; } header { padding-inline: 32px; } .recipe-list { grid-template-columns: repeat(3, minmax(0, 1fr)); } .browse-categories { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+    @media (max-width: 359px) { main { padding-inline: 14px; } .days { gap: 0; padding: 0; } .meal { padding: 14px; gap: 10px; } .meal.photo { padding: 0; } .recipe-list { gap: 60px 10px; } .recipe { padding-inline: 8px; } .recipe-spotlight { margin-inline: -14px; padding-inline: 14px; } .browse-categories { grid-template-columns: repeat(2, minmax(0, 1fr)); } .split-dish .recipe-cover { width: 52px; height: 52px; } }
     #recipe-print { display: none; }
     @media print {
       @page { margin: 18mm; }
@@ -383,8 +402,20 @@
       </section>
 
       <section id="recipes-panel" class="panel" hidden>
-        <span class="section-kicker">À découvrir</span>
-        <div class="section-heading"><div><h1>Des idées pour avoir faim.</h1><span id="recipe-count" class="muted"></span></div><div style="display:flex;gap:8px"><button id="import-recipes" class="icon-button" type="button" aria-label="Importer une recette">⇩</button><button id="new-recipe" class="icon-button" type="button" aria-label="Ajouter une recette">＋</button></div></div>
+        <div class="recipe-page-heading">
+          <button id="recipes-back" class="icon-button" type="button" aria-label="Retour à toutes les recettes" hidden>←</button>
+          <div class="recipe-page-heading-copy"><span id="recipes-kicker" class="section-kicker">À découvrir</span><h1 id="recipes-title">Explorer les recettes</h1><span id="recipe-count" class="muted"></span></div>
+          <div class="recipe-page-actions"><button id="import-recipes" class="icon-button" type="button" aria-label="Importer une recette">⇩</button><button id="new-recipe" class="icon-button" type="button" aria-label="Ajouter une recette">＋</button></div>
+        </div>
+        <label class="recipe-search-field" for="recipe-search"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg><input id="recipe-search" type="search" placeholder="Un plat, un ingrédient…" autocomplete="off"><span class="sr-only">Chercher une recette</span></label>
+        <p id="recipe-feedback" class="error" role="alert" hidden></p>
+        <div id="recipe-discovery">
+          <div id="recipe-spotlight" class="recipe-spotlight" aria-label="Recettes à découvrir"></div>
+          <div class="recipe-block-heading"><h2>Choisir un univers</h2></div>
+          <div id="browse-categories" class="browse-categories"></div>
+          <details class="browse-more"><summary>Voir tous les univers</summary><div id="browse-more-categories" class="browse-categories"></div></details>
+        </div>
+        <div id="recipe-results-heading" class="recipe-block-heading"><h2 id="recipe-results-title">Toutes les recettes</h2></div>
         <div id="recipes" class="recipe-list"></div>
         <button id="import-catalog" class="secondary" type="button">＋ Ajouter les recettes manquantes du catalogue</button>
         <p id="catalog-status" class="muted" role="status"></p>
@@ -741,9 +772,8 @@
     const dietLabels = { vegan: 'J’aime les graines', vegetarian: 'Veggie cool', pescetarian: 'Team océan', omnivore: 'Je mange de tout' };
     const categoryLabels = { plant: 'Graines & plantes', egg: 'Veggie', fish: 'Team océan', meat: 'Viandard·e' };
     const recipeCategories = { rat: '🐀 Recettes du rat', date: '♥ Recettes de date', mijote: '🍲 Plats mijotés', japon: '🇯🇵 Japon', chine: '🇨🇳 Chine', terroir: '🥖 Terroir français', chef: '✦ Côté chef', express: '⚡ Express · 30 min max', batch: '📦 Batch cooking', emporter: '🥡 À emporter', comfort: '🛋️ Doudou food', mediterranee: '☀️ Méditerranée', italie: '🍝 Italie', inde: '🍛 Inde', mexique: '🌮 Mexique' };
-    document.getElementById('recipes').insertAdjacentHTML('beforebegin', `<div class="recipe-filters"><label class="field"><span>Rechercher une recette</span><input id="recipe-search" type="search" placeholder="Nom ou ingrédient…"></label><label class="field"><span>Univers</span><select id="recipe-category"><option value="">Tous les univers</option>${Object.entries(recipeCategories).map(([key, label]) => `<option value="${key}">${label}</option>`).join('')}</select></label></div>`);
+    let activeRecipeCategory = '';
     let editingRecipeId = null;
-    document.getElementById('recipe-category').insertAdjacentHTML('beforeend', '<option value="__favorites">★ Mes favoris</option>');
     let editingMemberId = null;
     let editingProteinId = null;
 
@@ -836,14 +866,47 @@
       document.getElementById('schedule').innerHTML = `<div><span class="slot-label">Midi</span>${mealMarkup('midi', midi)}</div><div><span class="slot-label">Soir</span>${mealMarkup('soir', soir)}</div>`;
     }
 
+    function recipeCover(recipe) {
+      if (recipe.hasPhoto) return `<img class="recipe-cover" src="/api/recipes/${recipe.id}/photo" alt="" loading="lazy">`;
+      const icons = { japon: '🍜', chine: '🥟', mijote: '🍲', italie: '🍝', inde: '🍛', mexique: '🌮', mediterranee: '🫒', emporter: '🥡', terroir: '🥘' };
+      const category = (recipe.tags || []).find(tag => icons[tag]);
+      return `<span class="recipe-cover" aria-hidden="true">${icons[category] || (recipe.diet === 'vegan' || recipe.diet === 'vegetarian' ? '🥗' : '🍽️')}</span>`;
+    }
+
+    function recipeFavoriteButton(recipe) {
+      return `<button class="recipe-favorite" type="button" data-favorite-recipe="${recipe.id}" aria-pressed="${Boolean(recipe.favorite)}" aria-label="${recipe.favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'} : ${escapeHtml(recipe.title)}">${recipe.favorite ? '♥' : '♡'}</button>`;
+    }
+
     function renderRecipes() {
-      const query = document.getElementById('recipe-search').value.trim().toLocaleLowerCase('fr');
-      const category = document.getElementById('recipe-category').value;
+      const search = document.getElementById('recipe-search');
+      const query = search.value.trim().toLocaleLowerCase('fr');
+      const category = activeRecipeCategory;
       const filtered = MangerFoodNames.searchRecipes(state.recipes.filter(recipe => category === '__favorites' ? recipe.favorite : !category || recipe.tags.includes(category)), query);
-      document.getElementById('recipe-count').textContent = `${filtered.length} sur ${state.recipes.length} recettes`;
-      const featured = !query && !category && filtered.find(recipe => recipe.hasPhoto);
-      const ordered = featured ? [featured, ...filtered.filter(recipe => recipe.id !== featured.id)] : filtered;
-      document.getElementById('recipes').innerHTML = ordered.map(recipe => `<button class="recipe${recipe.id === featured?.id ? ' featured' : ''}" type="button" data-edit-recipe="${recipe.id}">${recipe.hasPhoto ? `<img class="recipe-cover" src="/api/recipes/${recipe.id}/photo" alt="" loading="lazy">` : '<span class="recipe-cover" aria-hidden="true">♨</span>'}<span class="recipe-copy"><strong>${escapeHtml(recipe.title)}</strong><small>${recipe.minutes} min · ${dietLabels[recipe.diet]}</small></span></button>`).join('') || '<div class="empty-state">Aucune recette ne correspond à ces filtres.</div>';
+      const title = category === '__favorites' ? 'Mes favoris' : category ? recipeCategories[category].split(' ').slice(1).join(' ') : 'Explorer les recettes';
+      document.getElementById('recipes-title').textContent = title;
+      document.getElementById('recipes-kicker').textContent = category ? 'Univers' : 'À découvrir';
+      document.getElementById('recipes-back').hidden = !category;
+      document.getElementById('recipe-count').textContent = query || category ? `${filtered.length} recette${filtered.length > 1 ? 's' : ''}` : `${state.recipes.length} recettes à explorer`;
+      search.placeholder = category ? `Chercher dans ${title.toLocaleLowerCase('fr')}…` : 'Un plat, un ingrédient…';
+      document.getElementById('recipe-discovery').hidden = Boolean(query || category);
+      document.getElementById('recipe-results-heading').hidden = Boolean(category);
+      document.getElementById('recipe-results-title').textContent = query ? 'Résultats de recherche' : 'Toutes les recettes';
+
+      if (!category && !query) {
+        const spotlight = [...state.recipes].sort((a, b) => Number(b.hasPhoto) - Number(a.hasPhoto)).slice(0, 3);
+        document.getElementById('recipe-spotlight').innerHTML = spotlight.map(recipe => `<article class="spotlight-card"><button class="recipe-main" type="button" data-edit-recipe="${recipe.id}" aria-label="Voir la recette ${escapeHtml(recipe.title)}">${recipeCover(recipe)}<strong>${escapeHtml(recipe.title)}</strong></button><span class="muted">${recipe.minutes} min · ${escapeHtml(dietLabels[recipe.diet])}</span><div class="recipe-card-actions">${recipeFavoriteButton(recipe)}<button class="recipe-add" type="button" data-plan-recipe="${recipe.id}">＋ Ajouter au menu</button></div></article>`).join('');
+        document.getElementById('recipe-spotlight').hidden = !spotlight.length;
+        const categories = [['__favorites', '♡ Mes favoris'], ...Object.entries(recipeCategories)];
+        const categoryTile = ([key, label]) => {
+          const [icon, ...words] = label.split(' ');
+          const count = state.recipes.filter(recipe => key === '__favorites' ? recipe.favorite : recipe.tags.includes(key)).length;
+          return `<button class="browse-category" type="button" data-browse-category="${key}"><span class="browse-category-icon" aria-hidden="true">${icon}</span><strong>${escapeHtml(words.join(' '))}</strong><small>${count} recette${count > 1 ? 's' : ''}</small></button>`;
+        };
+        const featuredCategories = ['__favorites', 'rat', 'date', 'japon', 'express', 'mijote'];
+        document.getElementById('browse-categories').innerHTML = categories.filter(([key]) => featuredCategories.includes(key)).map(categoryTile).join('');
+        document.getElementById('browse-more-categories').innerHTML = categories.filter(([key]) => !featuredCategories.includes(key)).map(categoryTile).join('');
+      }
+      document.getElementById('recipes').innerHTML = filtered.map(recipe => `<article class="recipe"><button class="recipe-main" type="button" data-edit-recipe="${recipe.id}" aria-label="Voir la recette ${escapeHtml(recipe.title)}">${recipeCover(recipe)}<span class="recipe-copy"><strong>${escapeHtml(recipe.title)}</strong><span class="recipe-badges"><small>◷ ${recipe.minutes} min</small><small>${escapeHtml(dietLabels[recipe.diet])}</small></span></span></button><div class="recipe-card-actions">${recipeFavoriteButton(recipe)}<button class="recipe-add" type="button" data-plan-recipe="${recipe.id}">＋ Ajouter</button></div></article>`).join('') || '<div class="empty-state">Aucune recette ici. Essaie un autre mot ou ajoute un plat.</div>';
     }
 
     const pantryDialog = document.getElementById('pantry-dialog');
@@ -2096,7 +2159,13 @@
     document.getElementById('export-recipes').addEventListener('click', () => { location.href = '/api/recipes/export'; });
     document.getElementById('new-recipe').addEventListener('click', () => openRecipeEditor());
     document.getElementById('recipe-search').addEventListener('input', renderRecipes);
-    document.getElementById('recipe-category').addEventListener('change', renderRecipes);
+    document.getElementById('recipes-back').addEventListener('click', () => {
+      const previous = activeRecipeCategory;
+      activeRecipeCategory = '';
+      document.getElementById('recipe-search').value = '';
+      renderRecipes();
+      document.querySelector(`[data-browse-category="${previous}"]`)?.focus();
+    });
     document.getElementById('import-catalog').addEventListener('click', async event => {
       event.target.disabled = true;
       try {
@@ -2108,26 +2177,56 @@
         document.getElementById('catalog-status').textContent = error.message;
       } finally { event.target.disabled = false; }
     });
-    document.getElementById('recipes').addEventListener('click', event => {
-      const button = event.target.closest('[data-edit-recipe]');
-      if (button) openRecipe(state.recipes.find(recipe => recipe.id === Number(button.dataset.editRecipe)));
+    document.getElementById('recipes-panel').addEventListener('click', async event => {
+      const category = event.target.closest('[data-browse-category]');
+      if (category) {
+        activeRecipeCategory = category.dataset.browseCategory;
+        document.getElementById('recipe-search').value = '';
+        renderRecipes();
+        document.getElementById('recipes-back').focus();
+        window.scrollTo(0, 0);
+        return;
+      }
+      const favorite = event.target.closest('[data-favorite-recipe]');
+      if (favorite) {
+        const recipe = state.recipes.find(item => item.id === Number(favorite.dataset.favoriteRecipe));
+        if (!recipe) return;
+        const message = document.getElementById('recipe-feedback'); message.hidden = true;
+        try { await toggleRecipeFavorite(recipe, favorite); }
+        catch (error) { message.textContent = error.message; message.hidden = false; }
+        return;
+      }
+      const plan = event.target.closest('[data-plan-recipe]');
+      if (plan) {
+        const recipe = state.recipes.find(item => item.id === Number(plan.dataset.planRecipe));
+        if (recipe) { openRecipe(recipe); document.getElementById('plan-recipe').click(); }
+        return;
+      }
+      const view = event.target.closest('[data-edit-recipe]');
+      if (view) openRecipe(state.recipes.find(recipe => recipe.id === Number(view.dataset.editRecipe)));
     });
     document.getElementById('close-recipe-view').addEventListener('click', () => recipeViewDialog.close());
-    document.getElementById('favorite-recipe').addEventListener('click', async event => {
-      const recipe = state.recipes.find(item => item.id === editingRecipeId);
-      if (!recipe) return;
-      const button = event.target; button.disabled = true;
-      document.getElementById('recipe-view-error').hidden = true;
+    async function toggleRecipeFavorite(recipe, button) {
+      button.disabled = true;
       try {
         const response = await fetch(`/api/recipes/${recipe.id}/favorite`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ favorite: !recipe.favorite }) });
         if (!response.ok) throw new Error((await response.json()).error);
         recipe.favorite = (await response.json()).favorite;
+        renderRecipes();
+      } finally { button.disabled = false; }
+    }
+    document.getElementById('favorite-recipe').addEventListener('click', async event => {
+      const recipe = state.recipes.find(item => item.id === editingRecipeId);
+      if (!recipe) return;
+      const button = event.target;
+      document.getElementById('recipe-view-error').hidden = true;
+      try {
+        await toggleRecipeFavorite(recipe, button);
         button.textContent = recipe.favorite ? '★ Retirer des favoris' : '☆ Ajouter aux favoris';
         button.setAttribute('aria-pressed', String(recipe.favorite));
-        renderRecipes();
       } catch (error) {
         const message = document.getElementById('recipe-view-error'); message.textContent = error.message; message.hidden = false;
-      } finally { button.disabled = false; }
+      }
     });
     document.getElementById('edit-recipe').addEventListener('click', () => {
       const recipe = state.recipes.find(item => item.id === editingRecipeId);

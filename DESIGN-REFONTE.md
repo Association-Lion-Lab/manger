@@ -29,13 +29,13 @@ Navigation compacte validée : **Semaine · Recettes · Courses · Compte**. Le 
 Schéma compact pour la découverte des recettes :
 
 ```text
-Recettes                         Foyer
-[ Rechercher une recette…          ]
-Suggestion du moment · grande photo
-[ Planifier ]
-Univers : Économique · Date · Japon · …  Voir tout
-Plats du foyer · cartes photo / substitut
-Navigation Semaine / Recettes / Courses
+Explorer les recettes             Importer  Ajouter
+[ Un plat, un ingrédient…                ]
+À découvrir · cartes à faire défiler
+Choisir un univers · six choix + voir tout
+Toutes les recettes · cartes avec photo ou illustration
+Univers choisi : retour + recherche + grille de plats
+Navigation Semaine / Recettes / Courses / Compte
 ```
 
 ## Direction visuelle proposée
