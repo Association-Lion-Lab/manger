@@ -74,6 +74,8 @@
     header { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 22px; background: color-mix(in srgb, var(--background) 88%, transparent); backdrop-filter: blur(20px); }
     .brand { font-size: 26px; font-weight: 750; letter-spacing: -.055em; line-height: 1.2; }
     .brand span { color: var(--accent); }
+    .brand-lockup { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .brand-logo { width: 42px; height: 42px; flex: none; border-radius: 12px; }
     .tagline, .muted { color: var(--muted); font-size: 13px; }
     .icon-button { width: 44px; height: 44px; flex-shrink: 0; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 50%; background: var(--surface); cursor: pointer; }
     .ui-icon { width: 22px; height: 22px; display: block; flex-shrink: 0; }
@@ -370,7 +372,7 @@
 <body>
   <div class="app">
     <header>
-      <div><div class="brand">Manger<span>!</span></div><div class="tagline">Ma cuisine, mes choix</div></div>
+      <div class="brand-lockup"><img class="brand-logo" src="/icon.svg" width="42" height="42" alt=""><div><div class="brand">Manger<span>!</span></div><div class="tagline">Ma cuisine, mes choix</div></div></div>
       <button id="household-button" class="icon-button" type="button" aria-label="Gérer le foyer"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2M16 5a3 3 0 0 1 0 6m2 3a5 5 0 0 1 3 4v2"/></svg></button>
     </header>
 
