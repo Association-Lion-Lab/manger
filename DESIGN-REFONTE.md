@@ -6,6 +6,14 @@ Statut : **direction à valider, aucune interface modifiée**. Les captures Jow 
 
 Sur téléphone, répondre vite à « On mange quoi ? », puis passer du repas prévu aux courses et à la préparation sans ressaisie. Le signe distinctif de Manger! reste le **repas de foyer** : une même table peut réunir des régimes et des assiettes différents, une sortie ou un date. L'identité visuelle doit être chaleureuse et culinaire, mais les commandes restent sobres.
 
+## Ce que précisent les six nouvelles captures Jow
+
+- **Accueil** : deux grandes portes d'entrée et des images de plats donnent immédiatement envie d'agir. Pour Manger!, proposer « Composer ma semaine » et « Ouvrir les courses », sans bannières commerciales ni notifications promotionnelles.
+- **Explorer** : recherche visible dès l'arrivée, recette mise en avant avec une grande photo, puis quelques univers illustrés. Garder la recherche accessible et limiter les univers affichés avant « Voir tout » ; les catégories de Manger! incluent notamment les recettes économiques, de date et par cuisine.
+- **Collections de recettes** : photos généreuses, titre court et action « Planifier » près de chaque plat. Ne pas multiplier les carrousels imbriqués : un seul espace à défilement horizontal clairement signalé au maximum, puis une grille ou liste verticale facile à parcourir.
+- **Profil** : les captures montrent des recettes à faire, listes de courses et collections sauvegardées. Dans Manger!, ces informations existent déjà dans Semaine, Courses et les favoris ; le foyer sert surtout aux personnes, goûts et réglages, sans recopier les mêmes cartes partout.
+- **Ambiance** : surfaces sombres calmes et photographie culinaire très présente. Faire la première maquette en mode sombre avec l'accent vert de Manger!, puis vérifier le mode clair ; l'apparence finale suit le téléphone, pas un thème sombre imposé.
+
 ## Écrans à maquettiser avant de coder
 
 1. **Semaine** : jours faciles à parcourir, repas de midi/soir en cartes, personnes visibles sans surcharger, action principale « Choisir un repas ». Une sortie ou un date garde un traitement distinct d'une recette.
@@ -15,6 +23,18 @@ Sur téléphone, répondre vite à « On mange quoi ? », puis passer du repas p
 5. **Foyer** : profils et goûts par personne, réglages peu fréquents hors de la navigation principale. Une configuration guidée et facultative peut aider un nouveau foyer à saisir régimes et exclusions ; demander les équipements seulement si les recettes savent réellement en tenir compte.
 
 Navigation compacte : **Semaine · Recettes · Courses**, avec le foyer depuis l'en-tête. Tablette/PC : mêmes contenus, disposition adaptée plus tard ; ne pas agrandir simplement les cartes mobiles.
+
+Schéma compact pour la découverte des recettes :
+
+```text
+Recettes                         Foyer
+[ Rechercher une recette…          ]
+Suggestion du moment · grande photo
+[ Planifier ]
+Univers : Économique · Date · Japon · …  Voir tout
+Plats du foyer · cartes photo / substitut
+Navigation Semaine / Recettes / Courses
+```
 
 ## Direction visuelle proposée
 
@@ -48,6 +68,7 @@ Sur grand écran, la photo et la fiche peuvent se placer côte à côte, avec un
 - Maquette de Semaine, Recettes, fiche et Courses avant développement ; faire valider le rendu sur téléphone, puis intégrer par écran sans remplacer tout d'un coup.
 - Vérifier Safari iPhone et Android, 320–430 px, texte agrandi, contraste, focus clavier et modes clair/sombre. Les commandes ne doivent pas se chevaucher ni masquer le contenu sous la navigation.
 - Éviter la copie des illustrations, formulations, icônes, photos et écrans Jow. Son parcours recette → menu → courses est une inspiration ; Manger! doit rester reconnaissable et librement auto-hébergeable.
+- Les photos culinaires doivent provenir des utilisateurs ou d'une source réutilisable avec droits vérifiés ; aucune photo Jow ni lien direct vers ses médias. Sans photo, montrer un substitut cohérent plutôt qu'une image trompeuse.
 - Ne pas ajouter un tutoriel obligatoire, un onglet « Plus », des animations gratuites ou des options de thème dans chaque écran. Une transition courte à l'ouverture de la fiche suffit si elle aide à suivre le contexte ; respecter la réduction des animations.
 
 La première décision à valider avec l'utilisateur est une **maquette mobile**, pas ce document ni une implémentation. Les équipements et données nutritionnelles demanderaient un chantier fonctionnel séparé avant d'apparaître dans la fiche.
