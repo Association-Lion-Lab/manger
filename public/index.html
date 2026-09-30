@@ -87,6 +87,13 @@
     h2 { font-size: 21px; letter-spacing: -.025em; line-height: 1.3; }
     .toolbar, .section-heading, .day-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
     .toolbar { text-align: center; }
+    .week-heading { flex: 1; min-width: 0; }
+    #choose-week { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 0; border: 0; background: transparent; color: var(--text); font: inherit; cursor: pointer; }
+    #choose-week span { min-width: 0; overflow-wrap: anywhere; }
+    #choose-week svg { width: 14px; height: 14px; flex: none; }
+    .week-meta { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0 8px; }
+    #today { font-size: 13px; }
+    #week-content { margin: 0; padding: 0; min-width: 0; border: 0; }
     .toolbar h1 { font-size: clamp(20px, 4.5vw, 26px); }
     .days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin: 22px 0 32px; padding: 6px; border: 1px solid var(--line); border-radius: 22px; background: var(--surface); }
     .day { min-width: 0; min-height: 66px; display: grid; place-items: center; align-content: center; gap: 4px; padding: 6px 2px; border: 0; border-radius: 16px; background: transparent; cursor: pointer; }
@@ -387,9 +394,11 @@
         <p class="muted page-subtitle">Les repas du foyer, sans casse-tête.</p>
         <div class="toolbar">
           <button id="previous-week" class="icon-button" type="button" aria-label="Semaine précédente">‹</button>
-          <div><h2 id="week-title"></h2><span id="week-number" class="muted"></span></div>
+          <div class="week-heading"><h2><button id="choose-week" type="button" aria-label="Choisir une date du planning" aria-haspopup="dialog"><span id="week-title"></span><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg></button></h2><div class="week-meta"><span id="week-number" class="muted"></span><button id="today" class="text-action" type="button" hidden>Aujourd’hui</button></div></div>
           <button id="next-week" class="icon-button" type="button" aria-label="Semaine suivante">›</button>
         </div>
+        <p id="week-status" class="muted" role="status" hidden></p>
+        <fieldset id="week-content" aria-label="Repas de la semaine">
         <div id="days" class="days" role="tablist" aria-label="Jours de la semaine"></div>
         <div class="day-heading">
           <div><h2 id="selected-day"></h2><span id="day-summary" class="muted"></span></div>
@@ -405,6 +414,7 @@
             <button id="export-calendar" class="secondary" type="button">⇩ Exporter la semaine</button>
           </details>
         </div>
+        </fieldset>
       </section>
 
       <section id="recipes-panel" class="panel" hidden>
@@ -480,6 +490,13 @@
       <button type="button" data-panel="account"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 21c.5-4.2 3.1-6.5 7.5-6.5s7 2.3 7.5 6.5"/></svg><span>Compte</span></button>
     </nav>
 
+    <dialog id="week-date-dialog" aria-labelledby="week-date-title">
+      <div class="section-heading"><h2 id="week-date-title">Aller à une date</h2><button id="close-week-date" class="icon-button" type="button" aria-label="Fermer le choix de date">×</button></div>
+      <form id="week-date-form" class="recipe-form">
+        <label class="field"><span>Jour à afficher</span><input id="week-date" type="date" min="1900-01-01" max="2100-12-31" required></label>
+        <button class="primary" type="submit">Afficher cette semaine</button>
+      </form>
+    </dialog>
     <dialog id="meal-dialog">
       <div class="handle"></div>
       <div class="section-heading">
@@ -744,7 +761,7 @@
       } catch (error) { status.textContent = error.message || 'Téléchargement interrompu. Réessaie.'; }
       finally { button.disabled = false; }
     });
-    const state = { weekStart: monday(new Date()), selected: 0, recipes: [], meals: [], shopping: [], members: [], proteins: [], slot: 'soir', pendingRecipe: null, pendingEvent: null };
+    const state = { weekStart: monday(new Date()), selected: (new Date().getDay() + 6) % 7, recipes: [], meals: [], shopping: [], members: [], proteins: [], slot: 'soir', pendingRecipe: null, pendingEvent: null };
     // Suggestions stay local and never replace a value without an explicit click.
     let foodHint;
     document.addEventListener('input', event => {
@@ -820,22 +837,46 @@
       if (!response.ok) throw new Error(result.error || 'Impossible d’enregistrer. Réessaie.');
       return result;
     }
-    let shoppingSyncVersion = 0, pendingLoads = 0;
-    async function load() {
+    let shoppingSyncVersion = 0, pendingLoads = 0, loadVersion = 0;
+    let requestedWeekStart = state.weekStart;
+    async function load(view = {}) {
+      const version = ++loadVersion, weekStart = new Date(view.weekStart || state.weekStart), start = key(weekStart);
+      requestedWeekStart = weekStart;
       shoppingSyncVersion++; pendingLoads++;
+      document.getElementById('week-panel').setAttribute('aria-busy', 'true');
+      document.getElementById('week-content').disabled = true;
       try {
-        const [weekResponse, householdResponse] = await Promise.all([fetch(`/api/week?start=${key(state.weekStart)}`), fetch('/api/household')]);
+        const signal = AbortSignal.timeout(10000);
+        const [weekResponse, householdResponse] = await Promise.all([fetch(`/api/week?start=${start}`, { signal }), fetch('/api/household', { signal })]);
         if (!weekResponse.ok || !householdResponse.ok) throw new Error('Impossible de charger la semaine');
-        Object.assign(state, await weekResponse.json(), await householdResponse.json());
+        const [week, household] = await Promise.all([weekResponse.json(), householdResponse.json()]);
+        if (version !== loadVersion) return false;
+        Object.assign(state, week, household, { weekStart, ...(view.selected === undefined ? {} : { selected: view.selected }) });
+        document.getElementById('week-status').hidden = true;
         render();
         saveOfflineShopping();
-      } finally { pendingLoads--; shoppingSyncVersion++; }
+        return true;
+      } catch (error) {
+        if (version !== loadVersion) return false;
+        requestedWeekStart = state.weekStart;
+        throw error;
+      } finally {
+        pendingLoads--; shoppingSyncVersion++;
+        if (version === loadVersion) {
+          document.getElementById('week-panel').setAttribute('aria-busy', 'false');
+          document.getElementById('week-content').disabled = false;
+        }
+      }
     }
 
     function render() {
       const end = dateAt(6);
-      document.getElementById('week-title').textContent = `${state.weekStart.getDate()}–${end.getDate()} ${monthNames[end.getMonth()]}`;
+      const startMonth = state.weekStart.getMonth() !== end.getMonth() ? ` ${monthNames[state.weekStart.getMonth()]}` : '';
+      const startYear = state.weekStart.getFullYear() !== end.getFullYear() ? ` ${state.weekStart.getFullYear()}` : '';
+      const endYear = startYear || end.getFullYear() !== new Date().getFullYear() ? ` ${end.getFullYear()}` : '';
+      document.getElementById('week-title').textContent = `${state.weekStart.getDate()}${startMonth}${startYear}${startMonth ? ' – ' : '–'}${end.getDate()} ${monthNames[end.getMonth()]}${endYear}`;
       document.getElementById('week-number').textContent = `Semaine ${weekNumber(state.weekStart)}`;
+      document.getElementById('today').hidden = key(dateAt(state.selected)) === key(new Date());
       document.getElementById('selected-day').textContent = `${fullDayNames[state.selected]} ${dateAt(state.selected).getDate()}`;
       renderDays();
       renderSchedule();
@@ -847,7 +888,7 @@
     function renderDays() {
       document.getElementById('days').innerHTML = dayNames.map((name, index) => {
         const planned = mealFor(index, 'midi') || mealFor(index, 'soir');
-        return `<button class="day" type="button" role="tab" aria-selected="${index === state.selected}" data-day="${index}"><small>${name}</small><strong>${dateAt(index).getDate()}</strong>${planned ? '<i></i>' : ''}</button>`;
+        return `<button class="day" type="button" role="tab" aria-selected="${index === state.selected}"${key(dateAt(index)) === key(new Date()) ? ' aria-current="date"' : ''} data-day="${index}"><small>${name}</small><strong>${dateAt(index).getDate()}</strong>${planned ? '<i></i>' : ''}</button>`;
       }).join('');
     }
 
@@ -1685,10 +1726,8 @@
         button.disabled = true;
         try {
           const date = new Date(`${document.getElementById('plan-recipe-date').value}T12:00:00`);
-          state.weekStart = monday(date);
-          state.selected = (date.getDay() + 6) % 7;
           state.slot = document.getElementById('plan-recipe-slot').value;
-          await load();
+          if (!await load({ weekStart: monday(date), selected: (date.getDay() + 6) % 7 })) throw new Error('Le planning a changé. Rouvre le choix du jour.');
           if (mealFor(state.selected, state.slot)) throw new Error('Ce créneau est déjà occupé. Choisis un autre jour ou repas.');
           await saveMeal({ dataset: { recipe: String(recipe.id) } });
         } catch (error) {
@@ -1958,8 +1997,25 @@
       if (event.target.id === 'compose-people') { menuPreviewVersion++; document.getElementById('compose-preview').replaceChildren(); }
       if (event.target.id === 'picker-search') renderPickerRecipes();
     });
-    document.getElementById('previous-week').addEventListener('click', async () => { state.weekStart.setDate(state.weekStart.getDate() - 7); state.selected = 0; await load(); });
-    document.getElementById('next-week').addEventListener('click', async () => { state.weekStart.setDate(state.weekStart.getDate() + 7); state.selected = 0; await load(); });
+    async function browseDate(date) {
+      const status = document.getElementById('week-status');
+      status.textContent = 'Chargement de la semaine…'; status.hidden = false;
+      try { await load({ weekStart: monday(date), selected: (date.getDay() + 6) % 7 }); }
+      catch { status.textContent = 'Cette semaine n’a pas pu être chargée. Le planning précédent est conservé ; vérifie ta connexion et réessaie.'; }
+    }
+    for (const [id, days] of [['previous-week', -7], ['next-week', 7]]) document.getElementById(id).addEventListener('click', () => {
+      const date = new Date(requestedWeekStart); date.setDate(date.getDate() + days); browseDate(date);
+    });
+    document.getElementById('today').addEventListener('click', () => browseDate(new Date()));
+    const weekDateDialog = document.getElementById('week-date-dialog');
+    document.getElementById('choose-week').addEventListener('click', () => { document.getElementById('week-date').value = key(dateAt(state.selected)); weekDateDialog.showModal(); });
+    document.getElementById('close-week-date').addEventListener('click', () => weekDateDialog.close());
+    document.getElementById('week-date-form').addEventListener('submit', event => {
+      event.preventDefault();
+      const input = document.getElementById('week-date');
+      if (!input.reportValidity()) return;
+      weekDateDialog.close(); browseDate(new Date(`${input.value}T12:00:00`));
+    });
     const accentSelect = document.getElementById('theme-accent');
     const modeSelect = document.getElementById('theme-mode');
     let savedAppearance = {};

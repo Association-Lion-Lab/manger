@@ -18,6 +18,7 @@ Contrainte produit : quatre onglets (Semaine, Recettes, Courses, Compte), action
 - Menu automatique anti-gaspi : quantités et dates du placard, réservations existantes et consommation virtuelle chronologique de l'aperçu.
 - Semaines types nommées : enregistrement, application sans écrasement et suppression indépendante du calendrier.
 - Filtre anti-gaspi automatique : basiques et épices reconnus exclus des scores et des mentions de réutilisation ; ingrédients et courses inchangés.
+- Navigation du planning : ouverture sur le jour courant, retour « Aujourd’hui » et accès direct à une date par sélecteur natif. Mois/années explicités aux frontières ; réponses anciennes ignorées et semaine précédente conservée en cas d’échec réseau. Parcours Chromium contrôlé à 320/390/760 px ; validation du sélecteur sur iPhone à effectuer.
 
 Vérification : tests Node et parcours navigateur sur base isolée. Le rendu a été contrôlé à 320, 390 et 760 px, en clair et en sombre. L'audio et le maintien de l'écran ont été contrôlés avec des API simulées ; un essai sur téléphone reste nécessaire.
 

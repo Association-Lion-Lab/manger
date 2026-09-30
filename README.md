@@ -85,6 +85,12 @@ Le volume et le fichier `.env` sont conservés. Changer le dossier ou le nom du 
 
 ## Principes
 
+### Naviguer dans le planning
+
+Le planning s'ouvre sur le jour courant de l'appareil. Les flèches changent de semaine ; touchez la période affichée entre les flèches pour choisir directement une date (de 1900 à 2100) avec le sélecteur natif du navigateur. « Aujourd’hui » apparaît quand un autre jour est sélectionné et permet de revenir en un toucher. Les semaines à cheval sur deux mois ou deux années affichent les deux bornes.
+
+Le planning affiché reste conservé pendant le chargement : les actions sur ses repas sont temporairement désactivées, mais les flèches restent utilisables. Seule la dernière demande peut actualiser le planning et sa copie de courses. En cas d'échec, le jour et les données précédents restent affichés ; réessayez après rétablissement de la connexion. Naviguer ne crée ni ne modifie de repas.
+
 ### Courses, recettes hors connexion et écran d'accueil
 
 Depuis une adresse HTTPS reconnue par le téléphone, ouvrez Courses → Courses hors connexion → « Garder une copie sur cet appareil ». L'activation est volontaire. La dernière semaine chargée est conservée avec ses quantités, les cases déjà cochées et l'heure de mise à jour ; consulter une autre semaine remplace cette copie. Les lectures réussies du serveur actualisent la copie. Elle reste consultable quand le serveur ou le réseau est inaccessible, même après rechargement. Dans cette copie, touchez une ligne pour cocher ou décocher un article : le compteur se met à jour et les coches persistent sur cet appareil. **Ces coches restent locales : elles ne sont jamais envoyées au serveur. Une liste chargée en ligne remplace la copie et ses coches locales**, y compris depuis un autre onglet. Les lignes ne changent pas de place au cochage. Une erreur de stockage n'enregistre pas la coche et préserve la dernière copie ; une copie remplacée dans un autre onglet est rechargée avant une nouvelle tentative. Photos, profils et sauvegardes ne sont pas mis en cache. Le bouton « Effacer toutes les copies sur cet appareil » supprime les copies de courses et de recettes et désactive l'actualisation des courses, sans toucher au serveur.
