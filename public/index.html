@@ -164,7 +164,7 @@
     nav button.active { color: var(--accent); background: transparent; }
     /* Glass is reserved for floating controls; reading surfaces stay opaque. */
     @supports (backdrop-filter: blur(20px)) {
-      nav, header > .icon-button, .toolbar > .icon-button {
+      nav, .toolbar > .icon-button {
         background: linear-gradient(145deg, var(--glass-sheen), transparent 55%), var(--glass);
         border-color: var(--glass-edge);
         backdrop-filter: blur(24px) saturate(150%);
@@ -354,7 +354,7 @@
       dialog[open] { animation: sheet-appear .18s ease-out; }
       @keyframes sheet-appear { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
     }
-    @media (prefers-reduced-transparency: reduce) { header, nav, header > .icon-button, .toolbar > .icon-button { background: var(--surface); backdrop-filter: none; border-color: var(--line); box-shadow: none; } }
+    @media (prefers-reduced-transparency: reduce) { header, nav, .toolbar > .icon-button { background: var(--surface); backdrop-filter: none; border-color: var(--line); box-shadow: none; } }
     @media (max-width: 619px) {
       dialog { width: calc(100% - 16px); max-height: calc(100dvh - 16px); margin: auto auto 8px; padding: 24px 20px calc(24px + env(safe-area-inset-bottom)); border-radius: 28px; }
     }
@@ -384,7 +384,6 @@
   <div class="app">
     <header>
       <div class="brand-lockup"><img class="brand-logo" src="/icon.svg" width="42" height="42" alt=""><div><div class="brand">Manger<span>!</span></div><div class="tagline">Ma cuisine, mes choix</div></div></div>
-      <button id="household-button" class="icon-button" type="button" aria-label="Gérer le foyer"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2M16 5a3 3 0 0 1 0 6m2 3a5 5 0 0 1 3 4v2"/></svg></button>
     </header>
 
     <main>
@@ -2030,8 +2029,8 @@
     accentSelect.addEventListener('change', applyAppearance);
     modeSelect.addEventListener('change', applyAppearance);
     matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (modeSelect.value === 'system') applyAppearance(); });
-    document.getElementById('account-household').addEventListener('click', () => document.getElementById('household-button').click());
-    document.getElementById('account-tastes').addEventListener('click', () => { document.getElementById('household-button').click(); document.getElementById('member-name').focus(); });
+    document.getElementById('account-household').addEventListener('click', () => householdDialog.showModal());
+    document.getElementById('account-tastes').addEventListener('click', () => { householdDialog.showModal(); document.getElementById('member-name').focus(); });
     document.querySelector('nav').addEventListener('click', event => {
       const button = event.target.closest('[data-panel]');
       if (!button) return;
@@ -2342,7 +2341,6 @@
       if (list.children.length > 1) button.closest('.step-row').remove();
     });
     document.getElementById('recipe-form').addEventListener('submit', saveRecipe);
-    document.getElementById('household-button').addEventListener('click', () => householdDialog.showModal());
     document.getElementById('preferences-form').addEventListener('submit', async event => {
       event.preventDefault();
       const button = event.target.querySelector('button'); button.disabled = true;
