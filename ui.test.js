@@ -29,6 +29,49 @@ test('le logo est servi comme icône de page et d’écran d’accueil iPhone', 
   assert.deepEqual(Buffer.from(await response.arrayBuffer()), readFileSync(join(__dirname, 'public', 'icon-180.png')));
 });
 
+test('le partage des courses respecte l’annulation et exporte seulement les articles restants, avec copie ou fichier de secours', async () => {
+  const html = readFileSync(join(__dirname, 'public', 'index.html'), 'utf8');
+  const source = html.match(/    async function shareShopping[\s\S]*?(?=\n    document.getElementById\('share'\))/)[0];
+  const state = { weekStart: '2026-09-28', shopping: [{ name: 'Café', checked: false }, { name: 'Savon', checked: true }] };
+  const status = {}, button = { disabled: false }, navigator = {};
+  const copies = [], downloads = [], revoked = []; let blob, failDownload = false;
+  const share = new Script(source + ';shareShopping').runInNewContext({
+    state, navigator, Blob, key: value => value, shoppingText: item => item.name,
+    document: { getElementById: () => status, body: { append() {} }, createElement: () => ({
+      click() { if (failDownload) throw new Error('Bloqué'); downloads.push(this.download); }, remove() {}
+    }) },
+    URL: { createObjectURL: value => { blob = value; return 'blob:test'; }, revokeObjectURL: value => revoked.push(value) },
+    setTimeout: callback => callback()
+  });
+  const click = () => share({ currentTarget: button });
+  navigator.clipboard = { writeText: async text => copies.push(text) };
+  let payload;
+  navigator.share = async data => { payload = data; };
+  await click(); assert.equal(payload.text, '- Café'); assert.equal(copies.length, 0); assert.equal(status.hidden, true);
+  navigator.share = async () => { throw { name: 'AbortError' }; };
+  await click(); assert.equal(copies.length, 0); assert.equal(downloads.length, 0); assert.equal(status.hidden, true);
+  navigator.share = async () => { throw { name: 'NotAllowedError' }; };
+  await click(); assert.deepEqual(copies, ['- Café']); assert.match(status.textContent, /Liste copiée/);
+  navigator.share = undefined;
+  await click(); assert.equal(copies.length, 2); assert.equal(downloads.length, 0);
+  navigator.clipboard.writeText = async () => { throw { name: 'NotAllowedError' }; };
+  await click(); assert.deepEqual(downloads, ['manger-courses-2026-09-28.txt']);
+  assert.equal(await blob.text(), '- Café\n'); assert.equal(blob.type, 'text/plain;charset=utf-8'); assert.deepEqual(revoked, ['blob:test']);
+  navigator.clipboard = undefined;
+  await click(); assert.equal(downloads.length, 2);
+  failDownload = true;
+  await click(); assert.match(status.textContent, /Impossible de partager/); assert.equal(status.className, 'error'); assert.equal(button.disabled, false); assert.equal(revoked.length, 3);
+  let finish, calls = 0;
+  navigator.share = () => { calls++; return new Promise(resolve => { finish = resolve; }); };
+  const pending = click(); assert.equal(button.disabled, true);
+  await click(); assert.equal(calls, 1);
+  finish(); await pending; assert.equal(button.disabled, false); assert.equal(status.hidden, true);
+  state.shopping[0].checked = true;
+  await click(); assert.match(status.textContent, /Aucun article/); assert.equal(calls, 1);
+  state.shopping = [];
+  await click(); assert.equal(downloads.length, 2); assert.equal(copies.length, 2);
+});
+
 test('les coches hors connexion persistent localement sans écraser une nouvelle copie ni perdre les données si le stockage échoue', () => {
   const html = readFileSync(join(__dirname, 'public', 'offline.html'), 'utf8');
   for (const match of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)) if (match[1].trim()) new Script(match[1]);

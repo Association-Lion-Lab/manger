@@ -441,6 +441,7 @@
       <section id="shopping-panel" class="panel" hidden>
         <span class="section-kicker">Ma semaine</span>
         <div class="section-heading"><div><h1>Mes courses</h1><span id="shopping-summary" class="muted"></span></div><button id="share" class="icon-button" type="button" aria-label="Partager la liste">↗</button></div>
+        <p id="shopping-share-status" class="muted" role="status" hidden></p>
         <div class="shopping-progress" aria-hidden="true"><span id="shopping-progress-bar"></span></div>
         <div class="subtle-tools"><button id="open-pantry" class="text-action" type="button">Mon placard</button><button id="organize-shopping" class="text-action" type="button" aria-pressed="false" aria-controls="shopping">Organiser les rayons</button></div>
         <p id="organize-shopping-help" class="muted" hidden>Glisse la poignée ⠿ vers un rayon. Ou touche-la pour choisir le rayon. Les corrections sont enregistrées immédiatement.</p>
@@ -2049,11 +2050,34 @@
       renderShopping();
       if (!organizingShopping) syncShopping();
     });
-    document.getElementById('share').addEventListener('click', async () => {
+    async function shareShopping(event) {
+      const button = event.currentTarget;
+      if (button.disabled) return;
+      const status = document.getElementById('shopping-share-status');
       const text = state.shopping.filter(item => !item.checked).map(item => `- ${shoppingText(item)}`).join('\n');
-      if (navigator.share) await navigator.share({ title: 'Courses — Manger!', text });
-      else await navigator.clipboard.writeText(text);
-    });
+      const week = key(state.weekStart);
+      status.className = 'muted'; status.textContent = ''; status.hidden = true;
+      if (!text) { status.textContent = 'Aucun article restant à partager.'; status.hidden = false; return; }
+      button.disabled = true;
+      try {
+        if (navigator.share) {
+          try { await navigator.share({ title: 'Courses — Manger!', text }); return; }
+          catch (error) { if (error.name === 'AbortError') return; }
+        }
+        if (navigator.clipboard?.writeText) {
+          try { await navigator.clipboard.writeText(text); status.textContent = 'Liste copiée. Tu peux la coller dans un message ou une note.'; return; }
+          catch {}
+        }
+        const url = URL.createObjectURL(new Blob([text + '\n'], { type: 'text/plain;charset=utf-8' }));
+        const link = document.createElement('a'); link.href = url; link.download = `manger-courses-${week}.txt`;
+        try { document.body.append(link); link.click(); }
+        finally { link.remove(); setTimeout(() => URL.revokeObjectURL(url), 60000); }
+        status.textContent = 'Partage et copie indisponibles : téléchargement de la liste lancé.';
+      } catch {
+        status.className = 'error'; status.textContent = 'Impossible de partager ou télécharger la liste. Réessaie depuis le navigateur.';
+      } finally { button.disabled = false; status.hidden = !status.textContent; }
+    }
+    document.getElementById('share').addEventListener('click', shareShopping);
     document.getElementById('shopping').addEventListener('change', async event => {
       const checkbox = event.target.closest('[data-shopping]');
       if (!checkbox) return;

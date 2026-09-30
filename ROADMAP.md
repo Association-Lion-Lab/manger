@@ -12,6 +12,7 @@ Contrainte produit : quatre onglets (Semaine, Recettes, Courses, Compte), action
 - Déplacement et copie de repas sans écraser les créneaux occupés.
 - Mode cuisine : son optionnel et maintien de l'écran selon le navigateur.
 - Courses : rafraîchissement automatique toutes les 15 secondes dans l'onglet visible, avec protection des actions et saisies locales.
+- Partage des courses fiabilisé : annulation silencieuse, copie avec retour discret et fichier texte de secours si les API natives sont indisponibles ou refusées. Seuls les articles non cochés sont exportés ; aucun changement du foyer. Cas d'échec simulés et téléchargement réel contrôlés dans Chromium ; essai Safari iPhone à effectuer.
 - Sauvegarde complète téléchargeable ; vérification et restauration vers un nouveau fichier en ligne de commande, sans écrasement de la base active.
 - Copie d'une semaine avec aperçu, variantes individuelles, liens de restes internes et refus des conflits.
 - Recherche de recettes tolérant accents, pluriels connus et petites fautes en l'absence de correspondance exacte.

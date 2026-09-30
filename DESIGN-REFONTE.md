@@ -24,7 +24,7 @@ Sur téléphone, répondre vite à « On mange quoi ? », puis passer du repas p
 4. **Courses** : quantités et rayons au premier plan, articles cochés repliés, partage accessible, placard en action secondaire. Garder le suivi utilisable d'une main.
 5. **Foyer** : profils et goûts par personne, réglages peu fréquents hors de la navigation principale. Une configuration guidée et facultative peut aider un nouveau foyer à saisir régimes et exclusions ; demander les équipements seulement si les recettes savent réellement en tenir compte.
 
-Navigation compacte validée : **Semaine · Recettes · Courses · Compte**. Le foyer reste accessible depuis l'en-tête et l'onglet Compte. Tablette/PC : mêmes contenus, disposition adaptée plus tard ; ne pas agrandir simplement les cartes mobiles.
+Navigation compacte validée : **Semaine · Recettes · Courses · Compte**. Le foyer est accessible depuis l'onglet Compte ; le raccourci redondant de l'en-tête a été retiré. Tablette/PC : mêmes contenus, disposition adaptée plus tard ; ne pas agrandir simplement les cartes mobiles.
 
 Schéma compact pour la découverte des recettes :
 
