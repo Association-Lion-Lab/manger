@@ -823,10 +823,10 @@ function createHandler(db, overpassUrl, communesUrl) {
         }
         return;
       }
-      const offlineAssets = { '/sw.js': 'text/javascript', '/offline.html': 'text/html', '/manifest.webmanifest': 'application/manifest+json', '/icon.svg': 'image/svg+xml', '/icon-180.png': 'image/png', '/icon-192.png': 'image/png', '/icon-512.png': 'image/png' };
+      const offlineAssets = { '/sw.js': 'text/javascript', '/offline.html': 'text/html', '/manifest.webmanifest': 'application/manifest+json', '/icon.svg': 'image/svg+xml', '/apple-touch-icon.png': 'image/png', '/icon-180.png': 'image/png', '/icon-192.png': 'image/png', '/icon-512.png': 'image/png' };
       if (request.method === 'GET' && Object.hasOwn(offlineAssets, url.pathname)) {
         response.writeHead(200, { 'Content-Type': offlineAssets[url.pathname] + '; charset=utf-8', 'Cache-Control': 'no-cache', 'X-Content-Type-Options': 'nosniff' });
-        return response.end(readFileSync(join(__dirname, 'public', url.pathname.slice(1))));
+        return response.end(readFileSync(join(__dirname, 'public', url.pathname === '/apple-touch-icon.png' ? 'icon-180.png' : url.pathname.slice(1))));
       }
       if (request.method === 'GET' && ['/tastes.js', '/food-names.js', '/offline-recipes.js'].includes(url.pathname)) {
         response.writeHead(200, { 'Content-Type': 'text/javascript; charset=utf-8', 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-cache' });
