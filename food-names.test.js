@@ -38,3 +38,14 @@ test('recherche de recettes : accents, pluriels, fautes en repli et priorité au
   assert.deepEqual(searchRecipes(recipes, 'aliment totalement inconnu'), []);
   assert.deepEqual(searchRecipes(recipes, ''), recipes);
 });
+
+test('recherche de recettes : le temps maximal filtre avant les mots et les fautes', () => {
+  const recipes = [
+    { title: 'Salade de tomates', minutes: 20, ingredients: [{ name: 'tomate' }] },
+    { title: 'Tomates farcies', minutes: 80, ingredients: [{ name: 'tomate' }] }
+  ];
+  assert.deepEqual(searchRecipes(recipes, '', 30), [recipes[0]]);
+  assert.deepEqual(searchRecipes(recipes, 'tomates', 30), [recipes[0]]);
+  assert.deepEqual(searchRecipes(recipes, 'farcies', 30), []);
+  assert.deepEqual(searchRecipes(recipes, 'tomates'), recipes);
+});

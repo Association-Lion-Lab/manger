@@ -31,7 +31,8 @@
       .map(([form, name]) => ({ name, score: distance(input, form) })).filter(item => item.score <= limit)
       .sort((a, b) => a.score - b.score || a.name.localeCompare(b.name, 'fr')).map(item => item.name))].slice(0, 3);
   }
-  function searchRecipes(recipes, query) {
+  function searchRecipes(recipes, query, maxMinutes = Infinity) {
+    recipes = Number.isFinite(maxMinutes) ? recipes.filter(recipe => recipe.minutes <= maxMinutes) : recipes;
     const normalized = fold(foodName(query));
     if (!normalized) return recipes;
     const searchable = recipe => [fold(recipe.title), ...recipe.ingredients.map(item => fold(foodName(item.name)))];

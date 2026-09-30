@@ -287,6 +287,8 @@
     .recipe-search-field:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
     #recipe-search { width: 100%; min-width: 0; min-height: 52px; padding: 0; border: 0; outline: 0; color: var(--text); background: transparent; font-size: 16px; }
     #recipe-search::placeholder { color: var(--muted); opacity: 1; }
+    .recipe-time-filter { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin: -14px 0 22px; color: var(--muted); font-size: 14px; }
+    .recipe-time-filter select { min-width: 138px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 14px; color: var(--text); background: var(--surface); font-size: 16px; }
     .recipe-block-heading { margin: 28px 0 16px; }
     .recipe-block-heading h2 { font-size: 20px; }
     .recipe-spotlight { display: flex; gap: 14px; margin: 0 -24px; padding: 0 24px 10px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }
@@ -355,7 +357,7 @@
       .assignment { grid-template-columns: 1fr; }
     }
     @media (min-width: 620px) { main { padding: 36px 32px 130px; } header { padding-inline: 32px; } .recipe-list { grid-template-columns: repeat(3, minmax(0, 1fr)); } .browse-categories { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
-    @media (max-width: 359px) { main { padding-inline: 14px; } .days { gap: 0; padding: 0; } .meal { padding: 14px; gap: 10px; } .meal.photo { padding: 0; } .recipe-list { gap: 60px 10px; } .recipe { padding-inline: 8px; } .recipe-spotlight { margin-inline: -14px; padding-inline: 14px; } .browse-categories { grid-template-columns: repeat(2, minmax(0, 1fr)); } .split-dish .recipe-cover { width: 52px; height: 52px; } }
+    @media (max-width: 359px) { main { padding-inline: 14px; } .days { gap: 0; padding: 0; } .meal { padding: 14px; gap: 10px; } .meal.photo { padding: 0; } .recipe-list { gap: 60px 10px; } .recipe { padding-inline: 8px; } .recipe .recipe-favorite { position: absolute; top: 8px; right: 8px; background: var(--surface); } .recipe .recipe-add { width: 100%; } .recipe-spotlight { margin-inline: -14px; padding-inline: 14px; } .browse-categories { grid-template-columns: repeat(2, minmax(0, 1fr)); } .split-dish .recipe-cover { width: 52px; height: 52px; } }
     #recipe-print { display: none; }
     @media print {
       @page { margin: 18mm; }
@@ -410,6 +412,7 @@
           <div class="recipe-page-actions"><button id="import-recipes" class="icon-button" type="button" aria-label="Importer une recette">⇩</button><button id="new-recipe" class="icon-button" type="button" aria-label="Ajouter une recette">＋</button></div>
         </div>
         <label class="recipe-search-field" for="recipe-search"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg><input id="recipe-search" type="search" placeholder="Un plat, un ingrédient…" autocomplete="off"><span class="sr-only">Chercher une recette</span></label>
+        <label id="recipe-time-filter-field" class="recipe-time-filter" hidden><span>Temps max</span><select id="recipe-time-filter"><option value="">Tous les temps</option><option value="30">30 min</option><option value="45">45 min</option><option value="60">1 heure</option></select></label>
         <p id="recipe-feedback" class="error" role="alert" hidden></p>
         <div id="recipe-discovery">
           <div id="recipe-spotlight" class="recipe-spotlight" aria-label="Recettes à découvrir"></div>
@@ -887,16 +890,18 @@
       const search = document.getElementById('recipe-search');
       const query = search.value.trim().toLocaleLowerCase('fr');
       const category = activeRecipeCategory;
-      const filtered = MangerFoodNames.searchRecipes(state.recipes.filter(recipe => category === '__favorites' ? recipe.favorite : !category || recipe.tags.includes(category)), query);
+      const maxMinutes = Number(document.getElementById('recipe-time-filter').value) || Infinity;
+      const filtered = MangerFoodNames.searchRecipes(state.recipes.filter(recipe => category === '__favorites' ? recipe.favorite : !category || recipe.tags.includes(category)), query, maxMinutes);
       const title = category === '__favorites' ? 'Mes favoris' : category ? recipeCategories[category].split(' ').slice(1).join(' ') : 'Explorer les recettes';
       document.getElementById('recipes-title').textContent = title;
       document.getElementById('recipes-kicker').textContent = category ? 'Univers' : 'À découvrir';
       document.getElementById('recipes-back').hidden = !category;
-      document.getElementById('recipe-count').textContent = query || category ? `${filtered.length} recette${filtered.length > 1 ? 's' : ''}` : `${state.recipes.length} recettes à explorer`;
+      document.getElementById('recipe-count').textContent = query || category || Number.isFinite(maxMinutes) ? `${filtered.length} recette${filtered.length > 1 ? 's' : ''}` : `${state.recipes.length} recettes à explorer`;
       search.placeholder = category ? `Chercher dans ${title.toLocaleLowerCase('fr')}…` : 'Un plat, un ingrédient…';
-      document.getElementById('recipe-discovery').hidden = Boolean(query || category);
+      document.getElementById('recipe-time-filter-field').hidden = !(query || category || Number.isFinite(maxMinutes));
+      document.getElementById('recipe-discovery').hidden = Boolean(query || category || Number.isFinite(maxMinutes));
       document.getElementById('recipe-results-heading').hidden = Boolean(category);
-      document.getElementById('recipe-results-title').textContent = query ? 'Résultats de recherche' : 'Toutes les recettes';
+      document.getElementById('recipe-results-title').textContent = query || Number.isFinite(maxMinutes) ? 'Résultats de recherche' : 'Toutes les recettes';
 
       if (!category && !query) {
         const spotlight = [...state.recipes].sort((a, b) => Number(b.hasPhoto) - Number(a.hasPhoto)).slice(0, 3);
@@ -912,7 +917,7 @@
         document.getElementById('browse-categories').innerHTML = categories.filter(([key]) => featuredCategories.includes(key)).map(categoryTile).join('');
         document.getElementById('browse-more-categories').innerHTML = categories.filter(([key]) => !featuredCategories.includes(key)).map(categoryTile).join('');
       }
-      document.getElementById('recipes').innerHTML = filtered.map(recipe => `<article class="recipe"><button class="recipe-main" type="button" data-edit-recipe="${recipe.id}" aria-label="Voir la recette ${escapeHtml(recipe.title)}">${recipeCover(recipe)}<span class="recipe-copy"><strong>${escapeHtml(recipe.title)}</strong><span class="recipe-badges"><small>◷ ${recipe.minutes} min</small><small>${escapeHtml(dietLabels[recipe.diet])}</small></span></span></button><div class="recipe-card-actions">${recipeFavoriteButton(recipe)}<button class="recipe-add" type="button" data-plan-recipe="${recipe.id}">＋ Ajouter</button></div></article>`).join('') || '<div class="empty-state">Aucune recette ici. Essaie un autre mot ou ajoute un plat.</div>';
+      document.getElementById('recipes').innerHTML = filtered.map(recipe => `<article class="recipe"><button class="recipe-main" type="button" data-edit-recipe="${recipe.id}" aria-label="Voir la recette ${escapeHtml(recipe.title)}">${recipeCover(recipe)}<span class="recipe-copy"><strong>${escapeHtml(recipe.title)}</strong><span class="recipe-badges"><small>◷ ${recipe.minutes} min</small><small>${escapeHtml(dietLabels[recipe.diet])}</small></span></span></button><div class="recipe-card-actions">${recipeFavoriteButton(recipe)}<button class="recipe-add" type="button" data-plan-recipe="${recipe.id}">＋ Ajouter</button></div></article>`).join('') || `<div class="empty-state">${Number.isFinite(maxMinutes) ? 'Aucune recette pour cette durée. Choisis un temps plus long.' : 'Aucune recette ici. Essaie un autre mot ou ajoute un plat.'}</div>`;
     }
 
     const pantryDialog = document.getElementById('pantry-dialog');
@@ -2165,10 +2170,12 @@
     document.getElementById('export-recipes').addEventListener('click', () => { location.href = '/api/recipes/export'; });
     document.getElementById('new-recipe').addEventListener('click', () => openRecipeEditor());
     document.getElementById('recipe-search').addEventListener('input', renderRecipes);
+    document.getElementById('recipe-time-filter').addEventListener('change', renderRecipes);
     document.getElementById('recipes-back').addEventListener('click', () => {
       const previous = activeRecipeCategory;
       activeRecipeCategory = '';
       document.getElementById('recipe-search').value = '';
+      document.getElementById('recipe-time-filter').value = '';
       renderRecipes();
       document.querySelector(`[data-browse-category="${previous}"]`)?.focus();
     });
@@ -2188,6 +2195,7 @@
       if (category) {
         activeRecipeCategory = category.dataset.browseCategory;
         document.getElementById('recipe-search').value = '';
+        document.getElementById('recipe-time-filter').value = '';
         renderRecipes();
         document.getElementById('recipes-back').focus();
         window.scrollTo(0, 0);
