@@ -1,5 +1,10 @@
 <!doctype html>
 <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Mon compte · Manger!</title>
+<meta name="apple-mobile-web-app-title" content="Manger!">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180">
 <script>try{const a=JSON.parse(localStorage.getItem('manger-appearance-v1')||'{}');document.documentElement.dataset.accent=['potager','ardoise','prune'].includes(a.accent)?a.accent:'potager';document.documentElement.dataset.mode=['light','dark'].includes(a.mode)?a.mode:(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');}catch{document.documentElement.dataset.mode=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}</script>
 <style>
 :root{color-scheme:light dark;--bg:#f7f8f3;--surface:#fff;--text:#1c2a22;--muted:#56645a;--border:#dce5dc;--accent:#1b6b4a;--on-accent:#fff}

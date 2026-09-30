@@ -88,7 +88,7 @@ function protectAccounts(db, handler, { secure = false } = {}) {
       }
       if (req.method === 'GET' && publicFiles.has(path)) return handler(req, res);
       if (req.method === 'GET' && ['/login', '/account'].includes(path)) {
-        res.setHeader('Content-Security-Policy', "default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
+        res.setHeader('Content-Security-Policy', "default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self'; manifest-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
         return res.end(PAGE);
       }

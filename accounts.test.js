@@ -23,6 +23,10 @@ async function fixture(t) {
 test('authentication protects data, exports and writes; origin is checked', async t => {
   const { request, login, accounts } = await fixture(t);
   assert.equal((await request('/')).status, 303);
+  const landing = await request('/login');
+  assert.equal(landing.status, 200);
+  assert.match(await landing.text(), /rel="apple-touch-icon" href="\/apple-touch-icon\.png"/);
+  assert.match(landing.headers.get('content-security-policy'), /img-src 'self'; manifest-src 'self'/);
   for (const path of ['/api/recipes', '/api/household', '/api/backup', '/api/photos/1', '/api/recipes/export', '/calendar.ics']) assert.equal((await request(path)).status, 401, path);
   assert.equal((await request('/api/health')).status, 200);
   const icon = await request('/apple-touch-icon.png');
