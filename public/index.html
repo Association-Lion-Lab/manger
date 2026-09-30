@@ -196,6 +196,7 @@
     .choice-copy { display: grid; gap: 2px; }
     .choice-copy small { color: var(--muted); }
     .recipe-form { display: grid; gap: 22px; margin-top: 22px; }
+    #recipe-fields { min-width: 0; margin-right: 0; margin-left: 0; padding: 0; border: 0; }
     .field { display: grid; gap: 6px; }
     .field > span { color: var(--muted); font-size: 13px; font-weight: 650; }
     .field input, .field textarea { width: 100%; min-width: 0; min-height: 48px; padding: 12px 14px; color: var(--text); border: 1px solid var(--line); border-radius: 14px; background: var(--field); }
@@ -530,7 +531,8 @@
         <div><h2 id="recipe-dialog-title">Nouvelle recette</h2><span class="muted">Recette privée du foyer</span></div>
         <button id="close-recipe-dialog" class="icon-button" type="button" aria-label="Fermer">×</button>
       </div>
-      <form id="recipe-form" class="recipe-form">
+      <form id="recipe-form">
+        <fieldset id="recipe-fields" class="recipe-form" aria-label="Contenu de la recette">
         <label class="field"><span>Nom</span><input id="recipe-title" required maxlength="120" autocomplete="off"></label>
         <details id="recipe-photo-options" class="quiet-details"><summary>Photo du plat</summary>
           <img id="recipe-photo-preview" class="recipe-hero" alt="Aperçu de la photo choisie" hidden>
@@ -561,8 +563,9 @@
         <div id="recipe-import-review" hidden><p class="muted">Vérifie le régime, les quantités, les unités, les portions et les étapes. Les recettes internet restent celles de leurs auteurs ; le lien source est conservé.</p><label style="display:flex;align-items:center;gap:10px;min-height:44px"><input id="recipe-reviewed" type="checkbox" style="width:20px;height:20px">J’ai vérifié cette recette avant de l’enregistrer.</label></div>
         <div class="recipe-form-actions">
           <button id="cancel-recipe" class="secondary" type="button">Annuler</button>
-          <button class="primary" type="submit">Enregistrer</button>
+          <button id="save-recipe" class="primary" type="submit">Enregistrer</button>
         </div>
+        </fieldset>
       </form>
     </dialog>
 
@@ -1919,6 +1922,8 @@
 
     async function saveRecipe(event) {
       event.preventDefault();
+      const fields = document.getElementById('recipe-fields');
+      if (fields.disabled) return;
       if (photoBusy) { document.getElementById('recipe-photo-options').open = true; return; }
       const ingredients = [...document.querySelectorAll('.ingredient-row')].map(row => ({
         name: row.querySelector('.ingredient-name').value,
@@ -1943,20 +1948,31 @@
         ingredients,
         steps
       };
-      const response = await fetch(editingRecipeId ? `/api/recipes/${editingRecipeId}` : '/api/recipes', {
-        method: editingRecipeId ? 'PUT' : 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      if (!response.ok) {
-        const error = await response.json();
-        const message = document.getElementById('recipe-error');
-        message.textContent = error.error;
+      const form = document.getElementById('recipe-form'), button = document.getElementById('save-recipe');
+      const close = document.getElementById('close-recipe-dialog'), message = document.getElementById('recipe-error');
+      fields.disabled = true; close.disabled = true;
+      form.setAttribute('aria-busy', 'true'); button.textContent = 'Enregistrement…'; message.hidden = true;
+      let saved = false;
+      try {
+        const response = await fetch(editingRecipeId ? `/api/recipes/${editingRecipeId}` : '/api/recipes', {
+          method: editingRecipeId ? 'PUT' : 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(payload),
+          signal: AbortSignal.timeout(15000)
+        }).catch(() => { throw new Error('Connexion interrompue. Ta saisie est conservée. Vérifie les recettes avant de réessayer : l’enregistrement a peut-être abouti.'); });
+        if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Enregistrement refusé par le serveur. Ta saisie est conservée.');
+        saved = true;
+        recipeDialog.close();
+      } catch (error) {
+        message.textContent = error.message;
         message.hidden = false;
-        return;
+      } finally {
+        fields.disabled = false; close.disabled = false;
+        form.setAttribute('aria-busy', 'false'); button.textContent = 'Enregistrer';
+        if (!saved) button.focus({ preventScroll: true });
       }
-      recipeDialog.close();
-      await load();
+      // A failed refresh must not invite a second write after a confirmed save.
+      if (saved) await load().catch(() => {});
     }
 
     document.getElementById('days').addEventListener('click', event => {
@@ -2376,6 +2392,7 @@
       await load();
     });
     document.getElementById('close-recipe-dialog').addEventListener('click', () => recipeDialog.close());
+    recipeDialog.addEventListener('cancel', event => { if (document.getElementById('recipe-fields').disabled) event.preventDefault(); });
     document.getElementById('cancel-recipe').addEventListener('click', () => recipeDialog.close());
     document.getElementById('add-ingredient').addEventListener('click', () => document.getElementById('ingredient-list').append(ingredientRow()));
     document.getElementById('ingredient-list').addEventListener('click', event => {

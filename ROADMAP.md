@@ -21,6 +21,7 @@ Contrainte produit : quatre onglets (Semaine, Recettes, Courses, Compte), action
 - Filtre anti-gaspi automatique : basiques et épices reconnus exclus des scores et des mentions de réutilisation ; ingrédients et courses inchangés.
 - Navigation du planning : ouverture sur le jour courant, retour « Aujourd’hui » et accès direct à une date par sélecteur natif. Mois/années explicités aux frontières ; réponses anciennes ignorées et semaine précédente conservée en cas d’échec réseau. Parcours Chromium contrôlé à 320/390/760 px ; validation du sélecteur sur iPhone à effectuer.
 - Reprise du chargement du planning : message clair et bouton « Réessayer » uniquement en cas d’échec, y compris au démarrage. Date demandée retrouvée, affichage précédent conservé, anciennes erreurs ignorées et aucune écriture rejouée. Parcours Chromium à 320/390/760 px et test logique ; essai Safari iPhone à effectuer.
+- Enregistrement des recettes fiabilisé : formulaire et fermeture bloqués pendant l’envoi, doubles appuis ignorés et saisie conservée dans la page en cas d’échec. Création, modification, copie et import partagent cette protection ; aucun renvoi automatique, et une lecture échouée après sauvegarde confirmée ne rejoue pas l’écriture. Tests logiques et Chromium sur base isolée ; essai Safari iPhone à effectuer.
 
 Vérification : tests Node et parcours navigateur sur base isolée. Le rendu a été contrôlé à 320, 390 et 760 px, en clair et en sombre. L'audio et le maintien de l'écran ont été contrôlés avec des API simulées ; un essai sur téléphone reste nécessaire.
 

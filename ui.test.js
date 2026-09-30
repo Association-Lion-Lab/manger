@@ -72,6 +72,65 @@ test('le partage des courses respecte l’annulation et exporte seulement les ar
   await click(); assert.equal(downloads.length, 2); assert.equal(copies.length, 2);
 });
 
+test('enregistrer une recette bloque les doubles appuis, conserve la saisie en cas d’échec et ne rejoue pas une sauvegarde confirmée', async () => {
+  const html = readFileSync(join(__dirname, 'public', 'index.html'), 'utf8');
+  const source = html.match(/    async function saveRecipe[\s\S]*?(?=\n    document.getElementById\('days'\))/)[0];
+  const nodes = new Map();
+  const node = id => {
+    if (!nodes.has(id)) nodes.set(id, { value: '', disabled: false, hidden: true, focus() { this.focused = true; }, setAttribute(name, value) { this[name] = value; } });
+    return nodes.get(id);
+  };
+  const values = { 'recipe-title': 'Mon curry', 'recipe-source': 'https://example.org/curry', 'recipe-minutes': '30', 'recipe-servings': '2', 'recipe-diet': 'vegan', 'recipe-tags': 'rapide, japon' };
+  for (const [id, value] of Object.entries(values)) node(id).value = value;
+  const row = values => ({ querySelector: selector => ({ value: values[selector] }) });
+  const lists = {
+    '.ingredient-row': [row({ '.ingredient-name': 'Carotte', '.ingredient-amount': '200', '.ingredient-unit': 'g', '.ingredient-state': 'cooked' })],
+    '.step-row': [row({ '.step-kind': 'cook', '.step-instruction': 'Cuire les carottes.', '.step-minutes': '' })],
+    '#recipe-categories input:checked': [{ value: 'japon' }]
+  };
+  let request, calls = 0, closes = 0, refreshes = 0, failRefresh = false;
+  const context = {
+    document: { getElementById: node, querySelectorAll: selector => lists[selector] },
+    photoBusy: false, recipePhoto: 'data:image/jpeg;base64,test', recipePhotoCopyId: 12,
+    recipeCategories: { japon: 'Japon' }, editingRecipeId: null, AbortSignal,
+    recipeDialog: { close: () => closes++ },
+    fetch: (path, options) => { calls++; request = { path, ...options }; return context.reply(); },
+    load: async () => { refreshes++; if (failRefresh) throw new Error('Lecture indisponible'); }
+  };
+  const save = new Script(source + ';saveRecipe').runInNewContext(context);
+  const submit = () => save({ preventDefault() {} });
+  context.photoBusy = true; await submit(); assert.equal(calls, 0); assert.equal(node('recipe-photo-options').open, true);
+  context.photoBusy = false;
+  let release;
+  context.reply = () => new Promise(resolve => { release = resolve; });
+  const pending = submit();
+  assert.equal(node('recipe-fields').disabled, true); assert.equal(node('close-recipe-dialog').disabled, true);
+  assert.equal(node('save-recipe').textContent, 'Enregistrement…'); assert.equal(node('recipe-form')['aria-busy'], 'true');
+  await submit(); assert.equal(calls, 1);
+  const payload = JSON.parse(request.body);
+  assert.equal(request.path, '/api/recipes'); assert.equal(request.method, 'POST'); assert.ok(request.signal instanceof AbortSignal);
+  assert.equal(payload.title, 'Mon curry'); assert.deepEqual(payload.tags, ['rapide', 'japon']); assert.equal(payload.steps[0].minutes, null);
+  assert.equal(payload.ingredients[0].preparation, 'cooked'); assert.equal(payload.photoCopyId, 12); assert.equal(payload.photo, context.recipePhoto);
+  release({ ok: false, json: async () => ({ error: 'Quantité invalide' }) }); await pending;
+  assert.equal(closes, 0); assert.equal(refreshes, 0); assert.equal(node('recipe-error').textContent, 'Quantité invalide');
+  assert.equal(node('recipe-error').hidden, false); assert.equal(node('recipe-fields').disabled, false);
+  assert.equal(node('close-recipe-dialog').disabled, false); assert.equal(node('save-recipe').textContent, 'Enregistrer');
+  assert.equal(node('save-recipe').focused, true);
+  assert.equal(node('recipe-form')['aria-busy'], 'false');
+  context.reply = async () => { throw new TypeError('Failed to fetch'); };
+  await submit(); assert.match(node('recipe-error').textContent, /saisie est conservée.*peut-être abouti/);
+  context.reply = async () => { throw { name: 'TimeoutError' }; };
+  await submit(); assert.match(node('recipe-error').textContent, /Connexion interrompue/);
+  context.reply = async () => ({ ok: false, json: async () => { throw new Error('HTML'); } });
+  await submit(); assert.match(node('recipe-error').textContent, /refusé par le serveur/);
+  for (const [id, value] of Object.entries(values)) assert.equal(node(id).value, value);
+  context.editingRecipeId = 7; failRefresh = true;
+  context.reply = async () => ({ ok: true });
+  await submit(); assert.equal(request.path, '/api/recipes/7'); assert.equal(request.method, 'PUT');
+  assert.equal(calls, 5); assert.equal(closes, 1); assert.equal(refreshes, 1);
+  assert.equal(node('recipe-error').hidden, true); assert.equal(node('recipe-fields').disabled, false);
+});
+
 test('les coches hors connexion persistent localement sans écraser une nouvelle copie ni perdre les données si le stockage échoue', () => {
   const html = readFileSync(join(__dirname, 'public', 'offline.html'), 'utf8');
   for (const match of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)) if (match[1].trim()) new Script(match[1]);
