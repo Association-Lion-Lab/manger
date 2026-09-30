@@ -254,9 +254,9 @@
     .dish-assignment > .field { display: grid; align-items: stretch; gap: 6px; min-width: 0; }
     .dish-assignment .field select { min-height: 50px; padding: 12px 14px; border-radius: 14px; background: var(--field); font-size: 16px; }
     .error { color: var(--error); }
-    .connection-error { margin: 18px 0; padding: 18px; border: 1px solid color-mix(in srgb, var(--error) 45%, var(--line)); border-radius: 18px; color: var(--error); background: color-mix(in srgb, var(--error) 8%, transparent); }
+    .connection-error { margin: 18px 0; padding: 18px; border: 1px solid color-mix(in srgb, var(--error) 45%, var(--line)); border-radius: 18px; color: var(--error); background: color-mix(in srgb, var(--error) 8%, transparent); overflow-wrap: anywhere; }
     .connection-error p { margin: 6px 0 0; }
-    .connection-error code { padding: 2px 5px; border-radius: 5px; color: var(--text); background: var(--field); }
+    .connection-error button { margin-top: 12px; color: var(--text); }
     .app { box-shadow: 0 12px 60px #0000000a; }
     header { padding: 18px 24px 12px; }
     .brand { font-size: 23px; }
@@ -387,6 +387,10 @@
     </header>
 
     <main>
+      <div id="connection-error" class="connection-error" hidden>
+        <p id="connection-message" role="alert"></p>
+        <button id="retry-connection" class="secondary" type="button">Réessayer</button>
+      </div>
       <section id="week-panel" class="panel">
         <span class="section-kicker">Ma semaine</span>
         <h1 class="page-title">On mange quoi cette semaine ?</h1>
@@ -839,12 +843,15 @@
     }
     let shoppingSyncVersion = 0, pendingLoads = 0, loadVersion = 0;
     let requestedWeekStart = state.weekStart;
+    let retryView = null;
     async function load(view = {}) {
       const version = ++loadVersion, weekStart = new Date(view.weekStart || state.weekStart), start = key(weekStart);
       requestedWeekStart = weekStart;
       shoppingSyncVersion++; pendingLoads++;
       document.getElementById('week-panel').setAttribute('aria-busy', 'true');
       document.getElementById('week-content').disabled = true;
+      document.getElementById('retry-connection').disabled = true;
+      document.getElementById('retry-connection').textContent = 'Chargement…';
       try {
         const signal = AbortSignal.timeout(10000);
         const [weekResponse, householdResponse] = await Promise.all([fetch(`/api/week?start=${start}`, { signal }), fetch('/api/household', { signal })]);
@@ -853,20 +860,40 @@
         if (version !== loadVersion) return false;
         Object.assign(state, week, household, { weekStart, ...(view.selected === undefined ? {} : { selected: view.selected }) });
         document.getElementById('week-status').hidden = true;
+        document.getElementById('connection-error').hidden = true;
+        retryView = null;
         render();
         saveOfflineShopping();
         return true;
       } catch (error) {
         if (version !== loadVersion) return false;
         requestedWeekStart = state.weekStart;
+        retryView = { weekStart, selected: view.selected ?? state.selected };
+        document.getElementById('connection-message').textContent = location.protocol === 'file:'
+          ? 'Ouvre Manger depuis son serveur, par exemple http://localhost:3000, pas comme un fichier HTML.'
+          : error.name === 'TimeoutError'
+            ? 'Le serveur met trop de temps à répondre. Vérifie le Wi-Fi ou le VPN puis réessaie. Le contenu déjà affiché est conservé.'
+            : 'La semaine n’a pas pu être chargée. Vérifie le Wi-Fi, le VPN ou le serveur puis réessaie. Le contenu déjà affiché est conservé.';
+        document.getElementById('connection-error').hidden = false;
         throw error;
       } finally {
         pendingLoads--; shoppingSyncVersion++;
         if (version === loadVersion) {
           document.getElementById('week-panel').setAttribute('aria-busy', 'false');
           document.getElementById('week-content').disabled = false;
+          document.getElementById('retry-connection').disabled = false;
+          document.getElementById('retry-connection').textContent = 'Réessayer';
         }
       }
+    }
+
+    async function retryConnection() {
+      const button = document.getElementById('retry-connection');
+      if (button.disabled) return;
+      const restoreFocus = document.activeElement === button;
+      try {
+        if (await load(retryView || {}) && restoreFocus && (document.activeElement === button || document.activeElement === document.body)) document.querySelector('nav button.active').focus();
+      } catch { /* load keeps the previous display and the retry action. No write is replayed. */ }
     }
 
     function render() {
@@ -2001,7 +2028,7 @@
       const status = document.getElementById('week-status');
       status.textContent = 'Chargement de la semaine…'; status.hidden = false;
       try { await load({ weekStart: monday(date), selected: (date.getDay() + 6) % 7 }); }
-      catch { status.textContent = 'Cette semaine n’a pas pu être chargée. Le planning précédent est conservé ; vérifie ta connexion et réessaie.'; }
+      catch { status.hidden = true; } // The shared connection message already offers a retry.
     }
     for (const [id, days] of [['previous-week', -7], ['next-week', 7]]) document.getElementById(id).addEventListener('click', () => {
       const date = new Date(requestedWeekStart); date.setDate(date.getDate() + days); browseDate(date);
@@ -2534,12 +2561,8 @@
       } catch (error) { document.getElementById('offline-status').textContent = error.message; }
       finally { button.disabled = false; }
     });
-    load().catch(error => {
-      const message = location.protocol === 'file:'
-        ? 'Manger doit être ouvert depuis son serveur (http://localhost:3000), pas comme un fichier HTML direct.'
-        : (error.message || 'Impossible de joindre le serveur Manger.');
-      document.getElementById('schedule').innerHTML = `<div class="connection-error" role="alert"><strong>Connexion au serveur impossible</strong><p>${escapeHtml(message)}</p><p class="muted">Lance <code>npm start</code> ou <code>docker compose up -d</code>, puis ouvre l’adresse HTTP affichée.</p></div>`;
-    });
+    document.getElementById('retry-connection').addEventListener('click', retryConnection);
+    load().catch(() => {}); // The shared loader displays a retry action without replacing the planning.
   </script>
 </body>
 </html>

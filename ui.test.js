@@ -92,14 +92,14 @@ test('les coches hors connexion persistent localement sans écraser une nouvelle
   stored = null; assert.throws(() => save(revision, 0, true), /copie a changé/); assert.equal(stored, null);
 });
 
-test('la dernière semaine demandée seule actualise le planning et une erreur préserve la semaine affichée', async () => {
+test('la dernière semaine demandée seule actualise le planning, une erreur préserve l’affichage et Réessayer reprend la demande sans écriture', async () => {
   const html = readFileSync(join(__dirname, 'public', 'index.html'), 'utf8');
   const state = { weekStart: new Date('2026-09-28T12:00:00'), selected: 2, meals: [], shopping: [] };
   const nodes = new Map(), requests = new Map(); let renders = 0, copies = 0;
   const response = data => ({ ok: true, json: async () => data });
   const script = html.match(/    let shoppingSyncVersion[\s\S]*?(?=\n    function render\()/)[0];
-  const { load } = new Script(script + ';({load})').runInNewContext({
-    state, Date, AbortSignal, key: date => date.toISOString().slice(0, 10),
+  const { load, retryConnection } = new Script(script + ';({load,retryConnection})').runInNewContext({
+    state, Date, AbortSignal, location: { protocol: 'http:' }, key: date => date.toISOString().slice(0, 10),
     document: { getElementById: id => { if (!nodes.has(id)) nodes.set(id, { setAttribute(name, value) { this[name] = value; } }); return nodes.get(id); } },
     fetch: path => path === '/api/household' ? Promise.resolve(response({ members: [] })) : new Promise((resolve, reject) => requests.set(path.split('=')[1], { resolve, reject })),
     render: () => renders++, saveOfflineShopping: () => copies++
@@ -120,4 +120,19 @@ test('la dernière semaine demandée seule actualise le planning et une erreur p
   await assert.rejects(failed, /Connexion coupée/);
   assert.equal(state.weekStart.toISOString().slice(0, 10), '2026-10-12'); assert.equal(state.meals[0].title, 'Nouveau repas');
   assert.equal(nodes.get('week-panel')['aria-busy'], 'false'); assert.equal(nodes.get('week-content').disabled, false);
+  assert.equal(nodes.get('connection-error').hidden, false); assert.match(nodes.get('connection-message').textContent, /contenu déjà affiché est conservé/);
+  assert.equal(nodes.get('retry-connection').disabled, false);
+  const retry = retryConnection();
+  assert.equal(nodes.get('retry-connection').disabled, true); assert.equal(nodes.get('retry-connection').textContent, 'Chargement…');
+  assert.equal(requests.size, 3);
+  requests.get('2026-10-19').resolve(response({ meals: [{ title: 'Repas retrouvé' }], shopping: [] }));
+  await retry;
+  assert.equal(state.weekStart.toISOString().slice(0, 10), '2026-10-19'); assert.equal(state.selected, 0);
+  assert.equal(state.meals[0].title, 'Repas retrouvé'); assert.equal(nodes.get('connection-error').hidden, true);
+  assert.equal(nodes.get('retry-connection').disabled, false); assert.equal(nodes.get('retry-connection').textContent, 'Réessayer');
+  const staleFailure = load({ weekStart: new Date('2026-10-26T12:00:00') });
+  const newer = load({ weekStart: new Date('2026-11-02T12:00:00') });
+  requests.get('2026-11-02').resolve(response({ meals: [], shopping: [] })); await newer;
+  requests.get('2026-10-26').reject(new Error('Erreur ancienne')); assert.equal(await staleFailure, false);
+  assert.equal(nodes.get('connection-error').hidden, true); assert.equal(state.weekStart.toISOString().slice(0, 10), '2026-11-02');
 });

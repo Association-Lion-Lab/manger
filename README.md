@@ -89,7 +89,7 @@ Le volume et le fichier `.env` sont conservés. Changer le dossier ou le nom du 
 
 Le planning s'ouvre sur le jour courant de l'appareil. Les flèches changent de semaine ; touchez la période affichée entre les flèches pour choisir directement une date (de 1900 à 2100) avec le sélecteur natif du navigateur. « Aujourd’hui » apparaît quand un autre jour est sélectionné et permet de revenir en un toucher. Les semaines à cheval sur deux mois ou deux années affichent les deux bornes.
 
-Le planning affiché reste conservé pendant le chargement : les actions sur ses repas sont temporairement désactivées, mais les flèches restent utilisables. Seule la dernière demande peut actualiser le planning et sa copie de courses. En cas d'échec, le jour et les données précédents restent affichés ; réessayez après rétablissement de la connexion. Naviguer ne crée ni ne modifie de repas.
+Le planning affiché reste conservé pendant le chargement : les actions sur ses repas sont temporairement désactivées, mais les flèches restent utilisables. Seule la dernière demande peut actualiser le planning et sa copie de courses. En cas d'échec, le jour et les données précédents restent affichés. Un message propose « Réessayer » : après rétablissement de la connexion, ce bouton recharge la semaine et le jour demandés, sans recharger toute la page. Il est temporairement désactivé pendant la demande ; le message disparaît après réussite. Cela fonctionne aussi après un premier chargement échoué. Le bouton ne rejoue aucune création, modification ou suppression : il effectue uniquement des lectures. Il ne synchronise pas les coches hors connexion. Naviguer ne crée ni ne modifie de repas.
 
 ### Courses, recettes hors connexion et écran d'accueil
 
