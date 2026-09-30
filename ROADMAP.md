@@ -1,6 +1,6 @@
 # Suite du développement
 
-Contrainte produit : trois onglets, actions dans leur contexte, options secondaires repliées ; préserver une interface sobre en clair et en sombre, au clavier et dès 320 px.
+Contrainte produit : quatre onglets (Semaine, Recettes, Courses, Compte), actions dans leur contexte, options secondaires repliées ; préserver une interface sobre en clair et en sombre, au clavier et dès 320 px.
 
 ## Lot implémenté — septembre 2026
 
@@ -27,7 +27,7 @@ Vérification : tests Node et parcours navigateur sur base isolée. Le rendu a �
 - Corriger les bugs bloquants et les chevauchements ; vérifier les parcours sur téléphone réel, notamment minuteurs, son et maintien de l'écran.
 - Restauration guidée ajoutée : aperçu, confirmation, copie de récupération et transaction. Tests sur base isolée ; ne pas tester par remplacement du foyer réel.
 - Docker construit sur le serveur Ubuntu personnel : état healthy confirmé. Publication d'une image préconstruite encore à faire.
-- Parcours téléphone et persistance après redémarrage confirmés par l'utilisateur. HTTPS natif optionnel préparé : certificats locaux, cookies Secure, contrôle Docker avec validation TLS et guide `HTTPS.md`. Tests locaux passés ; activation Ubuntu et confiance des certificats sur téléphone encore à effectuer pour vérifier maintien de l'écran et géolocalisation.
+- Parcours téléphone et persistance après redémarrage confirmés par l'utilisateur. HTTPS natif optionnel : certificats locaux, cookies Secure, contrôle Docker avec validation TLS et guide `HTTPS.md`. HTTPS sur Ubuntu et logo d'écran d'accueil iPhone confirmés après activation de la confiance totale du certificat ; maintien de l'écran et géolocalisation restent à vérifier sur téléphone.
 - Téléchargement et aperçu de sauvegarde confirmés par l'utilisateur sur son installation. Restauration complète testée uniquement sur base isolée.
 
 ## P2 — Améliorer l'usage quotidien
@@ -35,7 +35,7 @@ Vérification : tests Node et parcours navigateur sur base isolée. Le rendu a �
 - Anti-gaspi implémenté : plusieurs lots par aliment, dates et édition indépendantes, consommation prioritaire des dates proches, réservations partagées entre courses et suggestions. Recomposition du menu après remplacement manuel, sans enregistrement avant validation finale. Tests automatisés et navigateur passés ; validation de ce lot sur Ubuntu à effectuer.
 - Restes d'une base commune avec protéines différentes implémentés : sélection des personnes, portions et protéines conservées ; achats comptés au jour de préparation. Tests serveur et navigateur passés, essai utilisateur à effectuer.
 - Catalogue porté à 26 recettes, dont huit nouveaux plats végétariens, végétaux, de poisson et de poulet dans les univers existants. Poursuivre la variété et valider les recettes en cuisine (essais culinaires non effectués).
-- Courses et recettes hors connexion implémentées en lecture seule, sur activation explicite : dernière liste et jusqu'à 20 recettes choisies avec portions, ingrédients, étapes et horodatage. Minuteurs locaux par étape (pause, reprise, réinitialisation), sans son ni notification en arrière-plan ; anciennes copies à réenregistrer. Photo personnelle en miniature facultative par copie, stockée avec la recette et effacée avec elle. Manifeste et icônes d'installation ajoutés. Coupure réseau, minuteurs et photo testés dans Chromium ; essai réel iOS/Android à effectuer. Les écritures différées hors connexion ne sont pas implémentées.
+- Courses et recettes hors connexion, sur activation explicite : dernière liste et jusqu'à 20 recettes choisies avec portions, ingrédients, étapes et horodatage. Courses cochables localement avec compteur et persistance après rechargement : aucune synchronisation serveur, une lecture en ligne remplace la copie et ses coches ; recettes en lecture seule. Minuteurs locaux par étape (pause, reprise, réinitialisation), sans son ni notification en arrière-plan ; anciennes copies à réenregistrer. Photo personnelle en miniature facultative par copie, stockée avec la recette et effacée avec elle. Manifeste et icônes d'installation ajoutés. Coupure réseau, minuteurs et photo testés dans Chromium ; essai réel iOS/Android à effectuer. Les écritures différées vers le serveur ne sont pas implémentées.
 - Comptes pour un foyer partagé : connexion individuelle, administrateur, création/désactivation, changement et récupération du mot de passe, déconnexion de tous ses appareils. Invitation par lien privé ajoutée : 24 h, usage unique, révocable, compte membre uniquement. L'envoi par courriel et l'isolation de plusieurs foyers restent à développer. HTTPS auto-signé préparé dans le lot P1 ; rien n'est activé automatiquement sur le serveur distant.
 - Invitation signalée fonctionnelle par l'utilisateur le 28 septembre ; le détail des appareils et des cas testés n'a pas été précisé.
 
