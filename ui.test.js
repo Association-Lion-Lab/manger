@@ -15,6 +15,16 @@ test('les quatre onglets ont un écran et les scripts intégrés restent valides
   for (const match of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)) if (match[1].trim()) new Script(match[1]);
 });
 
+test('les dates restent natives et leur largeur est étirée sans pourcentage pour éviter le padding additionnel sur iOS', () => {
+  const html = readFileSync(join(__dirname, 'public', 'index.html'), 'utf8');
+  const rule = html.match(/\.field input\[type="date"\]\s*\{([^}]+)\}/)?.[1] || '';
+  assert.match(rule, /\bwidth:\s*auto\s*;/);
+  assert.match(rule, /\bjustify-self:\s*stretch\s*;/);
+  assert.match(rule, /\bmax-width:\s*100%\s*;/);
+  assert.match(html, /id="plan-recipe-date" type="date"/);
+  assert.match(html, /id="week-date" type="date"/);
+});
+
 test('le logo est servi comme icône de page et d’écran d’accueil iPhone', async t => {
   const html = readFileSync(join(__dirname, 'public', 'index.html'), 'utf8');
   assert.match(html, /rel="apple-touch-icon" href="\/apple-touch-icon\.png" sizes="180x180"/);

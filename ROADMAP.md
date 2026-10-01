@@ -27,6 +27,8 @@ Vérification : tests Node et parcours navigateur sur base isolée. Le rendu a �
 
 ## Lot implémenté — octobre 2026
 
+- Champs de date : largeur étirée par la grille, sans `width: 100%` susceptible d'ajouter le padding sur Safari iOS (WebKit 301648). Ajout au menu contrôlé à 320/375/390/430/760 px en clair/sombre, texte agrandi et débordement du modèle de boîte simulé dans Chromium ; jour choisi et sélecteur du planning vérifiés. Défaut initial non reproduit sur un véritable iPhone : confirmation Safari à effectuer.
+
 - Enregistrement des repas fiabilisé : protection commune contre les doubles appuis, choix et fermeture bloqués pendant l'envoi, délai de 15 secondes et choix conservés dans la page en cas d'échec. Repas partagé, plats individuels, invités, date à la maison et ajout depuis une fiche vérifiés dans Chromium sur base isolée. Une lecture échouée après confirmation ne rejoue pas l'écriture ; test logique ajouté, essai Safari iPhone à effectuer.
 
 ## P1 — Fiabiliser et préserver le travail
