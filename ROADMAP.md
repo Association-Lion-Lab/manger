@@ -25,6 +25,10 @@ Contrainte produit : quatre onglets (Semaine, Recettes, Courses, Compte), action
 
 Vérification : tests Node et parcours navigateur sur base isolée. Le rendu a été contrôlé à 320, 390 et 760 px, en clair et en sombre. L'audio et le maintien de l'écran ont été contrôlés avec des API simulées ; un essai sur téléphone reste nécessaire.
 
+## Lot implémenté — octobre 2026
+
+- Enregistrement des repas fiabilisé : protection commune contre les doubles appuis, choix et fermeture bloqués pendant l'envoi, délai de 15 secondes et choix conservés dans la page en cas d'échec. Repas partagé, plats individuels, invités, date à la maison et ajout depuis une fiche vérifiés dans Chromium sur base isolée. Une lecture échouée après confirmation ne rejoue pas l'écriture ; test logique ajouté, essai Safari iPhone à effectuer.
+
 ## P1 — Fiabiliser et préserver le travail
 
 - Sauvegarde Git : lot `da71f43` poussé sur Codeberg, branche development (confirmé par la sortie Git de l'utilisateur).

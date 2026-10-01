@@ -131,6 +131,50 @@ test('enregistrer une recette bloque les doubles appuis, conserve la saisie en c
   assert.equal(node('recipe-error').hidden, true); assert.equal(node('recipe-fields').disabled, false);
 });
 
+test('planifier un repas bloque les doubles appuis, garde les choix après un échec et sépare sauvegarde et rechargement', async () => {
+  const html = readFileSync(join(__dirname, 'public', 'index.html'), 'utf8');
+  const source = html.match(/    async function postMeal[\s\S]*?(?=\n    function compatibleProteins)/)[0];
+  const nodes = new Map();
+  const node = id => {
+    if (!nodes.has(id)) nodes.set(id, { disabled: false, hidden: true, contains: el => el === focused, setAttribute(name, value) { this[name] = value; } });
+    return nodes.get(id);
+  };
+  const focused = { focus() { this.focused = true; } };
+  node('dialog-subtitle').textContent = 'Qui mange et avec quelle protéine ?';
+  const payload = { date: '2026-10-01', slot: 'soir', location: 'home', occasion: 'regular', people: 2, title: 'Curry', recipeId: null, assignments: [], dishes: [{ memberId: 1, recipeId: 2, portions: 1, proteinId: null }, { memberId: 2, recipeId: 3, portions: 1, proteinId: 4 }] };
+  let request, calls = 0, closes = 0, refreshes = 0, failRefresh = false;
+  const context = {
+    document: { getElementById: node, activeElement: focused }, AbortSignal,
+    dialog: { close() { closes++; } },
+    fetch: (path, options) => { calls++; request = { path, ...options }; return context.reply(); },
+    load: async () => { refreshes++; assert.equal(node('meal-fields').disabled, false); if (failRefresh) throw new Error('Lecture indisponible'); }
+  };
+  const save = new Script(source + ';postMeal').runInNewContext(context);
+  let release;
+  context.reply = () => new Promise(resolve => { release = resolve; });
+  const pending = save(payload);
+  assert.equal(node('meal-fields').disabled, true); assert.equal(node('close-dialog').disabled, true);
+  assert.equal(node('meal-fields')['aria-busy'], 'true'); assert.equal(node('dialog-subtitle').textContent, 'Enregistrement…');
+  await save(payload); assert.equal(calls, 1);
+  assert.equal(request.path, '/api/meals'); assert.equal(request.method, 'POST'); assert.ok(request.signal instanceof AbortSignal);
+  assert.deepEqual(JSON.parse(request.body), payload);
+  release({ ok: false, json: async () => ({ error: 'Recette incompatible avec le régime' }) }); await pending;
+  assert.equal(closes, 0); assert.equal(refreshes, 0); assert.equal(node('dialog-error').textContent, 'Recette incompatible avec le régime');
+  assert.equal(node('meal-fields').disabled, false); assert.equal(node('close-dialog').disabled, false);
+  assert.equal(node('meal-fields')['aria-busy'], 'false'); assert.equal(node('dialog-subtitle').textContent, 'Qui mange et avec quelle protéine ?');
+  assert.equal(node('dialog-error').hidden, false); assert.equal(focused.focused, true);
+  context.reply = async () => { throw new TypeError('Failed to fetch'); };
+  await save(payload); assert.match(node('dialog-error').textContent, /choix sont conservés.*peut-être abouti/);
+  context.reply = async () => { throw { name: 'TimeoutError' }; };
+  await save(payload); assert.match(node('dialog-error').textContent, /Connexion interrompue/);
+  context.reply = async () => ({ ok: false, json: async () => { throw new Error('HTML'); } });
+  await save(payload); assert.match(node('dialog-error').textContent, /refusé par le serveur/);
+  assert.deepEqual(JSON.parse(request.body), payload);
+  context.reply = async () => ({ ok: true }); failRefresh = true;
+  await save(payload); assert.equal(calls, 5); assert.equal(closes, 1); assert.equal(refreshes, 1);
+  assert.equal(node('dialog-error').hidden, true); assert.equal(node('meal-fields').disabled, false);
+});
+
 test('les coches hors connexion persistent localement sans écraser une nouvelle copie ni perdre les données si le stockage échoue', () => {
   const html = readFileSync(join(__dirname, 'public', 'offline.html'), 'utf8');
   for (const match of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)) if (match[1].trim()) new Script(match[1]);

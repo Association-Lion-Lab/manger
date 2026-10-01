@@ -93,7 +93,7 @@
     #choose-week svg { width: 14px; height: 14px; flex: none; }
     .week-meta { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0 8px; }
     #today { font-size: 13px; }
-    #week-content { margin: 0; padding: 0; min-width: 0; border: 0; }
+    #week-content, #meal-fields { margin: 0; padding: 0; min-width: 0; border: 0; }
     .toolbar h1 { font-size: clamp(20px, 4.5vw, 26px); }
     .days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin: 22px 0 32px; padding: 6px; border: 1px solid var(--line); border-radius: 22px; background: var(--surface); }
     .day { min-width: 0; min-height: 66px; display: grid; place-items: center; align-content: center; gap: 4px; padding: 6px 2px; border: 0; border-radius: 16px; background: transparent; cursor: pointer; }
@@ -505,10 +505,10 @@
     <dialog id="meal-dialog">
       <div class="handle"></div>
       <div class="section-heading">
-        <div><h2 id="dialog-title">Ajouter un repas</h2><span id="dialog-subtitle" class="muted"></span></div>
+        <div><h2 id="dialog-title">Ajouter un repas</h2><span id="dialog-subtitle" class="muted" role="status"></span></div>
         <button id="close-dialog" class="icon-button" type="button" aria-label="Fermer">×</button>
       </div>
-      <div id="choices" class="choices"></div>
+      <fieldset id="meal-fields" aria-label="Choix du repas"><div id="choices" class="choices"></div></fieldset>
       <p id="dialog-error" class="error" role="alert" hidden></p>
     </dialog>
 
@@ -1538,16 +1538,29 @@
     }
 
     async function postMeal(payload) {
-      const response = await fetch('/api/meals', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) });
-      if (!response.ok) {
-        const error = await response.json();
-        const message = document.getElementById('dialog-error');
-        message.textContent = error.error;
-        message.hidden = false;
-        return;
+      const fields = document.getElementById('meal-fields');
+      if (fields.disabled) return;
+      const close = document.getElementById('close-dialog'), message = document.getElementById('dialog-error');
+      const subtitle = document.getElementById('dialog-subtitle'), previous = subtitle.textContent, focused = document.activeElement;
+      fields.disabled = true; close.disabled = true;
+      fields.setAttribute('aria-busy', 'true'); subtitle.textContent = 'Enregistrement…'; message.hidden = true;
+      let saved = false;
+      try {
+        const response = await fetch('/api/meals', {
+          method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload), signal: AbortSignal.timeout(15000)
+        }).catch(() => { throw new Error('Connexion interrompue. Tes choix sont conservés. Vérifie le planning avant de réessayer : l’enregistrement a peut-être abouti.'); });
+        if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Enregistrement refusé par le serveur. Tes choix sont conservés.');
+        saved = true;
+        dialog.close();
+      } catch (error) {
+        message.textContent = error.message; message.hidden = false;
+      } finally {
+        fields.disabled = false; close.disabled = false;
+        fields.setAttribute('aria-busy', 'false'); subtitle.textContent = previous;
+        if (!saved && fields.contains(focused)) focused.focus({ preventScroll: true });
       }
-      dialog.close();
-      await load();
+      // A failed refresh must not invite a second write after a confirmed save.
+      if (saved) await load().catch(() => {});
     }
 
     function compatibleProteins(member) {
@@ -1613,10 +1626,7 @@
       const error = document.getElementById('dialog-error');
       if (!dishes.length) { error.textContent = 'Choisis au moins une personne et sa recette.'; error.hidden = false; return; }
       const names = [...new Set(dishes.map(dish => state.recipes.find(recipe => recipe.id === dish.recipeId).title))];
-      const button = document.getElementById('confirm-duo'); if (button.disabled) return; button.disabled = true;
-      try { await postMeal({ date: key(dateAt(state.selected)), slot: state.slot, location: 'home', occasion: 'regular', people: dishes.length, recipeId: null, title: names.join(' + ').slice(0, 120), assignments: [], dishes }); }
-      catch (failure) { error.textContent = failure.message; error.hidden = false; }
-      finally { button.disabled = false; }
+      await postMeal({ date: key(dateAt(state.selected)), slot: state.slot, location: 'home', occasion: 'regular', people: dishes.length, recipeId: null, title: names.join(' + ').slice(0, 120), assignments: [], dishes });
     }
 
     async function deleteMeal() {
@@ -1990,7 +2000,9 @@
     document.getElementById('compose-week').addEventListener('click', openWeekComposer);
     document.getElementById('export-calendar').addEventListener('click', () => { location.href = `/api/calendar.ics?start=${key(state.weekStart)}`; });
     document.getElementById('close-dialog').addEventListener('click', () => dialog.close());
+    dialog.addEventListener('cancel', event => { if (document.getElementById('meal-fields').disabled) event.preventDefault(); });
     document.getElementById('choices').addEventListener('click', event => {
+      if (document.getElementById('meal-fields').disabled) return;
       if (event.target.closest('#retry-suggestions')) return renderSuggestions(document.getElementById('suggestion-minutes').value);
       if (event.target.closest('#find-restaurants')) return findRestaurants();
       if (event.target.closest('#find-place')) return findPlaces();
