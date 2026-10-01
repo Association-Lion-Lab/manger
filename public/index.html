@@ -93,7 +93,7 @@
     #choose-week svg { width: 14px; height: 14px; flex: none; }
     .week-meta { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0 8px; }
     #today { font-size: 13px; }
-    #week-content, #meal-fields { margin: 0; padding: 0; min-width: 0; border: 0; }
+    #week-content, #meal-fields, #shopping-edit-fields { margin: 0; padding: 0; min-width: 0; border: 0; }
     .toolbar h1 { font-size: clamp(20px, 4.5vw, 26px); }
     .days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin: 22px 0 32px; padding: 6px; border: 1px solid var(--line); border-radius: 22px; background: var(--surface); }
     .day { min-width: 0; min-height: 66px; display: grid; place-items: center; align-content: center; gap: 4px; padding: 6px 2px; border: 0; border-radius: 16px; background: transparent; cursor: pointer; }
@@ -652,10 +652,21 @@
       <div class="recipe-view-actions"><button id="cooking-back" class="secondary" type="button">Précédente</button><button id="cooking-next" class="primary" type="button">Suivante</button></div>
     </dialog>
 
-    <dialog id="shopping-move-dialog">
-      <div class="section-heading"><h2 id="shopping-move-title">Déplacer l’article</h2><button id="close-shopping-move" class="icon-button" type="button" aria-label="Annuler le déplacement">×</button></div>
-      <label class="field"><span>Rayon</span><select id="shopping-move-aisle"></select></label>
-      <button id="save-shopping-move" class="primary" type="button">Déplacer</button>
+    <dialog id="shopping-move-dialog" aria-labelledby="shopping-move-title">
+      <div class="section-heading"><h2 id="shopping-move-title">Déplacer l’article</h2><button id="close-shopping-move" class="icon-button" type="button" aria-label="Annuler">×</button></div>
+      <form id="shopping-edit-form" class="recipe-form">
+        <fieldset id="shopping-edit-fields" class="recipe-form">
+          <div id="shopping-edit-manual" class="compact-form" hidden>
+            <label class="field wide"><span>Article</span><input id="shopping-edit-name" maxlength="80" required></label>
+            <label class="field"><span>Quantité</span><input id="shopping-edit-amount" type="number" min="0.001" max="10000" step="any" required></label>
+            <label class="field"><span>Unité</span><input id="shopping-edit-unit" maxlength="24" required></label>
+          </div>
+          <label class="field"><span>Rayon</span><select id="shopping-move-aisle"></select></label>
+          <button id="save-shopping-move" class="primary" type="submit">Déplacer</button>
+          <button id="delete-shopping-item" class="secondary" type="button" hidden>Supprimer cet article</button>
+        </fieldset>
+        <p id="shopping-edit-error" class="error" role="alert" hidden></p>
+      </form>
     </dialog>
     <dialog id="household-dialog">
       <div class="handle"></div>
@@ -1069,14 +1080,14 @@
         const focused = document.activeElement;
         const index = focused?.dataset.shopping;
         const selected = index === undefined ? null : state.shopping[Number(index)];
-        const removeId = focused?.dataset.removeShopping;
+        const editId = focused?.dataset.editShopping;
         state.shopping = shopping; renderShopping();
         if (selected) {
           const next = shopping.findIndex(item => selected.manualId ? item.manualId === selected.manualId : !item.manualId && item.name === selected.name && item.unit === selected.unit);
           if (next >= 0) document.querySelector(`[data-shopping="${next}"]`)?.focus({ preventScroll: true });
           else document.getElementById('organize-shopping').focus({ preventScroll: true });
         }
-        if (removeId) (document.querySelector(`[data-remove-shopping="${removeId}"]`) || document.getElementById('organize-shopping')).focus({ preventScroll: true });
+        if (editId) (document.querySelector(`[data-edit-shopping="${editId}"]`) || document.getElementById('organize-shopping')).focus({ preventScroll: true });
       } catch { /* Keep the current list on a temporary network failure; retry on the next tick. */ }
       finally { shoppingSyncRunning = false; }
     }
@@ -1099,7 +1110,7 @@
         rows.forEach(({ item, index }) => {
           const aisle = shoppingAisle(item);
           if (!groups.has(aisle)) groups.set(aisle, []);
-          groups.get(aisle).push(`<div style="display:flex;gap:8px;align-items:center"><label class="shopping-item" style="flex:1;min-width:0"><input type="checkbox" data-shopping="${index}"${item.checked ? ' checked' : ''}><span>${escapeHtml(shoppingText(item))}${item.manualId ? ' · ajouté' : ''}</span></label>${item.manualId ? `<button type="button" class="icon-button" data-remove-shopping="${item.manualId}" aria-label="Supprimer ${escapeHtml(item.name)}">×</button>` : ''}</div>`);
+          groups.get(aisle).push(`<div style="display:flex;gap:8px;align-items:center"><label class="shopping-item" style="flex:1;min-width:0"><input type="checkbox" data-shopping="${index}"${item.checked ? ' checked' : ''}><span>${escapeHtml(shoppingText(item))}${item.manualId ? ' · ajouté' : ''}</span></label>${item.manualId ? `<button type="button" class="icon-button" data-edit-shopping="${item.manualId}" aria-label="Modifier ${escapeHtml(item.name)}">✎</button>` : ''}</div>`);
         });
         return [...groups].sort(([a], [b]) => a.localeCompare(b, 'fr')).map(([aisle, items]) => `<section class="shopping-group"><h2 class="group-title">${escapeHtml(aisle)}</h2>${items.join('')}</section>`).join('');
       };
@@ -2167,6 +2178,7 @@
     }
     const shoppingMoveDialog = document.getElementById('shopping-move-dialog');
     let shoppingMove = null;
+    let shoppingMoveWeek = '', shoppingEditBusy = false;
     let shoppingDrag = null;
     let suppressShoppingClick = false;
     async function moveShoppingItem(item, aisle) {
@@ -2188,20 +2200,60 @@
       finally { container.inert = false; document.getElementById('organize-shopping').disabled = false; document.getElementById('organize-shopping').focus(); }
     }
     document.getElementById('shopping').addEventListener('click', event => {
-      const handle = event.target.closest('[data-shopping-handle]');
+      if (shoppingEditBusy) return;
+      const handle = event.target.closest('[data-shopping-handle], [data-edit-shopping]');
       if (!handle) return;
       if (suppressShoppingClick && event.detail > 0) { suppressShoppingClick = false; return; }
-      shoppingMove = state.shopping[Number(handle.dataset.shoppingHandle)];
-      document.getElementById('shopping-move-title').textContent = `Déplacer ${shoppingMove.name}`;
+      shoppingMove = handle.dataset.editShopping ? state.shopping.find(item => item.manualId === Number(handle.dataset.editShopping)) : state.shopping[Number(handle.dataset.shoppingHandle)];
+      if (!shoppingMove) return;
+      shoppingMove = { ...shoppingMove };
+      shoppingMoveWeek = key(state.weekStart);
+      const manual = Boolean(shoppingMove.manualId);
+      document.getElementById('shopping-move-title').textContent = manual ? 'Modifier l’article' : `Déplacer ${shoppingMove.name}`;
+      document.getElementById('shopping-edit-manual').hidden = !manual;
+      document.querySelectorAll('#shopping-edit-manual input').forEach(input => { input.disabled = !manual; });
+      document.getElementById('shopping-edit-name').value = shoppingMove.name;
+      document.getElementById('shopping-edit-amount').value = shoppingMove.amount;
+      document.getElementById('shopping-edit-unit').value = shoppingMove.unit;
+      document.getElementById('save-shopping-move').textContent = manual ? 'Enregistrer' : 'Déplacer';
+      document.getElementById('delete-shopping-item').hidden = !manual;
+      document.getElementById('shopping-edit-error').hidden = true;
       document.getElementById('shopping-move-aisle').innerHTML = ['', 'Fruits et légumes', 'Frais', 'Épicerie', 'Surgelés', 'Maison', 'Autres'].map(aisle => `<option value="${aisle}"${(shoppingMove.aisle || '') === aisle ? ' selected' : ''}>${aisle || 'Automatique'}</option>`).join('');
       shoppingMoveDialog.showModal();
     });
-    document.getElementById('close-shopping-move').addEventListener('click', () => shoppingMoveDialog.close());
-    document.getElementById('save-shopping-move').addEventListener('click', async event => {
-      event.target.disabled = true;
-      await moveShoppingItem(shoppingMove, document.getElementById('shopping-move-aisle').value);
-      event.target.disabled = false;
-    });
+    document.getElementById('close-shopping-move').addEventListener('click', () => { if (!shoppingEditBusy) shoppingMoveDialog.close(); });
+    shoppingMoveDialog.addEventListener('cancel', event => { if (shoppingEditBusy) event.preventDefault(); });
+    async function saveShoppingEdit(remove = false) {
+      if (shoppingEditBusy || !shoppingMove || (remove && !shoppingMove.manualId)) return;
+      if (!remove && !document.getElementById('shopping-edit-form').reportValidity()) return;
+      if (remove && !confirm('Supprimer cet article ajouté aux courses ?')) return;
+      shoppingEditBusy = true;
+      document.getElementById('shopping-edit-fields').disabled = true;
+      document.getElementById('close-shopping-move').disabled = true;
+      const errorMessage = document.getElementById('shopping-edit-error');
+      errorMessage.hidden = true;
+      document.getElementById('shopping-error').hidden = true;
+      let saved = false;
+      try {
+        const manual = Boolean(shoppingMove.manualId);
+        const body = { weekStart: shoppingMoveWeek, name: shoppingMove.name, unit: shoppingMove.unit, manualId: shoppingMove.manualId, aisle: document.getElementById('shopping-move-aisle').value };
+        if (manual) Object.assign(body, { name: document.getElementById('shopping-edit-name').value, amount: Number(document.getElementById('shopping-edit-amount').value), unit: document.getElementById('shopping-edit-unit').value, previous: shoppingMove });
+        await api(manual ? `/api/shopping-manual/${shoppingMove.manualId}` : '/api/shopping-aisles', { method: remove ? 'DELETE' : manual ? 'PUT' : 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(15000) });
+        saved = true;
+        shoppingMoveDialog.close();
+        await load();
+        (document.querySelector(`[data-edit-shopping="${shoppingMove.manualId}"]`) || document.getElementById('organize-shopping')).focus({ preventScroll: true });
+      } catch (error) {
+        if (saved) shoppingError(new Error('La modification est enregistrée, mais les courses n’ont pas pu être actualisées. Utilise « Réessayer » sans refaire la modification.'));
+        else { errorMessage.textContent = error.name === 'TimeoutError' ? 'Le serveur met trop de temps à répondre. Ta saisie est conservée. Vérifie les courses après avoir rechargé la page avant de réessayer.' : error.message; errorMessage.hidden = false; }
+      } finally {
+        shoppingEditBusy = false;
+        document.getElementById('shopping-edit-fields').disabled = false;
+        document.getElementById('close-shopping-move').disabled = false;
+      }
+    }
+    document.getElementById('shopping-edit-form').addEventListener('submit', event => { event.preventDefault(); saveShoppingEdit(); });
+    document.getElementById('delete-shopping-item').addEventListener('click', () => saveShoppingEdit(true));
     document.getElementById('shopping').addEventListener('pointerdown', event => {
       const handle = event.target.closest('[data-shopping-handle]');
       if (!handle || event.button !== 0) return;
@@ -2221,7 +2273,7 @@
         drag.ghost.setAttribute('aria-hidden', 'true');
         drag.ghost.inert = true;
         drag.ghost.style.width = `${drag.rect.width}px`;
-        drag.ghost.querySelectorAll('input, button').forEach(control => { control.removeAttribute('data-shopping'); control.removeAttribute('data-shopping-handle'); control.removeAttribute('data-remove-shopping'); });
+        drag.ghost.querySelectorAll('input, button').forEach(control => { control.removeAttribute('data-shopping'); control.removeAttribute('data-shopping-handle'); control.removeAttribute('data-edit-shopping'); });
         document.body.append(drag.ghost);
       }
       const left = Math.max(0, Math.min(innerWidth - drag.rect.width, drag.rect.left + event.clientX - drag.x));
@@ -2255,16 +2307,6 @@
         event.target.reset(); await load();
       } catch (error) { shoppingError(error); }
       finally { button.disabled = false; }
-    });
-    document.getElementById('shopping').addEventListener('click', async event => {
-      const button = event.target.closest('[data-remove-shopping]');
-      if (!button || !confirm('Supprimer cet article ajouté aux courses ?')) return;
-      button.disabled = true;
-      try {
-        const response = await fetch(`/api/shopping-manual/${button.dataset.removeShopping}`, { method: 'DELETE' });
-        if (!response.ok) throw new Error((await response.json()).error);
-        await load();
-      } catch (error) { shoppingError(error); button.disabled = false; }
     });
     const recipeImportDialog = document.getElementById('recipe-import-dialog');
     let importPreview = [];

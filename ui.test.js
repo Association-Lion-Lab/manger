@@ -39,6 +39,45 @@ test('les rayons automatiques reconnaissent les présentations et préservent le
   assert.match(html, /\.shopping-item span\s*\{\s*min-width:\s*0;\s*overflow-wrap:\s*anywhere;/);
 });
 
+test('modifier les courses bloque les doubles envois, conserve la saisie en échec et ne rejoue pas une écriture confirmée', async () => {
+  const html = readFileSync(join(__dirname, 'public', 'index.html'), 'utf8');
+  const source = html.match(/    async function saveShoppingEdit[\s\S]*?(?=\n    document.getElementById\('shopping-edit-form'\))/)[0];
+  const controls = new Map([
+    ['shopping-edit-form', { reportValidity: () => true }], ['shopping-edit-fields', {}], ['close-shopping-move', {}], ['shopping-edit-error', {}],
+    ['shopping-edit-name', { value: 'Bananes' }], ['shopping-edit-amount', { value: '4' }], ['shopping-edit-unit', { value: 'pièce' }], ['shopping-move-aisle', { value: '' }], ['organize-shopping', { focus() {} }], ['shopping-error', {}]
+  ]);
+  const writes = [], errors = []; let release, failure, readFails = false, closed = 0;
+  const context = {
+    shoppingEditBusy: false, shoppingMove: { manualId: 7, name: 'Pommes', amount: 2, unit: 'kg', aisle: '' }, shoppingMoveWeek: '2026-09-14',
+    document: { getElementById: id => controls.get(id), querySelector: () => null },
+    shoppingMoveDialog: { close() { closed++; } }, AbortSignal, Error, confirm: () => true,
+    shoppingError: error => errors.push(error.message), load: async () => { if (readFails) throw new Error('Lecture échouée'); },
+    api: async (path, options) => { writes.push({ path, options }); await new Promise(resolve => { release = resolve; }); if (failure) throw new Error(failure); }
+  };
+  const save = new Script(source + ';saveShoppingEdit').runInNewContext(context);
+  const first = save(); await save();
+  assert.equal(writes.length, 1); assert.equal(context.shoppingEditBusy, true);
+  assert.equal(controls.get('shopping-edit-fields').disabled, true);
+  assert.equal(controls.get('close-shopping-move').disabled, true);
+  assert.equal(writes[0].path, '/api/shopping-manual/7'); assert.equal(writes[0].options.method, 'PUT');
+  assert.deepEqual(JSON.parse(writes[0].options.body), { weekStart: '2026-09-14', name: 'Bananes', unit: 'pièce', manualId: 7, aisle: '', amount: 4, previous: context.shoppingMove });
+  failure = 'Connexion coupée'; release(); await first;
+  assert.equal(closed, 0); assert.equal(controls.get('shopping-edit-name').value, 'Bananes');
+  assert.equal(controls.get('shopping-edit-error').textContent, failure);
+  assert.equal(context.shoppingEditBusy, false); assert.equal(controls.get('shopping-edit-fields').disabled, false);
+  failure = null; readFails = true;
+  const retry = save(); release(); await retry;
+  assert.equal(closed, 1); assert.equal(writes.length, 2); assert.match(errors[0], /enregistrée/);
+  assert.equal(context.shoppingEditBusy, false);
+  readFails = false; context.shoppingMove = { name: 'Riz', amount: 200, unit: 'g' };
+  const move = save(); release(); await move;
+  assert.equal(writes[2].path, '/api/shopping-aisles'); assert.equal(writes[2].options.method, 'POST');
+  assert.equal(JSON.parse(writes[2].options.body).amount, undefined);
+  await save(true); assert.equal(writes.length, 3);
+  assert.match(html, /shoppingMoveDialog.addEventListener\('cancel', event => \{ if \(shoppingEditBusy\) event.preventDefault\(\)/);
+  assert.doesNotMatch(html, /data-remove-shopping/);
+});
+
 test('les dates restent natives et leur largeur est étirée sans pourcentage pour éviter le padding additionnel sur iOS', () => {
   const html = readFileSync(join(__dirname, 'public', 'index.html'), 'utf8');
   const rule = html.match(/\.field input\[type="date"\]\s*\{([^}]+)\}/)?.[1] || '';

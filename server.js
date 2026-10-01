@@ -1144,13 +1144,21 @@ function createHandler(db, overpassUrl, communesUrl) {
         }
         return sendJson(response, 200, {});
       }
-      if (request.method === 'POST' && url.pathname === '/api/shopping-manual') {
+      const shoppingManualMatch = url.pathname.match(/^\/api\/shopping-manual\/(\d+)$/);
+      if ((request.method === 'POST' && url.pathname === '/api/shopping-manual') || (request.method === 'PUT' && shoppingManualMatch)) {
         const input = await readJson(request);
         if (!input || !isDateKey(input.weekStart) || typeof input.name !== 'string' || !input.name.trim() || input.name.length > 80 || typeof input.unit !== 'string' || !input.unit.trim() || input.unit.length > 24 || !Number.isFinite(input.amount) || input.amount <= 0 || input.amount > 10000 || !['', 'Fruits et légumes', 'Frais', 'Épicerie', 'Surgelés', 'Maison', 'Autres'].includes(input.aisle)) throw new Error('Article invalide');
+        if (request.method === 'PUT') {
+          const id = Number(shoppingManualMatch[1]), previous = input.previous;
+          if (!Number.isSafeInteger(id) || id <= 0 || !previous || typeof previous.name !== 'string' || typeof previous.unit !== 'string' || typeof previous.aisle !== 'string' || !Number.isFinite(previous.amount)) throw new Error('Article invalide');
+          // Ne pas écraser la modification d'un autre appareil ; l'état coché reste indépendant.
+          const result = db.prepare('UPDATE shopping_manual SET name = ?, amount = ?, unit = ?, aisle = ? WHERE id = ? AND week_start = ? AND name = ? AND amount = ? AND unit = ? AND aisle = ?').run(input.name.trim(), input.amount, input.unit.trim(), input.aisle, id, input.weekStart, previous.name, previous.amount, previous.unit, previous.aisle);
+          if (!result.changes) return sendJson(response, 409, { error: 'Cet article a été modifié ou supprimé ailleurs. Ferme cette fenêtre et recharge la page avant de réessayer.' });
+          return sendJson(response, 200, { id });
+        }
         const result = db.prepare('INSERT INTO shopping_manual (week_start, name, amount, unit, aisle) VALUES (?, ?, ?, ?, ?)').run(input.weekStart, input.name.trim(), input.amount, input.unit.trim(), input.aisle);
         return sendJson(response, 201, { id: Number(result.lastInsertRowid) });
       }
-      const shoppingManualMatch = url.pathname.match(/^\/api\/shopping-manual\/(\d+)$/);
       if (request.method === 'DELETE' && shoppingManualMatch) {
         if (db.prepare('DELETE FROM shopping_manual WHERE id = ?').run(Number(shoppingManualMatch[1])).changes === 0) throw new Error('Article inconnu');
         return sendJson(response, 200, {});

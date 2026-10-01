@@ -54,6 +54,36 @@ test('les ajouts aux courses sont indépendants, isolés par semaine et validés
   assert.equal((await week('2026-09-21')).some(item => item.manualId === automaticId), false);
 });
 
+test('modifier un article manuel préserve son identité et sa coche, sans écraser une modification concurrente', async t => {
+  const db = createDatabase(':memory:');
+  const server = createApp(db); server.listen(0, '127.0.0.1');
+  await once(server, 'listening');
+  t.after(() => { server.close(); db.close(); });
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const write = (path, method, body) => fetch(base + path, { method, headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  const input = { weekStart: '2026-09-14', name: 'Savon', amount: 2, unit: 'pièce', aisle: 'Maison' };
+  const { id } = await (await write('/api/shopping-manual', 'POST', input)).json();
+  const path = `/api/shopping-manual/${id}`;
+  const edited = { ...input, name: ' COncombres ', amount: 3.5, unit: ' kg ', aisle: '', previous: input, checked: false };
+  for (const invalid of [{ name: '' }, { amount: 0 }, { amount: '3' }, { amount: 10001 }, { unit: ' ' }, { aisle: null }, { previous: null }, { previous: {} }, { weekStart: '2026-99-99' }]) assert.equal((await write(path, 'PUT', { ...edited, ...invalid })).status, 400);
+  assert.equal((await write(path, 'PUT', { ...edited, weekStart: '2026-09-21' })).status, 409);
+  assert.equal((await write('/api/shopping-manual/9007199254740992', 'PUT', edited)).status, 400);
+  await write('/api/shopping-checks', 'POST', { ...input, manualId: id, checked: true });
+  assert.equal((await write(path, 'PUT', edited)).status, 200);
+  const items = async () => (await (await fetch(`${base}/api/shopping?start=${input.weekStart}`)).json());
+  const current = async () => (await items()).find(item => item.manualId === id);
+  assert.deepEqual(await current(), { manualId: id, name: 'COncombres', amount: 3.5, unit: 'kg', aisle: '', checked: true });
+  assert.equal((await write(path, 'PUT', { ...edited, amount: 9 })).status, 409);
+  assert.equal((await current()).amount, 3.5);
+  const previous = await current();
+  await write('/api/shopping-aisles', 'POST', { ...previous, weekStart: input.weekStart, aisle: 'Autres' });
+  assert.equal((await write(path, 'PUT', { ...edited, previous })).status, 409);
+  assert.equal((await current()).aisle, 'Autres');
+  await write(path, 'DELETE', {});
+  assert.equal((await write(path, 'PUT', { ...edited, previous })).status, 409);
+  assert.equal((await items()).length, 0);
+});
+
 test('la composition hebdomadaire préserve les repas et valide tout avant écriture', async t => {
   const db = createDatabase(':memory:');
   const server = createApp(db);
