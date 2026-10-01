@@ -82,6 +82,71 @@ test('le partage des courses respecte l’annulation et exporte seulement les ar
   await click(); assert.equal(downloads.length, 2); assert.equal(copies.length, 2);
 });
 
+test('les invitations se partagent volontairement, sans courriel automatique ni double action, et conservent une copie de secours', async () => {
+  const html = readFileSync(join(__dirname, 'public', 'accounts.html'), 'utf8');
+  for (const match of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)) if (match[1].trim()) new Script(match[1]);
+  const source = html.match(/let invitationBusy[\s\S]*?(?=\nform\('password-form')/)[0];
+  const nodes = new Map();
+  const $ = id => {
+    if (!nodes.has(id)) nodes.set(id, { value: '', disabled: false, hidden: true, textContent: '', focus() { this.focused = true; }, select() { this.selected = true; } });
+    return nodes.get(id);
+  };
+  const location = { origin: 'https://192.168.1.31:3000', href: '/account' }, navigator = {};
+  const calls = [], copies = []; let token = 'a'.repeat(64), fail = false, finish;
+  const state = new Script(source + ';({expire(){invitationExpires=0;}})').runInNewContext({ $, location, navigator, Date, encodeURIComponent,
+    api: async (path, method) => {
+      calls.push({ path, method });
+      if (fail) throw new Error('Serveur indisponible. Réessaie.');
+      if (finish === null) await new Promise(resolve => { finish = resolve; });
+      return { token, expires: Date.now() + 86400000 };
+    }
+  });
+  assert.equal($('share-invitation').hidden, true); // Native sharing absent: copy and mail remain usable.
+  await $('email-invitation').onclick();
+  assert.match($('invitation-status').textContent, /Crée un lien/); assert.equal(location.href, '/account');
+  await $('create-invitation').onclick();
+  const link = location.origin + '/login#invite=' + token;
+  assert.equal($('invitation-link').value, link); assert.equal($('invitation-result').hidden, false);
+  navigator.clipboard = { writeText: async value => { copies.push(value); } };
+  await $('copy-invitation').onclick(); assert.deepEqual(copies, [link]);
+  let payload;
+  navigator.share = async data => { payload = data; };
+  await $('share-invitation').onclick();
+  assert.equal(payload.url, link); assert.match(payload.text, /une seule inscription/);
+  assert.match(payload.text, /Wi-Fi ou VPN/); assert.match($('invitation-status').textContent, /Vérifie son envoi/);
+  navigator.share = async () => { throw { name: 'AbortError' }; };
+  await $('share-invitation').onclick();
+  assert.match($('invitation-status').textContent, /Partage annulé/); assert.equal(copies.length, 1); assert.equal(location.href, '/account');
+  navigator.share = async () => { throw { name: 'NotAllowedError' }; };
+  await $('share-invitation').onclick(); assert.match($('invitation-status').textContent, /Partage indisponible/);
+  navigator.clipboard = undefined;
+  await $('copy-invitation').onclick(); assert.equal($('invitation-link').selected, true); assert.match($('invitation-status').textContent, /menu du champ/);
+  await $('email-invitation').onclick();
+  const mail = new URL(location.href);
+  assert.equal(mail.protocol, 'mailto:'); assert.equal(mail.pathname, ''); assert.equal(mail.hash, '');
+  assert.equal(mail.searchParams.get('subject'), 'Invitation au foyer — Manger!');
+  assert.ok(mail.searchParams.get('body').endsWith(link)); assert.match(mail.searchParams.get('body'), /recettes, au planning et aux courses partagés/);
+  assert.equal(calls.length, 1); // Preparing a mail or sharing does not issue or consume another invitation.
+  let shared = 0, resolveShare;
+  navigator.share = () => { shared++; return new Promise(resolve => { resolveShare = resolve; }); };
+  const sharing = $('share-invitation').onclick();
+  for (const id of ['create-invitation','revoke-invitation','share-invitation','copy-invitation','email-invitation']) assert.equal($(id).disabled, true);
+  await $('share-invitation').onclick(); await $('create-invitation').onclick(); await $('revoke-invitation').onclick();
+  assert.equal(shared, 1); assert.equal(calls.length, 1);
+  resolveShare(); await sharing; assert.equal($('create-invitation').disabled, false);
+  state.expire(); const before = location.href;
+  for (const id of ['share-invitation','copy-invitation','email-invitation']) { await $(id).onclick(); assert.match($('invitation-status').textContent, /a expiré/); }
+  assert.equal(shared, 1); assert.equal(location.href, before);
+  finish = null; token = 'b'.repeat(64);
+  const creating = $('create-invitation').onclick();
+  await $('create-invitation').onclick(); assert.equal(calls.length, 2);
+  finish(); await creating; assert.ok($('invitation-link').value.endsWith(token));
+  await $('revoke-invitation').onclick(); assert.equal($('invitation-result').hidden, true); assert.equal($('invitation-link').value, '');
+  assert.equal(calls[2].method, 'DELETE');
+  fail = true; await $('create-invitation').onclick(); assert.match($('invitation-status').textContent, /Serveur indisponible/);
+  assert.equal($('create-invitation').disabled, false); assert.equal($('invitation-result').hidden, true);
+});
+
 test('enregistrer une recette bloque les doubles appuis, conserve la saisie en cas d’échec et ne rejoue pas une sauvegarde confirmée', async () => {
   const html = readFileSync(join(__dirname, 'public', 'index.html'), 'utf8');
   const source = html.match(/    async function saveRecipe[\s\S]*?(?=\n    document.getElementById\('days'\))/)[0];
