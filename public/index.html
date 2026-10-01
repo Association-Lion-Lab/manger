@@ -449,6 +449,10 @@
         <span class="section-kicker">Ma semaine</span>
         <div class="section-heading"><div><h1>Mes courses</h1><span id="shopping-summary" class="muted"></span></div><button id="share" class="icon-button" type="button" aria-label="Partager la liste">↗</button></div>
         <p id="shopping-share-status" class="muted" role="status" hidden></p>
+        <div id="offline-purchases" hidden>
+          <p id="offline-purchases-status" class="muted" role="status"></p>
+          <button id="send-offline-purchases" class="secondary" type="button">Envoyer mes achats au foyer</button>
+        </div>
         <div class="shopping-progress" aria-hidden="true"><span id="shopping-progress-bar"></span></div>
         <div class="subtle-tools"><button id="open-pantry" class="text-action" type="button">Mon placard</button><button id="organize-shopping" class="text-action" type="button" aria-pressed="false" aria-controls="shopping">Organiser les rayons</button></div>
         <p id="organize-shopping-help" class="muted" hidden>Glisse la poignée ⠿ vers un rayon. Ou touche-la pour choisir le rayon. Les corrections sont enregistrées immédiatement.</p>
@@ -463,8 +467,9 @@
         <p class="muted">Les ajouts restent dans cette semaine. Le rangement automatique des ingrédients est indicatif.</p>
         <p id="shopping-error" class="error" role="alert" hidden></p>
         <details class="quiet-details"><summary>Courses hors connexion</summary>
-          <p class="muted">Garde la dernière liste consultée sur cet appareil et coche-la sans réseau. Les coches hors connexion restent locales, sans synchronisation avec le foyer. Une liste chargée en ligne remplace la copie et ses coches. Accessible aux personnes utilisant ce navigateur.</p>
+          <p class="muted">Garde la dernière liste consultée sur cet appareil et coche-la sans réseau. Au retour, tu peux envoyer tes nouveaux achats au foyer. Les décoches restent locales ; les articles supprimés ou dont la quantité a changé ne sont pas envoyés. Accessible aux personnes utilisant ce navigateur.</p>
           <button id="enable-offline" class="secondary" type="button">Garder une copie sur cet appareil</button>
+          <button id="discard-offline-purchases" class="secondary" type="button" hidden>Abandonner les achats locaux</button>
           <a href="/offline.html">Consulter la copie enregistrée</a>
           <p id="offline-status" class="muted" role="status"></p>
         </details>
@@ -712,6 +717,7 @@
   <script src="/tastes.js"></script>
   <script src="/food-names.js"></script>
   <script src="/offline-recipes.js"></script>
+  <script src="/offline-shopping.js"></script>
   <script>
     const originalFetch = window.fetch.bind(window);
     function clearOfflineAccount() {
@@ -2526,10 +2532,66 @@
     function saveOfflineShopping(items = state.shopping) {
       try {
         if (localStorage.getItem('manger-offline-enabled') !== 'yes') return;
-        localStorage.setItem('manger-shopping-offline-v1', JSON.stringify({ week: key(state.weekStart), savedAt: new Date().toISOString(), items: items.map(item => ({ text: shoppingText(item), checked: item.checked })) }));
-        document.getElementById('offline-status').textContent = 'Copie à jour sur cet appareil · ' + new Date().toLocaleTimeString('fr-FR');
+        const updated = offlineShopping.capture(localStorage, key(state.weekStart), items.map(item => ({ ...item, text: shoppingText(item) })));
+        document.getElementById('offline-status').textContent = updated ? 'Copie à jour sur cet appareil · ' + new Date().toLocaleTimeString('fr-FR') : 'Achats locaux conservés jusqu’à leur envoi ou leur abandon.';
+        renderOfflinePurchases();
       } catch { document.getElementById('offline-status').textContent = 'Stockage indisponible : copie non mise à jour.'; }
     }
+    function renderOfflinePurchases() {
+      try {
+        const copy = offlineShopping.read(localStorage), count = offlineShopping.pending(copy).length;
+        document.getElementById('offline-purchases').hidden = !count;
+        document.getElementById('discard-offline-purchases').hidden = !count;
+        document.getElementById('offline-purchases-status').textContent = count ? `${count} achat${count > 1 ? 's' : ''} hors connexion à envoyer · semaine du ${copy.week.split('-').reverse().join('/')}.` : '';
+      } catch { document.getElementById('offline-status').textContent = 'Copie de courses illisible. Ouvre les copies hors connexion pour les effacer.'; }
+    }
+    async function sendOfflinePurchases() {
+      const button = document.getElementById('send-offline-purchases'), discard = document.getElementById('discard-offline-purchases');
+      if (button.disabled) return;
+      button.disabled = discard.disabled = true;
+      const message = document.getElementById('offline-purchases-status');
+      const feedback = document.getElementById('shopping-share-status');
+      feedback.hidden = true;
+      message.textContent = 'Envoi des achats…';
+      let confirmed = false, receipt = '';
+      try {
+        const revision = localStorage.getItem(offlineShopping.KEY), copy = offlineShopping.read(localStorage);
+        const purchases = offlineShopping.pending(copy).slice(0, 50), accountChange = localStorage.getItem('manger-auth-change');
+        if (!purchases.length) { renderOfflinePurchases(); return; }
+        const response = await fetch('/api/shopping-checks/sync', {
+          method: 'POST', headers: { 'content-type': 'application/json' }, signal: AbortSignal.timeout(15000),
+          body: JSON.stringify({ weekStart: copy.week, items: purchases.map(({ item }) => ({ name: item.name, unit: item.unit, amount: item.amount, manualId: item.manualId })) })
+        }).catch(() => { throw new Error('Connexion interrompue. Les achats locaux sont conservés. Vérifie la liste du foyer avant de réessayer.'); });
+        const result = await response.json().catch(() => { throw new Error('Confirmation illisible. Les achats locaux sont conservés. Vérifie la liste du foyer avant de réessayer.'); });
+        if (!response.ok) throw new Error(result.error || 'Envoi refusé. Les achats locaux sont conservés.');
+        if (accountChange !== localStorage.getItem('manger-auth-change')) throw new Error('Le compte a changé. Reconnecte-toi.');
+        if (!Array.isArray(result.accepted) || result.accepted.some(index => !Number.isInteger(index) || !purchases[index])) throw new Error('Confirmation illisible. Vérifie la liste du foyer avant de réessayer.');
+        offlineShopping.acknowledge(localStorage, revision, result.accepted.map(index => purchases[index].index));
+        confirmed = true;
+        renderOfflinePurchases();
+        const remaining = offlineShopping.pending(offlineShopping.read(localStorage));
+        receipt = `${result.accepted.length} achat(s) confirmé(s) dans le foyer.`;
+        if (remaining.length) receipt += ` Encore locaux : ${remaining.slice(0, 3).map(({ item }) => item.name).join(', ')}${remaining.length > 3 ? '…' : ''}. La liste a pu changer. Vérifie-la ou abandonne les achats locaux dans « Courses hors connexion ».`;
+      } catch (error) {
+        message.textContent = error.message;
+        feedback.textContent = error.message; feedback.className = 'error'; feedback.hidden = false;
+      }
+      finally { button.disabled = discard.disabled = false; }
+      // Never replay a confirmed write because refreshing the planning failed.
+      if (confirmed) {
+        await load().catch(() => {});
+        const status = document.getElementById('shopping-share-status');
+        status.textContent = receipt; status.className = 'muted'; status.hidden = false;
+      }
+    }
+    document.getElementById('send-offline-purchases').addEventListener('click', sendOfflinePurchases);
+    document.getElementById('discard-offline-purchases').addEventListener('click', () => {
+      if (document.getElementById('discard-offline-purchases').disabled || !confirm('Abandonner les achats locaux non envoyés ? Les courses du foyer et les recettes enregistrées resteront inchangées.')) return;
+      try { localStorage.removeItem(offlineShopping.KEY); saveOfflineShopping(); renderOfflinePurchases(); }
+      catch { document.getElementById('offline-status').textContent = 'Impossible d’effacer cette copie.'; }
+    });
+    addEventListener('storage', event => { if (event.key === offlineShopping.KEY || event.key === null) renderOfflinePurchases(); });
+    renderOfflinePurchases();
     async function prepareOffline() {
       if (!isSecureContext || !('serviceWorker' in navigator)) throw new Error('HTTPS est nécessaire pour activer le mode hors connexion sur ce téléphone.');
       let timeout;
@@ -2593,6 +2655,9 @@
       finally { button.disabled = false; }
     });
     document.getElementById('retry-connection').addEventListener('click', retryConnection);
+    try {
+      if (isSecureContext && navigator.serviceWorker && localStorage.getItem('manger-offline-enabled') === 'yes') navigator.serviceWorker.getRegistration().then(registration => registration?.update()).catch(() => {});
+    } catch {}
     load().catch(() => {}); // The shared loader displays a retry action without replacing the planning.
   </script>
 </body>

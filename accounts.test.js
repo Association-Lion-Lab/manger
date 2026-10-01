@@ -29,11 +29,14 @@ test('authentication protects data, exports and writes; origin is checked', asyn
   assert.match(landing.headers.get('content-security-policy'), /img-src 'self'; manifest-src 'self'/);
   for (const path of ['/api/recipes', '/api/household', '/api/backup', '/api/photos/1', '/api/recipes/export', '/calendar.ics']) assert.equal((await request(path)).status, 401, path);
   assert.equal((await request('/api/health')).status, 200);
+  assert.equal((await request('/offline-shopping.js')).status, 200);
+  assert.equal((await request('/api/shopping-checks/sync', 'POST', {})).status, 401);
   const icon = await request('/apple-touch-icon.png');
   assert.equal(icon.status, 200);
   assert.match(icon.headers.get('content-type'), /^image\/png/);
   assert.equal((await request('/api/account/login', 'POST', { username: 'admin', password: 'long-password-admin' }, null, 'https://evil.example')).status, 403);
   const cookie = await login('AdMiN');
+  assert.equal((await request('/api/shopping-checks/sync', 'POST', {}, cookie, 'https://evil.example')).status, 403);
   assert.equal((await request('/api/household', 'GET', undefined, cookie)).status, 200);
   assert.equal((await request('/api/meals', 'POST', {}, cookie, 'https://evil.example')).status, 403);
   const row = accounts.prepare('SELECT * FROM accounts WHERE username=?').get('admin');

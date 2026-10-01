@@ -828,7 +828,7 @@ function createHandler(db, overpassUrl, communesUrl) {
         response.writeHead(200, { 'Content-Type': offlineAssets[url.pathname] + '; charset=utf-8', 'Cache-Control': 'no-cache', 'X-Content-Type-Options': 'nosniff' });
         return response.end(readFileSync(join(__dirname, 'public', url.pathname === '/apple-touch-icon.png' ? 'icon-180.png' : url.pathname.slice(1))));
       }
-      if (request.method === 'GET' && ['/tastes.js', '/food-names.js', '/offline-recipes.js'].includes(url.pathname)) {
+      if (request.method === 'GET' && ['/tastes.js', '/food-names.js', '/offline-recipes.js', '/offline-shopping.js'].includes(url.pathname)) {
         response.writeHead(200, { 'Content-Type': 'text/javascript; charset=utf-8', 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-cache' });
         return response.end(readFileSync(join(__dirname, 'public', url.pathname.slice(1))));
       }
@@ -1088,6 +1088,33 @@ function createHandler(db, overpassUrl, communesUrl) {
         if (db.prepare('SELECT 1 FROM meal_assignments WHERE protein_id = ? UNION ALL SELECT 1 FROM meal_dishes WHERE protein_id = ?').get(id, id)) throw new Error('Cette protéine est utilisée dans le planning');
         if (db.prepare('DELETE FROM proteins WHERE id = ?').run(id).changes === 0) throw new Error('Protéine inconnue');
         return sendJson(response, 200, {});
+      }
+
+      if (request.method === 'POST' && url.pathname === '/api/shopping-checks/sync') {
+        const input = await readJson(request);
+        if (!input || !isDateKey(input.weekStart) || !Array.isArray(input.items) || !input.items.length || input.items.length > 200
+          || input.items.some(item => !item || typeof item.name !== 'string' || !item.name.trim() || item.name.length > 80
+            || typeof item.unit !== 'string' || !item.unit.trim() || item.unit.length > 24 || !Number.isFinite(item.amount) || item.amount <= 0
+            || (item.manualId != null && (!Number.isSafeInteger(item.manualId) || item.manualId < 1)))) throw new Error('Achats hors connexion invalides.');
+        const identity = item => item.manualId == null ? foodKey(item) : `manual:${item.manualId}`;
+        if (new Set(input.items.map(identity)).size !== input.items.length) throw new Error('Article envoyé plusieurs fois.');
+        const accepted = [], rejected = [];
+        db.exec('BEGIN');
+        try {
+          const current = shoppingState(db, input.weekStart);
+          for (const [index, item] of input.items.entries()) {
+            const match = current.find(row => identity(row) === identity(item));
+            if (!match || foodKey(match) !== foodKey(item) || match.amount !== item.amount) { rejected.push(index); continue; }
+            // Only mark existing, unchanged items bought. A retry is harmless while the item stays checked.
+            if (!match.checked) {
+              if (match.manualId != null) db.prepare('UPDATE shopping_manual SET checked = 1 WHERE id = ? AND week_start = ?').run(match.manualId, input.weekStart);
+              else db.prepare('INSERT OR IGNORE INTO shopping_checks (week_start, name, unit) VALUES (?, ?, ?)').run(input.weekStart, match.name, match.unit);
+            }
+            accepted.push(index);
+          }
+          db.exec('COMMIT');
+        } catch (error) { db.exec('ROLLBACK'); throw error; }
+        return sendJson(response, 200, { accepted, rejected });
       }
 
       if (request.method === 'POST' && url.pathname === '/api/shopping-checks') {

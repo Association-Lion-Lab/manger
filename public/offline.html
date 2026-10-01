@@ -6,10 +6,11 @@ details{border:1px solid #aaa6;border-radius:20px;padding:16px;margin:14px 0}sum
 .timer-controls{display:flex;flex-wrap:wrap;gap:8px}.timer-controls button{flex:1 1 140px;min-height:48px;margin-top:8px}.timer-value{font-variant-numeric:tabular-nums}.timer-notice:empty{display:none}
 .recipe-photo{display:block;width:100%;max-height:220px;object-fit:cover;border-radius:16px;margin:16px 0}
 .shopping-item{padding:0}.shopping-item label{display:flex;align-items:center;gap:14px;min-height:56px;padding:12px 0;cursor:pointer}.shopping-item input{width:24px;height:24px;margin:0;flex:none;accent-color:var(--accent)}.shopping-item span{min-width:0}input:focus-visible{outline:3px solid var(--accent);outline-offset:4px}#shopping-progress{font-weight:650;color:inherit}#shopping-error:empty{display:none}
-</style></head><body><h1>Hors connexion</h1><p>Copies locales · elles peuvent être anciennes.</p><h2>Courses enregistrées</h2><p id="status" role="status"></p><p>Tu peux cocher les articles sur cet appareil. Ces coches ne sont pas envoyées au foyer ; la prochaine liste chargée en ligne les remplace.</p><p id="shopping-progress" role="status"></p><p id="shopping-error" role="alert"></p><ul id="items"></ul>
+</style></head><body><h1>Hors connexion</h1><p>Copies locales · elles peuvent être anciennes.</p><h2>Courses enregistrées</h2><p id="status" role="status"></p><p>Au retour du réseau, ouvre Manger puis Courses pour envoyer tes nouveaux achats au foyer. Les décoches restent sur cet appareil.</p><p id="shopping-pending" role="status"></p><p id="shopping-progress" role="status"></p><p id="shopping-error" role="alert"></p><ul id="items"></ul>
 <section id="recipes" aria-labelledby="recipes-heading"><h2 id="recipes-heading" tabindex="-1">Recettes enregistrées</h2><p id="recipes-status" role="status"></p><div id="recipe-copies"></div></section>
 <a href="/">Revenir à Manger</a><button id="clear" type="button">Effacer toutes les copies sur cet appareil</button>
 <script src="/offline-recipes.js"></script>
+<script src="/offline-shopping.js"></script>
 <script>
 const list = document.getElementById('items'), status = document.getElementById('status');
 let timers = [];
@@ -18,7 +19,6 @@ function timerSeconds(timer, now = Date.now()) {
 }
 setInterval(() => timers.forEach(update => update()), 1000);
 document.addEventListener('visibilitychange', () => timers.forEach(update => update()));
-// ponytail: device-only checklist; add conflict-aware server sync only if offline shared writes are needed.
 function saveShoppingCheck(revision, index, checked) {
   if (localStorage.getItem('manger-shopping-offline-v1') !== revision) throw new Error('La copie a changé dans un autre onglet. Elle a été rechargée : coche à nouveau cet article.');
   const snapshot = JSON.parse(revision);
@@ -30,14 +30,17 @@ function saveShoppingCheck(revision, index, checked) {
 function shoppingProgress(snapshot) {
   const remaining = snapshot.items.filter(item => !item.checked).length;
   document.getElementById('shopping-progress').textContent = snapshot.items.length ? (remaining ? `${remaining} article${remaining > 1 ? 's' : ''} restant${remaining > 1 ? 's' : ''} · coches locales` : 'Tout est dans le panier · coches locales') : '';
+  const count = offlineShopping.pending(snapshot).length;
+  document.getElementById('shopping-pending').textContent = snapshot.version !== 2 ? 'Ancienne copie : coches locales uniquement. Enregistre une nouvelle liste en ligne pour pouvoir envoyer les achats.' : count ? `${count} nouvel achat${count > 1 ? 's' : ''} à envoyer au foyer, une fois en ligne.` : '';
 }
 function show() {
   list.replaceChildren();
   document.getElementById('shopping-progress').textContent = '';
+  document.getElementById('shopping-pending').textContent = '';
   const error = document.getElementById('shopping-error'); error.textContent = '';
   try {
     let revision = localStorage.getItem('manger-shopping-offline-v1');
-    const snapshot = JSON.parse(revision);
+    const snapshot = offlineShopping.read(localStorage);
     if (!snapshot || !Array.isArray(snapshot.items)) { status.textContent = 'Aucune liste enregistrée. Active la copie hors connexion dans Courses quand le serveur est accessible.'; return; }
     if (snapshot.items.some(item => !item || typeof item.text !== 'string' || typeof item.checked !== 'boolean')) throw new Error('Copie invalide');
     status.textContent = `Semaine du ${snapshot.week} · mise à jour le ${new Date(snapshot.savedAt).toLocaleString('fr-FR')}. Cette copie peut être ancienne.`;
