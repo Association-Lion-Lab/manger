@@ -15,6 +15,30 @@ test('les quatre onglets ont un écran et les scripts intégrés restent valides
   for (const match of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)) if (match[1].trim()) new Script(match[1]);
 });
 
+test('les rayons automatiques reconnaissent les présentations et préservent les corrections sans modifier les articles', () => {
+  const html = readFileSync(join(__dirname, 'public', 'index.html'), 'utf8');
+  const source = html.match(/    function shoppingAisle[\s\S]*?(?=\n    function )/)[0];
+  const aisle = new Script(source + ';shoppingAisle').runInNewContext({ MangerFoodNames: require('./public/food-names') });
+  for (const [expected, names] of [
+    ['Fruits et légumes', ['COncombres', 'ÉPINARDS', 'poireaux', 'pommes de terre', 'haricots verts', 'petits pois', 'patates douces', 'basilic']],
+    ['Frais', ['œufs', 'OEUFS', 'BŒUF', 'boeuf', 'cabillaud', 'crevettes', 'jambon cuit', 'pâte brisée', 'crème liquide', 'tofu fumé']],
+    ['Épicerie', ['tomates concassées', 'tomates en conserve', 'thon au naturel égoutté', 'crème de coco', 'beurre de cacahuète', 'nouilles udon sèches sans œuf', 'pâtes sèches sans œuf', 'pois chiches cuits égouttés', 'bouillon de légumes', 'Café', 'thé']],
+    ['Surgelés', ['petits pois surgelés', 'épinards surgelés', 'crevettes congelées']],
+    ['Maison', ['Savon', 'lessive', 'papier toilette']],
+    ['Autres', ['produit inconnu', 'tapis', 'sellette', 'poivrière']]
+  ]) for (const name of names) {
+    const item = { name, amount: 2, unit: 'pièce', checked: false, aisle: '' }, before = { ...item };
+    assert.equal(aisle(item), expected, name);
+    assert.deepEqual(item, before);
+    assert.equal(aisle({ ...item, aisle: 'Autres' }), 'Autres');
+    assert.equal(aisle({ ...item, aisle: 'Maison' }), 'Maison');
+  }
+  assert.match(html, /id="manual-aisle"><option value="">Automatique<\/option>/);
+  assert.doesNotMatch(html, /shoppingMove\.manualId \? \[\] : \[''\]/);
+  assert.match(html, /\.shopping-list\s*\{\s*grid-template-columns:\s*minmax\(0, 1fr\);/);
+  assert.match(html, /\.shopping-item span\s*\{\s*min-width:\s*0;\s*overflow-wrap:\s*anywhere;/);
+});
+
 test('les dates restent natives et leur largeur est étirée sans pourcentage pour éviter le padding additionnel sur iOS', () => {
   const html = readFileSync(join(__dirname, 'public', 'index.html'), 'utf8');
   const rule = html.match(/\.field input\[type="date"\]\s*\{([^}]+)\}/)?.[1] || '';

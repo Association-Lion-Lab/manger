@@ -1135,7 +1135,7 @@ function createHandler(db, overpassUrl, communesUrl) {
         const input = await readJson(request);
         if (!input || typeof input.name !== 'string' || !input.name.trim() || input.name.length > 80 || typeof input.unit !== 'string' || !input.unit.trim() || input.unit.length > 24 || !['', 'Fruits et légumes', 'Frais', 'Épicerie', 'Surgelés', 'Maison', 'Autres'].includes(input.aisle)) throw new Error('Rayon invalide');
         if (input.manualId != null) {
-          if (!Number.isSafeInteger(input.manualId) || !isDateKey(input.weekStart) || db.prepare('UPDATE shopping_manual SET aisle = ? WHERE id = ? AND week_start = ?').run(input.aisle || 'Autres', input.manualId, input.weekStart).changes === 0) throw new Error('Article inconnu');
+          if (!Number.isSafeInteger(input.manualId) || !isDateKey(input.weekStart) || db.prepare('UPDATE shopping_manual SET aisle = ? WHERE id = ? AND week_start = ?').run(input.aisle, input.manualId, input.weekStart).changes === 0) throw new Error('Article inconnu');
         } else {
           for (const item of db.prepare('SELECT name, unit FROM shopping_aisles').all()) {
             if (foodKey(item) === foodKey(input)) db.prepare('DELETE FROM shopping_aisles WHERE name = ? AND unit = ?').run(item.name, item.unit);
@@ -1146,7 +1146,7 @@ function createHandler(db, overpassUrl, communesUrl) {
       }
       if (request.method === 'POST' && url.pathname === '/api/shopping-manual') {
         const input = await readJson(request);
-        if (!input || !isDateKey(input.weekStart) || typeof input.name !== 'string' || !input.name.trim() || input.name.length > 80 || typeof input.unit !== 'string' || !input.unit.trim() || input.unit.length > 24 || !Number.isFinite(input.amount) || input.amount <= 0 || input.amount > 10000 || !['Fruits et légumes', 'Frais', 'Épicerie', 'Surgelés', 'Maison', 'Autres'].includes(input.aisle)) throw new Error('Article invalide');
+        if (!input || !isDateKey(input.weekStart) || typeof input.name !== 'string' || !input.name.trim() || input.name.length > 80 || typeof input.unit !== 'string' || !input.unit.trim() || input.unit.length > 24 || !Number.isFinite(input.amount) || input.amount <= 0 || input.amount > 10000 || !['', 'Fruits et légumes', 'Frais', 'Épicerie', 'Surgelés', 'Maison', 'Autres'].includes(input.aisle)) throw new Error('Article invalide');
         const result = db.prepare('INSERT INTO shopping_manual (week_start, name, amount, unit, aisle) VALUES (?, ?, ?, ?, ?)').run(input.weekStart, input.name.trim(), input.amount, input.unit.trim(), input.aisle);
         return sendJson(response, 201, { id: Number(result.lastInsertRowid) });
       }

@@ -127,6 +127,7 @@
     .secondary { border: 1px solid var(--line); background: var(--raised); }
     .panel[hidden] { display: none; }
     .recipe-list, .shopping-list { display: grid; margin-top: 20px; }
+    .shopping-list { grid-template-columns: minmax(0, 1fr); }
     #import-catalog { margin-top: 24px; }
     .recipe-cover { width: 72px; height: 72px; border-radius: 16px; object-fit: cover; background: var(--accent-soft); display: grid; place-items: center; color: var(--accent); font-size: 24px; }
     .recipe-hero { width: 100%; max-height: 240px; object-fit: cover; border-radius: 18px; margin: 16px 0; }
@@ -155,7 +156,8 @@
     @media (prefers-reduced-motion: reduce) { .shopping-drag-preview { box-shadow: none; } }
     .shopping-item { min-height: 56px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--line); cursor: pointer; }
     .shopping-item:last-child { border-bottom: 0; }
-    .shopping-item input { width: 20px; height: 20px; accent-color: var(--accent); }
+    .shopping-item input { width: 20px; height: 20px; flex-shrink: 0; accent-color: var(--accent); }
+    .shopping-item span { min-width: 0; overflow-wrap: anywhere; }
     .shopping-item input:checked + span { color: var(--muted); text-decoration: line-through; }
     .empty-state { padding: 34px 12px; text-align: center; color: var(--muted); }
     nav { position: fixed; z-index: 3; inset: auto 0 0; width: min(100%, 760px); margin: auto; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 6px 12px calc(8px + env(safe-area-inset-bottom)); border: 1px solid var(--line); border-bottom: 0; border-radius: 20px 20px 0 0; background: color-mix(in srgb, var(--background) 92%, transparent); backdrop-filter: blur(24px); box-shadow: 0 -8px 32px #0000000a; }
@@ -461,7 +463,7 @@
           <label class="field wide"><span>Article</span><input id="manual-name" required maxlength="80" placeholder="Café, savon…"></label>
           <label class="field"><span>Quantité</span><input id="manual-amount" type="number" value="1" min="0.01" max="10000" step="0.01" required></label>
           <label class="field"><span>Unité</span><input id="manual-unit" value="pièce" required maxlength="24"></label>
-          <label class="field wide"><span>Rayon</span><select id="manual-aisle"><option>Autres</option><option>Fruits et légumes</option><option>Frais</option><option>Épicerie</option><option>Surgelés</option><option>Maison</option></select></label>
+          <label class="field wide"><span>Rayon</span><select id="manual-aisle"><option value="">Automatique</option><option>Fruits et légumes</option><option>Frais</option><option>Épicerie</option><option>Surgelés</option><option>Maison</option><option>Autres</option></select></label>
           <button class="primary wide" type="submit">Ajouter aux courses</button>
         </form></details>
         <p class="muted">Les ajouts restent dans cette semaine. Le rangement automatique des ingrédients est indicatif.</p>
@@ -1130,10 +1132,15 @@
 
     function shoppingAisle(item) {
       if (item.aisle) return item.aisle;
-      // ponytail: classement indicatif par mots, préférer des rayons enregistrés si le catalogue grandit.
-      if (/\b(carotte|tomate|courgette|oignon|ail|citron|brocoli|champignon|pomme de terre|chou|gingembre|aubergine|poivron)s?\b/i.test(item.name)) return 'Fruits et légumes';
-      if (/\b(œuf|oeuf|lait|crème|beurre|fromage|poulet|porc|bœuf|boeuf|saumon|tofu)s?\b/i.test(item.name)) return 'Frais';
-      if (/\b(riz|pâtes|lentille|pois|huile|sucre|sel|sauce|coco|farine|café)s?\b/i.test(item.name)) return 'Épicerie';
+      // ponytail: mots explicites seulement, pas une connaissance du magasin ; le rayon choisi reste prioritaire.
+      const name = MangerFoodNames.foodName(item.name).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/œ/g, 'oe');
+      if (/\b(savon|lessive|detergent|liquide vaisselle|papier toilette|essuie-tout|sac poubelle)s?\b/.test(name)) return 'Maison';
+      if (/\b(surgele|congele)e?s?\b/.test(name)) return 'Surgelés';
+      // La présentation prime sur l'aliment : une tomate en conserve n'est pas une tomate fraîche.
+      if (/\b(conserve|boite)s?\b|\b(tomates? (concassee|sechee|confite)s?|(lait|creme) de coco|lait en poudre|beurre de cacahuete|thon au naturel|nouilles?|pates? seches?)\b/.test(name)) return 'Épicerie';
+      if (/\b(pate (brisee|feuilletee)|creme|beurre|fromage|chevre|feta|mozzarella|parmesan|yaourt|oeuf|lait|poulet|porc|boeuf|jambon|lardon|dinde|saumon|cabillaud|thon|sardine|poisson|crevette|tofu)s?\b/.test(name)) return 'Frais';
+      if (/\b(huile|sauce|vinaigre|moutarde|mayonnaise|bouillon|riz|pate|nouille|semoule|polenta|lentille|pois chiche|farine|sucre|sel|poivre|cumin|curry|epice|cafe|the|coco)s?\b/.test(name)) return 'Épicerie';
+      if (/\b(carotte|tomate|concombre|courgette|oignon|echalote|ail|citron|brocoli|champignon|pommes? de terre|chou|gingembre|aubergine|poivron|poireau|epinard|salade|haricots? verts?|petits? pois|patates? douces?|potiron|butternut|navet|betterave|radis|avocat|pomme|poire|banane|orange|clementine|abricot|peche|fraise|framboise|raisin|basilic|persil|coriandre)s?\b/.test(name)) return 'Fruits et légumes';
       return 'Autres';
     }
 
@@ -2186,7 +2193,7 @@
       if (suppressShoppingClick && event.detail > 0) { suppressShoppingClick = false; return; }
       shoppingMove = state.shopping[Number(handle.dataset.shoppingHandle)];
       document.getElementById('shopping-move-title').textContent = `Déplacer ${shoppingMove.name}`;
-      document.getElementById('shopping-move-aisle').innerHTML = (shoppingMove.manualId ? [] : ['']).concat(['Fruits et légumes', 'Frais', 'Épicerie', 'Surgelés', 'Maison', 'Autres']).map(aisle => `<option value="${aisle}"${(shoppingMove.aisle || '') === aisle ? ' selected' : ''}>${aisle || 'Automatique'}</option>`).join('');
+      document.getElementById('shopping-move-aisle').innerHTML = ['', 'Fruits et légumes', 'Frais', 'Épicerie', 'Surgelés', 'Maison', 'Autres'].map(aisle => `<option value="${aisle}"${(shoppingMove.aisle || '') === aisle ? ' selected' : ''}>${aisle || 'Automatique'}</option>`).join('');
       shoppingMoveDialog.showModal();
     });
     document.getElementById('close-shopping-move').addEventListener('click', () => shoppingMoveDialog.close());
