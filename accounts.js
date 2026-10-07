@@ -3,6 +3,7 @@ const { randomBytes, scrypt, timingSafeEqual, createHash } = require('node:crypt
 const { promisify } = require('node:util');
 const { mkdirSync, readFileSync } = require('node:fs');
 const { dirname, join } = require('node:path');
+const { emailAddress } = require('./invitation-mail');
 const derive = promisify(scrypt);
 const hash = value => createHash('sha256').update(value).digest('hex');
 const DAY = 86400000;
@@ -58,8 +59,8 @@ async function body(req) {
   try { return JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch { throw new Error('Requête invalide.'); }
 }
 
-function protectAccounts(db, handler, { secure = false } = {}) {
-  let busy = 0;
+function protectAccounts(db, handler, { secure = false, mailer = null } = {}) {
+  let busy = 0, mailBusy = false;
   const dummy = `${'0'.repeat(32)}:${'0'.repeat(64)}`;
   const cookie = (res, value, maxAge) => res.setHeader('Set-Cookie', `manger_session=${value}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${secure ? '; Secure' : ''}`);
   const session = req => {
@@ -138,7 +139,7 @@ function protectAccounts(db, handler, { secure = false } = {}) {
         if (req.method === 'GET' && path === '/') { res.writeHead(303, { Location: '/login' }); return res.end(); }
         return json(res, 401, { error: 'Connecte-toi pour accéder au foyer.' });
       }
-      if (req.method === 'GET' && path === '/api/account') return json(res, 200, { id: user.id, username: user.username, admin: Boolean(user.admin) });
+      if (req.method === 'GET' && path === '/api/account') return json(res, 200, { id: user.id, username: user.username, admin: Boolean(user.admin), invitationEmailEnabled: Boolean(user.admin && mailer) });
       if (req.method === 'POST' && path === '/api/account/logout') {
         db.prepare('DELETE FROM sessions WHERE token=?').run(user.token);
         cookie(res, '', 0);
@@ -165,6 +166,27 @@ function protectAccounts(db, handler, { secure = false } = {}) {
       }
       const adminRoute = path.startsWith('/api/accounts') || path === '/api/backup' || path.startsWith('/api/restore/');
       if (adminRoute && !user.admin) return json(res, 403, { error: 'Cette action est réservée à l’administrateur.' });
+      if (path === '/api/accounts/invitation/email' && req.method === 'POST') {
+        if (!mailer) return json(res, 503, { error: 'L’envoi de courriels n’est pas configuré sur ce serveur. Utilise le partage ou la copie du lien.' });
+        const data = await body(req);
+        if (!session(req)?.admin) return json(res, 403, { error: 'Droit administrateur requis.' });
+        const to = emailAddress(data?.to);
+        const token = typeof data?.token === 'string' && /^[a-f0-9]{64}$/.test(data.token) ? data.token : '';
+        const now = Date.now();
+        const invitation = db.prepare('SELECT i.expires FROM invitations i JOIN accounts a ON a.id=i.creator WHERE i.token=? AND i.expires>? AND a.active=1 AND a.admin=1').get(hash(token), now);
+        if (!invitation) return json(res, 400, { error: 'Invitation expirée, utilisée ou annulée. Crée un nouveau lien.' });
+        if (mailBusy) return json(res, 429, { error: 'Un envoi est déjà en cours. Attends sa confirmation.' });
+        db.prepare('DELETE FROM attempts WHERE key=? AND expires<=?').run('invitation-mail', now);
+        if ((db.prepare('SELECT count FROM attempts WHERE key=?').get('invitation-mail')?.count || 0) >= 5) return json(res, 429, { error: 'Limite de 5 envois par heure atteinte. Utilise la copie du lien ou réessaie plus tard.' });
+        db.prepare('INSERT INTO attempts VALUES(?,1,?) ON CONFLICT(key) DO UPDATE SET count=count+1').run('invitation-mail', now + 3600000);
+        mailBusy = true;
+        try {
+          await mailer.send(to, token, invitation.expires);
+          return json(res, 200, { ok: true }); // SMTP acceptance is not proof of inbox delivery.
+        } catch {
+          return json(res, 503, { error: 'L’envoi n’a pas pu être confirmé. Le lien reste disponible. Vérifie la boîte du destinataire avant de réessayer, ou copie le lien.' });
+        } finally { mailBusy = false; }
+      }
       if (path === '/api/accounts/invitation' && req.method === 'POST') {
         const token = randomBytes(32).toString('hex'), expires = Date.now() + DAY;
         db.prepare('INSERT INTO invitations(id,token,creator,expires) VALUES(1,?,?,?) ON CONFLICT(id) DO UPDATE SET token=excluded.token,creator=excluded.creator,expires=excluded.expires').run(hash(token), user.id, expires);

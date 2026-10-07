@@ -425,6 +425,40 @@ test('les invitations se partagent volontairement, sans courriel automatique ni 
   assert.equal($('create-invitation').disabled, false); assert.equal($('invitation-result').hidden, true);
 });
 
+test('le courriel serveur est volontaire, conserve le destinataire en erreur et protège les doubles envois', async () => {
+  const html = readFileSync(join(__dirname, 'public', 'accounts.html'), 'utf8');
+  assert.match(html, /id="server-email" hidden/);
+  assert.match(html, /\$\('server-email'\)\.hidden=!\(me.admin&&me.invitationEmailEnabled\)/);
+  const source = html.match(/let invitationBusy[\s\S]*?(?=\nform\('password-form')/)[0];
+  const nodes = new Map(), calls = [];
+  const $ = id => { if (!nodes.has(id)) nodes.set(id, { value: '', hidden: true, disabled: false, textContent: '', reportValidity: () => true }); return nodes.get(id); };
+  let finish, fail = false, lost = false;
+  const state = new Script(source + ';({expire(){invitationExpires=0;}})').runInNewContext({ $, location: { origin: 'https://example.org' }, navigator: {}, Date, encodeURIComponent, TypeError, SyntaxError,
+    api: async (path, method, data) => {
+      calls.push({ path, method, data });
+      if (path.endsWith('/email')) { if (finish === null) await new Promise(resolve => { finish = resolve; }); if (lost) throw new TypeError('fetch failed'); if (fail) throw new Error('Envoi indisponible.'); return { ok: true }; }
+      return { token: 'a'.repeat(64), expires: Date.now() + 86400000 };
+    }
+  });
+  const submit = () => $('invitation-email-form').onsubmit({ preventDefault() {} });
+  await $('create-invitation').onclick(); assert.equal(calls.length, 1);
+  $('invitation-email').value = 'personne@example.org';
+  await submit(); assert.equal(calls.length, 1); // Hidden when SMTP is not configured.
+  $('server-email').hidden = false;
+  $('invitation-email-form').reportValidity = () => false; await submit(); assert.equal(calls.length, 1);
+  $('invitation-email-form').reportValidity = () => true;
+  finish = null; const sending = submit();
+  assert.equal($('invitation-email').disabled, true); assert.match($('send-invitation-email').textContent, /Envoi en cours/);
+  await submit(); await $('create-invitation').onclick(); await $('revoke-invitation').onclick(); assert.equal(calls.length, 2);
+  assert.equal(calls[1].data.to, 'personne@example.org'); assert.equal(calls[1].data.token, 'a'.repeat(64));
+  finish(); await sending; assert.equal($('invitation-email').value, ''); assert.equal($('invitation-email').disabled, false);
+  assert.match($('invitation-email-status').textContent, /acceptée par le service/); assert.match($('send-invitation-email').textContent, /Envoyer l’invitation/);
+  fail = true; $('invitation-email').value = 'second@example.org'; await submit();
+  assert.equal($('invitation-email').value, 'second@example.org'); assert.match($('invitation-email-status').textContent, /indisponible/);
+  lost = true; await submit(); assert.match($('invitation-email-status').textContent, /Vérifie la boîte/); assert.equal($('invitation-email').value, 'second@example.org');
+  const before = calls.length; state.expire(); await submit(); assert.equal(calls.length, before); assert.match($('invitation-email-status').textContent, /expiré/);
+});
+
 test('enregistrer une recette bloque les doubles appuis, conserve la saisie en cas d’échec et ne rejoue pas une sauvegarde confirmée', async () => {
   const html = readFileSync(join(__dirname, 'public', 'index.html'), 'utf8');
   const source = html.match(/    async function saveRecipe[\s\S]*?(?=\n    document.getElementById\('days'\))/)[0];

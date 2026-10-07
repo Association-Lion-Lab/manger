@@ -14,6 +14,7 @@ const { downloadRecipePage, extractRecipeDraft } = require('./recipe-import');
 const { recipeTaste, tasteRank } = require('./public/tastes');
 const { createRestore } = require('./restore');
 const { openAccounts, protectAccounts } = require('./accounts');
+const { createInvitationMailer } = require('./invitation-mail');
 
 const INDEX_HTML = readFileSync(join(__dirname, 'public', 'index.html'));
 const DAY_MS = 86_400_000;
@@ -1287,12 +1288,13 @@ function createHandler(db, overpassUrl, communesUrl) {
 }
 
 // Supplying a database is the isolated core-test harness; production always opens accounts.
-function createApp(database, overpassUrl = process.env.MANGER_OVERPASS_URL || 'https://overpass-api.de/api/interpreter', communesUrl = process.env.MANGER_COMMUNES_URL || 'https://geo.api.gouv.fr/communes', accounts, tls = tlsOptions()) {
+function createApp(database, overpassUrl = process.env.MANGER_OVERPASS_URL || 'https://overpass-api.de/api/interpreter', communesUrl = process.env.MANGER_COMMUNES_URL || 'https://geo.api.gouv.fr/communes', accounts, tls = tlsOptions(), mailer = null) {
   const production = database === undefined;
+  if (production) mailer = createInvitationMailer();
   database ||= createDatabase(process.env.MANGER_DB || join(__dirname, 'data', 'manger.db'));
   if (production) accounts = openAccounts();
   const handler = createHandler(database, overpassUrl, communesUrl);
-  const protectedHandler = accounts ? protectAccounts(accounts, handler, { secure: Boolean(tls) || process.env.MANGER_SECURE_COOKIE === '1' }) : handler;
+  const protectedHandler = accounts ? protectAccounts(accounts, handler, { secure: Boolean(tls) || process.env.MANGER_SECURE_COOKIE === '1', mailer }) : handler;
   const server = tls ? createHttpsServer(tls, protectedHandler) : createServer(protectedHandler);
   if (production) server.on('close', () => { accounts.close(); database.close(); });
   return server;

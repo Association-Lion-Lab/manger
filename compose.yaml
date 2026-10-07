@@ -2,6 +2,13 @@ services:
   manger:
     image: manger:0.1.0
     build: .
+    environment:
+      MANGER_SMTP_HOST: "${MANGER_SMTP_HOST:-}"
+      MANGER_SMTP_PORT: "${MANGER_SMTP_PORT:-587}"
+      MANGER_SMTP_FROM: "${MANGER_SMTP_FROM:-}"
+      MANGER_SMTP_USER: "${MANGER_SMTP_USER:-}"
+      MANGER_SMTP_PASSWORD: "${MANGER_SMTP_PASSWORD:-}"
+      MANGER_APP_URL: "${MANGER_APP_URL:-}"
     ports:
       - "${MANGER_BIND_ADDRESS:-0.0.0.0}:${MANGER_HTTP_PORT:-3000}:3000"
     volumes:

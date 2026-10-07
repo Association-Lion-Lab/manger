@@ -14,10 +14,11 @@ Depuis une fiche recette, **Cuisiner cette recette** ouvre les étapes guidées 
 
 Le nombre de portions est ajustable de 1 à 100 dans la fiche et le mode cuisine : les ingrédients sont recalculés sans modifier la recette, le planning ou les courses. Les instructions rédigées et les durées ne sont pas recalculées automatiquement ; adaptez la cuisson si nécessaire. Changer les portions ne réinitialise pas les minuteurs.
 
-Prérequis : Node.js 24 ou plus récent. Aucune dépendance n'est à installer.
+Prérequis : Node.js 24 ou plus récent. `npm ci --ignore-scripts` installe la dépendance de messagerie Nodemailer à la version verrouillée. Docker le fait pendant la construction de l'image.
 Depuis la fiche recette, « Imprimer / PDF » ouvre l'impression du navigateur : sélectionnez votre imprimante ou l'enregistrement en PDF. La fiche contient les ingrédients pour les portions choisies, les étapes et le lien source éventuel. Les durées et instructions restent celles de la recette d'origine.
 
 ```shell
+npm ci --ignore-scripts
 npm start
 ```
 
@@ -155,13 +156,38 @@ La connexion est obligatoire depuis l'ajout des comptes. Restez sur un réseau d
 
 Dans « Mon compte → Connexion sur d’autres appareils », **Déconnecter tous mes appareils** révoque toutes les sessions de votre compte, y compris celle utilisée, après confirmation. Le mot de passe reste inchangé et les autres membres restent connectés. Les anciennes sessions sont refusées dès leur prochaine requête au serveur ; cette action ne peut pas effacer une copie hors connexion sur un appareil déconnecté.
 
-Une instance héberge **un seul foyer partagé**. Chaque accès possède un identifiant et un mot de passe ; les recettes, goûts des personnes, repas et courses existants sont conservés. Un accès n'ajoute pas automatiquement une personne à table. L'envoi de courriels par le serveur et plusieurs foyers isolés ne sont pas encore disponibles.
+Une instance héberge **un seul foyer partagé**. Chaque accès possède un identifiant et un mot de passe ; les recettes, goûts des personnes, repas et courses existants sont conservés. Un accès n'ajoute pas automatiquement une personne à table. Plusieurs foyers isolés ne sont pas encore disponibles.
 
 Dans **Mon compte → Accès au foyer → Inviter par lien privé**, un administrateur peut créer un lien valable **24 heures pour une seule inscription**. La personne invitée choisit son identifiant et son mot de passe, puis se connecte : son compte est toujours membre, jamais administrateur. Elle accède aux données partagées du foyer. Un nouveau lien remplace le précédent ; « Annuler le lien en cours » révoque l'invitation sans désactiver les comptes déjà créés. Désactiver l'administrateur qui l'a créée annule aussi son invitation.
 
-Après création, **Partager l’invitation** ouvre le partage natif du téléphone lorsque le navigateur le permet ; **Copier le lien** reste disponible. **Préparer un courriel** ouvre l'application de courriel avec le lien et les consignes d'accès, sans destinataire prédéfini : choisissez la personne et confirmez vous-même l'envoi. Aucun envoi automatique, service SMTP, adresse de courriel enregistrée ou suivi de livraison. Une annulation du partage ne déclenche pas de copie ni de courriel. Un lien expiré doit être recréé ; la validation serveur reste déterminante si le lien a déjà été utilisé ou annulé depuis un autre appareil.
+Après création, **Partager l’invitation** ouvre le partage natif du téléphone lorsque le navigateur le permet ; **Copier le lien** reste disponible. **Préparer un courriel** ouvre l'application de courriel avec le lien et les consignes d'accès, sans destinataire prédéfini : choisissez la personne et confirmez vous-même l'envoi. Ce bouton n'envoie rien depuis le serveur. Une annulation du partage ne déclenche pas de copie ni de courriel. Un lien expiré doit être recréé ; la validation serveur reste déterminante si le lien a déjà été utilisé ou annulé depuis un autre appareil.
 
-Transmettez ce lien uniquement au destinataire : toute personne qui le possède peut l'utiliser tant qu'il est valide. Le destinataire doit accéder au serveur par le réseau local ou le VPN, et faire confiance au certificat si HTTPS est configuré. Le secret est dans le fragment du lien (non envoyé lors du chargement de la page), retiré de la barre d'adresse à l'ouverture et stocké haché côté serveur. Rechargez depuis le lien original si vous quittez le formulaire avant l'inscription. Manger! n'envoie aucun courriel lui-même. Sans HTTPS, l'inscription reste non chiffrée comme la connexion.
+Transmettez ce lien uniquement au destinataire : toute personne qui le possède peut l'utiliser tant qu'il est valide. Le destinataire doit accéder au serveur par le réseau local ou le VPN, et faire confiance au certificat si HTTPS est configuré. Le secret est dans le fragment du lien (non envoyé lors du chargement de la page), retiré de la barre d'adresse à l'ouverture et stocké haché côté serveur. Rechargez depuis le lien original si vous quittez le formulaire avant l'inscription. Sans HTTPS, l'inscription reste non chiffrée comme la connexion.
+
+#### Envoi facultatif depuis le serveur
+
+L'envoi SMTP est **désactivé par défaut**. Aucun fournisseur n'est contacté au démarrage et aucune adresse de destinataire n'est enregistrée dans les bases ou les journaux de Manger!. Quand il est configuré, **Envoyer depuis Manger!** apparaît dans le lien d'invitation créé, uniquement pour les administrateurs. Saisissez un destinataire et confirmez volontairement l'envoi. Les contrôles restent dans le formulaire existant, sans nouvel écran.
+
+Avec Docker Compose, complétez votre fichier local `.env` (déjà exclu de Git et de l'image), en conservant les réglages existants. Exemple **à adapter**, sans utiliser ces identifiants fictifs :
+
+```dotenv
+MANGER_SMTP_HOST=smtp.example.org
+MANGER_SMTP_PORT=587
+MANGER_SMTP_FROM=admin@example.org
+MANGER_SMTP_USER=admin@example.org
+MANGER_SMTP_PASSWORD='mot-de-passe-application-du-fournisseur'
+MANGER_APP_URL=https://adresse-locale-du-serveur:3000
+```
+
+`MANGER_APP_URL` est l'adresse exacte utilisable par la personne invitée (Wi-Fi/VPN), sans chemin, paramètres ou identifiants. HTTPS est recommandé ; HTTP reste réservé au réseau de confiance. Le lien envoyé est construit depuis cette configuration, jamais depuis une adresse fournie dans la demande. `FROM` doit être une adresse autorisée chez votre fournisseur. Utilisez un mot de passe d'application si nécessaire ; ne partagez jamais le fichier `.env`. Les lignes USER/PASSWORD peuvent rester vides seulement si votre relais autorise l'envoi sans authentification.
+
+Le port **465** utilise TLS dès la connexion ; **587** (ou un autre port) exige STARTTLS. Le certificat du service SMTP doit être valide pour son nom ; aucune option ne désactive sa vérification. Les délais de connexion, accueil, résolution DNS et inactivité SMTP sont limités à 10 secondes chacun. Le fournisseur peut conserver le destinataire et le contenu, dont le lien privé : choisissez un service de confiance. Voir la [documentation SMTP de Nodemailer](https://nodemailer.com/smtp).
+
+Après configuration, appliquez `docker compose up -d --build` depuis le dépôt. Pour désactiver l'envoi, videz `MANGER_SMTP_HOST` puis relancez cette commande. Hors Docker, définissez ces variables dans l'environnement avant `npm start` ; Node ne charge pas `.env` automatiquement. Une configuration SMTP incomplète avec HOST renseigné refuse le démarrage avec le nom du réglage à corriger, sans afficher les secrets.
+
+L'envoi ne crée, ne remplace et ne consomme pas l'invitation : les règles de 24 heures, inscription unique et révocation restent identiques. Limite commune à l'instance : **5 tentatives d'envoi par heure**, échecs compris, conservée après redémarrage ; un seul envoi simultané. Une erreur conserve le lien et le destinataire saisi. Une confirmation indique uniquement l'acceptation par le service SMTP, **pas la livraison**. Une réponse perdue peut masquer un envoi réussi : vérifiez la boîte et les indésirables avant de réessayer. Il n'y a ni nouvel envoi automatique, ni suivi de livraison, ni garantie contre deux envois successifs volontaires depuis plusieurs appareils.
+
+Tests automatisés et navigateur effectués avec une messagerie simulée et des données isolées ; refus d'un serveur SMTP sans STARTTLS également testé par connexion locale. Aucun vrai courriel n'a été envoyé. Configuration du fournisseur, réception réelle, Docker Linux et Safari/iPhone restent à vérifier sur votre installation.
 
 Après la mise à jour, créez le premier administrateur depuis le serveur (aucune inscription publique, aucun mot de passe par défaut) :
 

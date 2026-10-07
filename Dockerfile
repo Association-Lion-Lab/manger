@@ -5,7 +5,9 @@ LABEL org.opencontainers.image.title="Manger!" \
       org.opencontainers.image.licenses="AGPL-3.0-or-later"
 
 WORKDIR /app
-COPY --chown=node:node package.json server.js accounts.js tls.js healthcheck.js catalog.js recipe-import.js ingredients.js backup-tools.js restore.js ./
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev --ignore-scripts
+COPY --chown=node:node server.js accounts.js invitation-mail.js tls.js healthcheck.js catalog.js recipe-import.js ingredients.js backup-tools.js restore.js ./
 COPY --chown=node:node public ./public
 RUN mkdir /data && chown node:node /data
 
