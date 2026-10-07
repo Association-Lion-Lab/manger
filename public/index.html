@@ -182,6 +182,34 @@
     dialog .section-heading > div { min-width: 0; }
     dialog h2 { font-size: 24px; overflow-wrap: anywhere; }
     .handle { display: none; }
+    #member-dialog { background: var(--background); }
+    #member-dialog > .section-heading { position: sticky; top: -28px; z-index: 2; background: var(--background); padding: 12px 0; }
+    #member-question { font-size: 1.75rem; line-height: 1.2; margin: 10px 0; }
+    #member-list { display: grid; gap: 12px; }
+    #member-list button { width: 100%; min-height: 66px; padding: 16px; border-radius: 20px; text-align: left; overflow-wrap: anywhere; }
+    .member-progress { height: 4px; margin: 0 0 24px; border-radius: 4px; background: var(--line); }
+    .member-progress span { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
+    #member-dialog .field { margin-bottom: 16px; }
+    .member-diets { display: grid; gap: 12px; margin: 20px 0; border: 0; padding: 0; }
+    .member-diets legend { padding: 0; margin-bottom: 12px; color: var(--muted); }
+    .member-diet-card { display: flex; align-items: center; gap: 14px; min-height: 82px; padding: 12px; border: 1px solid var(--line); border-radius: 22px; background: var(--surface); cursor: pointer; }
+    .member-diet-card:has(:checked) { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); background: var(--accent-soft); }
+    .member-diet-card input { accent-color: var(--accent); width: 20px; height: 20px; flex: none; }
+    .member-diet-card strong, .member-diet-card small { display: block; }
+    .member-diet-card strong { font-size: 1rem; line-height: 1.3; }
+    .member-diet-card small { color: var(--muted); font-size: .875rem; line-height: 1.35; }
+    .member-diet-card .member-emoji { font-size: 26px; }
+    .member-taste-chips { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0; }
+    .member-taste-chips button { min-height: 44px; max-width: 100%; padding: 10px 14px; border: 1px solid var(--line); border-radius: 24px; background: var(--surface); overflow-wrap: anywhere; cursor: pointer; }
+    #member-selected-tastes button { border-color: var(--accent); background: var(--accent-soft); }
+    .member-taste-add { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: end; }
+    #member-recap { padding: 20px; border: 1px solid var(--line); border-radius: 22px; background: var(--surface); overflow-wrap: anywhere; }
+    #member-recap dt { color: var(--muted); font-size: .875rem; }
+    #member-recap dd { margin: 4px 0 18px; }
+    #member-recap dd:last-child { margin-bottom: 0; }
+    .member-actions { display: grid; gap: 10px; padding: 14px 0 0; background: var(--background); }
+    #member-back { min-height: 44px; padding: 0 10px 0 0; }
+    #member-fields { border: 0; padding: 0; margin: 0; min-width: 0; }
     .choices { display: grid; gap: 8px; margin-top: 16px; }
     .choices .choice { width: 100%; }
     .choices > div:has(> a) { border: 1px solid var(--line); border-radius: 18px; overflow: hidden; background: var(--raised); }
@@ -698,14 +726,8 @@
       <section class="household-section">
         <div><h2>Les gourmands</h2><span class="muted">Le régime sert de limite stricte aux propositions.</span></div>
         <div id="member-list" class="household-list"></div>
-        <form id="member-form" class="compact-form">
-          <label class="field"><span>Prénom</span><input id="member-name" required maxlength="60" placeholder="Camille"></label>
-          <label class="field"><span>Style</span><select id="member-diet"><option value="vegan">J’aime les graines</option><option value="vegetarian">Veggie cool</option><option value="pescetarian">Team océan</option><option value="omnivore">Je mange de tout</option></select></label>
-          <label class="field wide"><span>N’aime pas</span><input id="member-avoided" maxlength="4049" placeholder="tomate crue, coriandre…" aria-describedby="member-tastes-help"></label>
-          <p id="member-tastes-help" class="muted wide">Sépare les aliments par des virgules, par exemple « tomate crue ». Les goûts donnent une priorité aux recettes, sans les exclure. Un état cru/cuit manquant est simplement signalé. Goûts uniquement, pas un filtre anti-allergies.</p>
-          <button id="save-member" class="primary wide" type="submit">Ajouter au foyer</button>
-          <button id="delete-member" class="secondary wide" type="button" hidden>Retirer cette personne</button>
-        </form>
+        <button id="new-member" class="secondary" type="button">＋ Ajouter une personne</button>
+        <p id="member-status" class="muted" role="status"></p>
       </section>
       <section class="household-section">
         <div><h2>Bar à protéines</h2><span class="muted">Quantité conseillée pour une portion.</span></div>
@@ -737,6 +759,38 @@
   </div>
 
   <article id="recipe-print"></article>
+  <dialog id="member-dialog" aria-labelledby="member-question">
+    <div class="section-heading"><button id="member-back" class="text-action" type="button">← Retour</button><button id="close-member" class="icon-button" type="button" aria-label="Annuler les modifications du profil">×</button></div>
+    <div class="member-progress" role="progressbar" aria-label="Profil alimentaire" aria-valuemin="1" aria-valuemax="3" aria-valuenow="1"><span id="member-progress-bar"></span></div>
+    <p id="member-step-label" class="section-kicker"></p>
+    <h2 id="member-question" tabindex="-1">Tu manges comment ?</h2>
+    <p id="member-intro" class="muted"></p>
+    <form id="member-form" novalidate>
+      <fieldset id="member-fields">
+        <section id="member-step-diet">
+          <label class="field"><span>Prénom</span><input id="member-name" required maxlength="60" placeholder="Camille" autocomplete="given-name"></label>
+          <input id="member-diet" type="hidden" value="omnivore">
+          <fieldset class="member-diets"><legend>Ton régime alimentaire</legend>
+            <label class="member-diet-card"><input type="radio" name="member-style" value="omnivore" checked><span class="member-emoji" aria-hidden="true">🍽️</span><span><strong>Je mange de tout</strong><small>Viande, poisson, végétal : tout me va.</small></span></label>
+            <label class="member-diet-card"><input type="radio" name="member-style" value="pescetarian"><span class="member-emoji" aria-hidden="true">🐟</span><span><strong>Team océan</strong><small>Poisson, œufs et végétal, sans viande.</small></span></label>
+            <label class="member-diet-card"><input type="radio" name="member-style" value="vegetarian"><span class="member-emoji" aria-hidden="true">🥚</span><span><strong>Veggie cool</strong><small>Végétal, œufs et laitages, sans chair animale.</small></span></label>
+            <label class="member-diet-card"><input type="radio" name="member-style" value="vegan"><span class="member-emoji" aria-hidden="true">🌱</span><span><strong>J’aime les graines</strong><small>Du végétal, sans produits animaux.</small></span></label>
+          </fieldset>
+        </section>
+        <section id="member-step-tastes" hidden>
+          <input id="member-avoided" type="hidden">
+          <h3>Je n’aime pas</h3><div id="member-selected-tastes" class="member-taste-chips"></div>
+          <label class="field"><span>Rechercher ou ajouter un aliment</span><input id="member-taste-search" type="search" maxlength="80" placeholder="Tomate, coriandre…" autocomplete="off"></label>
+          <div class="member-taste-add"><label class="field"><span>Dans quel cas ?</span><select id="member-taste-state"><option value="">Peu importe</option><option value="cru">Cru</option><option value="cuit">Cuit</option></select></label><button id="member-add-taste" class="text-action" type="button">＋ Ajouter</button></div>
+          <div id="member-taste-choices" class="member-taste-chips"></div>
+          <p id="member-tastes-help" class="muted">Les goûts orientent les propositions sans cacher les recettes mal renseignées. Un état cru/cuit manquant est signalé. Goûts uniquement : pas une protection contre les allergies.</p>
+        </section>
+        <section id="member-step-recap" hidden><dl id="member-recap"></dl><p class="muted">Tu pourras modifier ce profil dans Compte → Personnes du foyer.</p><button id="delete-member" class="text-action" type="button" hidden>Retirer cette personne</button></section>
+        <p id="member-error" class="error" role="alert" hidden></p>
+        <div class="member-actions"><button id="member-next" class="primary" type="submit">Continuer</button><button id="save-member" class="primary" type="submit" hidden>Enregistrer ce profil</button><button id="member-skip" class="text-action" type="button" hidden>Passer cette étape</button></div>
+      </fieldset>
+    </form>
+  </dialog>
   <script src="/tastes.js"></script>
   <script src="/food-names.js"></script>
   <script src="/seasons.js"></script>
@@ -1006,7 +1060,7 @@
       const filtered = MangerFoodNames.searchRecipes(state.recipes.filter(recipe => (category === '__favorites' ? recipe.favorite : !category || recipe.tags.includes(category)) && (!seasonal || MangerSeasons.recipeSeason(recipe, Number(seasonMonth.value)).matches)), query, maxMinutes);
       document.getElementById('recipe-season-month-field').hidden = !seasonal;
       document.getElementById('recipe-season-note').hidden = !seasonal;
-      const title = category === '__favorites' ? 'Mes favoris' : category ? recipeCategories[category].split(' ').slice(1).join(' ') : 'Explorer les recettes';
+      const title = category === '__favorites' ? 'Mes favoris' : category ? recipeCategories[category].split(' ').slice(1).join(' ') : 'Qu’est-ce qui te fait envie ?';
       document.getElementById('recipes-title').textContent = title;
       document.getElementById('recipes-kicker').textContent = category ? 'Univers' : 'À découvrir';
       document.getElementById('recipes-back').hidden = !category;
@@ -2193,7 +2247,7 @@
     modeSelect.addEventListener('change', applyAppearance);
     matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (modeSelect.value === 'system') applyAppearance(); });
     document.getElementById('account-household').addEventListener('click', () => householdDialog.showModal());
-    document.getElementById('account-tastes').addEventListener('click', () => { householdDialog.showModal(); document.getElementById('member-name').focus(); });
+    document.getElementById('account-tastes').addEventListener('click', () => { householdDialog.showModal(); (document.querySelector('[data-member]') || document.getElementById('new-member')).focus(); });
     document.querySelector('nav').addEventListener('click', event => {
       const button = event.target.closest('[data-panel]');
       if (!button) return;
@@ -2602,36 +2656,124 @@
       finally { button.disabled = false; }
     });
     document.getElementById('close-household').addEventListener('click', () => householdDialog.close());
+    const memberDialog = document.getElementById('member-dialog');
+    let memberStep = 0, memberBusy = false;
+    function memberTastes() { return document.getElementById('member-avoided').value.split(',').map(word => word.trim()).filter(Boolean); }
+    function memberError(message) { const field = document.getElementById('member-error'); field.textContent = message; field.hidden = !message; }
+    function renderMemberTastes() {
+      const selected = memberTastes();
+      document.getElementById('member-selected-tastes').innerHTML = selected.map((taste, index) => `<button type="button" data-remove-taste="${index}" aria-label="Retirer ${escapeHtml(taste)}">${escapeHtml(taste)} ×</button>`).join('') || '<span class="muted">Aucun goût renseigné, c’est très bien aussi.</span>';
+      const query = document.getElementById('member-taste-search').value;
+      const fold = value => value.toLocaleLowerCase('fr').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      const names = [...new Set(['tomate', 'brocoli', 'concombre', 'coriandre', 'champignon', ...state.recipes.flatMap(recipe => recipe.ingredients.map(item => MangerFoodNames.foodName(item.name)))])];
+      document.getElementById('member-taste-choices').innerHTML = names.filter(name => fold(name).includes(fold(query)) && !selected.includes(name)).slice(0, 8).map(name => `<button type="button" data-add-taste="${escapeHtml(name)}">${escapeHtml(name)} ＋</button>`).join('');
+    }
+    function addMemberTaste(value = document.getElementById('member-taste-search').value) {
+      const name = value.trim(), context = document.getElementById('member-taste-state').value;
+      if (!name) { document.getElementById('member-taste-search').focus(); return; }
+      const taste = `${name}${context ? ` ${context}` : ''}`;
+      const selected = memberTastes();
+      if (taste.length > 80 || name.includes(',') || selected.length >= 50) return memberError('Choisis un aliment à la fois, 80 caractères et 50 goûts maximum.');
+      if (!selected.some(item => item.toLocaleLowerCase('fr') === taste.toLocaleLowerCase('fr'))) selected.push(taste);
+      document.getElementById('member-avoided').value = selected.join(', ');
+      document.getElementById('member-taste-search').value = '';
+      document.getElementById('member-taste-state').value = '';
+      memberError(''); renderMemberTastes();
+    }
+    function renderMemberStep() {
+      const steps = ['diet', 'tastes', 'recap'];
+      steps.forEach((name, index) => document.getElementById(`member-step-${name}`).hidden = index !== memberStep);
+      document.getElementById('member-name').required = memberStep === 0;
+      document.getElementById('member-step-label').textContent = `Étape ${memberStep + 1} sur 3`;
+      document.querySelector('#member-dialog [role="progressbar"]').setAttribute('aria-valuenow', memberStep + 1);
+      document.getElementById('member-progress-bar').style.width = `${(memberStep + 1) / 3 * 100}%`;
+      document.getElementById('member-question').textContent = ['Tu manges comment ?', 'Qu’est-ce qui ne te plaît pas ?', 'C’est tout toi ?'][memberStep];
+      document.getElementById('member-intro').textContent = ['Un profil pour cette personne, pas pour tout le foyer.', 'Facultatif. Choisis les aliments, puis précise cru ou cuit si nécessaire.', 'Vérifie tes choix avant de les enregistrer.'][memberStep];
+      document.getElementById('member-next').hidden = memberStep === 2;
+      document.getElementById('save-member').hidden = memberStep !== 2;
+      document.getElementById('member-skip').hidden = memberStep !== 1;
+      document.getElementById('delete-member').hidden = !editingMemberId || memberStep !== 2;
+      if (memberStep === 1) renderMemberTastes();
+      if (memberStep === 2) document.getElementById('member-recap').innerHTML = `<dt>Prénom</dt><dd>${escapeHtml(document.getElementById('member-name').value.trim())}</dd><dt>Régime</dt><dd>${escapeHtml(dietLabels[document.getElementById('member-diet').value])}</dd><dt>Je n’aime pas</dt><dd>${memberTastes().map(escapeHtml).join(', ') || 'Aucun goût renseigné'}</dd>`;
+      memberDialog.scrollTop = 0;
+      document.getElementById('member-question').focus({ preventScroll: true });
+    }
+    function openMemberEditor(member) {
+      clearMemberEditor();
+      document.getElementById('member-status').textContent = '';
+      if (member) {
+        editingMemberId = member.id;
+        document.getElementById('member-name').value = member.name;
+        document.getElementById('member-diet').value = member.diet;
+        document.querySelector(`[name="member-style"][value="${member.diet}"]`).checked = true;
+        document.getElementById('member-avoided').value = (member.avoidedIngredients || []).join(', ');
+      }
+      householdDialog.close(); memberDialog.showModal(); renderMemberStep();
+    }
+    function closeMemberEditor() {
+      if (memberBusy) return;
+      memberDialog.close(); clearMemberEditor(); renderHousehold(); householdDialog.showModal();
+      document.getElementById('new-member').focus();
+    }
+    document.getElementById('new-member').addEventListener('click', () => openMemberEditor());
+    document.getElementById('member-name').addEventListener('input', event => { if (memberStep === 0 && event.target.value.trim()) memberError(''); });
+    document.getElementById('close-member').addEventListener('click', closeMemberEditor);
+    memberDialog.addEventListener('cancel', event => { event.preventDefault(); closeMemberEditor(); });
+    document.getElementById('member-back').addEventListener('click', () => { if (memberBusy) return; if (memberStep === 0) closeMemberEditor(); else { memberStep--; memberError(''); renderMemberStep(); } });
+    document.querySelector('.member-diets').addEventListener('change', event => { document.getElementById('member-diet').value = event.target.value; });
+    document.getElementById('member-taste-search').addEventListener('input', renderMemberTastes);
+    document.getElementById('member-taste-search').addEventListener('keydown', event => { if (event.key === 'Enter' && !event.isComposing) { event.preventDefault(); if (!memberBusy) addMemberTaste(); } });
+    document.getElementById('member-add-taste').addEventListener('click', () => addMemberTaste());
+    document.getElementById('member-taste-choices').addEventListener('click', event => { const button = event.target.closest('[data-add-taste]'); if (button) addMemberTaste(button.dataset.addTaste); });
+    document.getElementById('member-selected-tastes').addEventListener('click', event => {
+      const button = event.target.closest('[data-remove-taste]'); if (!button) return;
+      const selected = memberTastes(); selected.splice(Number(button.dataset.removeTaste), 1);
+      document.getElementById('member-avoided').value = selected.join(', '); renderMemberTastes();
+    });
+    document.getElementById('member-skip').addEventListener('click', () => { memberStep = 2; memberError(''); renderMemberStep(); });
+    function setMemberBusy(value) {
+      memberBusy = value;
+      document.getElementById('member-fields').disabled = value;
+      document.getElementById('member-back').disabled = document.getElementById('close-member').disabled = value;
+      memberDialog.setAttribute('aria-busy', String(value));
+    }
     document.getElementById('member-form').addEventListener('submit', async event => {
       event.preventDefault();
-      const button = document.getElementById('save-member'); button.disabled = true;
+      if (memberBusy) return;
+      if (memberStep < 2) {
+        if (memberStep === 0 && !document.getElementById('member-name').value.trim()) { memberError('Indique un prénom pour continuer.'); document.getElementById('member-name').focus(); return; }
+        if (memberStep === 1 && event.submitter == null && document.getElementById('member-taste-search').value.trim()) { addMemberTaste(); return; }
+        memberStep++; memberError(''); renderMemberStep(); return;
+      }
+      setMemberBusy(true); memberError('');
       try {
-        const response = await fetch(editingMemberId ? `/api/members/${editingMemberId}` : '/api/members', { method: editingMemberId ? 'PUT' : 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: document.getElementById('member-name').value, diet: document.getElementById('member-diet').value, avoidedIngredients: document.getElementById('member-avoided').value.split(',').map(word => word.trim()).filter(Boolean) }) });
-        if (!response.ok) return showHouseholdError(await response.json());
-        clearMemberEditor();
-        await load();
-      } catch (error) { showHouseholdError({ error: error.message }); }
-      finally { button.disabled = false; }
+        const response = await fetch(editingMemberId ? `/api/members/${editingMemberId}` : '/api/members', { method: editingMemberId ? 'PUT' : 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: document.getElementById('member-name').value, diet: document.getElementById('member-diet').value, avoidedIngredients: memberTastes() }), signal: AbortSignal.timeout(15000) });
+        if (!response.ok) throw new Error((await response.json()).error || 'Le profil n’a pas pu être enregistré.');
+        memberDialog.close(); clearMemberEditor(); householdDialog.showModal();
+        document.getElementById('member-status').textContent = 'Profil enregistré.';
+        try { await load(); } catch { document.getElementById('member-status').textContent = 'Profil enregistré. L’affichage n’a pas pu être actualisé : utilise Réessayer dans la semaine, sans recréer ce profil.'; }
+      } catch (error) { memberError(error.name === 'TypeError' || error.name === 'TimeoutError' ? 'Impossible de confirmer l’enregistrement. La saisie est conservée : vérifie les personnes du foyer avant un nouvel essai.' : error.message); }
+      finally { setMemberBusy(false); }
     });
     document.getElementById('member-list').addEventListener('click', event => {
       const button = event.target.closest('[data-member]');
       if (!button) return;
       const member = state.members.find(item => item.id === Number(button.dataset.member));
-      editingMemberId = member.id;
-      document.getElementById('member-name').value = member.name;
-      document.getElementById('member-diet').value = member.diet;
-      document.getElementById('member-avoided').value = (member.avoidedIngredients || []).join(', ');
-      document.getElementById('save-member').textContent = 'Enregistrer les changements';
-      document.getElementById('delete-member').hidden = false;
-      renderHousehold();
+      openMemberEditor(member);
     });
     document.getElementById('delete-member').addEventListener('click', async () => {
+      if (memberBusy) return;
       const member = state.members.find(item => item.id === editingMemberId);
       if (!member || !confirm(`Retirer ${member.name} du foyer ?`)) return;
-      const response = await fetch(`/api/members/${member.id}`, { method: 'DELETE' });
-      if (!response.ok) return showHouseholdError(await response.json());
-      clearMemberEditor();
-      await load();
+      setMemberBusy(true); memberError('');
+      try {
+        const response = await fetch(`/api/members/${member.id}`, { method: 'DELETE', signal: AbortSignal.timeout(15000) });
+        if (!response.ok) throw new Error((await response.json()).error);
+        memberDialog.close(); clearMemberEditor(); householdDialog.showModal();
+        document.getElementById('member-status').textContent = 'Personne retirée du foyer.';
+        try { await load(); } catch { document.getElementById('member-status').textContent = 'Personne retirée. L’affichage n’a pas pu être actualisé : utilise Réessayer dans la semaine.'; }
+      } catch (error) { memberError(error.message); }
+      finally { setMemberBusy(false); }
     });
     document.getElementById('protein-form').addEventListener('submit', async event => {
       event.preventDefault();
@@ -2671,7 +2813,10 @@
     function clearMemberEditor() {
       editingMemberId = null;
       document.getElementById('member-form').reset();
-      document.getElementById('save-member').textContent = 'Ajouter au foyer';
+      document.getElementById('member-diet').value = 'omnivore';
+      document.getElementById('member-avoided').value = '';
+      memberStep = 0;
+      memberError('');
       document.getElementById('delete-member').hidden = true;
       document.getElementById('household-error').hidden = true;
     }
