@@ -74,3 +74,9 @@ Sur grand écran, la photo et la fiche peuvent se placer côte à côte, avec un
 - Ne pas ajouter un tutoriel obligatoire, un onglet « Plus », des animations gratuites ou des options de thème dans chaque écran. Une transition courte à l'ouverture de la fiche suffit si elle aide à suivre le contexte ; respecter la réduction des animations.
 
 La maquette mobile a été validée avant l'intégration. Les équipements et données nutritionnelles demanderaient un chantier fonctionnel séparé avant d'apparaître dans la fiche.
+
+## Nouvelle proposition — 7 octobre 2026
+
+La demande de reprendre Romi/Jow autorise maintenant une proposition pour les profils alimentaires. Une nouvelle maquette locale séparée présente l'exploration (recherche, univers et recettes de saison), les quatre onglets et un profil en trois étapes par personne : prénom/régime, goûts facultatifs avec cru/cuit, récapitulatif. Les profils restent distincts des comptes de connexion. Les goûts orientent les propositions sans exclure les recettes aux données incertaines et ne constituent pas une protection contre les allergies.
+
+Palette existante conservée, avec fond gris/noir en sombre. Pas de questionnaire de calories, budget ou enseigne, ni nouveau menu principal. La maquette ne modifie aucune donnée réelle ; validation visuelle attendue avant intégration du nouveau parcours. Le filtre saisonnier seul est intégré à l'application actuelle, sans remplacement de la navigation ou de l'éditeur du foyer.
