@@ -15,6 +15,28 @@ test('les quatre onglets ont un écran et les scripts intégrés restent valides
   for (const match of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)) if (match[1].trim()) new Script(match[1]);
 });
 
+test('le planning expose réutilisation et export sans Plus d’options, avec les deux parcours existants dans le même dialogue', () => {
+  const html = readFileSync(join(__dirname, 'public', 'index.html'), 'utf8');
+  const panel = html.match(/<section id="week-panel"[\s\S]*?<\/section>/)[0];
+  assert.doesNotMatch(panel, /<details|Plus d’options/);
+  assert.match(panel, /id="reuse-week"[^>]*aria-haspopup="dialog">Réutiliser un menu/);
+  assert.match(panel, /id="export-calendar"[^>]*aria-label="Exporter la semaine dans un calendrier"/);
+  const source = html.match(/    function openReuseWeek[\s\S]*?(?=\n    document.getElementById\('reuse-week'\))/)[0];
+  const controls = new Map(); let shown = 0, focused = 0;
+  const dialog = { open: false, showModal() { this.open = true; shown++; } };
+  const context = { dialog, document: { getElementById: id => { if (!controls.has(id)) controls.set(id, {}); return controls.get(id); }, querySelector: () => ({ focus() { focused++; } }) },
+    choice: (_, title, detail, data) => `<button data-reuse="${data.reuse}">${title} ${detail}</button>` };
+  const open = new Script(source + ';openReuseWeek').runInNewContext(context);
+  open(); assert.equal(shown, 1); assert.equal(focused, 1);
+  assert.match(controls.get('choices').innerHTML, /data-reuse="past"/);
+  assert.match(controls.get('choices').innerHTML, /data-reuse="templates"/);
+  assert.equal(controls.get('dialog-error').hidden, true);
+  open(); assert.equal(shown, 1); assert.equal(focused, 2);
+  assert.match(html, /button.dataset.reuse === 'past' \? openCopyWeek\(\) : openWeekTemplates\(\)/);
+  assert.match(html, /if \(event.target.closest\('\[data-reuse-back\]'\)\) return openReuseWeek\(\)/);
+  assert.match(html, /const templates = await api\('\/api\/week-templates'\);\s*if \(!list.isConnected\) return;/);
+});
+
 test('reprendre une occasion retrouve les champs sans contaminer un autre type ou une nouvelle recette', () => {
   const html = readFileSync(join(__dirname, 'public', 'index.html'), 'utf8');
   const source = html.match(/    function openEventSetup[\s\S]*?(?=\n    function findRestaurants)/)[0];

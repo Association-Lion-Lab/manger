@@ -1,6 +1,6 @@
 # Suite du développement
 
-Contrainte produit : quatre onglets (Semaine, Recettes, Courses, Compte), actions dans leur contexte, options secondaires repliées ; préserver une interface sobre en clair et en sombre, au clavier et dès 320 px.
+Contrainte produit : quatre onglets (Semaine, Recettes, Courses, Compte), actions dans leur contexte, fonctions secondaires regroupées sans surcharger ; préserver une interface sobre en clair et en sombre, au clavier et dès 320 px.
 
 ## Lot implémenté — septembre 2026
 
@@ -26,6 +26,8 @@ Contrainte produit : quatre onglets (Semaine, Recettes, Courses, Compte), action
 Vérification : tests Node et parcours navigateur sur base isolée. Le rendu a été contrôlé à 320, 390 et 760 px, en clair et en sombre. L'audio et le maintien de l'écran ont été contrôlés avec des API simulées ; un essai sur téléphone reste nécessaire.
 
 ## Lot implémenté — octobre 2026
+
+- Ergonomie des actions du planning revue le 7 octobre : « Plus d’options » retiré de Semaine, remplacé par deux accès visibles et discrets, « Réutiliser un menu » et « Exporter ». Copie d'une semaine et semaines types regroupées dans le dialogue existant, avec retour contextuel, focus clavier et fermeture native. Retour bloqué pendant les écritures ; réponses de lecture tardives des semaines types ignorées après changement de vue. Aucun nouvel onglet, dépendance ou changement de données ; contrôles existants réutilisés selon Ponytail et Apple Design. Suite Node : 93 tests réussis, un test HTTPS ignoré faute d'OpenSSL. Parcours Chromium sur base isolée : clavier, focus, Escape, retour, copie conservant les repas déjà prévus, enregistrement/application/suppression d'une semaine type et export ICS de la semaine affichée ; rendu clair/sombre à 320/390/760 px et texte doublé contrôlés. Validation réelle iPhone à effectuer. Les actions secondaires de la fiche recette ne sont pas modifiées.
 
 - Reprise des sorties, dates et repas avec invités le 7 octobre : « Changer ce repas » puis le même type retrouve le nom, le lieu et le nombre de personnes, ainsi que la recette d'un date à la maison. Choisir une nouvelle recette pour les invités conserve les personnes mais reprend le titre de la nouvelle recette. Commande et sans recette gardent le nom existant quand aucune recette n'est enregistrée, sans inférence depuis le texte ; retrait volontaire d'une recette conservé. Autres occasions, nouveaux créneaux, restes et répartitions individuelles non préremplis. Même formulaire et protection d'enregistrement, sans nouvel écran, contrôle ni dépendance, suivant Ponytail et Apple Design. Suite Node : 92 tests réussis, un test HTTPS ignoré faute d'OpenSSL. Parcours Chromium sur base isolée : champs repris, titres échappés, remplacement de recette, mise à jour du même repas et des courses, échec conservant la saisie, double appui, Escape, changement maison/restaurant et rechargement ; rendu clair/sombre à 320/390/760 px et texte doublé vérifiés. Validation réelle iPhone/Ubuntu à effectuer.
 
@@ -66,11 +68,10 @@ L'utilisateur indique avoir testé les P1 le 1er octobre 2026, sans préciser la
 
 - Terminer la refonte mobile de Semaine, Recettes, Courses et Compte : première intégration de la maquette validée effectuée sur `development` (navigation, thèmes et assiettes distinctes). Restent la validation iPhone/Android sur serveur, la finition de la fiche et des filtres de recettes. Direction et limites dans [DESIGN-REFONTE.md](DESIGN-REFONTE.md).
 - Concevoir les interfaces tablette et PC : exploiter la largeur pour le planning et les recettes, adapter la navigation au tactile et au clavier/souris. Les contrôles actuels de largeur ne constituent pas encore ces interfaces.
-- Revoir « Plus d’options », jugé peu pratique, et rendre les fonctions fréquentes plus accessibles sans surcharger l'écran.
 - Ajouter le coût indicatif des recettes et de la semaine à partir de prix renseignés.
 - Ajouter la saisonnalité selon la région choisie.
 - Intégrer une carte des restaurants.
 
-Ordre de travail : P1, puis P2, puis P3. Les interfaces tablette/PC et la révision de « Plus d’options » restent différées à la demande de l'utilisateur ; les défauts visuels qui gênent l'utilisation restent P1.
+Ordre de travail : P1, puis P2, puis P3. Les interfaces tablette/PC restent différées à la demande de l'utilisateur ; la révision de « Plus d’options » dans le planning a été demandée puis implémentée le 7 octobre. Les défauts visuels qui gênent l'utilisation restent P1.
 
 L'export JSON de recettes ne remplace pas la sauvegarde du foyer et n'inclut pas les photos ni les avis. L'application ne doit pas être exposée directement à Internet avant la mise en place d'un accès protégé.

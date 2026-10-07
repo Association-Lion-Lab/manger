@@ -105,7 +105,9 @@
     .text-action { min-height: 44px; display: inline-flex; align-items: center; gap: 5px; border: 0; color: var(--accent); background: transparent; font-weight: 650; cursor: pointer; }
     .schedule { display: grid; gap: 20px; margin: 22px 0 28px; }
     .week-actions { display: grid; gap: 10px; }
-    .week-actions > details > button + button { margin-top: 10px; }
+    .week-tools { display: flex; flex-wrap: wrap; gap: 8px; }
+    .week-tools > button { flex: 1 1 140px; min-width: 0; justify-content: center; padding: 8px 12px; border-radius: 12px; font-size: .875rem; overflow-wrap: anywhere; }
+    .week-tools > button:active { background: var(--field); }
     #template-list { margin-top: 24px; }
     #template-list .assignment { grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 18px 0; }
     #template-list .assignment > span { min-width: 0; overflow-wrap: anywhere; }
@@ -416,11 +418,10 @@
         <div class="week-actions">
           <button id="suggest" class="primary" type="button">✦ Proposer le prochain repas</button>
           <button id="compose-week" class="secondary" type="button">✦ Compose ma semaine</button>
-          <details class="quiet-details"><summary>Plus d’options</summary>
-            <button id="week-templates" class="secondary" type="button">Mes semaines types</button>
-            <button id="copy-week" class="secondary" type="button">Réutiliser une autre semaine</button>
-            <button id="export-calendar" class="secondary" type="button">⇩ Exporter la semaine</button>
-          </details>
+          <div class="week-tools" role="group" aria-label="Réutilisation et export du planning">
+            <button id="reuse-week" class="text-action" type="button" aria-haspopup="dialog">Réutiliser un menu</button>
+            <button id="export-calendar" class="text-action" type="button" aria-label="Exporter la semaine dans un calendrier" title="Exporter la semaine dans un calendrier">⇩ Exporter</button>
+          </div>
         </div>
         </fieldset>
       </section>
@@ -511,7 +512,7 @@
         <button class="primary" type="submit">Afficher cette semaine</button>
       </form>
     </dialog>
-    <dialog id="meal-dialog">
+    <dialog id="meal-dialog" aria-labelledby="dialog-title" aria-describedby="dialog-subtitle">
       <div class="handle"></div>
       <div class="section-heading">
         <div><h2 id="dialog-title">Ajouter un repas</h2><span id="dialog-subtitle" class="muted" role="status"></span></div>
@@ -1305,14 +1306,25 @@
       renderPickerRecipes();
     }
 
-    document.getElementById('copy-week').addEventListener('click', () => {
+    function openReuseWeek() {
+      document.getElementById('dialog-title').textContent = 'Réutiliser un menu';
+      document.getElementById('dialog-subtitle').textContent = 'Reprends une semaine passée ou un menu enregistré.';
+      document.getElementById('dialog-error').hidden = true;
+      document.getElementById('choices').innerHTML = choice('↻', 'Reprendre une semaine', 'Choisir une semaine du planning à copier ici', { reuse: 'past' })
+        + choice('▤', 'Mes semaines types', 'Retrouver tes menus enregistrés ou garder cette semaine', { reuse: 'templates' });
+      if (!dialog.open) dialog.showModal();
+      document.querySelector('[data-reuse]').focus();
+    }
+    document.getElementById('reuse-week').addEventListener('click', openReuseWeek);
+
+    function openCopyWeek() {
       const targetStart = key(state.weekStart), previous = new Date(state.weekStart); previous.setDate(previous.getDate() - 7);
       document.getElementById('dialog-title').textContent = 'Réutiliser une semaine';
       document.getElementById('dialog-subtitle').textContent = `Vers la semaine du ${targetStart.split('-').reverse().join('/')}`;
       document.getElementById('dialog-error').hidden = true;
-      document.getElementById('choices').innerHTML = `<form id="copy-week-form" class="recipe-form"><label class="field"><span>Une date dans la semaine à reprendre</span><input id="copy-week-date" type="date" value="${key(previous)}" required></label><button class="secondary" type="submit">Voir les repas à copier</button><div id="copy-week-preview" aria-live="polite"></div></form>`;
+      document.getElementById('choices').innerHTML = `<button class="text-action" type="button" data-reuse-back>← Retour aux menus</button><form id="copy-week-form" class="recipe-form"><label class="field"><span>Une date dans la semaine à reprendre</span><input id="copy-week-date" type="date" value="${key(previous)}" required></label><button class="secondary" type="submit">Voir les repas à copier</button><div id="copy-week-preview" aria-live="polite"></div></form>`;
       let request = 0;
-      const dateInput = document.getElementById('copy-week-date'), output = document.getElementById('copy-week-preview');
+      const dateInput = document.getElementById('copy-week-date'), output = document.getElementById('copy-week-preview'), back = document.querySelector('[data-reuse-back]');
       dateInput.addEventListener('input', () => { request++; output.replaceChildren(); });
       document.getElementById('copy-week-form').addEventListener('submit', async event => {
         event.preventDefault(); const version = ++request; output.textContent = 'Chargement…';
@@ -1324,42 +1336,44 @@
           if (!source.length) throw new Error('Cette semaine ne contient aucun repas.');
           output.innerHTML = `<p class="muted">${source.length} repas. Même répartition par personne et mêmes suppléments. Aucun créneau occupé ne sera remplacé. Les restes prévus hors de cette semaine ne sont pas copiés.</p><ul>${source.map(meal => `<li>${escapeHtml(meal.date.split('-').reverse().join('/'))} · ${meal.slot === 'midi' ? 'Midi' : 'Soir'} : ${escapeHtml(meal.title)}${meal.leftoverOf ? ' · restes' : ''}</li>`).join('')}</ul><button id="confirm-copy-week" class="primary" type="button">Copier ces ${source.length} repas</button>`;
           document.getElementById('confirm-copy-week').addEventListener('click', async event => {
-            const button = event.currentTarget; if (button.disabled) return; button.disabled = true; dateInput.disabled = true;
+            const button = event.currentTarget; if (button.disabled) return; button.disabled = true; dateInput.disabled = true; back.disabled = true;
             try {
               await api('/api/week/copy', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ sourceStart, targetStart, sourceSnapshot: JSON.stringify(source) }) });
               dialog.close(); await load();
             } catch (error) { const message = document.getElementById('dialog-error'); message.textContent = error.message; message.hidden = false; }
-            finally { button.disabled = false; dateInput.disabled = false; }
+            finally { button.disabled = false; dateInput.disabled = false; back.disabled = false; }
           });
         } catch (error) { if (version === request && output.isConnected) output.textContent = error.message; }
       });
-      dialog.showModal();
-    });
+      if (!dialog.open) dialog.showModal();
+      dateInput.focus();
+    }
 
-    document.getElementById('week-templates').addEventListener('click', async () => {
+    async function openWeekTemplates() {
       const targetStart = key(state.weekStart);
       document.getElementById('dialog-title').textContent = 'Mes semaines types';
       document.getElementById('dialog-subtitle').textContent = `Semaine affichée · ${targetStart.split('-').reverse().join('/')}`;
       document.getElementById('dialog-error').hidden = true;
-      document.getElementById('choices').innerHTML = `<form id="template-form" class="recipe-form"><label class="field"><span>Nom de cette semaine type</span><input id="template-name" maxlength="60" placeholder="Semaine rapide, vacances…" required></label><button class="secondary" type="submit">Enregistrer la semaine affichée</button></form><div id="template-list" aria-live="polite">Chargement…</div>`;
-      const list = document.getElementById('template-list');
-      const showError = error => { const node = document.getElementById('dialog-error'); node.textContent = error.message; node.hidden = false; };
+      document.getElementById('choices').innerHTML = `<button class="text-action" type="button" data-reuse-back>← Retour aux menus</button><form id="template-form" class="recipe-form"><label class="field"><span>Nom de cette semaine type</span><input id="template-name" maxlength="60" placeholder="Semaine rapide, vacances…" required></label><button class="secondary" type="submit">Enregistrer la semaine affichée</button></form><div id="template-list" aria-live="polite">Chargement…</div>`;
+      const list = document.getElementById('template-list'), back = document.querySelector('[data-reuse-back]');
+      const showError = error => { if (!list.isConnected || !dialog.open) return; const node = document.getElementById('dialog-error'); node.textContent = error.message; node.hidden = false; };
       const refresh = async () => {
         const templates = await api('/api/week-templates');
+        if (!list.isConnected) return;
         list.innerHTML = templates.length ? templates.map(template => `<div class="assignment"><span><strong>${escapeHtml(template.name)}</strong><small class="muted">${template.mealCount} repas</small></span><div class="subtle-tools"><button class="text-action" type="button" data-template-use="${template.id}">Ajouter ici</button><button class="text-action" type="button" data-template-delete="${template.id}" data-template-name="${escapeHtml(template.name)}">Supprimer</button></div></div>`).join('') : '<p class="empty-state">Enregistre une semaine réussie pour la réutiliser plus tard.</p>';
       };
       document.getElementById('template-form').addEventListener('submit', async event => {
-        event.preventDefault(); const button = event.submitter; button.disabled = true; document.getElementById('dialog-error').hidden = true;
+        event.preventDefault(); const button = event.submitter; button.disabled = true; back.disabled = true; document.getElementById('dialog-error').hidden = true;
         try {
           await api('/api/week-templates', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: document.getElementById('template-name').value, start: targetStart }) });
           document.getElementById('template-name').value = ''; await refresh();
         } catch (error) { showError(error); }
-        finally { button.disabled = false; }
+        finally { button.disabled = false; back.disabled = false; }
       });
       list.addEventListener('click', async event => {
         const use = event.target.closest('[data-template-use]'), remove = event.target.closest('[data-template-delete]');
         if (!use && !remove) return;
-        event.target.disabled = true; document.getElementById('dialog-error').hidden = true;
+        event.target.disabled = true; back.disabled = true; document.getElementById('dialog-error').hidden = true;
         try {
           if (use) {
             await api(`/api/week-templates/${use.dataset.templateUse}/apply`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ targetStart }) });
@@ -1368,11 +1382,12 @@
             await api(`/api/week-templates/${remove.dataset.templateDelete}`, { method: 'DELETE' }); await refresh();
           }
         } catch (error) { showError(error); }
-        finally { if (event.target.isConnected) event.target.disabled = false; }
+        finally { if (event.target.isConnected) event.target.disabled = false; back.disabled = false; }
       });
-      dialog.showModal();
+      if (!dialog.open) dialog.showModal();
+      document.getElementById('template-name').focus();
       try { await refresh(); } catch (error) { showError(error); list.textContent = ''; }
-    });
+    }
 
     function openWeekComposer() {
       document.getElementById('dialog-title').textContent = 'Compose ma semaine';
@@ -2040,6 +2055,7 @@
     dialog.addEventListener('cancel', event => { if (document.getElementById('meal-fields').disabled) event.preventDefault(); });
     document.getElementById('choices').addEventListener('click', event => {
       if (document.getElementById('meal-fields').disabled) return;
+      if (event.target.closest('[data-reuse-back]')) return openReuseWeek();
       if (event.target.closest('#retry-suggestions')) return renderSuggestions(document.getElementById('suggestion-minutes').value);
       if (event.target.closest('#find-restaurants')) return findRestaurants();
       if (event.target.closest('#find-place')) return findPlaces();
@@ -2048,6 +2064,7 @@
       if (event.target.closest('#confirm-event')) return saveEvent();
       const button = event.target.closest('.choice');
       if (!button) return;
+      if (button.dataset.reuse) return button.dataset.reuse === 'past' ? openCopyWeek() : openWeekTemplates();
       if (button.dataset.editplates) return openDuoSetup(null, true);
       if (button.dataset.place) {
         return searchRestaurantPosition(Number(button.dataset.latitude), Number(button.dataset.longitude), `la commune de ${button.dataset.place}`).catch(error => { document.getElementById('restaurant-results').innerHTML = `<p class="error">${escapeHtml(error.message)}</p>`; });
