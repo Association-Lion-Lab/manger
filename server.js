@@ -918,7 +918,9 @@ function createHandler(db, overpassUrl, communesUrl) {
         const start = url.searchParams.get('start');
         if (!isDateKey(start)) throw new Error('Début de semaine invalide');
         const body = Buffer.from(calendar(db, start));
-        response.writeHead(200, { 'Content-Type': 'text/calendar; charset=utf-8', 'Content-Disposition': `attachment; filename="manger-${start}.ics"`, 'Content-Length': body.length, 'Cache-Control': 'no-store' });
+        // Request a regular file download rather than a direct calendar handoff.
+        const contentType = url.searchParams.get('download') === '1' ? 'application/octet-stream' : 'text/calendar; charset=utf-8';
+        response.writeHead(200, { 'Content-Type': contentType, 'Content-Disposition': `attachment; filename="manger-${start}.ics"`, 'Content-Length': body.length, 'Cache-Control': 'no-store' });
         response.end(body);
         return;
       }

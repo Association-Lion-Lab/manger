@@ -452,6 +452,15 @@ test('la semaine peut être exportée dans un calendrier standard', async t => {
   assert.equal(response.headers.get('content-disposition'), 'attachment; filename="manger-2026-09-14.ics"');
   assert.match(body, /DTSTART;VALUE=DATE:20260914\r\nDTEND;VALUE=DATE:20260915/);
   assert.match(body, /SUMMARY:Soir — Bowl\\, pois chiches/);
+  const download = await fetch(`${baseUrl}/api/calendar.ics?start=2026-09-14&download=1`);
+  assert.equal(download.status, 200);
+  assert.equal(download.headers.get('content-type'), 'application/octet-stream');
+  assert.equal(download.headers.get('content-disposition'), 'attachment; filename="manger-2026-09-14.ics"');
+  assert.equal(download.headers.get('cache-control'), 'no-store');
+  const file = await download.arrayBuffer();
+  assert.equal(Number(download.headers.get('content-length')), file.byteLength);
+  assert.match(Buffer.from(file).toString('utf8'), /SUMMARY:Soir — Bowl\\, pois chiches/);
+  assert.equal((await fetch(`${baseUrl}/api/calendar.ics?start=invalid&download=1`)).status, 400);
 });
 
 test('les restaurants OpenStreetMap sont normalisés et triés par distance', () => {

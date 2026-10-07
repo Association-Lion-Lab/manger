@@ -15,6 +15,22 @@ test('les quatre onglets ont un écran et les scripts intégrés restent valides
   for (const match of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)) if (match[1].trim()) new Script(match[1]);
 });
 
+test('le bouton Exporter demande le fichier ICS de la semaine affichée sans ouverture directe du calendrier', () => {
+  const html = readFileSync(join(__dirname, 'public', 'index.html'), 'utf8');
+  const source = html.split('\n').find(line => line.includes("document.getElementById('export-calendar').addEventListener"));
+  let click;
+  const location = {};
+  const weekStart = new Date('2026-10-05T12:00:00');
+  new Script(source).runInNewContext({ location, state: { weekStart }, key: date => {
+    assert.equal(date, weekStart); return '2026-10-05';
+  }, document: { getElementById: id => {
+    assert.equal(id, 'export-calendar');
+    return { addEventListener: (event, handler) => { assert.equal(event, 'click'); click = handler; } };
+  } } });
+  click();
+  assert.equal(location.href, '/api/calendar.ics?start=2026-10-05&download=1');
+});
+
 test('le planning expose réutilisation et export sans Plus d’options, avec les deux parcours existants dans le même dialogue', () => {
   const html = readFileSync(join(__dirname, 'public', 'index.html'), 'utf8');
   const panel = html.match(/<section id="week-panel"[\s\S]*?<\/section>/)[0];

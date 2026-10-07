@@ -27,7 +27,7 @@ test('authentication protects data, exports and writes; origin is checked', asyn
   assert.equal(landing.status, 200);
   assert.match(await landing.text(), /rel="apple-touch-icon" href="\/apple-touch-icon\.png"/);
   assert.match(landing.headers.get('content-security-policy'), /img-src 'self'; manifest-src 'self'/);
-  for (const path of ['/api/recipes', '/api/household', '/api/backup', '/api/photos/1', '/api/recipes/export', '/calendar.ics']) assert.equal((await request(path)).status, 401, path);
+  for (const path of ['/api/recipes', '/api/household', '/api/backup', '/api/photos/1', '/api/recipes/export', '/calendar.ics', '/api/calendar.ics?start=2026-09-14', '/api/calendar.ics?start=2026-09-14&download=1']) assert.equal((await request(path)).status, 401, path);
   assert.equal((await request('/api/health')).status, 200);
   assert.equal((await request('/offline-shopping.js')).status, 200);
   assert.equal((await request('/api/shopping-checks/sync', 'POST', {})).status, 401);
@@ -40,6 +40,10 @@ test('authentication protects data, exports and writes; origin is checked', asyn
   assert.equal((await request('/api/shopping-checks/sync', 'POST', {}, cookie, 'https://evil.example')).status, 403);
   assert.equal((await request('/api/shopping-manual/1', 'PUT', {}, cookie, 'https://evil.example')).status, 403);
   assert.equal((await request('/api/household', 'GET', undefined, cookie)).status, 200);
+  const calendar = await request('/api/calendar.ics?start=2026-09-14&download=1', 'GET', undefined, cookie);
+  assert.equal(calendar.status, 200);
+  assert.equal(calendar.headers.get('content-type'), 'application/octet-stream');
+  assert.match(await calendar.text(), /^BEGIN:VCALENDAR\r\n/);
   assert.equal((await request('/api/meals', 'POST', {}, cookie, 'https://evil.example')).status, 403);
   const row = accounts.prepare('SELECT * FROM accounts WHERE username=?').get('admin');
   assert.notEqual(row.password, 'long-password-admin');

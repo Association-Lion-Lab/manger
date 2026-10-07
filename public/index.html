@@ -2050,7 +2050,7 @@
     document.getElementById('add-meal').addEventListener('click', () => openAdd(mealFor(state.selected, 'soir') ? 'midi' : 'soir'));
     document.getElementById('suggest').addEventListener('click', openSuggestions);
     document.getElementById('compose-week').addEventListener('click', openWeekComposer);
-    document.getElementById('export-calendar').addEventListener('click', () => { location.href = `/api/calendar.ics?start=${key(state.weekStart)}`; });
+    document.getElementById('export-calendar').addEventListener('click', () => { location.href = `/api/calendar.ics?start=${key(state.weekStart)}&download=1`; });
     document.getElementById('close-dialog').addEventListener('click', () => dialog.close());
     dialog.addEventListener('cancel', event => { if (document.getElementById('meal-fields').disabled) event.preventDefault(); });
     document.getElementById('choices').addEventListener('click', event => {
