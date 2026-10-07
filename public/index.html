@@ -1477,13 +1477,21 @@
       state.pendingEvent = { occasion, recipeId: recipe?.id ?? null };
       const isDate = occasion === 'date';
       const isGuests = occasion === 'guests';
-      const title = recipe?.title ?? (isDate ? 'Date à organiser' : mode === 'order' ? 'Commande pizza' : isGuests ? 'Repas sans recette' : 'Repas à l’extérieur');
+      const current = mealFor(state.selected, state.slot);
+      const existing = current?.occasion === occasion && !current.leftoverOf && !current.assignments?.length && !current.dishes?.length
+        && (isGuests ? current.location === 'home' : isDate || current.location !== 'home') ? current : null;
+      const keepTitle = existing && (!isGuests || existing.recipeId === (recipe?.id ?? null));
+      const title = keepTitle ? existing.title : recipe?.title ?? (isDate ? 'Date à organiser' : mode === 'order' ? 'Commande pizza' : isGuests ? 'Repas sans recette' : 'Repas à l’extérieur');
       document.getElementById('dialog-title').textContent = recipe ? 'Cuisiner pour les invités' : isDate ? 'Prévoir un date' : mode === 'order' ? 'Commander' : isGuests ? 'Repas sans recette' : 'Manger à l’extérieur';
       document.getElementById('dialog-subtitle').textContent = `${fullDayNames[state.selected]} · ${state.slot === 'midi' ? 'Midi' : 'Soir'}`;
       const places = isGuests ? '<option value="home">À la maison</option>' : '<option value="restaurant">Restaurant</option><option value="outside">Autre lieu</option>' + (isDate ? '<option value="home">À la maison</option>' : '');
       const restaurantSearch = isGuests ? '' : '<div class="field"><button id="find-restaurants" class="secondary" type="button">⌖ Localise-moi</button><small class="muted">Après autorisation, votre position est transmise à Manger puis à Overpass, sans enregistrement par Manger.</small></div><label class="field"><span>Ou ville / code postal en France</span><input id="restaurant-place" maxlength="80" placeholder="Arras ou 62000" autocomplete="off"></label><button id="find-place" class="secondary" type="button">Rechercher la commune</button><small class="muted">La saisie est envoyée à l’API publique des communes ; le centre choisi est transmis à Overpass.</small><div id="restaurant-results" aria-live="polite"></div>';
       const dateRecipes = isDate ? `<div id="date-home-recipes" hidden><label class="field"><span>Recette à préparer</span><select id="date-recipe"><option value="">Sans recette pour le moment</option>${[...state.recipes].sort((a, b) => Number(b.tags.includes('date')) - Number(a.tags.includes('date'))).map(item => `<option value="${item.id}">${escapeHtml(item.title)} · ${item.minutes} min${item.tags.includes('date') ? ' · ♥ Date' : ''}</option>`).join('')}</select></label><p class="muted">Les recettes de date apparaissent en premier. Les ingrédients seront ajoutés aux courses.</p></div>` : '';
-      document.getElementById('choices').innerHTML = `<div class="recipe-form"><label class="field"><span>Nom</span><input id="event-title" maxlength="120" value="${escapeHtml(title)}" required></label><label class="field"><span>Lieu</span><select id="event-location">${places}</select></label><div id="event-restaurant-search">${restaurantSearch}</div>${dateRecipes}<label class="field"><span>Nombre de personnes</span><input id="event-people" type="number" min="1" max="100" value="${isGuests ? 4 : isDate ? 2 : 1}" required></label><button id="confirm-event" class="primary" type="button">Ajouter au calendrier</button></div>`;
+      document.getElementById('choices').innerHTML = `<div class="recipe-form"><label class="field"><span>Nom</span><input id="event-title" maxlength="120" value="${escapeHtml(title)}" required></label><label class="field"><span>Lieu</span><select id="event-location">${places}</select></label><div id="event-restaurant-search">${restaurantSearch}</div>${dateRecipes}<label class="field"><span>Nombre de personnes</span><input id="event-people" type="number" min="1" max="100" value="${existing?.people ?? (isGuests ? 4 : isDate ? 2 : 1)}" required></label><button id="confirm-event" class="primary" type="button">${existing ? 'Enregistrer les modifications' : 'Ajouter au calendrier'}</button></div>`;
+      if (existing) {
+        document.getElementById('event-location').value = existing.location;
+        if (isDate) document.getElementById('date-recipe').value = existing.recipeId ?? '';
+      }
       document.getElementById('event-location').addEventListener('change', () => {
         const location = document.getElementById('event-location').value;
         document.getElementById('event-restaurant-search').hidden = location !== 'restaurant';
