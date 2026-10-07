@@ -93,7 +93,7 @@
     #choose-week svg { width: 14px; height: 14px; flex: none; }
     .week-meta { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0 8px; }
     #today { font-size: 13px; }
-    #week-content, #meal-fields, #shopping-edit-fields { margin: 0; padding: 0; min-width: 0; border: 0; }
+    #week-content, #meal-fields, #shopping-edit-fields, #manual-shopping-fields { margin: 0; padding: 0; min-width: 0; border: 0; }
     .toolbar h1 { font-size: clamp(20px, 4.5vw, 26px); }
     .days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin: 22px 0 32px; padding: 6px; border: 1px solid var(--line); border-radius: 22px; background: var(--surface); }
     .day { min-width: 0; min-height: 66px; display: grid; place-items: center; align-content: center; gap: 4px; padding: 6px 2px; border: 0; border-radius: 16px; background: transparent; cursor: pointer; }
@@ -459,13 +459,13 @@
         <div class="subtle-tools"><button id="open-pantry" class="text-action" type="button">Mon placard</button><button id="organize-shopping" class="text-action" type="button" aria-pressed="false" aria-controls="shopping">Organiser les rayons</button></div>
         <p id="organize-shopping-help" class="muted" hidden>Glisse la poignée ⠿ vers un rayon. Ou touche-la pour choisir le rayon. Les corrections sont enregistrées immédiatement.</p>
         <div id="shopping" class="shopping-list"></div>
-        <details><summary>Ajouter un article</summary><form id="manual-shopping-form" class="compact-form">
+        <details><summary>Ajouter un article</summary><form id="manual-shopping-form"><fieldset id="manual-shopping-fields" class="compact-form" aria-label="Article à ajouter aux courses">
           <label class="field wide"><span>Article</span><input id="manual-name" required maxlength="80" placeholder="Café, savon…"></label>
           <label class="field"><span>Quantité</span><input id="manual-amount" type="number" value="1" min="0.01" max="10000" step="0.01" required></label>
           <label class="field"><span>Unité</span><input id="manual-unit" value="pièce" required maxlength="24"></label>
           <label class="field wide"><span>Rayon</span><select id="manual-aisle"><option value="">Automatique</option><option>Fruits et légumes</option><option>Frais</option><option>Épicerie</option><option>Surgelés</option><option>Maison</option><option>Autres</option></select></label>
           <button class="primary wide" type="submit">Ajouter aux courses</button>
-        </form></details>
+        </fieldset></form></details>
         <p class="muted">Les ajouts restent dans cette semaine. Le rangement automatique des ingrédients est indicatif.</p>
         <p id="shopping-error" class="error" role="alert" hidden></p>
         <details class="quiet-details"><summary>Courses hors connexion</summary>
@@ -916,7 +916,10 @@
       if (button.disabled) return;
       const restoreFocus = document.activeElement === button;
       try {
-        if (await load(retryView || {}) && restoreFocus && (document.activeElement === button || document.activeElement === document.body)) document.querySelector('nav button.active').focus();
+        if (await load(retryView || {})) {
+          document.getElementById('shopping-error').hidden = true;
+          if (restoreFocus && (document.activeElement === button || document.activeElement === document.body)) document.querySelector('nav button.active').focus();
+        }
       } catch { /* load keeps the previous display and the retry action. No write is replayed. */ }
     }
 
@@ -2297,17 +2300,38 @@
     document.getElementById('shopping').addEventListener('pointercancel', () => finishShoppingDrag(true));
     document.getElementById('shopping').addEventListener('lostpointercapture', () => finishShoppingDrag(true));
     document.addEventListener('keydown', event => { if (event.key === 'Escape') finishShoppingDrag(true); });
-    document.getElementById('manual-shopping-form').addEventListener('submit', async event => {
+    let manualShoppingBusy = false;
+    async function addManualShopping(event) {
       event.preventDefault();
-      const button = event.target.querySelector('button'); button.disabled = true;
+      if (manualShoppingBusy) return;
+      const form = event.currentTarget;
+      if (!form.reportValidity()) return;
+      manualShoppingBusy = true;
+      const fields = document.getElementById('manual-shopping-fields'), button = form.querySelector('button');
+      fields.disabled = true;
+      form.setAttribute('aria-busy', 'true');
+      button.textContent = 'Ajout en cours…';
       document.getElementById('shopping-error').hidden = true;
+      let saved = false;
       try {
-        const response = await fetch('/api/shopping-manual', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ weekStart: key(state.weekStart), name: document.getElementById('manual-name').value, amount: Number(document.getElementById('manual-amount').value), unit: document.getElementById('manual-unit').value, aisle: document.getElementById('manual-aisle').value }) });
-        if (!response.ok) throw new Error((await response.json()).error);
-        event.target.reset(); await load();
-      } catch (error) { shoppingError(error); }
-      finally { button.disabled = false; }
-    });
+        await api('/api/shopping-manual', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ weekStart: key(state.weekStart), name: document.getElementById('manual-name').value, amount: Number(document.getElementById('manual-amount').value), unit: document.getElementById('manual-unit').value, aisle: document.getElementById('manual-aisle').value }), signal: AbortSignal.timeout(15000) });
+        saved = true;
+        form.reset();
+        await load();
+      } catch (error) {
+        shoppingError(new Error(saved
+          ? 'L’article a été ajouté, mais les courses n’ont pas pu être actualisées. Utilise « Réessayer » sans ajouter l’article à nouveau.'
+          : error.name === 'TimeoutError' || error.name === 'TypeError' || error.name === 'SyntaxError'
+            ? 'L’ajout n’a pas pu être confirmé. Ta saisie est conservée. Vérifie les courses avant de réessayer : le serveur a peut-être reçu la demande.'
+            : error.message));
+      } finally {
+        manualShoppingBusy = false;
+        fields.disabled = false;
+        form.setAttribute('aria-busy', 'false');
+        button.textContent = 'Ajouter aux courses';
+      }
+    }
+    document.getElementById('manual-shopping-form').addEventListener('submit', addManualShopping);
     const recipeImportDialog = document.getElementById('recipe-import-dialog');
     let importPreview = [];
     let importRequest = 0;

@@ -78,6 +78,48 @@ test('modifier les courses bloque les doubles envois, conserve la saisie en éch
   assert.doesNotMatch(html, /data-remove-shopping/);
 });
 
+test('ajouter un article bloque les doubles envois et les champs, garde le brouillon et distingue écriture et lecture échouées', async () => {
+  const html = readFileSync(join(__dirname, 'public', 'index.html'), 'utf8');
+  const source = html.match(/    async function addManualShopping[\s\S]*?(?=\n    document.getElementById\('manual-shopping-form'\))/)[0];
+  const controls = new Map([['manual-shopping-fields', {}], ['shopping-error', {}], ['manual-name', { value: 'Café' }], ['manual-amount', { value: '2' }], ['manual-unit', { value: 'paquet' }], ['manual-aisle', { value: 'Épicerie' }]]);
+  const button = {}; let valid = true, resets = 0, busy, release, failure = null, readFails = false;
+  const form = { reportValidity: () => valid, querySelector: () => button, setAttribute: (_, value) => { busy = value; }, reset() { resets++; controls.get('manual-name').value = ''; } };
+  const writes = [], errors = [];
+  const context = {
+    manualShoppingBusy: false, AbortSignal, Error, state: { weekStart: '2026-09-28' }, key: value => value,
+    document: { getElementById: id => controls.get(id) }, shoppingError: error => errors.push(error.message),
+    api: async (path, options) => { writes.push({ path, options }); await new Promise(resolve => { release = resolve; }); if (failure) throw failure; },
+    load: async () => { if (readFails) throw new Error('Lecture échouée'); }
+  };
+  const add = new Script(source + ';addManualShopping').runInNewContext(context);
+  const event = { preventDefault() {}, currentTarget: form };
+  valid = false; await add(event); assert.equal(writes.length, 0); valid = true;
+  const first = add(event); await add(event);
+  assert.equal(writes.length, 1); assert.equal(context.manualShoppingBusy, true);
+  assert.equal(controls.get('manual-shopping-fields').disabled, true); assert.equal(busy, 'true');
+  assert.equal(writes[0].path, '/api/shopping-manual'); assert.equal(writes[0].options.method, 'POST');
+  assert.deepEqual(JSON.parse(writes[0].options.body), { weekStart: '2026-09-28', name: 'Café', amount: 2, unit: 'paquet', aisle: 'Épicerie' });
+  failure = new TypeError('fetch failed'); release(); await first;
+  assert.equal(resets, 0); assert.equal(controls.get('manual-name').value, 'Café');
+  assert.match(errors[0], /peut-être reçu/); assert.equal(controls.get('manual-shopping-fields').disabled, false);
+  assert.equal(context.manualShoppingBusy, false); assert.equal(busy, 'false');
+  assert.equal(button.textContent, 'Ajouter aux courses');
+  failure = null; readFails = true;
+  const retry = add(event); release(); await retry;
+  assert.equal(writes.length, 2); assert.equal(resets, 1); assert.equal(controls.get('manual-name').value, '');
+  assert.match(errors[1], /a été ajouté/); assert.match(errors[1], /Réessayer/);
+  assert.equal(context.manualShoppingBusy, false);
+  readFails = false;
+  for (const name of ['TimeoutError', 'SyntaxError']) {
+    failure = { name, message: 'Réponse indisponible' };
+    controls.get('manual-name').value = 'Savon';
+    const uncertain = add(event); release(); await uncertain;
+    assert.match(errors.at(-1), /peut-être reçu/);
+    assert.equal(controls.get('manual-name').value, 'Savon');
+    assert.equal(resets, 1);
+  }
+});
+
 test('les dates restent natives et leur largeur est étirée sans pourcentage pour éviter le padding additionnel sur iOS', () => {
   const html = readFileSync(join(__dirname, 'public', 'index.html'), 'utf8');
   const rule = html.match(/\.field input\[type="date"\]\s*\{([^}]+)\}/)?.[1] || '';
@@ -364,12 +406,14 @@ test('la dernière semaine demandée seule actualise le planning, une erreur pr�
   assert.equal(nodes.get('connection-error').hidden, false); assert.match(nodes.get('connection-message').textContent, /contenu déjà affiché est conservé/);
   assert.equal(nodes.get('retry-connection').disabled, false);
   const retry = retryConnection();
+  nodes.set('shopping-error', { hidden: false });
   assert.equal(nodes.get('retry-connection').disabled, true); assert.equal(nodes.get('retry-connection').textContent, 'Chargement…');
   assert.equal(requests.size, 3);
   requests.get('2026-10-19').resolve(response({ meals: [{ title: 'Repas retrouvé' }], shopping: [] }));
   await retry;
   assert.equal(state.weekStart.toISOString().slice(0, 10), '2026-10-19'); assert.equal(state.selected, 0);
   assert.equal(state.meals[0].title, 'Repas retrouvé'); assert.equal(nodes.get('connection-error').hidden, true);
+  assert.equal(nodes.get('shopping-error').hidden, true);
   assert.equal(nodes.get('retry-connection').disabled, false); assert.equal(nodes.get('retry-connection').textContent, 'Réessayer');
   const staleFailure = load({ weekStart: new Date('2026-10-26T12:00:00') });
   const newer = load({ weekStart: new Date('2026-11-02T12:00:00') });
