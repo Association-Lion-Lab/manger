@@ -218,6 +218,81 @@ test('ajouter un article bloque les doubles envois et les champs, garde le broui
   }
 });
 
+test('le placard protège ajout, édition et retrait, conserve les échecs et ne rejoue pas un stock confirmé', async () => {
+  const html = readFileSync(join(__dirname, 'public', 'index.html'), 'utf8');
+  const source = html.match(/    async function savePantry[\s\S]*?(?=\n    document.getElementById\('pantry-form'\))/)[0];
+  const button = { textContent: 'Enregistrer le stock' }, summary = { focus() { this.focused = true; } };
+  const controls = new Map([
+    ['pantry-form', { reportValidity: () => valid, setAttribute(_, value) { this.busy = value; }, querySelector: () => button }],
+    ['pantry-fields', {}], ['pantry-list', {}], ['close-pantry', {}], ['pantry-editor', { open: true }], ['pantry-error', {}],
+    ['pantry-name', { value: 'Carottes' }], ['pantry-amount', { value: '500' }], ['pantry-unit', { value: 'g' }], ['pantry-use-by', { value: '2026-10-10' }],
+    ['delete-pantry-item', { textContent: 'Retirer du placard' }]
+  ]);
+  const writes = [], errors = [], rendered = []; let valid = true, confirmed = true, release, failure, readFails = false, resets = 0;
+  const context = {
+    pantryBusy: false, pantryEditingId: null, pantryLoadVersion: 0, AbortSignal, Error,
+    document: { getElementById: id => controls.get(id), querySelector: () => summary }, confirm: () => confirmed,
+    pantryError: error => errors.push(error.message), renderPantry: items => rendered.push(items),
+    resetPantryEditor() { resets++; context.pantryEditingId = null; controls.get('pantry-name').value = ''; },
+    load: async () => { if (readFails) throw new Error('Lecture échouée'); },
+    api: async (path, options) => {
+      writes.push({ path, options }); await new Promise(resolve => { release = resolve; });
+      if (failure) throw failure; return [{ id: 7, name: 'Carottes', amount: 500 }];
+    }
+  };
+  const save = new Script(source + ';savePantry').runInNewContext(context);
+  valid = false; await save(); assert.equal(writes.length, 0);
+  valid = true;
+  const pending = save(); await save(); await save(true);
+  assert.equal(writes.length, 1); assert.equal(context.pantryBusy, true);
+  assert.equal(controls.get('pantry-fields').disabled, true);
+  assert.equal(controls.get('pantry-list').inert, true);
+  assert.equal(controls.get('close-pantry').disabled, true);
+  assert.equal(controls.get('pantry-form').busy, 'true'); assert.equal(button.textContent, 'Enregistrement…');
+  assert.deepEqual(JSON.parse(writes[0].options.body), { newLot: true, name: 'Carottes', unit: 'g', amount: 500, useBy: '2026-10-10' });
+  assert.ok(writes[0].options.signal instanceof AbortSignal);
+  failure = new Error('Stock refusé'); release(); await pending;
+  assert.equal(resets, 0); assert.equal(controls.get('pantry-name').value, 'Carottes'); assert.equal(errors.at(-1), 'Stock refusé');
+  assert.equal(context.pantryBusy, false); assert.equal(controls.get('pantry-fields').disabled, false);
+  assert.equal(controls.get('pantry-list').inert, false); assert.equal(controls.get('close-pantry').disabled, false);
+  assert.equal(controls.get('pantry-form').busy, 'false'); assert.equal(button.textContent, 'Enregistrer le stock');
+  for (const name of ['TimeoutError', 'TypeError', 'SyntaxError']) {
+    failure = { name, message: 'Réponse perdue' }; const uncertain = save(); release(); await uncertain;
+    assert.match(errors.at(-1), /peut-être reçu/); assert.equal(resets, 0); assert.equal(controls.get('pantry-name').value, 'Carottes');
+  }
+  failure = null; context.pantryEditingId = 7; readFails = true;
+  const update = save(); release(); await update;
+  assert.equal(JSON.parse(writes.at(-1).options.body).id, 7);
+  assert.equal('newLot' in JSON.parse(writes.at(-1).options.body), false);
+  assert.equal(resets, 1); assert.equal(controls.get('pantry-editor').open, false); assert.equal(summary.focused, true);
+  assert.match(errors.at(-1), /placard est à jour/); assert.match(errors.at(-1), /Réessayer/); assert.equal(rendered.length, 1);
+  context.pantryEditingId = 7; readFails = false; confirmed = false;
+  const before = writes.length; await save(true); assert.equal(writes.length, before);
+  confirmed = true; valid = false;
+  const remove = save(true); await save(); await save(true);
+  assert.equal(writes.length, before + 1); assert.equal(writes.at(-1).path, '/api/pantry/7');
+  assert.equal(writes.at(-1).options.method, 'DELETE'); assert.equal(writes.at(-1).options.body, undefined);
+  release(); await remove; assert.equal(resets, 2); assert.equal(controls.get('delete-pantry-item').textContent, 'Retirer du placard');
+  assert.equal(context.pantryBusy, false);
+  assert.match(html, /pantryDialog.addEventListener\('cancel', event => \{ if \(pantryBusy\) event.preventDefault\(\)/);
+});
+
+test('les lectures tardives du placard ne remplacent pas une nouvelle ouverture ou une écriture', async () => {
+  const html = readFileSync(join(__dirname, 'public', 'index.html'), 'utf8');
+  const source = html.match(/    async function loadPantry[\s\S]*?(?=\n    function pantryError)/)[0];
+  const pending = [], rendered = [];
+  const context = { pantryLoadVersion: 0, pantryDialog: { open: true }, AbortSignal,
+    api: () => new Promise((resolve, reject) => pending.push({ resolve, reject })), renderPantry: items => rendered.push(items) };
+  const load = new Script(source + ';loadPantry').runInNewContext(context);
+  const old = load(), recent = load(); pending[1].resolve(['Récent']); await recent;
+  pending[0].resolve(['Ancien']); await old; assert.deepEqual(rendered, [['Récent']]);
+  const beforeWrite = load(); context.pantryLoadVersion++; pending[2].reject(new Error('Ancienne lecture')); await beforeWrite;
+  const closed = load(); context.pantryDialog.open = false; pending[3].resolve(['Fermé']); await closed;
+  assert.equal(rendered.length, 1);
+  context.pantryDialog.open = true; const failed = load(); pending[4].reject(new Error('Lecture échouée'));
+  await assert.rejects(failed, /Lecture échouée/);
+});
+
 test('les dates restent natives et leur largeur est étirée sans pourcentage pour éviter le padding additionnel sur iOS', () => {
   const html = readFileSync(join(__dirname, 'public', 'index.html'), 'utf8');
   const rule = html.match(/\.field input\[type="date"\]\s*\{([^}]+)\}/)?.[1] || '';

@@ -200,7 +200,7 @@
     .choice-copy { display: grid; gap: 2px; }
     .choice-copy small { color: var(--muted); }
     .recipe-form { display: grid; gap: 22px; margin-top: 22px; }
-    #recipe-fields { min-width: 0; margin-right: 0; margin-left: 0; padding: 0; border: 0; }
+    #recipe-fields, #pantry-fields { min-width: 0; margin-right: 0; margin-left: 0; padding: 0; border: 0; }
     .field { display: grid; gap: 6px; }
     .field > span { color: var(--muted); font-size: 13px; font-weight: 650; }
     .field input, .field textarea { width: 100%; min-width: 0; min-height: 48px; padding: 12px 14px; color: var(--text); border: 1px solid var(--line); border-radius: 14px; background: var(--field); }
@@ -623,7 +623,7 @@
       <div id="pantry-list"></div>
       <details id="pantry-editor" class="quiet-details"><summary>Ajouter un aliment</summary>
         <p class="muted">Chaque ajout crée un lot avec sa propre date. Pour corriger une quantité existante, touche sa ligne dans le placard.</p>
-        <form id="pantry-form" class="recipe-form">
+        <form id="pantry-form"><fieldset id="pantry-fields" class="recipe-form" aria-label="Stock du placard">
           <label class="field"><span>Aliment</span><input id="pantry-name" list="pantry-foods" maxlength="80" required autocomplete="off"></label><datalist id="pantry-foods"></datalist>
           <div class="form-grid"><label class="field"><span>Quantité en stock aujourd’hui</span><input id="pantry-amount" type="number" min="0.01" max="1000000" step="0.01" required></label><label class="field"><span>Unité</span><input id="pantry-unit" list="pantry-units" maxlength="24" value="g" required></label></div>
           <datalist id="pantry-units"><option value="g"><option value="kg"><option value="ml"><option value="cl"><option value="l"><option value="pièce"></datalist>
@@ -631,7 +631,7 @@
           <small id="pantry-date-help" class="muted">Repère personnel, pas une garantie de conservation. Vérifie les indications de l’emballage. Après cette date, ce stock n’est plus déduit des repas suivants.</small>
           <button class="primary" type="submit">Enregistrer le stock</button>
           <div class="subtle-tools"><button id="new-pantry-item" class="text-action" type="button" hidden>Ajouter un autre aliment</button><button id="delete-pantry-item" class="text-action" type="button" hidden>Retirer du placard</button></div>
-        </form>
+        </fieldset></form>
       </details>
       <p id="pantry-error" class="error" role="alert" hidden></p>
     </dialog>
@@ -1019,27 +1019,39 @@
     }
 
     const pantryDialog = document.getElementById('pantry-dialog');
-    let pantryItems = [], pantryEditingId = null;
+    let pantryItems = [], pantryEditingId = null, pantryBusy = false, pantryLoadVersion = 0;
     function resetPantryEditor() {
       pantryEditingId = null; document.getElementById('pantry-form').reset();
       document.getElementById('pantry-name').readOnly = false; document.getElementById('pantry-unit').readOnly = false;
       document.getElementById('delete-pantry-item').hidden = true; document.getElementById('new-pantry-item').hidden = true;
       document.querySelector('#pantry-editor summary').textContent = 'Ajouter un aliment';
     }
-    async function loadPantry() {
-      pantryItems = await api('/api/pantry');
+    function renderPantry(items) {
+      pantryItems = items;
       document.getElementById('pantry-list').innerHTML = pantryItems.length ? pantryItems.map(item => `<button class="stock-row" type="button" data-pantry="${item.id}"><span><strong>${escapeHtml(item.name)}</strong><small>${item.ambiguous ? 'Doublon à vérifier · non déduit des courses' : item.useBy ? `${item.dateStatus === 'past' ? 'Date dépassée · à vérifier' : item.dateStatus === 'soon' ? 'À utiliser bientôt' : 'À utiliser d’ici le'} · ${escapeHtml(item.useBy.split('-').reverse().join('/'))}` : `Mis à jour le ${escapeHtml(item.recordedOn.split('-').reverse().join('/'))}`}</small></span><span>${formatAmount(item.ambiguous ? item.amount : item.remaining)} ${escapeHtml(item.unit)} <span aria-hidden="true">›</span></span></button>`).join('') : '<p class="empty-state">Ce que tu as déjà, en moins sur les courses.</p>';
+    }
+    async function loadPantry() {
+      const version = ++pantryLoadVersion;
+      try {
+        const items = await api('/api/pantry', { signal: AbortSignal.timeout(10000) });
+        if (version === pantryLoadVersion && pantryDialog.open) renderPantry(items);
+      } catch (error) {
+        if (version === pantryLoadVersion && pantryDialog.open) throw error;
+      }
     }
     function pantryError(error) { const node = document.getElementById('pantry-error'); node.textContent = error.message; node.hidden = false; }
     document.getElementById('open-pantry').addEventListener('click', async () => {
+      if (pantryBusy) return;
       resetPantryEditor(); document.getElementById('pantry-editor').open = false; document.getElementById('pantry-error').hidden = true;
       document.getElementById('pantry-list').textContent = 'Chargement…';
       const names = [...new Set(state.recipes.flatMap(recipe => recipe.ingredients.map(item => item.name)))].sort((a,b) => a.localeCompare(b, 'fr'));
       document.getElementById('pantry-foods').innerHTML = names.map(name => `<option value="${escapeHtml(name)}">`).join('');
       pantryDialog.showModal(); try { await loadPantry(); } catch (error) { pantryError(error); }
     });
-    document.getElementById('close-pantry').addEventListener('click', () => pantryDialog.close());
+    document.getElementById('close-pantry').addEventListener('click', () => { if (!pantryBusy) pantryDialog.close(); });
+    pantryDialog.addEventListener('cancel', event => { if (pantryBusy) event.preventDefault(); });
     document.getElementById('pantry-list').addEventListener('click', event => {
+      if (pantryBusy) return;
       const button = event.target.closest('[data-pantry]'); if (!button) return;
       const item = pantryItems.find(row => row.id === Number(button.dataset.pantry)); if (!item) return;
       pantryEditingId = item.id;
@@ -1051,20 +1063,44 @@
       document.querySelector('#pantry-editor summary').textContent = 'Mettre à jour ce lot'; document.getElementById('pantry-editor').open = true;
       document.getElementById('pantry-amount').focus();
     });
-    document.getElementById('new-pantry-item').addEventListener('click', () => { resetPantryEditor(); document.getElementById('pantry-name').focus(); });
-    document.getElementById('pantry-form').addEventListener('submit', async event => {
-      event.preventDefault(); const button = event.submitter; if (button.disabled) return; button.disabled = true;
+    document.getElementById('new-pantry-item').addEventListener('click', () => { if (pantryBusy) return; resetPantryEditor(); document.getElementById('pantry-name').focus(); });
+    async function savePantry(remove = false) {
+      if (pantryBusy || (remove && !pantryEditingId)) return;
+      const form = document.getElementById('pantry-form');
+      if (!remove && !form.reportValidity()) return;
+      if (remove && !confirm('Retirer ce lot du placard ?')) return;
+      pantryBusy = true;
+      pantryLoadVersion++;
+      const fields = document.getElementById('pantry-fields'), list = document.getElementById('pantry-list');
+      const button = remove ? document.getElementById('delete-pantry-item') : form.querySelector('[type="submit"]');
+      const label = button.textContent;
+      fields.disabled = true; list.inert = true;
+      document.getElementById('close-pantry').disabled = true;
+      form.setAttribute('aria-busy', 'true');
+      button.textContent = remove ? 'Retrait en cours…' : 'Enregistrement…';
       document.getElementById('pantry-error').hidden = true;
+      let saved = false;
       try {
-        await api('/api/pantry', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...(pantryEditingId ? { id: pantryEditingId } : { newLot: true }), name: document.getElementById('pantry-name').value, unit: document.getElementById('pantry-unit').value, amount: Number(document.getElementById('pantry-amount').value), useBy: document.getElementById('pantry-use-by').value || null }) });
-        await loadPantry(); await load(); resetPantryEditor(); document.getElementById('pantry-editor').open = false;
-      } catch (error) { pantryError(error); } finally { button.disabled = false; }
-    });
-    document.getElementById('delete-pantry-item').addEventListener('click', async event => {
-      if (!pantryEditingId) return; const button = event.currentTarget; button.disabled = true;
-      try { await api(`/api/pantry/${pantryEditingId}`, { method: 'DELETE' }); await loadPantry(); await load(); resetPantryEditor(); document.getElementById('pantry-editor').open = false; }
-      catch (error) { pantryError(error); } finally { button.disabled = false; }
-    });
+        const items = await api(remove ? `/api/pantry/${pantryEditingId}` : '/api/pantry', { method: remove ? 'DELETE' : 'POST', headers: { 'content-type': 'application/json' },
+          ...(remove ? {} : { body: JSON.stringify({ ...(pantryEditingId ? { id: pantryEditingId } : { newLot: true }), name: document.getElementById('pantry-name').value, unit: document.getElementById('pantry-unit').value, amount: Number(document.getElementById('pantry-amount').value), useBy: document.getElementById('pantry-use-by').value || null }) }), signal: AbortSignal.timeout(15000) });
+        saved = true;
+        renderPantry(items); resetPantryEditor(); document.getElementById('pantry-editor').open = false;
+        await load();
+      } catch (error) {
+        pantryError(new Error(saved
+          ? 'Le placard est à jour, mais les courses n’ont pas pu être actualisées. Ferme le placard puis utilise « Réessayer », sans refaire la modification.'
+          : ['TimeoutError', 'TypeError', 'SyntaxError'].includes(error.name)
+            ? 'La modification n’a pas pu être confirmée. Ta saisie est conservée. Ferme puis rouvre le placard pour vérifier le stock avant de réessayer : le serveur a peut-être reçu la demande.'
+            : error.message));
+      } finally {
+        pantryBusy = false; fields.disabled = false; list.inert = false;
+        document.getElementById('close-pantry').disabled = false;
+        form.setAttribute('aria-busy', 'false'); button.textContent = label;
+        if (saved) document.querySelector('#pantry-editor summary').focus();
+      }
+    }
+    document.getElementById('pantry-form').addEventListener('submit', event => { event.preventDefault(); savePantry(); });
+    document.getElementById('delete-pantry-item').addEventListener('click', () => savePantry(true));
     let organizingShopping = false;
     let shoppingSyncRunning = false, shoppingInteraction = false;
     function canSyncShopping() {
