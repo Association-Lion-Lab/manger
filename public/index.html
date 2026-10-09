@@ -349,17 +349,21 @@
     .recipe-page-actions { display: flex; flex: none; gap: 7px; }
     .recipe-search-field { display: flex; align-items: center; gap: 10px; min-height: 54px; margin: 20px 0 26px; padding: 0 16px; border: 1px solid var(--line); border-radius: 18px; color: var(--accent); background: var(--surface); }
     .recipe-search-field:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
-    .recipe-season-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin: -12px 0 24px; }
-    .recipe-season-tools button { min-height: 44px; padding: 10px 16px; border-radius: 24px; background: var(--surface); color: var(--text); border: 1px solid var(--line); }
+    .recipe-season-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: -12px 0 20px; }
+    .recipe-season-tools button { min-height: 44px; padding: 10px 12px; border-radius: 24px; background: var(--surface); color: var(--text); border: 1px solid var(--line); cursor: pointer; font-size: 1rem; }
     .recipe-season-tools button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
-    .recipe-season-tools label { display: flex; align-items: center; gap: 8px; color: var(--muted); }
-    .recipe-season-tools select { min-height: 44px; max-width: 100%; color: var(--text); background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 8px 12px; }
+    #recipe-season-filter[aria-pressed="false"] .filter-check { display: none; }
+    .recipe-season-tools label { display: flex; align-items: center; gap: 8px; color: var(--muted); min-width: 0; }
+    .recipe-season-tools select { min-height: 44px; min-width: 0; max-width: 100%; color: var(--text); background: var(--surface); border: 1px solid var(--line); border-radius: 24px; padding: 8px 12px; font-size: 1rem; }
+    #recipe-season-month-field { flex-basis: 100%; font-size: .875rem; }
+    #recipe-season-month { flex: 1; }
+    #reset-recipe-filters { margin: -8px 0 16px; padding: 8px 0; font-size: .875rem; }
     #recipe-season-note { margin: 0 0 24px; }
     #recipe-season-note summary { color: var(--muted); font-size: 13px; min-height: 44px; cursor: pointer; }
     #recipe-search { width: 100%; min-width: 0; min-height: 52px; padding: 0; border: 0; outline: 0; color: var(--text); background: transparent; font-size: 16px; }
     #recipe-search::placeholder { color: var(--muted); opacity: 1; }
-    .recipe-time-filter { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin: -14px 0 22px; color: var(--muted); font-size: 14px; }
-    .recipe-time-filter select { min-width: 138px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 14px; color: var(--text); background: var(--surface); font-size: 16px; }
+    .recipe-time-filter { flex: 1 1 8rem; }
+    .recipe-time-filter select { width: 100%; }
     .recipe-block-heading { margin: 28px 0 16px; }
     .recipe-block-heading h2 { font-size: 20px; }
     .recipe-spotlight { display: flex; gap: 14px; margin: 0 -24px; padding: 0 24px 10px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }
@@ -489,8 +493,12 @@
           <div class="recipe-page-actions"><button id="import-recipes" class="icon-button" type="button" aria-label="Importer une recette">⇩</button><button id="new-recipe" class="icon-button" type="button" aria-label="Ajouter une recette">＋</button></div>
         </div>
         <label class="recipe-search-field" for="recipe-search"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg><input id="recipe-search" type="search" placeholder="Un plat, un ingrédient…" autocomplete="off"><span class="sr-only">Chercher une recette</span></label>
-        <label id="recipe-time-filter-field" class="recipe-time-filter" hidden><span>Temps max</span><select id="recipe-time-filter"><option value="">Tous les temps</option><option value="30">30 min</option><option value="45">45 min</option><option value="60">1 heure</option></select></label>
-        <div class="recipe-season-tools"><button id="recipe-season-filter" type="button" aria-pressed="false" aria-controls="recipes recipe-season-month-field recipe-season-note">🌿 De saison</button><label id="recipe-season-month-field" hidden><span>Mois</span><select id="recipe-season-month" aria-label="Mois des recettes de saison"></select></label></div>
+        <div class="recipe-season-tools" role="group" aria-label="Filtrer les recettes">
+          <label id="recipe-time-filter-field" class="recipe-time-filter"><span class="sr-only">Durée maximale de la recette</span><select id="recipe-time-filter"><option value="">Toutes durées</option><option value="30">30 min max</option><option value="45">45 min max</option><option value="60">1 h max</option></select></label>
+          <button id="recipe-season-filter" type="button" aria-pressed="false" aria-controls="recipes recipe-season-month-field recipe-season-note"><span aria-hidden="true">🌿</span> De saison <span class="filter-check" aria-hidden="true">✓</span></button>
+          <label id="recipe-season-month-field" hidden><span>Mois</span><select id="recipe-season-month" aria-label="Mois des recettes de saison"></select></label>
+        </div>
+        <button id="reset-recipe-filters" class="text-action" type="button" hidden>Réinitialiser les filtres</button>
         <details id="recipe-season-note" hidden><summary>Fruits et légumes du mois · repères indicatifs</summary><p class="muted">Repères pour les fruits et légumes identifiés, en France métropolitaine. Couverture partielle, variable selon la région. Les produits transformés ne sont pas évalués. <a href="https://www.mangerbouger.fr/manger-mieux/bien-manger-sans-se-ruiner/calendrier-de-saison" target="_blank" rel="noopener noreferrer">Calendrier de référence</a></p></details>
         <p id="recipe-feedback" class="error" role="alert" hidden></p>
         <div id="recipe-discovery">
@@ -1088,7 +1096,7 @@
       document.getElementById('recipes-back').hidden = !category;
       document.getElementById('recipe-count').textContent = query || category || seasonal || Number.isFinite(maxMinutes) ? `${filtered.length} recette${filtered.length > 1 ? 's' : ''}` : `${state.recipes.length} recettes à explorer`;
       search.placeholder = category ? `Chercher dans ${title.toLocaleLowerCase('fr')}…` : 'Un plat, un ingrédient…';
-      document.getElementById('recipe-time-filter-field').hidden = !(query || category || seasonal || Number.isFinite(maxMinutes));
+      document.getElementById('reset-recipe-filters').hidden = !(query || seasonal || Number.isFinite(maxMinutes));
       document.getElementById('recipe-discovery').hidden = Boolean(query || category || seasonal || Number.isFinite(maxMinutes));
       document.getElementById('recipe-results-heading').hidden = Boolean(category);
       document.getElementById('recipe-results-title').textContent = seasonal ? `À cuisiner en ${seasonMonth.selectedOptions[0].textContent}` : query || Number.isFinite(maxMinutes) ? 'Résultats de recherche' : 'Toutes les recettes';
@@ -2544,6 +2552,13 @@
     document.getElementById('new-recipe').addEventListener('click', () => openRecipeEditor());
     document.getElementById('recipe-search').addEventListener('input', renderRecipes);
     document.getElementById('recipe-time-filter').addEventListener('change', renderRecipes);
+    document.getElementById('reset-recipe-filters').addEventListener('click', () => {
+      document.getElementById('recipe-search').value = '';
+      document.getElementById('recipe-time-filter').value = '';
+      document.getElementById('recipe-season-filter').setAttribute('aria-pressed', 'false');
+      renderRecipes();
+      document.getElementById('recipe-time-filter').focus();
+    });
     document.getElementById('recipe-season-month').addEventListener('change', renderRecipes);
     document.getElementById('recipe-season-filter').addEventListener('click', event => {
       const button = event.currentTarget;

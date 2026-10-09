@@ -27,6 +27,8 @@ Vérification : tests Node et parcours navigateur sur base isolée. Le rendu a �
 
 ## Lot implémenté — octobre 2026
 
+- Filtres de recettes affinés le 9 octobre : durée disponible dès l'ouverture à côté de De saison, mois sur une ligne séparée uniquement quand utile, état saisonnier marqué par une coche et remise à zéro visible seulement avec des critères actifs. Recherche, durée et saison réinitialisées sans quitter l'univers ou les favoris ; mois conservé. Sélecteurs natifs et calculs existants réutilisés selon Apple Design et Ponytail, sans fenêtre supplémentaire, stockage de recherche ni dépendance. Suite Node : 115 tests réussis, un test HTTPS ignoré faute d'OpenSSL. Contrôle Chromium sur base isolée : durée sans recherche, combinaisons mois/univers/recherche/durée, résultat vide, réinitialisation et focus, 320/390/760 px clair/sombre et texte doublé. Essai réel Safari/iPhone et déploiement Ubuntu à effectuer.
+
 - Fiche recette mobile affinée le 9 octobre : favoris et fermeture accessibles après défilement, titre non comprimé par les boutons, portions compactes et actions Planifier/Cuisiner avant les ingrédients. Liste quantifiée aérée, étapes numérotées conservées, gestion secondaire explicitement nommée. Réouverture au début de la fiche et aide des portions repliée ; rappel visible que le menu reste inchangé. Contrôles natifs, palette claire/sombre existante et calculs conservés selon Apple Design et Ponytail, sans dépendance, migration ni photo de démonstration en production. Suite Node : 114 tests réussis, un test HTTPS ignoré faute d'OpenSSL. Parcours Chromium sur base isolée : avec/sans photo, portions et erreurs, favoris persistants, cuisine, choix de date, édition, fermeture après défilement et Escape ; 320/390/760 px clair/sombre et texte doublé contrôlés. Validation Safari/iPhone et mise à jour Ubuntu à effectuer.
 
 - Recettes de saison : filtre facultatif dans Recettes, choix du mois, combinaison avec univers, favoris, recherche et durée. Repères locaux et partiels sur les fruits et légumes identifiés, calendrier mensuel Manger Bouger ; aucun changement des recettes ni du planning. Produits transformés et ingrédients inconnus non évalués. La régionalisation reste différée.
@@ -78,7 +80,7 @@ L'utilisateur indique avoir testé les P1 le 1er octobre 2026, sans préciser la
 
 ## P3 — Évolutions différées
 
-- Terminer la refonte mobile de Semaine, Recettes, Courses et Compte : première intégration de la maquette validée effectuée sur `development` (navigation, thèmes et assiettes distinctes). Restent la validation iPhone/Android sur serveur, la finition de la fiche et des filtres de recettes. Direction et limites dans [DESIGN-REFONTE.md](DESIGN-REFONTE.md).
+- Valider la refonte mobile de Semaine, Recettes, Courses et Compte : première intégration de la maquette validée effectuée sur `development` (navigation, thèmes et assiettes distinctes), fiche et filtres affinés le 9 octobre. Restent la validation iPhone/Android sur serveur et les ajustements issus de ces essais. Direction et limites dans [DESIGN-REFONTE.md](DESIGN-REFONTE.md).
 - Concevoir les interfaces tablette et PC : exploiter la largeur pour le planning et les recettes, adapter la navigation au tactile et au clavier/souris. Les contrôles actuels de largeur ne constituent pas encore ces interfaces.
 - Ajouter le coût indicatif des recettes et de la semaine à partir de prix renseignés.
 - Ajouter la saisonnalité selon la région choisie.
