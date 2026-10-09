@@ -2383,22 +2383,32 @@
     let shoppingDrag = null;
     let suppressShoppingClick = false;
     async function moveShoppingItem(item, aisle) {
+      if (shoppingEditBusy || !item) return;
+      shoppingEditBusy = true;
+      const week = key(state.weekStart);
       const container = document.getElementById('shopping');
       container.inert = true;
       document.getElementById('organize-shopping').disabled = true;
       document.getElementById('shopping-error').hidden = true;
+      let saved = false;
       try {
-        const response = await fetch('/api/shopping-aisles', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ weekStart: key(state.weekStart), name: item.name, unit: item.unit, manualId: item.manualId, aisle }) });
-        if (!response.ok) throw new Error((await response.json()).error);
-        await load();
+        const response = await fetch('/api/shopping-aisles', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ weekStart: week, name: item.name, unit: item.unit, manualId: item.manualId, aisle }), signal: AbortSignal.timeout(15000) });
+        if (!response.ok) throw new Error((await response.json().catch(() => null))?.error || 'Le déplacement a été refusé. Le rayon précédent est conservé.');
+        saved = true;
+        if (week !== key(state.weekStart)) return;
+        if (!await load()) throw new Error('Lecture remplacée');
         if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
           const index = state.shopping.findIndex(candidate => item.manualId ? candidate.manualId === item.manualId : !candidate.manualId && candidate.name === item.name && candidate.unit === item.unit);
           document.querySelector(`[data-shopping-handle="${index}"]`)?.parentElement.animate([{ background: 'var(--accent-soft)', transform: 'translateY(8px)' }, { background: 'transparent', transform: 'translateY(0)' }], { duration: 180, easing: 'ease-out' });
         }
         shoppingMoveDialog.close();
         document.getElementById('organize-shopping').focus();
-      } catch (error) { shoppingError(error); shoppingMoveDialog.close(); }
-      finally { container.inert = false; document.getElementById('organize-shopping').disabled = false; document.getElementById('organize-shopping').focus(); }
+      } catch (error) {
+        if (week === key(state.weekStart)) shoppingError(new Error(saved
+          ? 'Le rayon est enregistré, mais les courses n’ont pas pu être actualisées. Utilise Réessayer dans la semaine, sans refaire le déplacement.'
+          : ['TypeError', 'TimeoutError', 'AbortError'].includes(error.name) ? 'Impossible de confirmer le déplacement. Recharge les courses avant de réessayer : le serveur a peut-être reçu la demande.' : error.message));
+        shoppingMoveDialog.close();
+      } finally { shoppingEditBusy = false; container.inert = false; document.getElementById('organize-shopping').disabled = false; document.getElementById('organize-shopping').focus(); }
     }
     document.getElementById('shopping').addEventListener('click', event => {
       if (shoppingEditBusy) return;
@@ -2456,6 +2466,7 @@
     document.getElementById('shopping-edit-form').addEventListener('submit', event => { event.preventDefault(); saveShoppingEdit(); });
     document.getElementById('delete-shopping-item').addEventListener('click', () => saveShoppingEdit(true));
     document.getElementById('shopping').addEventListener('pointerdown', event => {
+      if (shoppingEditBusy) return;
       const handle = event.target.closest('[data-shopping-handle]');
       if (!handle || event.button !== 0) return;
       suppressShoppingClick = false;
