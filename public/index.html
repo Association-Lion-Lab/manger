@@ -1206,9 +1206,11 @@
     document.getElementById('pantry-form').addEventListener('submit', event => { event.preventDefault(); savePantry(); });
     document.getElementById('delete-pantry-item').addEventListener('click', () => savePantry(true));
     let organizingShopping = false;
+    const pendingShoppingChecks = new Map();
+    function shoppingCheckKey(item, week = key(state.weekStart)) { return JSON.stringify([week, item.manualId ?? null, item.name, item.unit]); }
     let shoppingSyncRunning = false, shoppingInteraction = false;
     function canSyncShopping() {
-      return !document.hidden && !document.getElementById('shopping-panel').hidden && !organizingShopping && !shoppingInteraction && !pendingLoads && !document.querySelector('dialog[open], #shopping-panel :disabled');
+      return !document.hidden && !document.getElementById('shopping-panel').hidden && !organizingShopping && !shoppingInteraction && !pendingLoads && !pendingShoppingChecks.size && !document.querySelector('dialog[open], #shopping-panel :disabled');
     }
     async function syncShopping() {
       if (shoppingSyncRunning || !canSyncShopping()) return;
@@ -1253,8 +1255,9 @@
         const groups = new Map();
         rows.forEach(({ item, index }) => {
           const aisle = shoppingAisle(item);
+          const checkKey = shoppingCheckKey(item), pending = pendingShoppingChecks.has(checkKey);
           if (!groups.has(aisle)) groups.set(aisle, []);
-          groups.get(aisle).push(`<div style="display:flex;gap:8px;align-items:center"><label class="shopping-item" style="flex:1;min-width:0"><input type="checkbox" data-shopping="${index}"${item.checked ? ' checked' : ''}><span>${escapeHtml(shoppingText(item))}${item.manualId ? ' · ajouté' : ''}</span></label>${item.manualId ? `<button type="button" class="icon-button" data-edit-shopping="${item.manualId}" aria-label="Modifier ${escapeHtml(item.name)}">✎</button>` : ''}</div>`);
+          groups.get(aisle).push(`<div style="display:flex;gap:8px;align-items:center"><label class="shopping-item" style="flex:1;min-width:0"><input type="checkbox" data-shopping="${index}"${(pendingShoppingChecks.get(checkKey) ?? item.checked) ? ' checked' : ''}${pending ? ' disabled aria-busy="true"' : ''}><span>${escapeHtml(shoppingText(item))}${item.manualId ? ' · ajouté' : ''}</span></label>${item.manualId ? `<button type="button" class="icon-button" data-edit-shopping="${item.manualId}" aria-label="Modifier ${escapeHtml(item.name)}">✎</button>` : ''}</div>`);
         });
         return [...groups].sort(([a], [b]) => a.localeCompare(b, 'fr')).map(([aisle, items]) => `<section class="shopping-group"><h2 class="group-title">${escapeHtml(aisle)}</h2>${items.join('')}</section>`).join('');
       };
@@ -2347,16 +2350,28 @@
     document.getElementById('share').addEventListener('click', shareShopping);
     document.getElementById('shopping').addEventListener('change', async event => {
       const checkbox = event.target.closest('[data-shopping]');
-      if (!checkbox) return;
+      if (!checkbox || checkbox.disabled) return;
       const item = state.shopping[Number(checkbox.dataset.shopping)];
-      checkbox.disabled = true;
+      if (!item) return;
+      const week = key(state.weekStart), checkKey = shoppingCheckKey(item, week), checked = checkbox.checked;
+      if (pendingShoppingChecks.has(checkKey)) return;
+      pendingShoppingChecks.set(checkKey, checked); shoppingSyncVersion++;
+      checkbox.disabled = true; checkbox.setAttribute('aria-busy', 'true');
       try {
-        const response = await fetch('/api/shopping-checks', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ weekStart: key(state.weekStart), name: item.name, unit: item.unit, manualId: item.manualId, checked: checkbox.checked }) });
-        if (!response.ok) throw new Error((await response.json()).error);
-        item.checked = checkbox.checked;
-        renderShopping();
-      } catch (error) { checkbox.checked = item.checked; shoppingError(error); }
-      finally { checkbox.disabled = false; }
+        const response = await fetch('/api/shopping-checks', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ weekStart: week, name: item.name, unit: item.unit, manualId: item.manualId, checked }), signal: AbortSignal.timeout(15000) });
+        if (!response.ok) throw new Error((await response.json().catch(() => null))?.error || 'La coche a été refusée. La liste précédente est conservée.');
+        if (week !== key(state.weekStart)) return;
+        const current = state.shopping.find(candidate => shoppingCheckKey(candidate, week) === checkKey);
+        if (current) current.checked = checked;
+        saveOfflineShopping();
+      } catch (error) {
+        if (week === key(state.weekStart)) shoppingError(new Error(['TypeError', 'TimeoutError', 'AbortError'].includes(error.name)
+          ? 'Impossible de confirmer la coche. La liste précédente est conservée ; recharge-la avant de réessayer : le serveur a peut-être reçu la demande.' : error.message));
+      } finally {
+        pendingShoppingChecks.delete(checkKey); shoppingSyncVersion++;
+        checkbox.disabled = false; checkbox.setAttribute('aria-busy', 'false');
+        if (week === key(state.weekStart)) renderShopping();
+      }
     });
     function shoppingError(error) {
       const message = document.getElementById('shopping-error');
