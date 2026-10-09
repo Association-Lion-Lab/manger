@@ -16,7 +16,7 @@ function editor() {
   Object.entries(values).forEach(([id, value]) => node(id).value = value);
   node('save-protein').textContent = 'Ajouter la protéine'; node('delete-protein').textContent = 'Retirer cette protéine';
   let resolve, reject, reloads = 0, cleared = 0, confirmations = 0;
-  const context = { proteinBusy: false, editingProteinId: null, state: { proteins: [{ id: 7, name: 'tofu fumé' }] }, AbortSignal,
+  const context = { proteinBusy: false, memberBusy: false, editingProteinId: null, state: { proteins: [{ id: 7, name: 'tofu fumé' }] }, AbortSignal,
     householdDialog: { open: true }, document: { getElementById: node },
     confirm: () => { confirmations++; return context.accept; }, accept: true,
     fetch(path, options) { calls.push({ path, options }); return new Promise((yes, no) => { resolve = yes; reject = no; }); },
@@ -85,6 +85,7 @@ test('protéines : retrait confirmé, annulation sans requête et clics protég�
   assert.equal(form.node('protein-status').textContent, 'Protéine retirée.');
   assert.equal(form.node('delete-protein').textContent, 'Retirer cette protéine');
   const html = readFileSync(join(__dirname, 'public/index.html'), 'utf8');
-  assert.match(html, /function openMemberEditor\(member\) \{\s+if \(proteinBusy\) return;/);
-  assert.match(html, /householdDialog.addEventListener\('cancel', event => \{ if \(proteinBusy\) event.preventDefault\(\); \}\)/);
+  assert.match(html, /function openMemberEditor\(member\) \{\s+if \(proteinBusy \|\| memberBusy\) return;/);
+  assert.match(html, /householdDialog.addEventListener\('cancel', event => \{ if \(proteinBusy \|\| memberBusy\) event.preventDefault\(\); \}\)/);
+  form.context.memberBusy = true; await form.save(); await form.save(true); assert.equal(form.calls.length, 1);
 });

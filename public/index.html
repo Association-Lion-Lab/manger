@@ -2758,8 +2758,8 @@
       } catch (error) { status.textContent = error.message; }
       finally { button.disabled = false; }
     });
-    document.getElementById('close-household').addEventListener('click', () => { if (!proteinBusy) householdDialog.close(); });
-    householdDialog.addEventListener('cancel', event => { if (proteinBusy) event.preventDefault(); });
+    document.getElementById('close-household').addEventListener('click', () => { if (!proteinBusy && !memberBusy) householdDialog.close(); });
+    householdDialog.addEventListener('cancel', event => { if (proteinBusy || memberBusy) event.preventDefault(); });
     const memberDialog = document.getElementById('member-dialog');
     let memberStep = 0, memberBusy = false;
     function memberTastes() { return document.getElementById('member-avoided').value.split(',').map(word => word.trim()).filter(Boolean); }
@@ -2803,7 +2803,7 @@
       document.getElementById('member-question').focus({ preventScroll: true });
     }
     function openMemberEditor(member) {
-      if (proteinBusy) return;
+      if (proteinBusy || memberBusy) return;
       clearMemberEditor();
       document.getElementById('member-status').textContent = '';
       if (member) {
@@ -2840,6 +2840,8 @@
       memberBusy = value;
       document.getElementById('member-fields').disabled = value;
       document.getElementById('member-back').disabled = document.getElementById('close-member').disabled = value;
+      document.getElementById('new-member').disabled = document.getElementById('close-household').disabled = value;
+      document.getElementById('member-list').inert = document.getElementById('protein-list').inert = value;
       memberDialog.setAttribute('aria-busy', String(value));
     }
     document.getElementById('member-form').addEventListener('submit', async event => {
@@ -2853,10 +2855,10 @@
       setMemberBusy(true); memberError('');
       try {
         const response = await fetch(editingMemberId ? `/api/members/${editingMemberId}` : '/api/members', { method: editingMemberId ? 'PUT' : 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: document.getElementById('member-name').value, diet: document.getElementById('member-diet').value, avoidedIngredients: memberTastes() }), signal: AbortSignal.timeout(15000) });
-        if (!response.ok) throw new Error((await response.json()).error || 'Le profil n’a pas pu être enregistré.');
+        if (!response.ok) throw new Error((await response.json().catch(() => null))?.error || 'Le profil n’a pas pu être enregistré. La saisie est conservée.');
         memberDialog.close(); clearMemberEditor(); householdDialog.showModal();
         document.getElementById('member-status').textContent = 'Profil enregistré.';
-        try { await load(); } catch { document.getElementById('member-status').textContent = 'Profil enregistré. L’affichage n’a pas pu être actualisé : utilise Réessayer dans la semaine, sans recréer ce profil.'; }
+        try { if (!await load()) throw new Error('Lecture remplacée'); } catch { document.getElementById('member-status').textContent = 'Profil enregistré. L’affichage n’a pas pu être actualisé : utilise Réessayer dans la semaine, sans recréer ce profil.'; }
       } catch (error) { memberError(error.name === 'TypeError' || error.name === 'TimeoutError' ? 'Impossible de confirmer l’enregistrement. La saisie est conservée : vérifie les personnes du foyer avant un nouvel essai.' : error.message); }
       finally { setMemberBusy(false); }
     });
@@ -2873,15 +2875,15 @@
       setMemberBusy(true); memberError('');
       try {
         const response = await fetch(`/api/members/${member.id}`, { method: 'DELETE', signal: AbortSignal.timeout(15000) });
-        if (!response.ok) throw new Error((await response.json()).error);
+        if (!response.ok) throw new Error((await response.json().catch(() => null))?.error || 'Le retrait a été refusé. Le profil est conservé.');
         memberDialog.close(); clearMemberEditor(); householdDialog.showModal();
         document.getElementById('member-status').textContent = 'Personne retirée du foyer.';
-        try { await load(); } catch { document.getElementById('member-status').textContent = 'Personne retirée. L’affichage n’a pas pu être actualisé : utilise Réessayer dans la semaine.'; }
-      } catch (error) { memberError(error.message); }
+        try { if (!await load()) throw new Error('Lecture remplacée'); } catch { document.getElementById('member-status').textContent = 'Personne retirée. L’affichage n’a pas pu être actualisé : utilise Réessayer dans la semaine, sans refaire le retrait.'; }
+      } catch (error) { memberError(error.name === 'TypeError' || error.name === 'TimeoutError' ? 'Impossible de confirmer le retrait. Le profil affiché est conservé : vérifie les personnes du foyer avant un nouvel essai.' : error.message); }
       finally { setMemberBusy(false); }
     });
     async function saveProtein(remove = false) {
-      if (proteinBusy) return;
+      if (proteinBusy || memberBusy) return;
       const form = document.getElementById('protein-form'), proteinId = editingProteinId;
       const protein = state.proteins.find(item => item.id === proteinId);
       if (remove ? !protein || !confirm(`Retirer ${protein.name} du bar à protéines ?`) : !form.reportValidity()) return;
