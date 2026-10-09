@@ -555,7 +555,7 @@ test('planifier un repas bloque les doubles appuis, garde les choix après un é
   context.reply = async () => { throw { name: 'TimeoutError' }; };
   await save(payload); assert.match(node('dialog-error').textContent, /Connexion interrompue/);
   context.reply = async () => ({ ok: false, json: async () => { throw new Error('HTML'); } });
-  await save(payload); assert.match(node('dialog-error').textContent, /refusé par le serveur/);
+  await save(payload); assert.match(node('dialog-error').textContent, /refusée par le serveur/);
   assert.deepEqual(JSON.parse(request.body), payload);
   context.reply = async () => ({ ok: true }); failRefresh = true;
   await save(payload); assert.equal(calls, 5); assert.equal(closes, 1); assert.equal(refreshes, 1);

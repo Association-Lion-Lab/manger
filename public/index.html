@@ -1346,9 +1346,8 @@
       document.getElementById('choices').innerHTML = `<form id="placement-form" class="recipe-form"><label class="field"><span>Action</span><select id="placement-action"><option value="move">Déplacer ce repas</option>${source.leftoverOf ? '' : '<option value="copy">Copier ce repas</option>'}</select></label><label class="field"><span>Jour</span><input id="placement-date" type="date" value="${source.date}" required></label><label class="field"><span>Repas</span><select id="placement-slot"><option value="midi">Midi</option><option value="soir">Soir</option></select></label><button class="primary" type="submit">Valider</button></form>`;
       document.getElementById('placement-slot').value = source.slot;
       document.getElementById('placement-form').addEventListener('submit', async event => {
-        event.preventDefault(); const button = event.submitter; if (button.disabled) return; button.disabled = true;
-        try { await api(`/api/meals/${sourceId}/placement`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: document.getElementById('placement-action').value, date: document.getElementById('placement-date').value, slot: document.getElementById('placement-slot').value, sourceDate: source.date, sourceSlot: source.slot }) }); dialog.close(); await load(); }
-        catch (error) { const node = document.getElementById('dialog-error'); node.textContent = error.message; node.hidden = false; } finally { button.disabled = false; }
+        event.preventDefault();
+        await postMeal({ action: document.getElementById('placement-action').value, date: document.getElementById('placement-date').value, slot: document.getElementById('placement-slot').value, sourceDate: source.date, sourceSlot: source.slot }, `/api/meals/${sourceId}/placement`);
       });
     }
     function openLeftovers(sourceId) {
@@ -1360,12 +1359,9 @@
       const dishes = source.dishes?.length ? `<div><span class="muted">Quelles assiettes conserver ?</span>${source.dishes.map(dish => { const member = state.members.find(item => item.id === dish.memberId), recipe = state.recipes.find(item => item.id === dish.recipeId), protein = state.proteins.find(item => item.id === dish.proteinId); return `<div class="assignment" data-leftover-dish="${dish.memberId}"><label><input type="checkbox" checked><span><strong>${escapeHtml(member?.name || 'Personne')}</strong><small class="muted">${escapeHtml(recipe?.title || 'Recette')} · ${escapeHtml(protein?.name || 'sans supplément')}</small></span></label><label class="field"><span>Portions</span><input data-leftover-portions type="number" min="1" max="20" value="1" required></label></div>`; }).join('')}</div>` : `<label class="field"><span>Portions à garder</span><input id="leftovers-people" type="number" min="1" max="${100 - source.people - source.extraPortions}" value="2" required></label>`;
       document.getElementById('choices').innerHTML = `<form id="leftovers-form" class="recipe-form"><label class="field"><span>Pour quel jour ?</span><input id="leftovers-date" type="date" min="${source.date}" value="${key(next)}" required></label><div class="form-grid"><label class="field"><span>Repas</span><select id="leftovers-slot"><option value="midi">Midi</option><option value="soir">Soir</option></select></label>${source.dishes?.length ? '' : dishes}</div>${source.dishes?.length ? dishes : ''}<p class="muted">Ces portions seront ajoutées aux quantités du repas où tu cuisines. Choisis une date adaptée à la conservation de chaque plat.</p><button type="submit" class="primary">Planifier les restes</button></form>`;
       document.getElementById('leftovers-form').addEventListener('submit', async event => {
-        event.preventDefault(); const button = event.submitter; if (button.disabled) return; button.disabled = true;
-        try {
-          const dishes = [...document.querySelectorAll('[data-leftover-dish]')].filter(row => row.querySelector('input[type="checkbox"]').checked).map(row => ({ memberId: Number(row.dataset.leftoverDish), portions: Number(row.querySelector('[data-leftover-portions]').value) }));
-          await api('/api/meals/leftovers', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ sourceId, date: document.getElementById('leftovers-date').value, slot: document.getElementById('leftovers-slot').value, people: Number(document.getElementById('leftovers-people')?.value), dishes }) });
-          dialog.close(); await load();
-        } catch (error) { const node = document.getElementById('dialog-error'); node.textContent = error.message; node.hidden = false; } finally { button.disabled = false; }
+        event.preventDefault();
+        const dishes = [...document.querySelectorAll('[data-leftover-dish]')].filter(row => row.querySelector('input[type="checkbox"]').checked).map(row => ({ memberId: Number(row.dataset.leftoverDish), portions: Number(row.querySelector('[data-leftover-portions]').value) }));
+        await postMeal({ sourceId, date: document.getElementById('leftovers-date').value, slot: document.getElementById('leftovers-slot').value, people: Number(document.getElementById('leftovers-people')?.value), dishes }, '/api/meals/leftovers');
       });
     }
 
@@ -1728,19 +1724,19 @@
       });
     }
 
-    async function postMeal(payload) {
+    async function postMeal(payload, path = '/api/meals', method = 'POST') {
       const fields = document.getElementById('meal-fields');
       if (fields.disabled) return;
       const close = document.getElementById('close-dialog'), message = document.getElementById('dialog-error');
       const subtitle = document.getElementById('dialog-subtitle'), previous = subtitle.textContent, focused = document.activeElement;
       fields.disabled = true; close.disabled = true;
-      fields.setAttribute('aria-busy', 'true'); subtitle.textContent = 'Enregistrement…'; message.hidden = true;
+      fields.setAttribute('aria-busy', 'true'); subtitle.textContent = method === 'DELETE' ? 'Retrait en cours…' : 'Enregistrement…'; message.hidden = true;
       let saved = false;
       try {
-        const response = await fetch('/api/meals', {
-          method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload), signal: AbortSignal.timeout(15000)
-        }).catch(() => { throw new Error('Connexion interrompue. Tes choix sont conservés. Vérifie le planning avant de réessayer : l’enregistrement a peut-être abouti.'); });
-        if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Enregistrement refusé par le serveur. Tes choix sont conservés.');
+        const response = await fetch(path, {
+          method, headers: { 'content-type': 'application/json' }, ...(method === 'DELETE' ? {} : { body: JSON.stringify(payload) }), signal: AbortSignal.timeout(15000)
+        }).catch(() => { throw new Error('Connexion interrompue. Tes choix sont conservés. Vérifie le planning avant de réessayer : la modification a peut-être abouti.'); });
+        if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Modification refusée par le serveur. Tes choix sont conservés.');
         saved = true;
         dialog.close();
       } catch (error) {
@@ -1822,10 +1818,7 @@
 
     async function deleteMeal() {
       const date = key(dateAt(state.selected));
-      const response = await fetch(`/api/meals?date=${date}&slot=${state.slot}`, { method: 'DELETE' });
-      if (!response.ok) return;
-      dialog.close();
-      await load();
+      await postMeal(null, `/api/meals?date=${date}&slot=${state.slot}`, 'DELETE');
     }
 
     function ingredientRow(ingredient = { name: '', amount: 1, unit: 'g' }) {
