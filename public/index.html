@@ -928,6 +928,7 @@
     let editingMemberId = null;
     let editingProteinId = null;
     let proteinBusy = false;
+    const pendingFavorites = new Set();
 
     function key(date) {
       const year = date.getFullYear();
@@ -1080,7 +1081,7 @@
     }
 
     function recipeFavoriteButton(recipe) {
-      return `<button class="recipe-favorite" type="button" data-favorite-recipe="${recipe.id}" aria-pressed="${Boolean(recipe.favorite)}" aria-label="${recipe.favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'} : ${escapeHtml(recipe.title)}">${recipe.favorite ? '♥' : '♡'}</button>`;
+      return `<button class="recipe-favorite" type="button" data-favorite-recipe="${recipe.id}"${pendingFavorites.has(recipe.id) ? ' disabled' : ''} aria-pressed="${Boolean(recipe.favorite)}" aria-label="${recipe.favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'} : ${escapeHtml(recipe.title)}">${recipe.favorite ? '♥' : '♡'}</button>`;
     }
 
     function renderRecipes() {
@@ -1917,6 +1918,7 @@
       else photo.removeAttribute('src');
       editingRecipeId = recipe.id;
       const favoriteButton = document.getElementById('favorite-recipe');
+      favoriteButton.disabled = pendingFavorites.has(recipe.id);
       favoriteButton.textContent = recipe.favorite ? '★ Retirer des favoris' : '☆ Ajouter aux favoris';
       favoriteButton.setAttribute('aria-pressed', String(Boolean(recipe.favorite)));
       document.getElementById('recipe-view-error').hidden = true;
@@ -2654,24 +2656,40 @@
     });
     document.getElementById('close-recipe-view').addEventListener('click', () => recipeViewDialog.close());
     async function toggleRecipeFavorite(recipe, button) {
+      if (pendingFavorites.has(recipe.id) || button.disabled) return;
+      pendingFavorites.add(recipe.id);
       button.disabled = true;
+      document.querySelectorAll(`[data-favorite-recipe="${recipe.id}"]`).forEach(control => control.disabled = true);
+      if (recipeViewDialog.open && editingRecipeId === recipe.id) document.getElementById('favorite-recipe').disabled = true;
       try {
-        const response = await fetch(`/api/recipes/${recipe.id}/favorite`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ favorite: !recipe.favorite }) });
-        if (!response.ok) throw new Error((await response.json()).error);
-        recipe.favorite = (await response.json()).favorite;
+        const response = await fetch(`/api/recipes/${recipe.id}/favorite`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ favorite: !recipe.favorite }), signal: AbortSignal.timeout(15000) })
+          .catch(() => { throw new Error('Impossible de confirmer le favori. Recharge les recettes avant de réessayer : le serveur a peut-être reçu la demande.'); });
+        if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Le serveur a refusé la modification du favori.');
+        const result = await response.json().catch(() => { throw new Error('Confirmation du favori illisible. Recharge les recettes avant de réessayer.'); });
+        if (typeof result?.favorite !== 'boolean') throw new Error('Confirmation du favori illisible. Recharge les recettes avant de réessayer.');
+        const current = state.recipes.find(item => item.id === recipe.id);
+        if (current) current.favorite = result.favorite;
+      } finally {
+        pendingFavorites.delete(recipe.id);
+        if (button.id !== 'favorite-recipe' || editingRecipeId === recipe.id) button.disabled = false;
         renderRecipes();
-      } finally { button.disabled = false; }
+        if (recipeViewDialog.open && editingRecipeId === recipe.id) {
+          const current = state.recipes.find(item => item.id === recipe.id), favorite = document.getElementById('favorite-recipe');
+          favorite.disabled = false;
+          favorite.textContent = current?.favorite ? '★ Retirer des favoris' : '☆ Ajouter aux favoris';
+          favorite.setAttribute('aria-pressed', String(Boolean(current?.favorite)));
+        }
+      }
     }
     document.getElementById('favorite-recipe').addEventListener('click', async event => {
       const recipe = state.recipes.find(item => item.id === editingRecipeId);
       if (!recipe) return;
-      const button = event.target;
+      const button = event.currentTarget;
       document.getElementById('recipe-view-error').hidden = true;
       try {
         await toggleRecipeFavorite(recipe, button);
-        button.textContent = recipe.favorite ? '★ Retirer des favoris' : '☆ Ajouter aux favoris';
-        button.setAttribute('aria-pressed', String(recipe.favorite));
       } catch (error) {
+        if (!recipeViewDialog.open || editingRecipeId !== recipe.id) return;
         const message = document.getElementById('recipe-view-error'); message.textContent = error.message; message.hidden = false;
       }
     });
