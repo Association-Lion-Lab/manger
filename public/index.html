@@ -2515,8 +2515,20 @@
     const recipeImportDialog = document.getElementById('recipe-import-dialog');
     let importPreview = [];
     let importRequest = 0;
-    document.getElementById('import-recipes').addEventListener('click', () => {
+    let importController = null;
+    function setImportBusy(busy) {
+      document.getElementById('preview-recipe-url').disabled = document.getElementById('recipe-import-file').disabled = document.getElementById('recipe-import-url').disabled = busy;
+      document.getElementById('preview-recipe-url').textContent = busy ? 'Recherche en cours…' : 'Préparer l’import';
+      recipeImportDialog.setAttribute('aria-busy', String(busy));
+    }
+    function cancelImportPreview() {
       importRequest++;
+      // shortcut: Browser cancellation leaves the server download bounded to 15 s; propagate cancellation if this occupies the import slot too often.
+      importController?.abort(); importController = null;
+      setImportBusy(false);
+    }
+    document.getElementById('import-recipes').addEventListener('click', () => {
+      cancelImportPreview();
       importPreview = [];
       document.getElementById('recipe-import-result').replaceChildren();
       document.getElementById('recipe-import-error').hidden = true;
@@ -2524,38 +2536,49 @@
       recipeImportDialog.showModal();
     });
     document.getElementById('close-recipe-import').addEventListener('click', () => recipeImportDialog.close());
-    recipeImportDialog.addEventListener('close', () => { importRequest++; });
+    recipeImportDialog.addEventListener('close', () => { if (!recipeImportDialog.open) cancelImportPreview(); });
     async function previewImport(input) {
       const button = document.getElementById('preview-recipe-url');
-      if (button.disabled) return;
+      if (button.disabled || !recipeImportDialog.open) return;
       const requestId = ++importRequest;
-      const file = document.getElementById('recipe-import-file');
+      const controller = new AbortController(); importController = controller;
+      const timeout = setTimeout(() => controller.abort(new DOMException('Import trop lent', 'TimeoutError')), 20000);
+      controller.signal.addEventListener('abort', () => clearTimeout(timeout), { once: true });
       const error = document.getElementById('recipe-import-error');
       const output = document.getElementById('recipe-import-result');
-      button.disabled = true; file.disabled = true; button.textContent = 'Recherche en cours…';
+      setImportBusy(true); importPreview = [];
       error.hidden = true; output.replaceChildren();
+      let readingFile = input.kind === 'file';
       try {
-        const response = await fetch('/api/recipes/import-preview', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(input) });
-        if (!response.ok) throw new Error((await response.json()).error);
+        if (readingFile) {
+          if (input.file.size > 1000000) throw new Error('Fichier trop volumineux (1 Mo maximum)');
+          input = { kind: 'file', data: JSON.parse(await input.file.text()) };
+          readingFile = false;
+        }
+        if (requestId !== importRequest || !recipeImportDialog.open) return;
+        if (controller.signal.aborted) throw controller.signal.reason;
+        const response = await fetch('/api/recipes/import-preview', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(input), signal: controller.signal });
+        if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Le serveur n’a pas pu préparer cette recette. Réessaie.');
         const result = await response.json();
         if (requestId !== importRequest || !recipeImportDialog.open) return;
+        if (!Array.isArray(result?.recipes) || !result.recipes.length || !Array.isArray(result.warnings)) throw new Error('La réponse du serveur est incomplète. Réessaie.');
         importPreview = result.recipes;
         output.innerHTML = `<p class="muted">${result.warnings.map(escapeHtml).join('<br>')}</p><label class="field"><span>Recette à vérifier</span><select id="recipe-import-select">${importPreview.map((recipe, index) => `<option value="${index}">${escapeHtml(recipe.title)}</option>`).join('')}</select></label><button class="primary" id="review-imported-recipe" type="button">Vérifier avant d’enregistrer</button>`;
-      } catch (failure) { if (requestId === importRequest && recipeImportDialog.open) { error.textContent = failure.message; error.hidden = false; } }
-      finally { button.disabled = false; file.disabled = false; button.textContent = 'Préparer l’import'; }
+      } catch (failure) { if (requestId === importRequest && recipeImportDialog.open) {
+        error.textContent = failure.name === 'TimeoutError' ? 'La recherche a dépassé le délai. Ton lien est conservé ; réessaie ou choisis un fichier.'
+          : failure.name === 'TypeError' ? 'Connexion interrompue. Aucun import enregistré. Réessaie quand le serveur est accessible.'
+          : failure.name === 'SyntaxError' ? readingFile ? 'Fichier JSON invalide' : 'La réponse du serveur est illisible. Réessaie.' : failure.message;
+        error.hidden = false;
+      } }
+      finally {
+        clearTimeout(timeout);
+        if (requestId === importRequest) { importController = null; setImportBusy(false); }
+      }
     }
     document.getElementById('recipe-url-form').addEventListener('submit', event => { event.preventDefault(); previewImport({ kind: 'url', url: document.getElementById('recipe-import-url').value }); });
-    document.getElementById('recipe-import-file').addEventListener('change', async event => {
+    document.getElementById('recipe-import-file').addEventListener('change', event => {
       const file = event.target.files[0]; if (!file) return;
-      const readId = ++importRequest;
-      importPreview = [];
-      document.getElementById('recipe-import-result').replaceChildren();
-      document.getElementById('recipe-import-error').hidden = true;
-      try {
-        if (file.size > 1000000) throw new Error('Fichier trop volumineux (1 Mo maximum)');
-        const data = JSON.parse(await file.text());
-        if (readId === importRequest && recipeImportDialog.open) previewImport({ kind: 'file', data });
-      } catch (failure) { if (readId === importRequest && recipeImportDialog.open) { const error = document.getElementById('recipe-import-error'); error.textContent = failure instanceof SyntaxError ? 'Fichier JSON invalide' : failure.message; error.hidden = false; } }
+      previewImport({ kind: 'file', file });
     });
     document.getElementById('recipe-import-result').addEventListener('click', event => {
       if (!event.target.closest('#review-imported-recipe')) return;
