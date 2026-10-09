@@ -1460,25 +1460,18 @@
       document.getElementById('dialog-error').hidden = true;
       document.getElementById('choices').innerHTML = `<button class="text-action" type="button" data-reuse-back>← Retour aux menus</button><form id="copy-week-form" class="recipe-form"><label class="field"><span>Une date dans la semaine à reprendre</span><input id="copy-week-date" type="date" value="${key(previous)}" required></label><button class="secondary" type="submit">Voir les repas à copier</button><div id="copy-week-preview" aria-live="polite"></div></form>`;
       let request = 0;
-      const dateInput = document.getElementById('copy-week-date'), output = document.getElementById('copy-week-preview'), back = document.querySelector('[data-reuse-back]');
+      const dateInput = document.getElementById('copy-week-date'), output = document.getElementById('copy-week-preview');
       dateInput.addEventListener('input', () => { request++; output.replaceChildren(); });
       document.getElementById('copy-week-form').addEventListener('submit', async event => {
         event.preventDefault(); const version = ++request; output.textContent = 'Chargement…';
         const sourceStart = key(monday(new Date(`${dateInput.value}T12:00:00`)));
         try {
           if (sourceStart === targetStart) throw new Error('Choisis une autre semaine.');
-          const source = (await api(`/api/week?start=${sourceStart}`)).meals;
+          const source = (await api(`/api/week?start=${sourceStart}`, { signal: AbortSignal.timeout(10000) })).meals;
           if (version !== request || !output.isConnected) return;
           if (!source.length) throw new Error('Cette semaine ne contient aucun repas.');
           output.innerHTML = `<p class="muted">${source.length} repas. Même répartition par personne et mêmes suppléments. Aucun créneau occupé ne sera remplacé. Les restes prévus hors de cette semaine ne sont pas copiés.</p><ul>${source.map(meal => `<li>${escapeHtml(meal.date.split('-').reverse().join('/'))} · ${meal.slot === 'midi' ? 'Midi' : 'Soir'} : ${escapeHtml(meal.title)}${meal.leftoverOf ? ' · restes' : ''}</li>`).join('')}</ul><button id="confirm-copy-week" class="primary" type="button">Copier ces ${source.length} repas</button>`;
-          document.getElementById('confirm-copy-week').addEventListener('click', async event => {
-            const button = event.currentTarget; if (button.disabled) return; button.disabled = true; dateInput.disabled = true; back.disabled = true;
-            try {
-              await api('/api/week/copy', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ sourceStart, targetStart, sourceSnapshot: JSON.stringify(source) }) });
-              dialog.close(); await load();
-            } catch (error) { const message = document.getElementById('dialog-error'); message.textContent = error.message; message.hidden = false; }
-            finally { button.disabled = false; dateInput.disabled = false; back.disabled = false; }
-          });
+          document.getElementById('confirm-copy-week').addEventListener('click', () => postMeal({ sourceStart, targetStart, sourceSnapshot: JSON.stringify(source) }, '/api/week/copy'));
         } catch (error) { if (version === request && output.isConnected) output.textContent = error.message; }
       });
       if (!dialog.open) dialog.showModal();
@@ -1491,34 +1484,44 @@
       document.getElementById('dialog-subtitle').textContent = `Semaine affichée · ${targetStart.split('-').reverse().join('/')}`;
       document.getElementById('dialog-error').hidden = true;
       document.getElementById('choices').innerHTML = `<button class="text-action" type="button" data-reuse-back>← Retour aux menus</button><form id="template-form" class="recipe-form"><label class="field"><span>Nom de cette semaine type</span><input id="template-name" maxlength="60" placeholder="Semaine rapide, vacances…" required></label><button class="secondary" type="submit">Enregistrer la semaine affichée</button></form><div id="template-list" aria-live="polite">Chargement…</div>`;
-      const list = document.getElementById('template-list'), back = document.querySelector('[data-reuse-back]');
+      const list = document.getElementById('template-list');
       const showError = error => { if (!list.isConnected || !dialog.open) return; const node = document.getElementById('dialog-error'); node.textContent = error.message; node.hidden = false; };
       const refresh = async () => {
-        const templates = await api('/api/week-templates');
-        if (!list.isConnected) return;
+        const templates = await api('/api/week-templates', { signal: AbortSignal.timeout(10000) });
+        if (!list.isConnected || !dialog.open) return;
         list.innerHTML = templates.length ? templates.map(template => `<div class="assignment"><span><strong>${escapeHtml(template.name)}</strong><small class="muted">${template.mealCount} repas</small></span><div class="subtle-tools"><button class="text-action" type="button" data-template-use="${template.id}">Ajouter ici</button><button class="text-action" type="button" data-template-delete="${template.id}" data-template-name="${escapeHtml(template.name)}">Supprimer</button></div></div>`).join('') : '<p class="empty-state">Enregistre une semaine réussie pour la réutiliser plus tard.</p>';
       };
-      document.getElementById('template-form').addEventListener('submit', async event => {
-        event.preventDefault(); const button = event.submitter; button.disabled = true; back.disabled = true; document.getElementById('dialog-error').hidden = true;
+      async function writeTemplate(remove = null) {
+        const fields = document.getElementById('meal-fields'), form = document.getElementById('template-form'), name = document.getElementById('template-name');
+        if (fields.disabled || !list.isConnected) return;
+        if (remove ? !confirm(`Supprimer la semaine type « ${remove.dataset.templateName} » ?`) : !form.reportValidity()) return;
+        const close = document.getElementById('close-dialog'), subtitle = document.getElementById('dialog-subtitle'), previous = subtitle.textContent;
+        fields.disabled = true; close.disabled = true; fields.setAttribute('aria-busy', 'true');
+        subtitle.textContent = remove ? 'Retrait en cours…' : 'Enregistrement…'; document.getElementById('dialog-error').hidden = true;
+        let saved = false;
         try {
-          await api('/api/week-templates', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: document.getElementById('template-name').value, start: targetStart }) });
-          document.getElementById('template-name').value = ''; await refresh();
-        } catch (error) { showError(error); }
-        finally { button.disabled = false; back.disabled = false; }
-      });
+          const response = await fetch(remove ? `/api/week-templates/${remove.dataset.templateDelete}` : '/api/week-templates', {
+            method: remove ? 'DELETE' : 'POST', headers: { 'content-type': 'application/json' },
+            ...(remove ? {} : { body: JSON.stringify({ name: name.value, start: targetStart }) }), signal: AbortSignal.timeout(15000)
+          });
+          if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Modification refusée par le serveur.');
+          saved = true; if (!remove) name.value = '';
+          await refresh();
+        } catch (error) { showError(new Error(saved ? 'Modification enregistrée, mais la liste n’a pas pu être actualisée. Ferme puis rouvre les semaines types sans refaire la modification.'
+          : ['TypeError', 'TimeoutError', 'AbortError'].includes(error.name) ? 'Impossible de confirmer la modification. Ta saisie est conservée. Ferme puis rouvre les semaines types pour vérifier avant de réessayer.' : error.message)); }
+        finally {
+          fields.disabled = false; close.disabled = false; fields.setAttribute('aria-busy', 'false');
+          subtitle.textContent = saved ? remove ? 'Semaine type supprimée.' : 'Semaine type enregistrée.' : previous;
+          if (dialog.open) name.focus({ preventScroll: true });
+        }
+      }
+      document.getElementById('template-form').addEventListener('submit', event => { event.preventDefault(); writeTemplate(); });
       list.addEventListener('click', async event => {
+        if (document.getElementById('meal-fields').disabled) return;
         const use = event.target.closest('[data-template-use]'), remove = event.target.closest('[data-template-delete]');
         if (!use && !remove) return;
-        event.target.disabled = true; back.disabled = true; document.getElementById('dialog-error').hidden = true;
-        try {
-          if (use) {
-            await api(`/api/week-templates/${use.dataset.templateUse}/apply`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ targetStart }) });
-            dialog.close(); await load();
-          } else if (confirm(`Supprimer la semaine type « ${remove.dataset.templateName} » ?`)) {
-            await api(`/api/week-templates/${remove.dataset.templateDelete}`, { method: 'DELETE' }); await refresh();
-          }
-        } catch (error) { showError(error); }
-        finally { if (event.target.isConnected) event.target.disabled = false; back.disabled = false; }
+        if (use) await postMeal({ targetStart }, `/api/week-templates/${use.dataset.templateUse}/apply`);
+        else await writeTemplate(remove);
       });
       if (!dialog.open) dialog.showModal();
       document.getElementById('template-name').focus();

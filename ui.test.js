@@ -50,7 +50,7 @@ test('le planning expose réutilisation et export sans Plus d’options, avec le
   open(); assert.equal(shown, 1); assert.equal(focused, 2);
   assert.match(html, /button.dataset.reuse === 'past' \? openCopyWeek\(\) : openWeekTemplates\(\)/);
   assert.match(html, /if \(event.target.closest\('\[data-reuse-back\]'\)\) return openReuseWeek\(\)/);
-  assert.match(html, /const templates = await api\('\/api\/week-templates'\);\s*if \(!list.isConnected\) return;/);
+  assert.match(html, /const templates = await api\('\/api\/week-templates', \{ signal: AbortSignal.timeout\(10000\) \}\);\s*if \(!list.isConnected \|\| !dialog.open\) return;/);
 });
 
 test('reprendre une occasion retrouve les champs sans contaminer un autre type ou une nouvelle recette', () => {
