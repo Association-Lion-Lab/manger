@@ -1541,6 +1541,7 @@
 
     let menuPreviewVersion = 0;
     async function previewWeek() {
+      if (document.getElementById('meal-fields').disabled || document.getElementById('preview-week').disabled) return;
       const rank = { vegan: 0, vegetarian: 1, pescetarian: 2, omnivore: 3 };
       const members = [...document.querySelectorAll('[data-compose-member]:checked')].map(input => state.members.find(member => member.id === Number(input.dataset.composeMember)));
       const people = members.length || Number(document.getElementById('compose-people')?.value);
@@ -1554,7 +1555,7 @@
       output.textContent = 'Composition du menu…';
       let choices;
       try {
-        const response = await fetch('/api/week/preview', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ start: key(state.weekStart), maxMinutes: Number(document.getElementById('compose-minutes').value), memberIds: members.map(member => member.id), people, slots: slots.map(input => ({ day: Number(input.dataset.composeDay), slot: input.value })) }) });
+        const response = await fetch('/api/week/preview', { method: 'POST', headers: { 'content-type': 'application/json' }, signal: AbortSignal.timeout(10000), body: JSON.stringify({ start: key(state.weekStart), maxMinutes: Number(document.getElementById('compose-minutes').value), memberIds: members.map(member => member.id), people, slots: slots.map(input => ({ day: Number(input.dataset.composeDay), slot: input.value })) }) });
         const result = await response.json();
         if (version !== menuPreviewVersion || !output.isConnected || !dialog.open) return;
         if (!response.ok) throw new Error(result.error || 'Menu indisponible. Réessaie.');
@@ -1562,26 +1563,22 @@
         choices = result;
       } catch (error) {
         if (version === menuPreviewVersion && output.isConnected && dialog.open) {
-          output.textContent = error.message === 'Failed to fetch' ? 'Connexion indisponible. Réessaie quand le serveur est accessible.' : error.message;
+          output.textContent = error.name === 'TimeoutError' ? 'La proposition prend trop de temps. Réessaie : aucun repas n’a été enregistré.' : error.message === 'Failed to fetch' ? 'Connexion indisponible. Réessaie quand le serveur est accessible.' : error.message;
         }
         return;
       } finally { button.disabled = false; }
       output.innerHTML = `<h2 style="margin:20px 0 10px">Ton menu · ${choices.length} repas</h2><p class="muted">Change un plat avant de valider. Une base commune, sans supplément de protéine ; les quantités s’adaptent aux participants. Des répétitions restent possibles si le catalogue est limité.</p>${choices.map((item, index) => `<label class="field" style="margin-bottom:14px"><span>${fullDayNames[item.day]} · ${item.slot === 'midi' ? 'Midi' : 'Soir'}</span><select data-compose-recipe="${index}">${candidates.map(recipe => `<option value="${recipe.id}"${recipe.id === item.recipeId ? ' selected' : ''}>${escapeHtml(recipe.title)} · ${recipe.minutes} min</option>`).join('')}</select></label>`).join('')}<button id="confirm-week" class="primary" type="button">Ajouter ces repas au planning</button>`;
-      document.getElementById('confirm-week').addEventListener('click', async event => {
-        event.target.disabled = true;
+      document.getElementById('confirm-week').addEventListener('click', async () => {
+        if (document.getElementById('meal-fields').disabled || document.getElementById('confirm-week').disabled) return;
         try {
           const meals = choices.map((item, index) => {
             const recipe = state.recipes.find(recipe => recipe.id === Number(document.querySelector(`[data-compose-recipe="${index}"]`).value));
             return { date: key(dateAt(item.day)), slot: item.slot, location: 'home', occasion: 'regular', title: recipe.title, people, recipeId: members.length ? null : recipe.id, assignments: [], dishes: members.map(member => ({ memberId: member.id, recipeId: recipe.id, portions: 1 })) };
           });
-          const response = await fetch('/api/week/plan', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ start: key(state.weekStart), meals }) });
-          if (!response.ok) throw new Error((await response.json()).error);
-          dialog.close();
-          await load();
+          await postMeal({ start: key(state.weekStart), meals }, '/api/week/plan');
         } catch (error) {
           document.getElementById('dialog-error').textContent = error.message;
           document.getElementById('dialog-error').hidden = false;
-          event.target.disabled = false;
         }
       });
       document.getElementById('confirm-week').insertAdjacentHTML('beforebegin', '<div id="compose-taste-notices" aria-live="polite"></div>');
@@ -1592,13 +1589,14 @@
       };
       const manualChoices = new Map();
       output.querySelectorAll('[data-compose-recipe]').forEach(select => select.addEventListener('change', async () => {
+        if (select.disabled || document.getElementById('meal-fields').disabled) return;
         const index = Number(select.dataset.composeRecipe), previous = manualChoices.get(index);
         manualChoices.set(index, Number(select.value));
         const controls = [...output.querySelectorAll('select, button')], status = output.querySelector('#compose-update-status');
         controls.forEach(control => control.disabled = true); button.disabled = true;
         status.textContent = 'Recalcul des autres plats…';
         try {
-          const result = await api('/api/week/preview', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ start: key(state.weekStart), maxMinutes: Number(document.getElementById('compose-minutes').value), memberIds: members.map(member => member.id), people, slots: choices.map((item, i) => ({ day: item.day, slot: item.slot, ...(manualChoices.has(i) ? { recipeId: manualChoices.get(i) } : {}) })) }) });
+          const result = await api('/api/week/preview', { method: 'POST', headers: { 'content-type': 'application/json' }, signal: AbortSignal.timeout(10000), body: JSON.stringify({ start: key(state.weekStart), maxMinutes: Number(document.getElementById('compose-minutes').value), memberIds: members.map(member => member.id), people, slots: choices.map((item, i) => ({ day: item.day, slot: item.slot, ...(manualChoices.has(i) ? { recipeId: manualChoices.get(i) } : {}) })) }) });
           if (version !== menuPreviewVersion || !output.isConnected || !dialog.open) return;
           if (result.length !== choices.length || result.some((item, i) => item.day !== choices[i].day || item.slot !== choices[i].slot || !candidates.some(recipe => recipe.id === item.recipeId))) throw new Error('Le catalogue a changé. Relance la proposition de menu.');
           choices = result;

@@ -363,6 +363,8 @@ L'aperçu ne modifie rien : chaque plat peut être remplacé avant validation. C
 
 La validation ajoute tous les repas et met à jour les courses. Si un créneau a été rempli entre-temps, aucun repas du menu n'est enregistré : fermez le formulaire et recomposez. Les repas existants ne sont jamais remplacés par cet outil.
 
+La confirmation utilise la protection commune du planning : doubles appuis ignorés, choix et fermeture bloqués pendant l'envoi, attente limitée à 15 secondes. Un refus conserve le menu choisi ; une réponse perdue demande de vérifier le planning avant de réessayer. Une lecture échouée après confirmation ne renvoie pas les repas. L'aperçu et son recalcul sont limités à 10 secondes, sans écriture ; en cas d'échec du recalcul, le menu précédent est conservé.
+
 ## Catalogue et univers
 
 Dans Recettes, **De saison** active un filtre facultatif pour le mois courant ; le mois peut être changé. Il se combine avec la recherche, les univers, les favoris et la durée. Le désactiver retrouve les autres recettes : aucun plat n'est supprimé du catalogue ou du planning.
