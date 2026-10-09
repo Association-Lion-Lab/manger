@@ -228,7 +228,7 @@
     .choice-copy { display: grid; gap: 2px; }
     .choice-copy small { color: var(--muted); }
     .recipe-form { display: grid; gap: 22px; margin-top: 22px; }
-    #recipe-fields, #pantry-fields { min-width: 0; margin-right: 0; margin-left: 0; padding: 0; border: 0; }
+    #recipe-fields, #pantry-fields, #recipe-notes-fields { min-width: 0; margin-right: 0; margin-left: 0; padding: 0; border: 0; }
     .field { display: grid; gap: 6px; }
     .field > span { color: var(--muted); font-size: 13px; font-weight: 650; }
     .field input, .field textarea { width: 100%; min-width: 0; min-height: 48px; padding: 12px 14px; color: var(--text); border: 1px solid var(--line); border-radius: 14px; background: var(--field); }
@@ -665,11 +665,11 @@
         <section><h3>Ingrédients</h3><ul id="recipe-view-ingredients" class="detail-list"></ul></section>
         <section><h3>Réalisation</h3><ol id="recipe-view-steps" class="detail-list"></ol></section>
       </div>
-      <details id="recipe-notes" class="quiet-details"><summary>Mon avis et mes notes</summary><form id="recipe-notes-form" class="recipe-form">
+      <details id="recipe-notes" class="quiet-details"><summary>Mon avis et mes notes</summary><form id="recipe-notes-form"><fieldset id="recipe-notes-fields" class="recipe-form" aria-label="Avis et notes du foyer">
         <label class="field"><span>Appréciation du foyer</span><select id="recipe-rating"><option value="0">Pas encore notée</option><option value="1">1 / 5</option><option value="2">2 / 5</option><option value="3">3 / 5</option><option value="4">4 / 5</option><option value="5">5 / 5</option></select></label>
         <label class="field"><span>À retenir pour la prochaine fois</span><textarea id="recipe-note" maxlength="2000" placeholder="Un peu moins de sel, ajouter du citron…"></textarea></label>
-        <button class="secondary" type="submit">Enregistrer mes notes</button><p id="recipe-notes-status" class="muted" role="status"></p>
-      </form></details>
+        <button id="save-recipe-notes" class="secondary" type="submit">Enregistrer mes notes</button>
+      </fieldset><p id="recipe-notes-status" class="muted" role="status"></p></form></details>
       <details id="recipe-offline" class="quiet-details"><summary>Cette recette hors connexion</summary>
         <p class="muted">Garde les ingrédients pour les portions affichées et les étapes. Jusqu’à 20 recettes sur cet appareil, accessibles aux personnes utilisant ce navigateur. Une nouvelle copie remplace l’ancienne pour cette recette.</p>
         <label id="offline-photo-option" class="check-option" hidden><input id="offline-photo" type="checkbox">Inclure une petite photo sur cet appareil</label>
@@ -1971,15 +1971,36 @@
     });
 
     document.getElementById('recipe-notes-form').addEventListener('submit', async event => {
-      event.preventDefault(); const button = event.submitter; if (button.disabled) return; button.disabled = true;
+      event.preventDefault();
+      const fields = document.getElementById('recipe-notes-fields');
+      if (fields.disabled) return;
+      const form = document.getElementById('recipe-notes-form'), button = document.getElementById('save-recipe-notes');
       const recipeId = editingRecipeId;
       const status = document.getElementById('recipe-notes-status');
+      const payload = { rating: Number(document.getElementById('recipe-rating').value), note: document.getElementById('recipe-note').value };
+      const controls = ['close-recipe-view', 'plan-recipe', 'start-cooking', 'edit-recipe', 'duplicate-recipe', 'delete-recipe', 'recipe-view-portions'].map(id => document.getElementById(id));
+      const disabled = controls.map(control => control.disabled);
+      fields.disabled = true; controls.forEach(control => control.disabled = true);
+      form.setAttribute('aria-busy', 'true'); button.textContent = 'Enregistrement…'; status.textContent = '';
       try {
-        const notes = await api(`/api/recipes/${recipeId}/notes`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ rating: Number(document.getElementById('recipe-rating').value), note: document.getElementById('recipe-note').value }) });
+        const response = await fetch(`/api/recipes/${recipeId}/notes`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload), signal: AbortSignal.timeout(15000) })
+          .catch(() => { throw new Error('Connexion interrompue. Ta saisie est conservée. Les notes ont peut-être été enregistrées : vérifie-les avant de réessayer.'); });
+        if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Enregistrement refusé par le serveur. Ta saisie est conservée.');
+        const notes = await response.json().catch(() => { throw new Error('Confirmation illisible. Ta saisie est conservée. Vérifie les notes enregistrées avant de réessayer.'); });
+        if (!notes || !Number.isInteger(notes.rating) || notes.rating < 0 || notes.rating > 5 || typeof notes.note !== 'string' || notes.note.length > 2000) throw new Error('Confirmation illisible. Ta saisie est conservée. Vérifie les notes enregistrées avant de réessayer.');
         const recipe = state.recipes.find(item => item.id === recipeId); if (recipe) Object.assign(recipe, notes);
-        if (editingRecipeId === recipeId) status.textContent = 'Notes enregistrées.';
-      } catch (error) { if (editingRecipeId === recipeId) status.textContent = error.message; } finally { button.disabled = false; }
+        if (editingRecipeId === recipeId) {
+          document.getElementById('recipe-rating').value = notes.rating;
+          document.getElementById('recipe-note').value = notes.note;
+          status.textContent = 'Notes enregistrées.';
+        }
+      } catch (error) { if (editingRecipeId === recipeId) status.textContent = error.message; } finally {
+        fields.disabled = false; controls.forEach((control, index) => control.disabled = disabled[index]);
+        form.setAttribute('aria-busy', 'false'); button.textContent = 'Enregistrer mes notes';
+        if (editingRecipeId === recipeId && recipeViewDialog.open) button.focus({ preventScroll: true });
+      }
     });
+    recipeViewDialog.addEventListener('cancel', event => { if (document.getElementById('recipe-notes-fields').disabled) event.preventDefault(); });
     const cookingDialog = document.getElementById('cooking-dialog');
     document.getElementById('print-recipe').addEventListener('click', () => {
       const recipe = state.recipes.find(item => item.id === editingRecipeId);

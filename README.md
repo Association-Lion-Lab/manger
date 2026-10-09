@@ -130,11 +130,13 @@ Le manifeste et les icônes permettent l'ajout à l'écran d'accueil depuis le m
 
 Le service worker ne conserve que la page de secours `/offline.html` ; les données de courses sont enregistrées séparément dans le stockage local après consentement. Les API et les écritures ne sont jamais interceptées. Lors d'une modification de la page de secours, incrémentez la version du cache dans `public/sw.js`.
 
-L'interface conserve quatre onglets : Semaine, Recettes, Courses et Compte. Les actions secondaires des recettes sont regroupées dans « Plus d'options » ; les notes et les options de cuisine sont repliées par défaut. Les contrastes des boutons principaux sont corrigés en clair et en sombre.
+L'interface conserve quatre onglets : Semaine, Recettes, Courses et Compte. Les actions secondaires des recettes sont regroupées dans « Gérer cette recette » ; les notes et les options de cuisine sont repliées par défaut. Les contrastes des boutons principaux sont corrigés en clair et en sombre.
 
 Une photo personnelle peut être ajoutée depuis l'éditeur, dans « Photo du plat ». JPEG, PNG ou WebP jusqu'à 10 Mo : le navigateur redimensionne à 960 pixels maximum puis convertit en JPEG avant envoi (400 000 caractères maximum pour la donnée encodée). Les photos sont conservées dans SQLite, chargées séparément et copiées avec les variantes. La suppression de la photo prend effet à l'enregistrement. Aucune photographie n'est importée automatiquement depuis un site tiers.
 
 « Mon avis et mes notes » enregistre une appréciation de 1 à 5 (ou aucune note) et un commentaire de 2 000 caractères maximum, communs au foyer. Modifier une recette conserve cet avis ; dupliquer une recette ne le copie pas.
+
+Pendant cet enregistrement, la saisie et les actions qui quittent la fiche sont temporairement bloquées ; les doubles envois sont ignorés. Après 15 secondes au maximum, les contrôles sont rendus disponibles. Un refus ou une connexion interrompue conserve le brouillon dans la fiche ouverte, sans renvoi automatique. Si la confirmation est perdue ou illisible, vérifiez les notes enregistrées avant de réessayer : le serveur peut avoir reçu la modification. Le brouillon n'est pas conservé après fermeture ou rechargement de la page. Entre plusieurs appareils, la dernière écriture reçue reste prioritaire ; il n'y a pas encore de détection des modifications simultanées pour les avis.
 
 Une fiche recette permet d'ajouter ou retirer un favori. « Mes favoris » dans le filtre Univers du catalogue et du choix des plats affiche uniquement ces recettes. Les favoris sont communs au foyer et persistants, sans changer les règles de régime ni les ingrédients des courses.
 
