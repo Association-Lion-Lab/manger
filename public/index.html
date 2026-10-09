@@ -2618,15 +2618,21 @@
       document.querySelector(`[data-browse-category="${previous}"]`)?.focus();
     });
     document.getElementById('import-catalog').addEventListener('click', async event => {
-      event.target.disabled = true;
+      const button = event.currentTarget; if (button.disabled) return;
+      const label = button.textContent, status = document.getElementById('catalog-status');
+      button.disabled = true; button.setAttribute('aria-busy', 'true'); button.textContent = 'Ajout du catalogue…'; status.textContent = '';
+      let saved = false;
       try {
-        const response = await fetch('/api/catalog/import', { method: 'POST' });
-        if (!response.ok) throw new Error((await response.json()).error);
-        document.getElementById('catalog-status').textContent = `${(await response.json()).added} nouvelles recettes ajoutées. Vos recettes existantes sont conservées.`;
-        await load();
+        const response = await fetch('/api/catalog/import', { method: 'POST', signal: AbortSignal.timeout(15000) });
+        if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Le serveur a refusé l’import du catalogue.');
+        saved = true;
+        const result = await response.json().catch(() => null);
+        status.textContent = Number.isInteger(result?.added) && result.added >= 0 ? `${result.added} nouvelles recettes ajoutées. Vos recettes existantes sont conservées.` : 'Catalogue importé. Vos recettes existantes sont conservées.';
+        if (!await load()) throw new Error('Affichage remplacé par une nouvelle demande.');
       } catch (error) {
-        document.getElementById('catalog-status').textContent = error.message;
-      } finally { event.target.disabled = false; }
+        status.textContent = saved ? 'Catalogue importé, mais l’affichage n’a pas pu être actualisé. Utilise Réessayer dans la semaine, sans refaire l’import.'
+          : ['TypeError', 'TimeoutError', 'AbortError'].includes(error.name) ? 'L’import n’a pas pu être confirmé. Recharge les recettes avant de réessayer : des plats ont peut-être été ajoutés.' : error.message;
+      } finally { button.disabled = false; button.setAttribute('aria-busy', 'false'); button.textContent = label; }
     });
     document.getElementById('recipes-panel').addEventListener('click', async event => {
       const category = event.target.closest('[data-browse-category]');
