@@ -14,6 +14,8 @@ Depuis une fiche recette, **Cuisiner cette recette** ouvre les étapes guidées 
 
 Le nombre de portions est ajustable de 1 à 100 dans la fiche et le mode cuisine : les ingrédients sont recalculés sans modifier la recette, le planning ou les courses. Les instructions rédigées et les durées ne sont pas recalculées automatiquement ; adaptez la cuisson si nécessaire. Changer les portions ne réinitialise pas les minuteurs.
 
+La fiche présente les favoris et la fermeture dans une barre qui reste accessible pendant le défilement. « Planifier ce repas » et « Cuisiner cette recette » se trouvent après les portions, avant les ingrédients et les étapes. « Le menu reste inchangé » rappelle la limite du recalcul et permet d'en lire le détail ; « Gérer cette recette » regroupe modification, duplication, impression et suppression. Aucun changement de données ou de calcul n'est lié à cette présentation.
+
 Prérequis : Node.js 24 ou plus récent. `npm ci --ignore-scripts` installe la dépendance de messagerie Nodemailer à la version verrouillée. Docker le fait pendant la construction de l'image.
 Depuis la fiche recette, « Imprimer / PDF » ouvre l'impression du navigateur : sélectionnez votre imprimante ou l'enregistrement en PDF. La fiche contient les ingrédients pour les portions choisies, les étapes et le lien source éventuel. Les durées et instructions restent celles de la recette d'origine.
 

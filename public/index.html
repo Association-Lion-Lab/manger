@@ -251,7 +251,27 @@
     .recipe-form-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .recipe-view-actions { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; padding-top: 18px; border-top: 1px solid var(--line); }
     #cooking-timer-controls[hidden] { display: none; }
-    #start-cooking { width: 100%; margin-bottom: 18px; }
+    .recipe-sheet-toolbar { position: sticky; top: -28px; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: -28px -28px 20px; padding: 16px 28px; border-bottom: 1px solid var(--line); background: var(--surface); }
+    .recipe-sheet-toolbar .text-action { min-width: 0; padding: 8px 0; font-size: .875rem; text-align: left; }
+    #recipe-view-title { font-size: 1.625rem; overflow-wrap: anywhere; }
+    #recipe-view-meta { display: block; margin-top: 10px; font-size: .875rem; }
+    #recipe-view-source { display: inline-block; margin-top: 16px; color: var(--accent); overflow-wrap: anywhere; }
+    .recipe-portions { display: grid; grid-template-columns: minmax(0, 1fr) minmax(76px, 6rem); align-items: center; gap: 16px; margin-top: 22px; }
+    .recipe-portions input { width: 100%; min-width: 0; }
+    .recipe-portions > span { font-size: 1rem; color: var(--text); }
+    #recipe-portions-help { border: 0; margin: 0 0 14px; }
+    #recipe-portions-help p { margin: 0 0 12px; font-size: .875rem; }
+    .recipe-main-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr)); gap: 10px; }
+    .recipe-main-actions button { font-size: 1rem; }
+    #recipe-view-dialog { scroll-padding-top: 7rem; }
+    #recipe-view-dialog .recipe-hero { margin-top: 0; }
+    #recipe-view-dialog .recipe-detail { font-size: 1rem; overflow-wrap: anywhere; }
+    #recipe-view-dialog .recipe-detail h3 { font-size: 1.125rem; }
+    #recipe-view-ingredients { padding: 0; gap: 0; list-style: none; }
+    #recipe-view-ingredients li { padding: 12px 0; border-bottom: 1px solid var(--line); }
+    #recipe-view-ingredients li:first-child { border-top: 1px solid var(--line); }
+    #recipe-view-steps .detail-step { padding: 16px; }
+    #recipe-view-steps small { font-size: .8125rem; text-transform: none; color: var(--muted); }
     #cooking-dialog button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
     #cooking-dialog button:active { filter: brightness(.9); }
     .recipe-view-actions button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
@@ -399,6 +419,7 @@
     @media (prefers-reduced-transparency: reduce) { header, nav, .toolbar > .icon-button { background: var(--surface); backdrop-filter: none; border-color: var(--line); box-shadow: none; } }
     @media (max-width: 619px) {
       dialog { width: calc(100% - 16px); max-height: calc(100dvh - 16px); margin: auto auto 8px; padding: 24px 20px calc(24px + env(safe-area-inset-bottom)); border-radius: 28px; }
+      .recipe-sheet-toolbar { top: -24px; margin: -24px -20px 20px; padding: 12px 20px; }
     }
     .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
     @media (max-width: 430px) {
@@ -616,37 +637,38 @@
       </form>
     </dialog>
 
-    <dialog id="recipe-view-dialog">
-      <div class="handle"></div>
-      <img id="recipe-view-photo" class="recipe-hero" alt="" hidden>
-      <div class="section-heading">
-        <div><h2 id="recipe-view-title"></h2><span id="recipe-view-meta" class="muted"></span></div>
-        <button id="close-recipe-view" class="icon-button" type="button" aria-label="Fermer">×</button>
+    <dialog id="recipe-view-dialog" aria-labelledby="recipe-view-title">
+      <div class="recipe-sheet-toolbar">
+        <button id="favorite-recipe" class="text-action" type="button" aria-pressed="false">☆ Ajouter aux favoris</button>
+        <button id="close-recipe-view" class="icon-button" type="button" aria-label="Fermer la recette" autofocus>×</button>
       </div>
+      <img id="recipe-view-photo" class="recipe-hero" alt="" hidden>
+      <h2 id="recipe-view-title"></h2><span id="recipe-view-meta" class="muted"></span>
       <p id="recipe-taste-warning" class="muted" hidden></p>
-      <button id="start-cooking" class="secondary" type="button">Cuisiner cette recette</button>
       <a id="recipe-view-source" target="_blank" rel="noreferrer noopener" hidden>Voir la recette sur son site d’origine ↗</a>
-      <label class="field"><span>Portions à préparer</span><input id="recipe-view-portions" type="number" min="1" max="100" step="1" required></label>
-      <p class="muted">Recalcul de consultation uniquement. Les instructions et durées restent celles de la recette d’origine : adapte la cuisson si nécessaire.</p>
+      <label class="field recipe-portions"><span>Portions à préparer</span><input id="recipe-view-portions" type="number" min="1" max="100" step="1" required aria-describedby="recipe-portions-description"></label>
+      <details id="recipe-portions-help" class="quiet-details"><summary>Le menu reste inchangé</summary><p id="recipe-portions-description" class="muted">Recalcul de consultation uniquement. Les instructions et durées restent celles de la recette d’origine : adapte la cuisson si nécessaire.</p></details>
+      <div class="recipe-main-actions">
+        <button id="plan-recipe" class="primary" type="button">Planifier ce repas</button>
+        <button id="start-cooking" class="secondary" type="button">Cuisiner cette recette</button>
+      </div>
+      <p id="recipe-view-error" class="error" role="alert" hidden></p>
       <div class="recipe-detail">
         <section><h3>Ingrédients</h3><ul id="recipe-view-ingredients" class="detail-list"></ul></section>
         <section><h3>Réalisation</h3><ol id="recipe-view-steps" class="detail-list"></ol></section>
       </div>
-      <button id="plan-recipe" class="primary" type="button">Planifier ce repas</button>
-      <p id="recipe-view-error" class="error" role="alert" hidden></p>
       <details id="recipe-notes" class="quiet-details"><summary>Mon avis et mes notes</summary><form id="recipe-notes-form" class="recipe-form">
         <label class="field"><span>Appréciation du foyer</span><select id="recipe-rating"><option value="0">Pas encore notée</option><option value="1">1 / 5</option><option value="2">2 / 5</option><option value="3">3 / 5</option><option value="4">4 / 5</option><option value="5">5 / 5</option></select></label>
         <label class="field"><span>À retenir pour la prochaine fois</span><textarea id="recipe-note" maxlength="2000" placeholder="Un peu moins de sel, ajouter du citron…"></textarea></label>
         <button class="secondary" type="submit">Enregistrer mes notes</button><p id="recipe-notes-status" class="muted" role="status"></p>
       </form></details>
-      <button id="favorite-recipe" class="text-action" type="button" aria-pressed="false">☆ Ajouter aux favoris</button>
       <details id="recipe-offline" class="quiet-details"><summary>Cette recette hors connexion</summary>
         <p class="muted">Garde les ingrédients pour les portions affichées et les étapes. Jusqu’à 20 recettes sur cet appareil, accessibles aux personnes utilisant ce navigateur. Une nouvelle copie remplace l’ancienne pour cette recette.</p>
         <label id="offline-photo-option" class="check-option" hidden><input id="offline-photo" type="checkbox">Inclure une petite photo sur cet appareil</label>
         <button id="save-offline-recipe" class="secondary" type="button">Garder cette recette sur cet appareil</button>
         <a href="/offline.html#recipes">Voir mes recettes enregistrées</a><p id="offline-recipe-status" class="muted" role="status"></p>
       </details>
-      <details id="recipe-more" class="quiet-details"><summary>Plus d’options</summary><div class="recipe-view-actions">
+      <details id="recipe-more" class="quiet-details"><summary>Gérer cette recette</summary><div class="recipe-view-actions">
         <button id="edit-recipe" class="secondary" type="button">Modifier</button>
         <button id="duplicate-recipe" class="secondary" type="button">Dupliquer</button>
         <button id="print-recipe" class="secondary" style="grid-column:1 / -1" type="button">Imprimer / PDF</button>
@@ -1876,6 +1898,7 @@
     }
 
     function openRecipe(recipe) {
+      document.getElementById('recipe-portions-help').open = false;
       document.getElementById('recipe-offline').open = false;
       document.getElementById('offline-recipe-status').textContent = '';
       document.getElementById('offline-photo-option').hidden = !recipe.hasPhoto;
@@ -1907,6 +1930,7 @@
       document.getElementById('recipe-view-ingredients').innerHTML = recipe.ingredients.map(ingredient => `<li>${escapeHtml(recipeIngredientText(ingredient))}</li>`).join('');
       document.getElementById('recipe-view-steps').innerHTML = recipe.steps.map(step => `<li class="detail-step"><small>${stepKindLabels[step.kind]}${step.minutes == null ? '' : ` · ${step.minutes} min`}</small><p>${escapeHtml(step.instruction)}</p></li>`).join('');
       recipeViewDialog.showModal();
+      recipeViewDialog.scrollTop = 0;
     }
 
     document.getElementById('plan-recipe').addEventListener('click', () => {

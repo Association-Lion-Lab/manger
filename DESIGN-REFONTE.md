@@ -4,6 +4,8 @@ Statut : **maquette validée ; première intégration mobile sur `development`**
 
 À poursuivre : contrôle humain sur iPhone Safari et Android après déploiement, finition des filtres de découverte et de la fiche, puis vraie adaptation tablette/PC. Les tests locaux ne valident pas ces environnements distants.
 
+Finition de la fiche intégrée le 9 octobre : fermeture et favoris dans une barre opaque persistante, photos réelles inchangées, titre sur toute la largeur, portions compactes, Planifier/Cuisiner avant les ingrédients et étapes. Les quantités sont séparées par des lignes discrètes ; les étapes restent numérotées et les actions de gestion secondaires restent repliées. Palette et contrastes ci-dessous réutilisés, sans animation ajoutée ni nouvel écran. Les principes de lisibilité, regroupement et sortie de modal d'Apple Design sont appliqués à des contrôles web natifs, pas présentés comme une interface iOS native. Tests Chromium et texte agrandi locaux ; contrôle humain iPhone/Android toujours requis.
+
 ## Intention
 
 Sur téléphone, répondre vite à « On mange quoi ? », puis passer du repas prévu aux courses et à la préparation sans ressaisie. Le signe distinctif de Manger! reste le **repas de foyer** : une même table peut réunir des régimes et des assiettes différents, une sortie ou un date. L'identité visuelle doit être chaleureuse et culinaire, mais les commandes restent sobres.
