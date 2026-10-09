@@ -93,7 +93,7 @@
     #choose-week svg { width: 14px; height: 14px; flex: none; }
     .week-meta { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0 8px; }
     #today { font-size: 13px; }
-    #week-content, #meal-fields, #shopping-edit-fields, #manual-shopping-fields { margin: 0; padding: 0; min-width: 0; border: 0; }
+    #week-content, #meal-fields, #shopping-edit-fields, #manual-shopping-fields, #protein-fields { margin: 0; padding: 0; min-width: 0; border: 0; }
     .toolbar h1 { font-size: clamp(20px, 4.5vw, 26px); }
     .days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin: 22px 0 32px; padding: 6px; border: 1px solid var(--line); border-radius: 22px; background: var(--surface); }
     .day { min-width: 0; min-height: 66px; display: grid; place-items: center; align-content: center; gap: 4px; padding: 6px 2px; border: 0; border-radius: 16px; background: transparent; cursor: pointer; }
@@ -762,14 +762,15 @@
       <section class="household-section">
         <div><h2>Bar à protéines</h2><span class="muted">Quantité conseillée pour une portion.</span></div>
         <div id="protein-list" class="household-list"></div>
-        <form id="protein-form" class="compact-form">
+        <form id="protein-form"><fieldset id="protein-fields" class="compact-form" aria-label="Protéine par portion">
           <label class="field wide"><span>Nom</span><input id="protein-name" required maxlength="60" placeholder="Seitan grillé"></label>
           <label class="field"><span>Famille</span><select id="protein-category"><option value="plant">J’aime les graines</option><option value="egg">Veggie cool</option><option value="fish">Team océan</option><option value="meat">Viandard·e</option></select></label>
           <label class="field"><span>Quantité</span><input id="protein-amount" type="number" min="0.01" max="10000" step="0.01" value="150" required></label>
           <label class="field wide"><span>Unité</span><input id="protein-unit" value="g" required maxlength="24"></label>
           <button id="save-protein" class="primary wide" type="submit">Ajouter la protéine</button>
           <button id="delete-protein" class="secondary wide" type="button" hidden>Retirer cette protéine</button>
-        </form>
+        </fieldset></form>
+        <p id="protein-status" class="muted" role="status"></p>
         <p id="household-error" class="error" role="alert" hidden></p>
       </section>
       <details class="quiet-details">
@@ -926,6 +927,7 @@
     let editingRecipeId = null;
     let editingMemberId = null;
     let editingProteinId = null;
+    let proteinBusy = false;
 
     function key(date) {
       const year = date.getFullYear();
@@ -2715,7 +2717,8 @@
       } catch (error) { status.textContent = error.message; }
       finally { button.disabled = false; }
     });
-    document.getElementById('close-household').addEventListener('click', () => householdDialog.close());
+    document.getElementById('close-household').addEventListener('click', () => { if (!proteinBusy) householdDialog.close(); });
+    householdDialog.addEventListener('cancel', event => { if (proteinBusy) event.preventDefault(); });
     const memberDialog = document.getElementById('member-dialog');
     let memberStep = 0, memberBusy = false;
     function memberTastes() { return document.getElementById('member-avoided').value.split(',').map(word => word.trim()).filter(Boolean); }
@@ -2759,6 +2762,7 @@
       document.getElementById('member-question').focus({ preventScroll: true });
     }
     function openMemberEditor(member) {
+      if (proteinBusy) return;
       clearMemberEditor();
       document.getElementById('member-status').textContent = '';
       if (member) {
@@ -2835,17 +2839,48 @@
       } catch (error) { memberError(error.message); }
       finally { setMemberBusy(false); }
     });
-    document.getElementById('protein-form').addEventListener('submit', async event => {
-      event.preventDefault();
-      const response = await fetch(editingProteinId ? `/api/proteins/${editingProteinId}` : '/api/proteins', { method: editingProteinId ? 'PUT' : 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: document.getElementById('protein-name').value, category: document.getElementById('protein-category').value, amount: Number(document.getElementById('protein-amount').value), unit: document.getElementById('protein-unit').value }) });
-      if (!response.ok) return showHouseholdError(await response.json());
-      clearProteinEditor();
-      await load();
-    });
+    async function saveProtein(remove = false) {
+      if (proteinBusy) return;
+      const form = document.getElementById('protein-form'), proteinId = editingProteinId;
+      const protein = state.proteins.find(item => item.id === proteinId);
+      if (remove ? !protein || !confirm(`Retirer ${protein.name} du bar à protéines ?`) : !form.reportValidity()) return;
+      proteinBusy = true;
+      const fields = document.getElementById('protein-fields'), button = document.getElementById(remove ? 'delete-protein' : 'save-protein');
+      const label = button.textContent, status = document.getElementById('protein-status');
+      fields.disabled = true;
+      document.getElementById('member-list').inert = document.getElementById('protein-list').inert = true;
+      document.getElementById('close-household').disabled = document.getElementById('new-member').disabled = true;
+      form.setAttribute('aria-busy', 'true'); button.textContent = remove ? 'Retrait en cours…' : 'Enregistrement…';
+      status.textContent = ''; document.getElementById('household-error').hidden = true;
+      let saved = false;
+      try {
+        const response = await fetch(proteinId ? `/api/proteins/${proteinId}` : '/api/proteins', {
+          method: remove ? 'DELETE' : proteinId ? 'PUT' : 'POST', headers: { 'content-type': 'application/json' },
+          ...(remove ? {} : { body: JSON.stringify({ name: document.getElementById('protein-name').value, category: document.getElementById('protein-category').value, amount: Number(document.getElementById('protein-amount').value), unit: document.getElementById('protein-unit').value }) }), signal: AbortSignal.timeout(15000)
+        });
+        if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Modification refusée par le serveur. Ta saisie est conservée.');
+        saved = true; clearProteinEditor();
+        status.textContent = remove ? 'Protéine retirée.' : proteinId ? 'Protéine enregistrée.' : 'Protéine ajoutée.';
+        if (!await load()) throw new Error('Affichage remplacé par une nouvelle demande.');
+      } catch (error) {
+        showHouseholdError({ error: saved ? 'Modification enregistrée, mais l’affichage n’a pas pu être actualisé. Utilise Réessayer dans la semaine, sans refaire cette modification.'
+          : ['TypeError', 'TimeoutError', 'AbortError'].includes(error.name) ? 'Impossible de confirmer la modification. Ta saisie est conservée. Vérifie le bar à protéines avant de réessayer : le serveur a peut-être reçu la demande.' : error.message });
+      } finally {
+        proteinBusy = false; fields.disabled = false;
+        document.getElementById('member-list').inert = document.getElementById('protein-list').inert = false;
+        document.getElementById('close-household').disabled = document.getElementById('new-member').disabled = false;
+        form.setAttribute('aria-busy', 'false');
+        if (!saved || remove) button.textContent = label;
+        if (householdDialog.open) (saved ? document.getElementById('protein-name') : button).focus({ preventScroll: true });
+      }
+    }
+    document.getElementById('protein-form').addEventListener('submit', event => { event.preventDefault(); saveProtein(); });
     document.getElementById('protein-list').addEventListener('click', event => {
+      if (proteinBusy) return;
       const button = event.target.closest('[data-protein]');
       if (!button) return;
       const protein = state.proteins.find(item => item.id === Number(button.dataset.protein));
+      if (!protein) return;
       editingProteinId = protein.id;
       document.getElementById('protein-name').value = protein.name;
       document.getElementById('protein-category').value = protein.category;
@@ -2853,16 +2888,10 @@
       document.getElementById('protein-unit').value = protein.unit;
       document.getElementById('save-protein').textContent = 'Enregistrer la protéine';
       document.getElementById('delete-protein').hidden = false;
+      document.getElementById('protein-status').textContent = ''; document.getElementById('household-error').hidden = true;
       renderHousehold();
     });
-    document.getElementById('delete-protein').addEventListener('click', async () => {
-      const protein = state.proteins.find(item => item.id === editingProteinId);
-      if (!protein || !confirm(`Retirer ${protein.name} du bar à protéines ?`)) return;
-      const response = await fetch(`/api/proteins/${protein.id}`, { method: 'DELETE' });
-      if (!response.ok) return showHouseholdError(await response.json());
-      clearProteinEditor();
-      await load();
-    });
+    document.getElementById('delete-protein').addEventListener('click', () => saveProtein(true));
 
     function showHouseholdError(error) {
       const message = document.getElementById('household-error');
