@@ -55,14 +55,14 @@ test('le planning expose réutilisation et export sans Plus d’options, avec le
 
 test('reprendre une occasion retrouve les champs sans contaminer un autre type ou une nouvelle recette', () => {
   const html = readFileSync(join(__dirname, 'public', 'index.html'), 'utf8');
-  const source = html.match(/    function openEventSetup[\s\S]*?(?=\n    function findRestaurants)/)[0];
+  const source = html.match(/    function openEventSetup[\s\S]*?(?=\n    let restaurantSearch)/)[0];
   const controls = new Map(); let current = null;
   const control = id => {
-    if (!controls.has(id)) controls.set(id, { value: '', addEventListener(name, callback) { this[name] = callback; }, dispatchEvent(event) { this[event.type]?.(event); } });
+    if (!controls.has(id)) controls.set(id, { value: '', replaceChildren() {}, addEventListener(name, callback) { this[name] = callback; }, dispatchEvent(event) { this[event.type]?.(event); } });
     return controls.get(id);
   };
   const recipes = [{ id: 1, title: 'Curry', minutes: 30, tags: ['date'] }, { id: 2, title: 'Risotto', minutes: 40, tags: [] }];
-  const context = { state: { selected: 0, slot: 'soir', recipes }, fullDayNames: ['Lundi'], Event,
+  const context = { state: { selected: 0, slot: 'soir', recipes }, fullDayNames: ['Lundi'], Event, cancelRestaurantSearch() {},
     mealFor: () => current, document: { getElementById: control },
     escapeHtml: value => String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;') };
   const open = new Script(source + ';openEventSetup').runInNewContext(context);
@@ -531,7 +531,7 @@ test('planifier un repas bloque les doubles appuis, garde les choix après un é
   const payload = { date: '2026-10-01', slot: 'soir', location: 'home', occasion: 'regular', people: 2, title: 'Curry', recipeId: null, assignments: [], dishes: [{ memberId: 1, recipeId: 2, portions: 1, proteinId: null }, { memberId: 2, recipeId: 3, portions: 1, proteinId: 4 }] };
   let request, calls = 0, closes = 0, refreshes = 0, failRefresh = false;
   const context = {
-    document: { getElementById: node, activeElement: focused }, AbortSignal,
+    document: { getElementById: node, activeElement: focused }, AbortSignal, cancelRestaurantSearch() {},
     dialog: { close() { closes++; } },
     fetch: (path, options) => { calls++; request = { path, ...options }; return context.reply(); },
     load: async () => { refreshes++; assert.equal(node('meal-fields').disabled, false); if (failRefresh) throw new Error('Lecture indisponible'); }

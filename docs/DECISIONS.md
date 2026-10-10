@@ -76,6 +76,18 @@ Pour chaque nouvelle décision, renseigne : **contexte → choix et raison → a
 
 **Limites :** un délai expiré côté navigateur n'annule pas une opération serveur. La protection d'une page ne fournit pas une idempotence globale entre appareils. Avis et certaines modifications concurrentes restent à dernière écriture reçue. Les brouillons non sauvegardés ne survivent pas au rechargement. Résultats et tests par parcours dans `ROADMAP.md` ; ne pas prétendre que tous les contrôles suivent une abstraction unique.
 
+## Recherches de communes et restaurants
+
+**Contexte :** localisation et commune écrivaient dans la même zone sans verrou commun ; une réponse tardive pouvait afficher les résultats d'un repas précédent ou réactiver les contrôles d'une nouvelle recherche. Les attentes HTTP côté navigateur n'étaient pas bornées.
+
+**Choix (10 octobre) :** conserver les deux boutons et les résultats existants, avec une seule recherche active. Un contrôleur d'annulation et un nettoyage idempotent capturent la zone et les états des contrôles ; seuls les résultats encore actuels, connectés et visibles peuvent être affichés. Fermer, changer de lieu, ouvrir une configuration ou enregistrer le repas annule cette lecture. Délai de 15 secondes pour commune/centre ; localisation limitée à 20 secondes par le navigateur, parcours complet limité à 35 secondes. Les refus sans JSON et résultats illisibles ont un message avec repli manuel. Aucune requête de coordonnées ne part après une localisation annulée.
+
+**Alternatives et conséquences :** pas de gestionnaire réseau général, dépendance, nouvelle carte, service ou changement de données selon Ponytail. Verrouiller seulement la recherche permet de fermer ou de saisir/planifier le repas pendant l'attente, plutôt que bloquer toute la fenêtre. Les états précédents sont restaurés une seule fois ; une ancienne réponse ne peut pas déverrouiller une demande suivante. L'annulation n'arrête pas nécessairement la localisation système ni les appels externes déjà partis ; les délais serveur de 10 secondes restent inchangés. Aucun essai automatique ni réservation.
+
+**Lisibilité :** la capture à 320 px avec texte doublé montrait un nom coupé malgré l'absence de débordement du dialogue. Une règle CSS limitée aux résultats permet le retour à la ligne sans réduire la police ni modifier les cartes ailleurs. Apple Design a guidé ce correctif d'accessibilité : `typography.md › Supporting Dynamic Type`, « Keep text truncation to a minimum as font size increases. » Police, couleurs sémantiques, contrôles et navigation approuvés conservés ; les principes de lisibilité sont appliqués au web, sans prétendre utiliser un composant natif iOS.
+
+**Validation et limite :** sept tests logiques et Chromium sur une base isolée, avec services de communes/Overpass locaux simulés et position simulée. Les anciens harnais de planning ont reçu la fonction d'annulation dans leur contexte, sans retirer leurs assertions. Recherche jusqu'à la planification, fermeture/localisation tardive, concurrence, erreurs, délai réel de 15 secondes et noms agrandis vérifiés. Aucun service public interrogé, coordonnées réelles récupérées ou serveur utilisateur modifié ; disponibilité publique, Safari/iPhone et géolocalisation réelle restent à tester.
+
 ## Hors connexion et partage
 
 **Contexte :** consulter courses et recettes sans réseau sans exposer automatiquement des données privées dans un cache.

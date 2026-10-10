@@ -227,6 +227,7 @@
     .choice-icon { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 13px; color: var(--accent); background: var(--accent-soft); }
     .choice-copy { display: grid; gap: 2px; }
     .choice-copy small { color: var(--muted); }
+    #restaurant-results .choice-copy { min-width: 0; overflow-wrap: anywhere; }
     .recipe-form { display: grid; gap: 22px; margin-top: 22px; }
     #recipe-fields, #pantry-fields, #recipe-notes-fields { min-width: 0; margin-right: 0; margin-left: 0; padding: 0; border: 0; }
     .field { display: grid; gap: 6px; }
@@ -1678,6 +1679,7 @@
     }
 
     function openEventSetup(occasion, mode = 'standard', recipe = null) {
+      cancelRestaurantSearch();
       state.pendingEvent = { occasion, recipeId: recipe?.id ?? null };
       const isDate = occasion === 'date';
       const isGuests = occasion === 'guests';
@@ -1697,8 +1699,10 @@
         if (isDate) document.getElementById('date-recipe').value = existing.recipeId ?? '';
       }
       document.getElementById('event-location').addEventListener('change', () => {
+        cancelRestaurantSearch();
         const location = document.getElementById('event-location').value;
         document.getElementById('event-restaurant-search').hidden = location !== 'restaurant';
+        document.getElementById('restaurant-results')?.replaceChildren();
         if (isDate) document.getElementById('date-home-recipes').hidden = location !== 'home';
       });
       document.getElementById('date-recipe')?.addEventListener('change', event => {
@@ -1708,61 +1712,85 @@
       document.getElementById('event-location').dispatchEvent(new Event('change'));
     }
 
-    function findRestaurants() {
-      const results = document.getElementById('restaurant-results');
-      const button = document.getElementById('find-restaurants');
-      if (!navigator.geolocation) {
-        results.innerHTML = '<p class="error">La géolocalisation n’est pas disponible sur cet appareil.</p>';
-        return;
-      }
-      button.disabled = true;
-      button.textContent = 'Recherche en cours…';
-      results.textContent = '';
-      navigator.geolocation.getCurrentPosition(async position => {
-        try {
-          await searchRestaurantPosition(position.coords.latitude, position.coords.longitude);
-        } catch (error) {
-          results.innerHTML = `<p class="error">${escapeHtml(error.message || 'Recherche impossible')}</p>`;
-        } finally {
-          button.disabled = false;
-          button.textContent = '⌖ Localise-moi';
-        }
-      }, error => {
-        const messages = {
-          1: 'Accès à la position refusé. Autorisez-le dans les permissions du navigateur.',
-          2: 'Position indisponible malgré l’autorisation. Vérifiez le service de localisation de Windows ou réessayez sur un téléphone.',
-          3: 'La localisation a dépassé le délai. Vérifiez votre connexion et réessayez.'
-        };
-        results.innerHTML = `<p class="error">${messages[error.code] || 'Impossible d’obtenir votre position.'}</p>`;
-        button.disabled = false;
-        button.textContent = '⌖ Localise-moi';
-      }, { enableHighAccuracy: false, timeout: 20_000, maximumAge: 300_000 });
+    let restaurantSearch = null;
+    function cancelRestaurantSearch() {
+      restaurantSearch?.controller.abort(); restaurantSearch?.finish();
     }
 
-    async function searchRestaurantPosition(latitude, longitude, origin = 'votre position') {
+    async function runRestaurantSearch(work, message, timeout = 15000) {
+      const container = document.getElementById('event-restaurant-search');
       const results = document.getElementById('restaurant-results');
-      results.textContent = 'Recherche des restaurants…';
-      const response = await fetch('/api/restaurants', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ latitude, longitude }) });
-      if (!response.ok) throw new Error((await response.json()).error);
-      const restaurants = await response.json();
-      results.innerHTML = restaurants.length ? `<small class="muted">À moins de 3 km de ${escapeHtml(origin)}</small><div class="choices">${restaurants.map(restaurant => `<div>${choice('⌖', restaurant.name, `${restaurant.distance} m${restaurant.address ? ` · ${restaurant.address}` : ''}${restaurant.cuisine ? ` · ${restaurant.cuisine}` : ''}`, { restaurant: restaurant.name })}<a href="https://www.openstreetmap.org/?mlat=${Number(restaurant.latitude)}&mlon=${Number(restaurant.longitude)}#map=18/${Number(restaurant.latitude)}/${Number(restaurant.longitude)}" target="_blank" rel="noopener noreferrer">Voir sur la carte</a></div>`).join('')}</div><small class="muted">Données © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">contributeurs OpenStreetMap</a></small>` : '<p class="muted">Aucun restaurant référencé dans un rayon de 3 km.</p>';
-    }
-
-    async function findPlaces() {
-      const results = document.getElementById('restaurant-results');
-      const button = document.getElementById('find-place');
-      button.disabled = true;
-      results.textContent = 'Recherche de la commune…';
+      if (restaurantSearch || !dialog.open || !results?.isConnected || container.hidden || document.getElementById('meal-fields').disabled) return;
+      const controller = new AbortController();
+      const controls = [...container.querySelectorAll('button, input')].map(control => ({ control, disabled: control.disabled }));
+      const timer = setTimeout(() => controller.abort(new DOMException('Recherche expirée', 'TimeoutError')), timeout);
+      let finished = false;
+      const finish = () => {
+        if (finished) return; finished = true;
+        clearTimeout(timer); controls.forEach(({ control, disabled }) => control.disabled = disabled);
+        container.setAttribute('aria-busy', 'false');
+        if (restaurantSearch?.controller === controller) restaurantSearch = null;
+      };
+      restaurantSearch = { controller, finish };
+      controls.forEach(({ control }) => control.disabled = true); container.setAttribute('aria-busy', 'true');
+      results.textContent = message;
+      const current = () => restaurantSearch?.controller === controller && results.isConnected && dialog.open && !container.hidden;
       try {
-        const response = await fetch(`/api/places?query=${encodeURIComponent(document.getElementById('restaurant-place').value.trim())}`);
-        if (!response.ok) throw new Error((await response.json()).error);
-        const places = await response.json();
-        results.innerHTML = places.length ? `<small class="muted">Choisissez le centre de votre recherche</small><div class="choices">${places.map(place => choice('⌖', place.name, (place.postalCodes || []).join(', '), { place: place.name, latitude: place.latitude, longitude: place.longitude })).join('')}</div>` : '<p class="muted">Aucune commune trouvée. Essayez son nom ou un code postal à 5 chiffres.</p>';
+        const output = await work(controller.signal);
+        if (current()) results.innerHTML = output;
       } catch (error) {
-        results.innerHTML = `<p class="error">${escapeHtml(error.message)}</p>`;
-      } finally {
-        button.disabled = false;
-      }
+        if (current()) {
+          const reason = controller.signal.aborted ? controller.signal.reason : error;
+          const message = reason.name === 'TimeoutError' ? 'La recherche a dépassé le délai. Réessaie ou renseigne le repas manuellement.'
+            : ['TypeError', 'SyntaxError'].includes(reason.name) ? 'Recherche indisponible. Vérifie ta connexion puis réessaie, ou renseigne le repas manuellement.' : reason.message;
+          results.innerHTML = `<p class="error">${escapeHtml(message || 'Recherche impossible. Réessaie.')}</p>`;
+        }
+      } finally { finish(); }
+    }
+
+    async function restaurantResponse(path, options, signal) {
+      const response = await fetch(path, { ...options, signal });
+      const result = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(typeof result?.error === 'string' ? result.error : 'Recherche temporairement indisponible. Réessaie ou renseigne le repas manuellement.');
+      if (!Array.isArray(result)) throw new Error('Réponse de recherche illisible. Réessaie ou renseigne le repas manuellement.');
+      return result;
+    }
+
+    function findRestaurants() {
+      return runRestaurantSearch(async signal => {
+        if (!navigator.geolocation) throw new Error('La géolocalisation n’est pas disponible sur cet appareil. Recherchez une commune.');
+        const position = await new Promise((resolve, reject) => {
+          const cancel = () => reject(signal.reason);
+          signal.addEventListener('abort', cancel, { once: true });
+          navigator.geolocation.getCurrentPosition(position => {
+            signal.removeEventListener('abort', cancel); resolve(position);
+          }, error => {
+            signal.removeEventListener('abort', cancel);
+            const messages = {
+              1: 'Accès à la position refusé. Autorisez-le dans les permissions du navigateur ou recherchez une commune.',
+              2: 'Position indisponible malgré l’autorisation. Recherchez une commune ou réessayez sur un téléphone.',
+              3: 'La localisation a dépassé le délai. Recherchez une commune ou réessayez.'
+            };
+            reject(new Error(messages[error.code] || 'Impossible d’obtenir votre position. Recherchez une commune.'));
+          }, { enableHighAccuracy: false, timeout: 20_000, maximumAge: 300_000 });
+        });
+        signal.throwIfAborted();
+        return searchRestaurantPosition(position.coords.latitude, position.coords.longitude, signal);
+      }, 'Recherche de votre position…', 35000);
+    }
+
+    async function searchRestaurantPosition(latitude, longitude, signal, origin = 'votre position') {
+      const restaurants = await restaurantResponse('/api/restaurants', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ latitude, longitude }) }, signal);
+      return restaurants.length ? `<small class="muted">À moins de 3 km de ${escapeHtml(origin)}</small><div class="choices">${restaurants.map(restaurant => `<div>${choice('⌖', restaurant.name, `${restaurant.distance} m${restaurant.address ? ` · ${restaurant.address}` : ''}${restaurant.cuisine ? ` · ${restaurant.cuisine}` : ''}`, { restaurant: restaurant.name })}<a href="https://www.openstreetmap.org/?mlat=${Number(restaurant.latitude)}&mlon=${Number(restaurant.longitude)}#map=18/${Number(restaurant.latitude)}/${Number(restaurant.longitude)}" target="_blank" rel="noopener noreferrer">Voir sur la carte</a></div>`).join('')}</div><small class="muted">Données © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">contributeurs OpenStreetMap</a></small>` : '<p class="muted">Aucun restaurant référencé dans un rayon de 3 km.</p>';
+    }
+
+    function findPlaces() {
+      const query = document.getElementById('restaurant-place').value.trim();
+      return runRestaurantSearch(async signal => {
+        if (query.length < 2) throw new Error('Saisis une ville ou un code postal à 5 chiffres.');
+        const places = await restaurantResponse(`/api/places?query=${encodeURIComponent(query)}`, {}, signal);
+        return places.length ? `<small class="muted">Choisissez le centre de votre recherche</small><div class="choices">${places.map(place => choice('⌖', place.name, (place.postalCodes || []).join(', '), { place: place.name, latitude: place.latitude, longitude: place.longitude })).join('')}</div>` : '<p class="muted">Aucune commune trouvée. Essayez son nom ou un code postal à 5 chiffres.</p>';
+      }, 'Recherche de la commune…');
     }
 
     async function saveEvent() {
@@ -1781,6 +1809,7 @@
     async function postMeal(payload, path = '/api/meals', method = 'POST') {
       const fields = document.getElementById('meal-fields');
       if (fields.disabled) return;
+      cancelRestaurantSearch();
       const close = document.getElementById('close-dialog'), message = document.getElementById('dialog-error');
       const subtitle = document.getElementById('dialog-subtitle'), previous = subtitle.textContent, focused = document.activeElement;
       fields.disabled = true; close.disabled = true;
@@ -2263,6 +2292,7 @@
     document.getElementById('compose-week').addEventListener('click', openWeekComposer);
     document.getElementById('export-calendar').addEventListener('click', () => { location.href = `/api/calendar.ics?start=${key(state.weekStart)}&download=1`; });
     document.getElementById('close-dialog').addEventListener('click', () => dialog.close());
+    dialog.addEventListener('close', cancelRestaurantSearch);
     dialog.addEventListener('cancel', event => { if (document.getElementById('meal-fields').disabled) event.preventDefault(); });
     document.getElementById('choices').addEventListener('click', event => {
       if (document.getElementById('meal-fields').disabled) return;
@@ -2278,7 +2308,7 @@
       if (button.dataset.reuse) return button.dataset.reuse === 'past' ? openCopyWeek() : openWeekTemplates();
       if (button.dataset.editplates) return openDuoSetup(null, true);
       if (button.dataset.place) {
-        return searchRestaurantPosition(Number(button.dataset.latitude), Number(button.dataset.longitude), `la commune de ${button.dataset.place}`).catch(error => { document.getElementById('restaurant-results').innerHTML = `<p class="error">${escapeHtml(error.message)}</p>`; });
+        return runRestaurantSearch(signal => searchRestaurantPosition(Number(button.dataset.latitude), Number(button.dataset.longitude), signal, `la commune de ${button.dataset.place}`), 'Recherche des restaurants…');
       }
       if (button.dataset.restaurant) {
         document.getElementById('event-title').value = button.dataset.restaurant;

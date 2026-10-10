@@ -23,7 +23,7 @@ function composer(members = []) {
     key: date => date.toISOString().slice(0, 10), dateAt: day => new Date(Date.UTC(2026, 9, 12 + day)), AbortSignal,
     fetch(path, options) { requests.push({ path, options }); return new Promise((yes, no) => { resolve = yes; reject = no; }); },
     dialog: { open: true, close() { closes++; this.open = false; } }, load: async () => { loads++; if (context.readError) throw new Error('Relecture impossible'); },
-    recipeTaste: () => ({}), tasteRank: () => 0, menuPreviewVersion: 0
+    recipeTaste: () => ({}), tasteRank: () => 0, menuPreviewVersion: 0, cancelRestaurantSearch() {}
   };
   const shared = html.match(/^    async function postMeal[\s\S]*?(?=\n    function compatibleProteins)/m)[0];
   const confirm = html.match(/^      document.getElementById\('confirm-week'\).addEventListener[\s\S]*?(?=\n      document.getElementById\('confirm-week'\).insertAdjacentHTML)/m)[0];
