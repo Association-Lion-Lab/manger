@@ -64,6 +64,7 @@ Cuisines : **Japon**, **Chine**, **Terroir français**, **Méditerranée**, **It
 - Création/désactivation d'accès, modification et récupération du mot de passe, déconnexion courante ou de tous ses appareils. Pas d'inscription publique ni mot de passe par défaut.
 - Invitation privée valable 24 heures pour une inscription membre, révocable ; partage, copie, courriel prérempli et envoi SMTP serveur facultatif, désactivé par défaut.
 - Docker Compose, volume persistant, état de santé, HTTPS local optionnel sans domaine ni reverse proxy ; sauvegarde du foyer et restauration avec aperçu, confirmation, copie de récupération et transaction.
+- Téléchargement de sauvegarde protégé contre les doubles appuis, réception limitée à 30 secondes, fichier vide refusé et bouton libéré en erreur ; aucune donnée du foyer modifiée, enregistrement du fichier à vérifier sur l'appareil.
 - Restauration protégée contre les doubles envois, attente navigateur limitée à 30 secondes, fichier conservé en erreur ; résultat perdu signalé sans rejouer le remplacement.
 - Quatre onglets et identité Manger!, logo rat cuisinier bicolore décliné en SVG et icônes PNG, manifeste et icône d'accueil iPhone ; modes clair/sombre neutre et accents Potager, Ardoise, Prune. Inspiration Romi/Jow, sans réutiliser leurs contenus.
 

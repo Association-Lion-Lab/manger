@@ -242,6 +242,10 @@ La déconnexion et le changement d'accès effacent les copies locales des course
 
 Dans « Mon foyer », un administrateur peut ouvrir « Sauvegarde du foyer » pour télécharger une copie SQLite des données du foyer, y compris les recettes, photos, profils, planning, placard et courses, mais pas les comptes de connexion. La copie peut être créée pendant le fonctionnement du serveur. Un seul téléchargement de sauvegarde peut être préparé à la fois.
 
+Le bouton affiche « Préparation… » pendant la réception du fichier, limitée à 30 secondes côté navigateur. Un double appui est ignoré ; une coupure, un refus ou un fichier vide débloque le bouton sans télécharger de fichier. Aucun nouvel essai n'est envoyé automatiquement : vérifiez la connexion puis retouchez le bouton. Ce téléchargement ne modifie pas le foyer ; son interruption n'annule pas nécessairement la préparation déjà commencée sur le serveur.
+
+« Téléchargement lancé » signifie que le fichier a été confié au navigateur, pas qu'il est enregistré sur l'appareil. Vérifiez sa présence dans vos téléchargements. Le contrôle local refuse un fichier vide, mais ne vérifie pas toute son intégrité SQLite : utilisez l'outil de vérification ci-dessous si nécessaire.
+
 Ce fichier contient vos données privées et n'est pas chiffré. Conservez-le dans un emplacement protégé ; le dépôt de code ne sauvegarde pas vos données personnelles. N'utilisez que des sauvegardes provenant de votre instance de confiance.
 
 « Restaurer une sauvegarde » accepte un fichier SQLite de 32 Mo maximum, de la même version de schéma que l'instance. La vérification affiche le nombre de recettes, personnes et repas sans modifier le foyer. Une confirmation explicite remplace ensuite toutes les données. Avant ce remplacement, une copie complète de récupération est créée dans `recovery/`, à côté de la base active (dans le volume Docker). Si sa création échoue, aucune restauration n'est effectuée. Une erreur pendant le remplacement annule la transaction. Ces copies privées ne sont pas supprimées automatiquement ; surveillez l'espace disque et conservez aussi une sauvegarde sur un autre appareil.

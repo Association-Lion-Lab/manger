@@ -910,17 +910,28 @@
     document.getElementById('restore-form').addEventListener('submit', previewRestore);
     document.getElementById('download-backup').addEventListener('click', async event => {
       const button = event.currentTarget, status = document.getElementById('backup-status');
-      if (button.disabled) return;
-      button.disabled = true; status.textContent = 'Préparation de la sauvegarde…';
+      if (restoreBusy || button.disabled) return;
+      const label = button.textContent; let url;
+      button.disabled = true; button.textContent = 'Préparation…'; button.setAttribute('aria-busy', 'true');
+      status.textContent = 'Préparation de la sauvegarde…';
       try {
-        const response = await fetch('/api/backup', { headers: { 'X-Manger-Backup': '1' }, cache: 'no-store' });
-        if (!response.ok) throw new Error((await response.json()).error || 'Sauvegarde indisponible.');
-        const url = URL.createObjectURL(await response.blob());
+        const response = await fetch('/api/backup', { headers: { 'X-Manger-Backup': '1' }, cache: 'no-store', signal: AbortSignal.timeout(30000) });
+        if (!response.ok) {
+          const result = await response.json().catch(() => null);
+          throw new Error(typeof result?.error === 'string' ? result.error : 'Sauvegarde indisponible. Vérifie ta connexion et tes accès, puis réessaie.');
+        }
+        const file = await response.blob();
+        if (!file.size) throw new Error('La sauvegarde reçue est vide. Aucun fichier téléchargé : réessaie.');
+        url = URL.createObjectURL(file);
         const link = document.createElement('a'); link.href = url; link.download = `manger-${new Date().toISOString().slice(0, 10)}.db`;
-        document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 60000);
+        try { document.body.append(link); link.click(); } finally { link.remove(); }
         status.textContent = 'Téléchargement lancé. Vérifie que le fichier est bien enregistré.';
-      } catch (error) { status.textContent = error.message || 'Téléchargement interrompu. Réessaie.'; }
-      finally { button.disabled = false; }
+      } catch (error) {
+        status.textContent = ['TypeError', 'TimeoutError', 'AbortError'].includes(error.name) ? 'Téléchargement interrompu. Vérifie ta connexion puis réessaie ; les données du foyer sont inchangées.' : error.message || 'Téléchargement interrompu. Réessaie.';
+      } finally {
+        if (url) setTimeout(() => URL.revokeObjectURL(url), 60000);
+        button.disabled = false; button.textContent = label; button.setAttribute('aria-busy', 'false');
+      }
     });
     const state = { weekStart: monday(new Date()), selected: (new Date().getDay() + 6) % 7, recipes: [], meals: [], shopping: [], members: [], proteins: [], slot: 'soir', pendingRecipe: null, pendingEvent: null };
     // Suggestions stay local and never replace a value without an explicit click.
