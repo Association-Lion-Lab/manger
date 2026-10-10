@@ -16,6 +16,8 @@ Le nombre de portions est ajustable de 1 à 100 dans la fiche et le mode cuisine
 
 La fiche présente les favoris et la fermeture dans une barre qui reste accessible pendant le défilement. « Planifier ce repas » et « Cuisiner cette recette » se trouvent après les portions, avant les ingrédients et les étapes. « Le menu reste inchangé » rappelle la limite du recalcul et permet d'en lire le détail ; « Gérer cette recette » regroupe modification, duplication, impression et suppression. Aucun changement de données ou de calcul n'est lié à cette présentation.
 
+La suppression demande confirmation et bloque la fiche pendant l'envoi (15 secondes maximum), sans doublon ni renvoi automatique. Une recette utilisée dans le planning ne peut pas être supprimée. Un refus conserve la fiche et les notes non enregistrées ; une réponse perdue invite à recharger les recettes avant de réessayer, car le serveur a peut-être reçu la demande. Après confirmation, la recette disparaît du catalogue affiché même si la relecture échoue ; « Réessayer » recharge seulement les données. Les copies personnelles hors connexion restent indépendantes. Les boutons de gestion s'empilent si la largeur ou le texte agrandi l'exige.
+
 Prérequis : Node.js 24 ou plus récent. `npm ci --ignore-scripts` installe la dépendance de messagerie Nodemailer à la version verrouillée. Docker le fait pendant la construction de l'image.
 Depuis la fiche recette, « Imprimer / PDF » ouvre l'impression du navigateur : sélectionnez votre imprimante ou l'enregistrement en PDF. La fiche contient les ingrédients pour les portions choisies, les étapes et le lien source éventuel. Les durées et instructions restent celles de la recette d'origine.
 

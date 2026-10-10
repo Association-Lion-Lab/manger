@@ -250,6 +250,7 @@
     .step-row .icon-button { border-radius: 12px; }
     .recipe-form-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .recipe-view-actions { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; padding-top: 18px; border-top: 1px solid var(--line); }
+    #recipe-more .recipe-view-actions { grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr)); }
     #cooking-timer-controls[hidden] { display: none; }
     .recipe-sheet-toolbar { position: sticky; top: -28px; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: -28px -28px 20px; padding: 16px 28px; border-bottom: 1px solid var(--line); background: var(--surface); }
     .recipe-sheet-toolbar .text-action { min-width: 0; padding: 8px 0; font-size: .875rem; text-align: left; }
@@ -925,6 +926,7 @@
     seasonMonth.innerHTML = Array.from({ length: 12 }, (_, index) => `<option value="${index + 1}">${new Intl.DateTimeFormat('fr', { month: 'long' }).format(new Date(2026, index, 1))}</option>`).join('');
     seasonMonth.value = String(new Date().getMonth() + 1);
     let editingRecipeId = null;
+    let recipeDeleteBusy = false;
     let editingMemberId = null;
     let editingProteinId = null;
     let proteinBusy = false;
@@ -1906,6 +1908,7 @@
     }
 
     function openRecipe(recipe) {
+      if (recipeDeleteBusy || !recipe) return;
       document.getElementById('recipe-portions-help').open = false;
       document.getElementById('recipe-offline').open = false;
       document.getElementById('offline-recipe-status').textContent = '';
@@ -2687,9 +2690,9 @@
       const view = event.target.closest('[data-edit-recipe]');
       if (view) openRecipe(state.recipes.find(recipe => recipe.id === Number(view.dataset.editRecipe)));
     });
-    document.getElementById('close-recipe-view').addEventListener('click', () => recipeViewDialog.close());
+    document.getElementById('close-recipe-view').addEventListener('click', () => { if (!recipeDeleteBusy && !document.getElementById('recipe-notes-fields').disabled) recipeViewDialog.close(); });
     async function toggleRecipeFavorite(recipe, button) {
-      if (pendingFavorites.has(recipe.id) || button.disabled) return;
+      if (pendingFavorites.has(recipe.id) || button.disabled || (recipeDeleteBusy && editingRecipeId === recipe.id)) return;
       pendingFavorites.add(recipe.id);
       button.disabled = true;
       document.querySelectorAll(`[data-favorite-recipe="${recipe.id}"]`).forEach(control => control.disabled = true);
@@ -2704,11 +2707,11 @@
         if (current) current.favorite = result.favorite;
       } finally {
         pendingFavorites.delete(recipe.id);
-        if (button.id !== 'favorite-recipe' || editingRecipeId === recipe.id) button.disabled = false;
+        if (button.id !== 'favorite-recipe' || editingRecipeId === recipe.id) button.disabled = button.id === 'favorite-recipe' && recipeDeleteBusy;
         renderRecipes();
         if (recipeViewDialog.open && editingRecipeId === recipe.id) {
           const current = state.recipes.find(item => item.id === recipe.id), favorite = document.getElementById('favorite-recipe');
-          favorite.disabled = false;
+          favorite.disabled = recipeDeleteBusy;
           favorite.textContent = current?.favorite ? '★ Retirer des favoris' : '☆ Ajouter aux favoris';
           favorite.setAttribute('aria-pressed', String(Boolean(current?.favorite)));
         }
@@ -2739,17 +2742,39 @@
       document.getElementById('recipe-dialog-title').textContent = 'Créer une variante';
     });
     document.getElementById('delete-recipe').addEventListener('click', async () => {
+      if (recipeDeleteBusy || document.getElementById('recipe-notes-fields').disabled) return;
       const recipe = state.recipes.find(item => item.id === editingRecipeId);
       if (!recipe || !confirm(`Supprimer la recette « ${recipe.title} » ?`)) return;
-      const response = await fetch(`/api/recipes/${recipe.id}`, { method: 'DELETE' });
-      if (!response.ok) {
-        const message = document.getElementById('recipe-view-error');
-        message.textContent = (await response.json()).error;
-        message.hidden = false;
-        return;
+      recipeDeleteBusy = true;
+      const controls = [...recipeViewDialog.querySelectorAll('button, input, select, textarea, fieldset')], disabled = controls.map(control => control.disabled);
+      const button = document.getElementById('delete-recipe'), label = button.textContent, message = document.getElementById('recipe-view-error');
+      controls.forEach(control => control.disabled = true); recipeViewDialog.setAttribute('aria-busy', 'true');
+      button.textContent = 'Suppression…'; message.hidden = true;
+      let saved = false;
+      try {
+        const response = await fetch(`/api/recipes/${recipe.id}`, { method: 'DELETE', signal: AbortSignal.timeout(15000) });
+        if (!response.ok) throw new Error((await response.json().catch(() => null))?.error || 'La suppression a été refusée. La recette est conservée.');
+        saved = true;
+      } catch (error) {
+        if (editingRecipeId === recipe.id) {
+          message.textContent = ['TypeError', 'TimeoutError', 'AbortError'].includes(error.name)
+            ? 'Impossible de confirmer la suppression. La fiche reste affichée ; recharge les recettes avant de réessayer : le serveur a peut-être reçu la demande.' : error.message;
+          message.hidden = false;
+        }
+      } finally {
+        recipeDeleteBusy = false; controls.forEach((control, index) => control.disabled = disabled[index]);
+        recipeViewDialog.setAttribute('aria-busy', 'false'); button.textContent = label;
+        if (editingRecipeId === recipe.id) {
+          document.getElementById('favorite-recipe').disabled = pendingFavorites.has(recipe.id);
+          if (!saved && recipeViewDialog.open) button.focus({ preventScroll: true });
+        }
       }
-      recipeViewDialog.close();
-      await load();
+      if (saved) {
+        state.recipes = state.recipes.filter(item => item.id !== recipe.id);
+        if (editingRecipeId === recipe.id) { editingRecipeId = null; recipeViewDialog.close(); }
+        renderRecipes();
+        await load().catch(() => {});
+      }
     });
     document.getElementById('close-recipe-dialog').addEventListener('click', () => recipeDialog.close());
     recipeDialog.addEventListener('cancel', event => { if (document.getElementById('recipe-fields').disabled) event.preventDefault(); });
