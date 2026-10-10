@@ -2,6 +2,31 @@
 
 Lecture du dépôt le **10 octobre 2026**. Aucun changement de runtime, dépendance, schéma ou données n'est lié à ce regroupement documentaire.
 
+## Résumé de l'architecture actuelle
+
+Manger! est un **monolithe web auto-hébergé** : un seul processus Node.js sert l'interface et l'API. Il n'y a ni serveur frontend distinct ni service cloud obligatoire pour gérer les recettes, le planning et les courses.
+
+- **Interface :** HTML, CSS et JavaScript dans `public/`, avec quatre onglets : Semaine, Recettes, Courses et Compte.
+- **Serveur :** `server.js` reçoit les requêtes, valide les données et coordonne les modules métier ; `accounts.js` protège les accès au lancement normal.
+- **Persistance :** SQLite conserve le foyer dans `manger.db` et les accès dans `accounts.db`. Les copies hors connexion restent séparées dans le navigateur.
+- **Déploiement :** Node.js directement ou Docker Compose avec un volume persistant ; HTTPS natif facultatif. Les recherches de restaurants/communes, l'import internet et le SMTP contactent des services externes uniquement lorsqu'ils sont utilisés.
+
+### Vue d'ensemble
+
+```text
+Navigateur — interface public/ et copies locales facultatives
+    |
+    | HTTP(S) : pages, fichiers autorisés et API JSON
+    v
+Serveur Node.js — un seul processus
+    |-- Contrôle des accès : accounts.js <--> accounts.db
+    |-- Routes et calculs métier : server.js + modules
+    |       `-- Données du foyer <--> manger.db
+    `-- Appels externes facultatifs : communes, Overpass, import, SMTP
+```
+
+Les deux fichiers SQLite sont stockés côté serveur. Le volume Docker les conserve lors d'une reconstruction de l'image ; publier le dépôt ne publie pas ces données. Le détail des responsabilités, des flux et des limites figure ci-dessous.
+
 ## Socle
 
 Manger! est une application web avec **serveur Node.js 24+**, API HTTP/HTTPS native et SQLite via `node:sqlite`. L'interface utilise HTML, CSS et JavaScript sans framework ni compilation client. `npm ci --ignore-scripts` installe Nodemailer à la version verrouillée ; son utilisation pour envoyer des invitations reste optionnelle.

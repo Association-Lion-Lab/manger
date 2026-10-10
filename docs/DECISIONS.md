@@ -134,6 +134,12 @@ Vraie adaptation tablette/PC, prix indicatifs, saison par région, carte restaur
 
 ## Regroupement documentaire du 10 octobre 2026
 
+### Résumé d'architecture
+
+**Choix :** compléter `ARCHITECTURE.md`, déjà présent dans `docs/`, par un résumé et une vue d'ensemble plutôt que créer une seconde description. Les imports, le lancement de `createApp()`, les fichiers de persistance et Compose sont les sources de vérification ; aucun changement applicatif n'est nécessaire.
+
+**Limite de l'outil d'analyse :** Graphify affiche sa version, mais signale un chemin Python introuvable ; l'interpréteur `python` accessible par défaut ne peut pas démarrer dans cet environnement. Aucun graphe n'est généré et aucune relation n'est attribuée à un graphe. Vérification directe du code en repli ; résoudre l'interpréteur installé avant une future extraction Graphify, sans réinstaller ni ajouter de dépendance au projet pour cette demande documentaire.
+
 **Choix :** mettre les documents complets dans `docs/`, conserver des liens d'entrée à la racine pour les anciennes instructions et les outils, ajouter des vues fonctionnalités/architecture/décisions. Cela évite de maintenir deux copies du guide et de perdre les détails des lots passés.
 
 **Corrections :** retirer les affirmations périmées « pas de restauration dans l'interface » et « aucun achat hors connexion envoyé plus tard ». Documenter séparément ce qui est automatique et volontaire, ainsi que les validations historiques et actuelles. Aucune nouvelle fonction applicative ni règle métier introduite.
