@@ -106,10 +106,11 @@ test('retrait du profil : refus illisible puis confirmation et lecture échouée
   assert.equal(form.context.memberBusy, false);
 });
 
-test('un profil ne peut pas être remplacé pendant son enregistrement ou celui des protéines', () => {
+test('un profil ne peut pas être remplacé pendant son enregistrement, les protéines ou une restauration', () => {
   const html = readFileSync(join(__dirname, 'public/index.html'), 'utf8');
   const source = html.match(/^    function openMemberEditor[\s\S]*?(?=\n    function closeMemberEditor)/m)[0];
-  const context = createContext({ memberBusy: true, proteinBusy: false, clearMemberEditor() { throw new Error('Ne pas remplacer le brouillon en cours'); } });
+  const context = createContext({ restoreBusy: false, memberBusy: true, proteinBusy: false, clearMemberEditor() { throw new Error('Ne pas remplacer le brouillon en cours'); } });
   const open = new Script(source + ';openMemberEditor').runInContext(context); open();
   context.memberBusy = false; context.proteinBusy = true; open();
+  context.proteinBusy = false; context.restoreBusy = true; open();
 });

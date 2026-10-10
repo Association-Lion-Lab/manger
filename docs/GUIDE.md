@@ -248,6 +248,12 @@ Ce fichier contient vos données privées et n'est pas chiffré. Conservez-le da
 
 L'aperçu expire après dix minutes. Les requêtes concurrentes sont refusées pendant la restauration ; rechargez les autres appareils après l'opération. Pour les fichiers plus volumineux ou d'anciennes versions, utilisez l'outil ci-dessous.
 
+La vérification et la confirmation bloquent les doubles envois, les champs et la fermeture du foyer pendant l'attente, limitée à 30 secondes côté navigateur. Un fichier absent, vide ou trop volumineux est refusé avant l'envoi ; le fichier choisi reste sélectionné en cas d'erreur. L'aperçu peut être demandé au clavier, sans dépendre du bouton de soumission.
+
+Attendez la fin de la préparation d'un téléchargement de sauvegarde avant de vérifier ou restaurer un fichier : ces demandes ne démarrent pas tant que ce téléchargement est en préparation.
+
+Une confirmation réussie recharge l'application sans renvoyer la restauration. Si la réponse du remplacement est perdue ou si le délai expire, **rechargez la page et vérifiez le foyer avant toute nouvelle restauration** : le serveur peut avoir terminé malgré l'erreur réseau. Le bouton de confirmation disparaît ; il faut une nouvelle vérification du fichier pour obtenir un autre aperçu. Une erreur réseau pendant le seul aperçu ne remplace pas le foyer. Le délai navigateur n'annule pas nécessairement l'opération déjà commencée sur le serveur.
+
 Pour vérifier un fichier puis le restaurer vers un **nouveau fichier**, depuis le dossier de l'application :
 
 ```shell

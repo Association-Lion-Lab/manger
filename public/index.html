@@ -782,7 +782,7 @@
         <details class="quiet-details"><summary>Restaurer une sauvegarde</summary>
           <form id="restore-form" class="recipe-form">
             <label class="field"><span>Sauvegarde du foyer · 32 Mo maximum</span><input id="restore-file" type="file" accept=".db,.sqlite,.sqlite3" required></label>
-            <button class="secondary" type="submit">Vérifier le fichier</button>
+            <button id="preview-restore" class="secondary" type="submit">Vérifier le fichier</button>
           </form>
           <div id="restore-preview" role="status"></div>
         </details>
@@ -847,31 +847,67 @@
       document.getElementById('account-invite').hidden = !account.admin;
       document.getElementById('account-name').textContent = account.username;
     }).catch(() => {});
-    let restoreToken = null;
+    let restoreToken = null, restoreBusy = false;
     const restoreOutput = document.getElementById('restore-preview');
-    document.getElementById('restore-file').addEventListener('change', () => { restoreToken = null; restoreOutput.replaceChildren(); });
-    document.getElementById('restore-form').addEventListener('submit', async event => {
+    function beginRestore(button) {
+      restoreBusy = true;
+      const dialog = document.getElementById('household-dialog');
+      const controls = [...dialog.querySelectorAll('button, input, select, textarea, fieldset')].map(control => [control, control.disabled]);
+      const lists = ['member-list', 'protein-list'].map(id => [document.getElementById(id), document.getElementById(id).inert]);
+      const label = button.textContent;
+      controls.forEach(([control]) => { control.disabled = true; });
+      lists.forEach(([list]) => { list.inert = true; });
+      dialog.setAttribute('aria-busy', 'true');
+      return () => {
+        restoreBusy = false;
+        controls.forEach(([control, disabled]) => { control.disabled = disabled; });
+        lists.forEach(([list, inert]) => { list.inert = inert; });
+        button.textContent = label; dialog.setAttribute('aria-busy', 'false');
+        if (dialog.open) (button.isConnected ? button : document.getElementById('restore-file')).focus({ preventScroll: true });
+      };
+    }
+    async function restoreRequest(path, body, contentType) {
+      const response = await fetch(path, { method: 'POST', headers: { 'X-Manger-Restore': '1', 'Content-Type': contentType }, body, signal: AbortSignal.timeout(30000) });
+      if (!response.ok) {
+        const result = await response.json().catch(() => null);
+        throw new Error(typeof result?.error === 'string' ? result.error : 'La demande a été refusée. Vérifie le fichier et les accès au foyer.');
+      }
+      return response;
+    }
+    async function previewRestore(event) {
       event.preventDefault();
-      const fileInput = document.getElementById('restore-file'), file = fileInput.files[0], button = event.submitter;
-      restoreToken = null; restoreOutput.textContent = 'Vérification…'; button.disabled = true; fileInput.disabled = true;
+      if (restoreBusy || proteinBusy || memberBusy || document.getElementById('download-backup').disabled) return;
+      const file = document.getElementById('restore-file').files[0], button = document.getElementById('preview-restore');
+      const finish = beginRestore(button);
+      restoreToken = null; restoreOutput.textContent = 'Vérification du fichier…'; button.textContent = 'Vérification…';
       try {
-        if (!file || file.size > 32 * 1024 * 1024) throw new Error('Choisis un fichier de 32 Mo maximum.');
-        const response = await fetch('/api/restore/preview', { method: 'POST', headers: { 'X-Manger-Restore': '1', 'Content-Type': 'application/octet-stream' }, body: file });
-        const result = await response.json(); if (!response.ok) throw new Error(result.error);
+        if (!file || !file.size || file.size > 32 * 1024 * 1024) throw new Error('Choisis une sauvegarde SQLite non vide de 32 Mo maximum.');
+        const response = await restoreRequest('/api/restore/preview', file, 'application/octet-stream');
+        const result = await response.json();
+        if (typeof result?.token !== 'string' || !result.token || !['recipes', 'members', 'meals'].every(key => Number.isSafeInteger(result[key]) && result[key] >= 0)) throw new Error('Aperçu illisible. Vérifie à nouveau le fichier ; le foyer n’a pas été remplacé.');
         restoreToken = result.token;
         restoreOutput.innerHTML = `<p>${result.recipes} recettes · ${result.members} personnes · ${result.meals} repas.</p><p class="muted">La restauration remplacera le foyer actuel. Une copie de récupération sera conservée sur le serveur. Les autres appareils devront recharger la page.</p><button id="confirm-restore" class="secondary" type="button">Restaurer ce foyer…</button>`;
-        document.getElementById('confirm-restore').addEventListener('click', async event => {
-          if (!restoreToken || !confirm('Remplacer toutes les données actuelles par cette sauvegarde ?')) return;
-          event.currentTarget.disabled = true; button.disabled = true; fileInput.disabled = true;
-          try {
-            const response = await fetch('/api/restore/apply', { method: 'POST', headers: { 'X-Manger-Restore': '1', 'Content-Type': 'application/json' }, body: JSON.stringify({ token: restoreToken }) });
-            const result = await response.json(); if (!response.ok) throw new Error(result.error);
-            location.reload();
-          } catch (error) { restoreToken = null; restoreOutput.textContent = error.message; button.disabled = false; fileInput.disabled = false; }
-        });
-      } catch (error) { restoreOutput.textContent = error.message; }
-      finally { button.disabled = false; fileInput.disabled = false; }
-    });
+        document.getElementById('confirm-restore').addEventListener('click', applyRestore);
+      } catch (error) {
+        restoreOutput.textContent = ['TypeError', 'TimeoutError', 'AbortError', 'SyntaxError'].includes(error.name) ? 'La vérification n’a pas pu être terminée. Le foyer n’a pas été remplacé. Vérifie ta connexion puis réessaie.' : error.message;
+      } finally { finish(); }
+    }
+    async function applyRestore() {
+      if (restoreBusy || proteinBusy || memberBusy || document.getElementById('download-backup').disabled || !restoreToken || !confirm('Remplacer toutes les données actuelles par cette sauvegarde ?')) return;
+      const token = restoreToken, button = document.getElementById('confirm-restore'), finish = beginRestore(button);
+      let restored = false;
+      restoreToken = null; button.textContent = 'Restauration…';
+      try {
+        await restoreRequest('/api/restore/apply', JSON.stringify({ token }), 'application/json');
+        restored = true; restoreOutput.textContent = 'Foyer restauré. Rechargement de l’application…';
+        location.reload();
+      } catch (error) {
+        restoreOutput.textContent = restored ? 'Foyer restauré. Recharge la page pour actualiser l’affichage, sans refaire la restauration.'
+          : ['TypeError', 'TimeoutError', 'AbortError'].includes(error.name) ? 'Impossible de confirmer la restauration. Recharge la page et vérifie le foyer avant toute nouvelle restauration : le serveur a peut-être terminé le remplacement.' : error.message;
+      } finally { if (!restored) finish(); }
+    }
+    document.getElementById('restore-file').addEventListener('change', () => { if (!restoreBusy) { restoreToken = null; restoreOutput.replaceChildren(); } });
+    document.getElementById('restore-form').addEventListener('submit', previewRestore);
     document.getElementById('download-backup').addEventListener('click', async event => {
       const button = event.currentTarget, status = document.getElementById('backup-status');
       if (button.disabled) return;
@@ -2809,8 +2845,9 @@
       } catch (error) { status.textContent = error.message; }
       finally { button.disabled = false; }
     });
-    document.getElementById('close-household').addEventListener('click', () => { if (!proteinBusy && !memberBusy) householdDialog.close(); });
-    householdDialog.addEventListener('cancel', event => { if (proteinBusy || memberBusy) event.preventDefault(); });
+    document.getElementById('close-household').addEventListener('click', () => { if (!restoreBusy && !proteinBusy && !memberBusy) householdDialog.close(); });
+    householdDialog.addEventListener('cancel', event => { if (restoreBusy || proteinBusy || memberBusy) event.preventDefault(); });
+    householdDialog.addEventListener('click', event => { if (restoreBusy) event.preventDefault(); }, true);
     const memberDialog = document.getElementById('member-dialog');
     let memberStep = 0, memberBusy = false;
     function memberTastes() { return document.getElementById('member-avoided').value.split(',').map(word => word.trim()).filter(Boolean); }
@@ -2854,7 +2891,7 @@
       document.getElementById('member-question').focus({ preventScroll: true });
     }
     function openMemberEditor(member) {
-      if (proteinBusy || memberBusy) return;
+      if (restoreBusy || proteinBusy || memberBusy) return;
       clearMemberEditor();
       document.getElementById('member-status').textContent = '';
       if (member) {
@@ -2934,7 +2971,7 @@
       finally { setMemberBusy(false); }
     });
     async function saveProtein(remove = false) {
-      if (proteinBusy || memberBusy) return;
+      if (restoreBusy || proteinBusy || memberBusy) return;
       const form = document.getElementById('protein-form'), proteinId = editingProteinId;
       const protein = state.proteins.find(item => item.id === proteinId);
       if (remove ? !protein || !confirm(`Retirer ${protein.name} du bar à protéines ?`) : !form.reportValidity()) return;

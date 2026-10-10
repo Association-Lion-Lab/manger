@@ -106,6 +106,14 @@ Pour chaque nouvelle décision, renseigne : **contexte → choix et raison → a
 
 **Restauration :** aperçu et confirmation, compatibilité de schéma, copie de récupération avant remplacement et transaction. L'outil en ligne de commande restaure vers un nouveau fichier et refuse une destination existante. Sauvegardes privées non chiffrées ; seul un fichier de confiance doit être utilisé.
 
+**Protection du formulaire (10 octobre) :** le parcours et la confirmation native sont conservés selon Ponytail. Un verrou commun empêche vérification/remplacement simultanés, bloque fermeture et édition du foyer, puis restaure les états désactivés précédents. Le bouton de vérification est identifié directement, sans dépendance à `submitter`. Délai navigateur de 30 secondes, choisi plus généreux que les petites écritures en raison du fichier pouvant atteindre 32 Mo. Aucun nouvel écran, dépendance, changement de schéma ou assouplissement serveur.
+
+**Téléchargement concurrent :** une sauvegarde déjà en préparation empêche de commencer l'aperçu ou le remplacement. Son verrou existant est réutilisé plutôt qu'ajouter un gestionnaire d'opérations ; cela évite que la fin du téléchargement déverrouille un contrôle pendant la restauration ou que la restauration remette un ancien état d'attente après la fin du téléchargement.
+
+**Résultat incertain :** succès HTTP du remplacement = restauration confirmée, sans exiger de relire le JSON pour déclencher le rechargement. Un échec de ce rechargement ne permet pas de rejouer la restauration. Après perte réseau/délai, jeton retiré et message demandant de recharger puis vérifier les données avant toute nouvelle tentative ; un nouveau remplacement exige un nouvel aperçu et une nouvelle confirmation. Pas de renvoi automatique ni garantie d'annulation serveur. Un refus reste distinct d'une réponse perdue ; l'aperçu valide le jeton et les compteurs avant affichage. Alternative écartée : réessayer automatiquement une opération qui remplace le foyer.
+
+**Vérification :** tests logiques du formulaire et protections des profils/protéines, restauration serveur sur bases isolées et parcours Chromium. Un premier contrôle HTTP isolé a rencontré `EACCES` sur `127.0.0.1:2163` ; la suite avec connexions locales autorisées a passé. Les anciens harnais profils/protéines ont été actualisés pour inclure le verrou de restauration, sans retirer leurs assertions. Résultats complets et limites dans la feuille de route ; aucun remplacement du foyer réel, accès Ubuntu ou essai Safari/iPhone.
+
 **Validation :** restauration testée sur données isolées, jamais sur le foyer réel. Export calendrier rapporté fonctionnel sur Safari iPhone ; autres systèmes non validés. Les sites sans Recipe structuré, avec connexion ou blocage ne sont pas contournés.
 
 ## Validations et blocages restants
