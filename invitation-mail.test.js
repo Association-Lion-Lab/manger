@@ -39,6 +39,7 @@ test('invitation MIME contains only the fixed canonical link and one recipient',
   // Decode quoted-printable soft wrapping for the long fragment token.
   const text = message.replace(/=\r\n/g, '').replace(/=([A-F0-9]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
   assert.ok(text.includes(config.MANGER_APP_URL + '/login#invite=' + token));
+  assert.ok(Buffer.from(text,'latin1').toString('utf8').includes('demande d’abord le certificat public et les instructions'));
   assert.match(message, /Content-Type: text\/plain/); assert.doesNotMatch(message, /Bcc:|Content-Type: text\/html|multipart\/mixed/);
   await assert.rejects(mailer.send('personne@example.org', 'bad', expires()));
   await assert.rejects(mailer.send('personne@example.org', token, 0));

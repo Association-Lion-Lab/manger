@@ -26,4 +26,6 @@ Le dernier lot de code avant ce regroupement est `07b2a97` : suppression de rece
 
 ## Maintenir cette documentation
 
+Dernier contrôle local du **11 octobre 2026** : aide certificat pour les appareils invités, 185 tests réussis (HTTPS réel inclus), téléchargement DER et parcours Chromium isolés. Les limites de Safari et de l’installation distante sont précisées dans [HTTPS.md](HTTPS.md) et [ROADMAP.md](ROADMAP.md).
+
 Lors d'une modification, actualise le guide ou les fonctionnalités concernés ; pour un choix ou un blocage, actualise aussi `DECISIONS.md`. Ajoute le résultat réel et les limites de validation au suivi, sans transformer un ancien test en nouvelle preuve. Mets à jour cet index si une nouvelle page apparaît. Les petits fichiers laissés à la racine ne sont que des points d'entrée vers les documents de référence.

@@ -1,6 +1,6 @@
 const { createServer } = require('node:http');
 const { createServer: createHttpsServer } = require('node:https');
-const { tlsOptions } = require('./tls');
+const { tlsOptions, localCertificate } = require('./tls');
 const { readFileSync, mkdirSync, createReadStream } = require('node:fs');
 const { mkdtemp, rm, stat } = require('node:fs/promises');
 const { tmpdir } = require('node:os');
@@ -1294,7 +1294,7 @@ function createApp(database, overpassUrl = process.env.MANGER_OVERPASS_URL || 'h
   database ||= createDatabase(process.env.MANGER_DB || join(__dirname, 'data', 'manger.db'));
   if (production) accounts = openAccounts();
   const handler = createHandler(database, overpassUrl, communesUrl);
-  const protectedHandler = accounts ? protectAccounts(accounts, handler, { secure: Boolean(tls) || process.env.MANGER_SECURE_COOKIE === '1', mailer }) : handler;
+  const protectedHandler = accounts ? protectAccounts(accounts, handler, { secure: Boolean(tls) || process.env.MANGER_SECURE_COOKIE === '1', mailer, certificate: localCertificate(tls) }) : handler;
   const server = tls ? createHttpsServer(tls, protectedHandler) : createServer(protectedHandler);
   if (production) server.on('close', () => { accounts.close(); database.close(); });
   return server;

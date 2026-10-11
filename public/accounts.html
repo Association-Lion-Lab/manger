@@ -16,6 +16,7 @@
 :root[data-mode="dark"][data-accent="ardoise"]{--accent:#a5c2fc;--on-accent:#111113}:root[data-mode="dark"][data-accent="prune"]{--accent:#e1a9bb;--on-accent:#111113}
 #invitation-options{margin-bottom:24px}#invitation-result{display:grid;gap:12px;margin-top:16px}#join .button{margin-top:20px}#invitation-status{overflow-wrap:anywhere}
 #server-email summary{min-height:48px;padding:12px 0;cursor:pointer}#invitation-email-form{margin:8px 0 16px}#server-email input{width:100%}button:active:not(:disabled){filter:brightness(.9)}
+#certificate-options{margin:20px 0}#certificate-options summary{min-height:48px;padding:12px 0;cursor:pointer}#certificate-options li{margin-bottom:12px}#certificate-options .quiet{margin-bottom:12px}#certificate-fingerprint{display:block;overflow-wrap:anywhere}#certificate-status{overflow-wrap:anywhere}#certificate-guide{width:100%;font:inherit;padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--bg);color:var(--text)}
 </style></head><body><main>
 <header><div class="brand">Manger<span>!</span></div><h1 id="title">Connexion</h1><p class="muted" id="intro">Ta connexion personnelle, les repas du foyer.</p></header>
 <p id="message" role="status" aria-live="polite"></p>
@@ -37,6 +38,22 @@
 <button class="primary">Changer le mot de passe</button></form></section>
 <section id="admin" hidden><h2>Accès au foyer</h2><p class="muted">Ces comptes partagent les recettes, le planning et les courses. Les personnes à table se gèrent toujours dans « Mon foyer ».</p><ul id="people"></ul>
 <details id="invitation-options"><summary>Inviter par lien privé</summary><p class="muted">Le membre choisira son mot de passe. Lien valable 24 heures, pour une seule inscription. En créer un nouveau annule le précédent.</p>
+<details id="certificate-options" hidden><summary>Préparer l’accès sur un nouvel iPhone</summary>
+<p>Si Safari refuse d’ouvrir le site, envoie d’abord ce certificat public par AirDrop ou en pièce jointe à un courriel. Un lien vers le certificat sur ce serveur serait lui aussi bloqué.</p>
+<a id="download-certificate" class="button quiet" href="/api/accounts/certificate" download="manger-ca.cer">Télécharger le certificat public</a>
+<button id="share-certificate" type="button" class="quiet" hidden>Partager le certificat…</button>
+<ol id="certificate-steps">
+<li>Vérifie avec l’administrateur l’empreinte SHA-256 du certificat reçu, par un autre canal de confiance.</li>
+<li>Ouvre le fichier manger-ca.cer sur l’iPhone, puis installe le profil dans Réglages → Général → VPN et gestion de l’appareil.</li>
+<li>Active sa confiance dans Réglages → Général → Informations → Réglages des certificats.</li>
+<li>Connecte-toi au Wi-Fi ou VPN du serveur, puis ouvre le lien d’invitation dans Safari.</li>
+</ol>
+<p><small>Installer cette autorité permet à ton appareil de faire confiance aux certificats qu’elle signe, pas seulement à Manger! Ne l’installe que si tu fais confiance à son administrateur. Tu peux retirer le profil ensuite.</small></p>
+<p><small>Empreinte SHA-256 à comparer :</small><code id="certificate-fingerprint"></code></p>
+<button id="copy-certificate-guide" type="button" class="quiet">Copier les instructions iPhone</button>
+<label id="certificate-guide-label" hidden>Instructions à copier<textarea id="certificate-guide" readonly rows="8"></textarea></label>
+<p id="certificate-status" role="status" aria-live="polite"></p>
+</details>
 <button id="create-invitation" type="button" class="quiet">Créer un lien d’invitation</button>
 <div id="invitation-result" hidden><label>Lien privé à transmettre<input id="invitation-link" readonly type="text"></label><button id="share-invitation" type="button" class="primary quiet" hidden>Partager l’invitation</button><button id="copy-invitation" type="button" class="quiet">Copier le lien</button><button id="email-invitation" type="button" class="quiet">Préparer un courriel</button><small>Ce bouton ouvre ton application de courriel. Choisis le destinataire et confirme l’envoi dans celle-ci.</small><p id="invitation-expiry" class="muted"></p>
 <details id="server-email" hidden><summary>Envoyer depuis Manger!</summary><form id="invitation-email-form"><label>Courriel du destinataire<input id="invitation-email" type="email" inputmode="email" autocomplete="email" autocapitalize="none" spellcheck="false" maxlength="254" placeholder="personne@example.org" required aria-describedby="invitation-email-help"></label><small id="invitation-email-help">L’adresse et le lien privé sont transmis au service de messagerie du serveur. Manger! ne conserve pas l’adresse.</small><button id="send-invitation-email" class="primary quiet">Envoyer l’invitation</button><p id="invitation-email-status" role="status"></p></form></details></div>
@@ -61,8 +78,43 @@ form('join-form',async data=>{await api('/api/account/join','POST',{...data,toke
 let invitationBusy=false, invitationExpires=0;
 const invitationButtons=['create-invitation','revoke-invitation','share-invitation','copy-invitation','email-invitation','send-invitation-email','invitation-email'];
 async function runInvitation(task,status=$('invitation-status')){if(invitationBusy)return;invitationBusy=true;invitationButtons.forEach(id=>$(id).disabled=true);$('invitation-status').textContent='';$('invitation-email-status').textContent='';try{await task();}catch(error){status.textContent=error.message;}finally{invitationBusy=false;invitationButtons.forEach(id=>$(id).disabled=false);}}
-function invitationContent(){const url=$('invitation-link').value;if(!url.startsWith(location.origin+'/login#invite=')||!/^[a-f0-9]{64}$/.test(url.split('#invite=')[1]||''))throw new Error('Crée un lien d’invitation avant de le transmettre.');if(invitationExpires<=Date.now())throw new Error('Ce lien a expiré. Crée une nouvelle invitation.');return{title:'Invitation au foyer — Manger!',url,text:'Rejoins notre foyer sur Manger! Tu choisiras ton identifiant et ton mot de passe pour accéder aux recettes, au planning et aux courses partagés.\nLien privé, pour une seule inscription, valable jusqu’au '+new Date(invitationExpires).toLocaleString('fr-FR')+'. Transmets-le seulement à la personne invitée.\nAccès au serveur nécessaire par Wi-Fi ou VPN ; approuve son certificat local si besoin.'};}
+function invitationContent(){const url=$('invitation-link').value;if(!url.startsWith(location.origin+'/login#invite=')||!/^[a-f0-9]{64}$/.test(url.split('#invite=')[1]||''))throw new Error('Crée un lien d’invitation avant de le transmettre.');if(invitationExpires<=Date.now())throw new Error('Ce lien a expiré. Crée une nouvelle invitation.');return{title:'Invitation au foyer — Manger!',url,text:'Rejoins notre foyer sur Manger! Tu choisiras ton identifiant et ton mot de passe pour accéder aux recettes, au planning et aux courses partagés.\nLien privé, pour une seule inscription, valable jusqu’au '+new Date(invitationExpires).toLocaleString('fr-FR')+'. Transmets-le seulement à la personne invitée.\nAccès au serveur nécessaire par Wi-Fi ou VPN. Si Safari bloque le site, demande d’abord le certificat public et les instructions à l’administrateur ; les accepter depuis ce lien ne sera pas forcément possible.'};}
 $('create-invitation').onclick=()=>runInvitation(async()=>{invitationExpires=0;$('invitation-link').value='';$('invitation-result').hidden=true;$('invitation-status').textContent='Création du lien…';const invitation=await api('/api/accounts/invitation','POST',{});invitationExpires=invitation.expires;$('invitation-link').value=location.origin+'/login#invite='+invitation.token;$('invitation-result').hidden=false;$('invitation-expiry').textContent='Expire le '+new Date(invitation.expires).toLocaleString('fr-FR');$('invitation-status').textContent='Lien créé. Il donne accès aux données partagées du foyer.';});
+function certificateInstructions(){
+  const steps=Array.from($('certificate-steps').children,(step,index)=>`${index+1}. ${step.textContent}`);
+  return 'Accès à Manger! sur iPhone — certificat fourni séparément par l’administrateur.\n\n'+steps.join('\n')+
+    '\n\nEmpreinte SHA-256 : '+me.localCertificate.fingerprint+
+    '\nServeur : '+location.origin+'\nN’installe cette autorité que si tu fais confiance à son administrateur : elle peut signer des certificats pour d’autres sites. Tu peux retirer le profil ensuite.';
+}
+let certificateFile=null, certificateLoading=false;
+async function prepareCertificateShare(){
+  if(!me?.localCertificate||location.protocol!=='https:'||certificateFile||certificateLoading||typeof navigator.canShare!=='function'||typeof navigator.share!=='function')return;
+  certificateLoading=true;$('certificate-status').textContent='Préparation du certificat pour le partage…';
+  try{
+    const response=await fetch('/api/accounts/certificate',{signal:AbortSignal.timeout(10000)});
+    if(!response.ok||response.headers.get('content-type')!=='application/pkix-cert')throw new Error();
+    const bytes=await response.arrayBuffer();if(!bytes.byteLength||bytes.byteLength>32768)throw new Error();
+    const file=new File([bytes],'manger-ca.cer',{type:'application/pkix-cert'});
+    if(navigator.canShare({files:[file]})){certificateFile=file;$('share-certificate').hidden=false;}
+    $('certificate-status').textContent='';
+  }catch{$('certificate-status').textContent='Partage direct indisponible. Télécharge le certificat public, puis envoie le fichier à la personne invitée.';}
+  finally{certificateLoading=false;}
+}
+$('invitation-options').addEventListener('toggle',()=>{if($('invitation-options').open)prepareCertificateShare();});
+$('certificate-options').addEventListener('toggle',()=>{if($('certificate-options').open)prepareCertificateShare();});
+$('share-certificate').onclick=async()=>{
+  const button=$('share-certificate');if(button.disabled||!certificateFile)return;button.disabled=true;
+  try{await navigator.share({files:[certificateFile],title:'Certificat public de Manger!',text:certificateInstructions()});$('certificate-status').textContent='Fichier transmis à l’application choisie. Vérifie son envoi avant de partager l’invitation.';}
+  catch(error){$('certificate-status').textContent=error.name==='AbortError'?'Partage annulé. Le certificat reste disponible.':'Partage indisponible. Télécharge le certificat public, puis envoie le fichier.';}
+  finally{button.disabled=false;}
+};
+$('copy-certificate-guide').onclick=async()=>{
+  const button=$('copy-certificate-guide');if(button.disabled||!me?.localCertificate)return;button.disabled=true;
+  const text=certificateInstructions();
+  try{await navigator.clipboard.writeText(text);$('certificate-guide-label').hidden=true;$('certificate-status').textContent='Instructions copiées. Envoie-les avec le fichier certificat, avant le lien d’invitation.';}
+  catch{$('certificate-guide').value=text;$('certificate-guide-label').hidden=false;$('certificate-guide').focus();$('certificate-guide').select();$('certificate-status').textContent='Sélectionne « Copier » dans le menu du champ.';}
+  finally{button.disabled=false;}
+};
 $('share-invitation').hidden=typeof navigator.share!=='function';
 $('share-invitation').onclick=()=>runInvitation(async()=>{const content=invitationContent();try{await navigator.share(content);$('invitation-status').textContent='Lien transmis à l’application choisie. Vérifie son envoi.';}catch(error){$('invitation-status').textContent=error.name==='AbortError'?'Partage annulé. Le lien reste disponible.':'Partage indisponible. Utilise « Copier le lien » ou « Préparer un courriel ».';}});
 $('copy-invitation').onclick=()=>runInvitation(async()=>{const {url}=invitationContent();try{await navigator.clipboard.writeText(url);$('invitation-status').textContent='Lien copié. Transmets-le seulement à la personne invitée.';}catch{$('invitation-link').focus();$('invitation-link').select();$('invitation-status').textContent='Sélectionne « Copier » dans le menu du champ.';}});
@@ -75,7 +127,7 @@ $('logout').onclick=event=>run(event.target,async()=>{await api('/api/account/lo
 $('logout-all').onclick=event=>run(event.target,async()=>{if(!confirm('Déconnecter tous tes appareils, y compris celui-ci ? Tu pourras te reconnecter avec ton mot de passe actuel.'))return;await api('/api/account/logout-all','POST',{});clearOffline();location.replace('/login');});
 async function people(){const users=await api('/api/accounts');$('people').replaceChildren();for(const user of users){const li=document.createElement('li'),label=document.createElement('div'),name=document.createElement('strong'),detail=document.createElement('small');name.textContent=user.username;detail.textContent=`${user.admin?'Administrateur':'Membre'} · ${user.active?'Actif':'Désactivé'}`;label.append(name,detail);li.append(label);if(user.id!==me.id){const button=document.createElement('button');button.textContent=user.active?'Désactiver':'Réactiver';button.setAttribute('aria-label',`${button.textContent} ${user.username}`);button.onclick=()=>run(button,async()=>{if(user.active&&!confirm(`Désactiver l’accès de ${user.username} et déconnecter ses appareils ?`))return;await api(`/api/accounts/${user.id}`,'PUT',{active:!user.active});await people();});li.append(button);}$('people').append(li);}}
 $('http-warning').hidden=location.protocol==='https:';
-(async()=>{try{const response=await fetch('/api/account');if(response.status===401){clearOffline(false);if(invitationToken){$('join').hidden=false;$('title').textContent='Bienvenue à table';$('intro').textContent='Une invitation à rejoindre le foyer.';}else $('login').hidden=false;return;}if(!response.ok)throw new Error('Connexion au serveur impossible. Recharge la page.');me=await response.json();$('title').textContent='Mon compte';$('intro').textContent=me.username;$('account').hidden=false;$('admin').hidden=!me.admin;$('server-email').hidden=!(me.admin&&me.invitationEmailEnabled);if(invitationToken)$('message').textContent='Tu es déjà connecté. Ouvre le lien sur l’appareil du nouveau membre.';if(me.admin)await people();}catch(error){$('message').textContent=error.message;}})();
+(async()=>{try{const response=await fetch('/api/account');if(response.status===401){clearOffline(false);if(invitationToken){$('join').hidden=false;$('title').textContent='Bienvenue à table';$('intro').textContent='Une invitation à rejoindre le foyer.';}else $('login').hidden=false;return;}if(!response.ok)throw new Error('Connexion au serveur impossible. Recharge la page.');me=await response.json();$('title').textContent='Mon compte';$('intro').textContent=me.username;$('account').hidden=false;$('admin').hidden=!me.admin;$('server-email').hidden=!(me.admin&&me.invitationEmailEnabled);$('certificate-options').hidden=!(me.admin&&me.localCertificate&&location.protocol==='https:');if(me.localCertificate)$('certificate-fingerprint').textContent=me.localCertificate.fingerprint;if(invitationToken)$('message').textContent='Tu es déjà connecté. Ouvre le lien sur l’appareil du nouveau membre.';if(me.admin)await people();}catch(error){$('message').textContent=error.message;}})();
 addEventListener('pageshow',event=>{if(event.persisted)location.reload();});
 addEventListener('storage',event=>{if(event.key==='manger-auth-change')location.reload();});
 </script></body></html>

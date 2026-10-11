@@ -108,6 +108,20 @@ Pour chaque nouvelle décision, renseigne : **contexte → choix et raison → a
 
 **Limites :** ni compte ni VPN ne chiffre une URL HTTP ; une adresse d'écoute n'est pas une liste de clients autorisés. Filtrage des ports Docker à vérifier sur le réseau ; aucune exposition Internet directe recommandée. L'autorité locale et les clés doivent être protégées ; certificat serveur à renouveler, pas de renouvellement automatique. Fournisseur SMTP réel et réception non vérifiés ; ne pas assouplir les sessions pour contourner un bug de partage.
 
+## Certificat pour les appareils invités — 11 octobre 2026
+
+**Contexte / blocage :** un invité rapporte que Safari refuse le site sans proposer d’exception. Le refus précis n’a pas été reproduit : certificat non approuvé, adresse/SAN, expiration et réseau/VPN restent des causes possibles. Quand TLS bloque avant le chargement HTML, proposer un téléchargement uniquement dans la page invitée serait inutilisable.
+
+**Choix et raison :** l’administrateur déjà connecté récupère le certificat public et l’envoie par un canal de confiance **avant** l’invitation. Aide repliée dans le volet existant, contrôles et couleurs conservés ; boutons explicites, empreinte qui revient à la ligne, guide copiable avec sélection manuelle de secours. Les principes Apple Design (`onboarding.md › Best practices`, `privacy.md › Protecting data`, `buttons.md › Content`) ont guidé la présentation : aide contextuelle, trust expliqué sans consentement simulé, pas de nouvel écran. Ponytail : bibliothèque standard `X509Certificate`, options TLS et protection administrateur existantes, aucune dépendance ni migration.
+
+**Frontière de sécurité :** `MANGER_TLS_CA` est lu au démarrage HTTPS. L’aide exige une autorité racine auto-signée valide qui a signé le certificat serveur valide au démarrage ; une autorité absente, invalide ou sans correspondance n’est pas proposée. `GET /api/accounts/certificate` exige une session administrateur, ne renvoie que `X509Certificate.raw` en DER, en pièce jointe `manger-ca.cer`, sans cache et avec `nosniff`. Même un PEM contenant une clé ne l’exporte pas. La clé d’autorité reste hors du montage Docker. La lecture ne modifie ni sessions ni invitations ; les fichiers ne sont pas mis dans le cache hors connexion.
+
+**Alternatives écartées :** serveur HTTP public supplémentaire pour contourner Safari, désactivation TLS, confiance silencieuse, assouplissement de `SameSite`, pièce jointe SMTP automatique et nouveau parcours obligatoire. Le partage natif n’apparaît qu’après lecture réussie du fichier et acceptation par `canShare`, avant le geste utilisateur pour préserver l’activation du navigateur. Préparation limitée à 10 secondes, doubles demandes bloquées, partage annulé sans autre action ; téléchargement classique et guide restent disponibles.
+
+**Conséquences / limites :** installer une autorité permet d’approuver ses certificats pour d’autres sites, pas seulement Manger! L’invité doit connaître l’administrateur et vérifier l’empreinte par un autre canal de confiance ; il peut retirer le profil ensuite. Aucun fichier n’est accessible via ce HTTPS avant que l’appareil puisse y accéder : partage par AirDrop/courriel externe nécessaire. La confiance n’est pas une réparation de réseau/VPN ni d’un SAN erroné ou d’un certificat expiré. SMTP rappelle la condition sans pièce jointe. Le comportement de partage/d’installation reste géré par iOS ; pas de garantie depuis un navigateur local.
+
+**Validation :** tests TLS réels avec OpenSSL sur données temporaires, contrôle des rôles, DER, empreinte et absence de clés ; tests logiques du partage et de la copie. Rendu et téléchargement navigateur contrôlés séparément après implémentation ; résultats exacts consignés dans la feuille de route. Installation de profil, confiance complète, partage natif Safari et installation Ubuntu restent à valider sur les appareils utilisateur.
+
 ## Import, export et récupération
 
 **Contexte :** récupérer des recettes externes et sauvegarder les données sans exposer le serveur ou écraser le foyer par erreur.

@@ -66,6 +66,17 @@ test('administrators create and disable accounts, members cannot restore or admi
   await login('julie', 'long-password-member');
   assert.equal((await request('/api/household', 'GET', undefined, guest)).status, 401);
 });
+
+test('certificate download is authenticated, administrator-only and unavailable without native local HTTPS', async t => {
+  const { request, login } = await fixture(t);
+  const endpoint='/api/accounts/certificate';
+  assert.equal((await request(endpoint)).status,401);
+  const owner=await login(), member=await login('julie','long-password-member');
+  assert.equal((await request(endpoint,'GET',undefined,member)).status,403);
+  assert.equal((await request(endpoint,'GET',undefined,owner)).status,404);
+  const account=await (await request('/api/account','GET',undefined,owner)).json();
+  assert.equal(account.localCertificate,null);
+});
 test('password change revokes all sessions; logout and expiry revoke access', async t => {
   const { request, login, accounts } = await fixture(t);
   const a = await login(), b = await login();

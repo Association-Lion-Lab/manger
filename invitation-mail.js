@@ -46,7 +46,7 @@ function createInvitationMailer(env = process.env, transportFactory = nodemailer
         text: 'Rejoins notre foyer sur Manger!\n\nChoisis ton identifiant et ton mot de passe pour accéder aux recettes, au planning et aux courses partagés.\n\n' +
           origin + '/login#invite=' + token + '\n\n' +
           'Lien privé, pour une seule inscription, valable jusqu’au ' + new Date(expires).toLocaleString('fr-FR', { timeZone: 'Europe/Paris' }) + ' (heure de Paris).\n' +
-          'Transmets-le seulement à la personne invitée. Accès au serveur nécessaire par Wi-Fi ou VPN ; approuve son certificat local si besoin.\n' +
+          'Transmets-le seulement à la personne invitée. Accès au serveur nécessaire par Wi-Fi ou VPN. Si Safari bloque le site, demande d’abord le certificat public et les instructions à l’administrateur.\n' +
           'Si tu n’attendais pas cette invitation, ignore ce message.',
         disableFileAccess: true, disableUrlAccess: true,
       });

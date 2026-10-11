@@ -366,7 +366,7 @@ test('les invitations se partagent volontairement, sans courriel automatique ni 
   const source = html.match(/let invitationBusy[\s\S]*?(?=\nform\('password-form')/)[0];
   const nodes = new Map();
   const $ = id => {
-    if (!nodes.has(id)) nodes.set(id, { value: '', disabled: false, hidden: true, textContent: '', focus() { this.focused = true; }, select() { this.selected = true; } });
+    if (!nodes.has(id)) nodes.set(id, { value: '', disabled: false, hidden: true, textContent: '', addEventListener() {}, focus() { this.focused = true; }, select() { this.selected = true; } });
     return nodes.get(id);
   };
   const location = { origin: 'https://192.168.1.31:3000', href: '/account' }, navigator = {};
@@ -431,7 +431,7 @@ test('le courriel serveur est volontaire, conserve le destinataire en erreur et 
   assert.match(html, /\$\('server-email'\)\.hidden=!\(me.admin&&me.invitationEmailEnabled\)/);
   const source = html.match(/let invitationBusy[\s\S]*?(?=\nform\('password-form')/)[0];
   const nodes = new Map(), calls = [];
-  const $ = id => { if (!nodes.has(id)) nodes.set(id, { value: '', hidden: true, disabled: false, textContent: '', reportValidity: () => true }); return nodes.get(id); };
+  const $ = id => { if (!nodes.has(id)) nodes.set(id, { value: '', hidden: true, disabled: false, textContent: '', reportValidity: () => true, addEventListener() {} }); return nodes.get(id); };
   let finish, fail = false, lost = false;
   const state = new Script(source + ';({expire(){invitationExpires=0;}})').runInNewContext({ $, location: { origin: 'https://example.org' }, navigator: {}, Date, encodeURIComponent, TypeError, SyntaxError,
     api: async (path, method, data) => {

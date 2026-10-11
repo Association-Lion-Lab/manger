@@ -79,7 +79,7 @@ Pour une écriture client, distingue refus, résultat perdu et confirmation suiv
 | Foyer et stocks | `/api/household`, préférences, `/api/members`, `/api/proteins`, `/api/pantry` et modification/retrait par identifiant. |
 | Courses | `GET /api/shopping`, `/api/shopping-checks`, `/api/shopping-checks/sync`, `/api/shopping-manual`, `/api/shopping-aisles`. |
 | Sorties | `GET /api/places` pour les communes, `POST /api/restaurants` pour Overpass. |
-| Accès | `/api/account`, connexion/déconnexion/mot de passe, `/api/accounts`, invitations et envoi SMTP facultatif. |
+| Accès | `/api/account`, connexion/déconnexion/mot de passe, `/api/accounts`, invitations et envoi SMTP facultatif ; `GET /api/accounts/certificate`, certificat public DER pour l’administrateur en HTTPS local. |
 | Exploitation | `/api/health`, `/api/calendar.ics`, `/api/backup`, `/api/restore/preview`, `/api/restore/apply`. |
 
 Il s'agit de repères, pas d'un contrat d'API externe exhaustif : les méthodes, payloads, en-têtes, limites et statuts se vérifient dans les routes et leurs tests avant utilisation.

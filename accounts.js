@@ -59,7 +59,7 @@ async function body(req) {
   try { return JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch { throw new Error('Requête invalide.'); }
 }
 
-function protectAccounts(db, handler, { secure = false, mailer = null } = {}) {
+function protectAccounts(db, handler, { secure = false, mailer = null, certificate = null } = {}) {
   let busy = 0, mailBusy = false;
   const dummy = `${'0'.repeat(32)}:${'0'.repeat(64)}`;
   const cookie = (res, value, maxAge) => res.setHeader('Set-Cookie', `manger_session=${value}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${secure ? '; Secure' : ''}`);
@@ -139,7 +139,11 @@ function protectAccounts(db, handler, { secure = false, mailer = null } = {}) {
         if (req.method === 'GET' && path === '/') { res.writeHead(303, { Location: '/login' }); return res.end(); }
         return json(res, 401, { error: 'Connecte-toi pour accéder au foyer.' });
       }
-      if (req.method === 'GET' && path === '/api/account') return json(res, 200, { id: user.id, username: user.username, admin: Boolean(user.admin), invitationEmailEnabled: Boolean(user.admin && mailer) });
+      const certificateReady = secure && certificate && Date.now() < Date.parse(certificate.validTo);
+      if (req.method === 'GET' && path === '/api/account') return json(res, 200, {
+        id: user.id, username: user.username, admin: Boolean(user.admin), invitationEmailEnabled: Boolean(user.admin && mailer),
+        localCertificate: user.admin && certificateReady ? { fingerprint: certificate.fingerprint256 } : null,
+      });
       if (req.method === 'POST' && path === '/api/account/logout') {
         db.prepare('DELETE FROM sessions WHERE token=?').run(user.token);
         cookie(res, '', 0);
@@ -166,6 +170,11 @@ function protectAccounts(db, handler, { secure = false, mailer = null } = {}) {
       }
       const adminRoute = path.startsWith('/api/accounts') || path === '/api/backup' || path.startsWith('/api/restore/');
       if (adminRoute && !user.admin) return json(res, 403, { error: 'Cette action est réservée à l’administrateur.' });
+      if (path === '/api/accounts/certificate' && req.method === 'GET') {
+        if (!certificateReady) return json(res, 404, { error: 'Certificat local indisponible. Vérifie la configuration HTTPS et MANGER_TLS_CA sur le serveur.' });
+        res.writeHead(200, { 'Content-Type': 'application/pkix-cert', 'Content-Disposition': 'attachment; filename="manger-ca.cer"', 'Content-Length': certificate.raw.length });
+        return res.end(certificate.raw);
+      }
       if (path === '/api/accounts/invitation/email' && req.method === 'POST') {
         if (!mailer) return json(res, 503, { error: 'L’envoi de courriels n’est pas configuré sur ce serveur. Utilise le partage ou la copie du lien.' });
         const data = await body(req);
