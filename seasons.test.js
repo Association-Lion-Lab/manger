@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { recipeSeason, freshProduce } = require('./public/seasons.js');
+const { recipeSeason, freshProduce, seasonCalendars } = require('./public/seasons.js');
 const recipe = (...names) => ({ ingredients: names.map(name => ({ name })) });
 
 test('repères été et hiver, frontière mensuelle comprise', () => {
@@ -32,6 +32,35 @@ test('un ingrédient identifié hors saison empêche le repère positif', () => 
 test('mois invalides refusés et 12 mois utilisables', () => {
   for (const month of [0, 13, '10', NaN, 1.5]) assert.throws(() => recipeSeason(recipe('carotte'), month), RangeError);
   for (let month = 1; month <= 12; month++) assert.equal(recipeSeason(recipe('carotte'), month).matches, true);
+});
+
+test('le calendrier national reste le défaut et les régions ont des repères distincts', () => {
+  assert.deepEqual(recipeSeason(recipe('tomate'), 7), recipeSeason(recipe('tomate'), 7, 'france'));
+  assert.equal(recipeSeason(recipe('betterave'), 4, 'hauts-de-france').matches, false);
+  assert.equal(recipeSeason(recipe('betterave'), 4, 'france').matches, true);
+  assert.equal(recipeSeason(recipe('pomme'), 5, 'hauts-de-france').matches, true);
+  assert.equal(recipeSeason(recipe('pomme'), 8, 'hauts-de-france').matches, false);
+  assert.equal(recipeSeason(recipe('pomme'), 8, 'france').matches, true);
+  assert.equal(recipeSeason(recipe('épinards', 'carottes'), 8, 'bretagne').matches, true);
+  assert.equal(recipeSeason(recipe('épinards', 'carottes'), 8, 'france').matches, false);
+  assert.equal(recipeSeason(recipe('endive'), 10, 'bretagne').matches, false);
+  assert.equal(recipeSeason(recipe('asperge'), 3, 'bretagne').matches, true);
+});
+
+test('couverture limitée explicite, complément national et mêmes exclusions', () => {
+  assert.match(seasonCalendars['hauts-de-france'].coverage, /Pommes et betteraves.*calendrier national/);
+  assert.match(seasonCalendars.bretagne.coverage, /complétés.*national/);
+  assert.match(seasonCalendars.bretagne.coverage, /fin mars/);
+  for (const region of Object.keys(seasonCalendars)) {
+    assert.equal(new URL(seasonCalendars[region].url).protocol, 'https:');
+    for (let month = 1; month <= 12; month++) {
+      assert.equal(recipeSeason(recipe('carotte'), month, region).matches, true);
+      assert.deepEqual(recipeSeason(recipe('panais'), month, region), recipeSeason(recipe('panais'), month));
+      assert.equal(recipeSeason(recipe('tomate concassée', 'sel', 'poulet'), month, region).matches, false);
+    }
+    assert.equal(recipeSeason(recipe('carotte', 'tomate'), 1, region).matches, false);
+  }
+  for (const region of ['', 'inconnue', '__proto__', 'constructor', null]) assert.throws(() => recipeSeason(recipe('carotte'), 10, region), RangeError);
 });
 
 test('le navigateur reçoit le module après les noms alimentaires', async t => {

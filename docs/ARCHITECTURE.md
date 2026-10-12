@@ -41,7 +41,7 @@ Manger! est une application web avec **serveur Node.js 24+**, API HTTP/HTTPS nat
 | [`public/index.html`](../public/index.html) | Quatre onglets, présentation, formulaires, état client et protections réseau. |
 | [`accounts.js`](../accounts.js) | Base des accès, authentification, rôles, invitations, sessions et outils administrateur. |
 | [`ingredients.js`](../ingredients.js), [`public/food-names.js`](../public/food-names.js) | Normalisation des aliments, unités, regroupements et vocabulaire anti-gaspi. |
-| [`public/tastes.js`](../public/tastes.js), [`public/seasons.js`](../public/seasons.js) | Classement des goûts et repères saisonniers locaux. |
+| [`public/tastes.js`](../public/tastes.js), [`public/seasons.js`](../public/seasons.js) | Classement des goûts et repères saisonniers calculés localement : calendrier national avec compléments régionaux sourcés. Choix du calendrier dans le stockage du navigateur, sans migration SQLite ni géolocalisation. |
 | [`catalog.js`](../catalog.js), [`recipe-import.js`](../recipe-import.js) | Catalogue original ; téléchargement sécurisé et extraction des brouillons internet. |
 | [`public/offline-shopping.js`](../public/offline-shopping.js), [`public/offline-recipes.js`](../public/offline-recipes.js), [`public/offline.html`](../public/offline.html), [`public/sw.js`](../public/sw.js) | Copies locales, page de secours et service worker limité à cette page. |
 | [`restore.js`](../restore.js), [`backup-tools.js`](../backup-tools.js) | Restauration guidée avec récupération ; vérification et restauration vers un nouveau fichier. |

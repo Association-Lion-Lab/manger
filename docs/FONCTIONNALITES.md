@@ -23,7 +23,7 @@
 - Création, modification et duplication avec ingrédients quantifiés, portions, durée, régime, étiquettes et étapes structurées de préparation, cuisson, repos ou dressage. Une copie n'existe qu'après enregistrement.
 - Fiche avec photo personnelle si disponible, représentation de remplacement sinon, durée, quantités, étapes numérotées et actions Planifier/Cuisiner. Modification des portions sans changer le planning ni recalculer les instructions ou durées.
 - Catalogue interne de 34 recettes originales importables volontairement ; titres déjà présents ignorés pour préserver les recettes personnalisées. L'import répété ne crée pas de doublon de titre.
-- Recherche par écrit visible aussi dans les univers, favoris, filtre de durée et filtre saisonnier par mois. Casse et accents ignorés, pluriels connus reconnus, rapprochement orthographique en l'absence de résultat exact.
+- Recherche par écrit visible aussi dans les univers, favoris, filtre de durée et filtre saisonnier par mois et calendrier. France métropolitaine, Bretagne et repères partiels Hauts-de-France ; calendrier mémorisé sur l'appareil, sources consultables. Casse et accents ignorés, pluriels connus reconnus, rapprochement orthographique en l'absence de résultat exact.
 - Favoris et avis du foyer : note de 1 à 5 facultative et commentaire ; illustration du même plat dans le catalogue et le planning lorsque ses données le permettent.
 
 ### Univers disponibles
@@ -79,4 +79,4 @@ Les protections locales ne constituent pas une garantie universelle d'idempotenc
 
 ## Ce qui n'est pas livré
 
-Les vraies interfaces tablette/PC, l'image Docker préconstruite publiée, l'isolation de plusieurs foyers, les coûts calculés et la saison par région restent différés. Il n'y a pas de carte intégrée, commande d'enseigne, réservation de restaurant, application native, réseau social, générateur de recettes par IA ni calcul nutritionnel avancé. Une recherche OSM, un tag budget ou une adaptation de largeur ne vaut pas livraison de ces fonctions.
+Les vraies interfaces tablette/PC, l'image Docker préconstruite publiée, l'isolation de plusieurs foyers, les coûts calculés et l'extension des calendriers régionaux restent différés. Il n'y a pas de carte intégrée, commande d'enseigne, réservation de restaurant, application native, réseau social, générateur de recettes par IA ni calcul nutritionnel avancé. Une recherche OSM, un tag budget ou une adaptation de largeur ne vaut pas livraison de ces fonctions.

@@ -64,7 +64,7 @@ Pour chaque nouvelle décision, renseigne : **contexte → choix et raison → a
 
 **Compromis :** aucune région ou origine agricole connue, aucune certification de tout le plat. Budget/Côté chef sont des univers éditoriaux, pas prix calculés ou attribution à un chef. Les recettes originales sont CC0 ; les imports gardent leurs sources et droits.
 
-**Validation :** calendrier et tests saisonniers dans `public/seasons.js` et `seasons.test.js` ; descriptions et ingrédients vérifiés en développement, mais aucun essai culinaire complet garanti. Extension du vocabulaire, prix et région restent des chantiers distincts.
+**Validation :** calendrier et tests saisonniers dans `public/seasons.js` et `seasons.test.js` ; descriptions et ingrédients vérifiés en développement, mais aucun essai culinaire complet garanti. Extension du vocabulaire, prix et couverture des autres régions restent des chantiers distincts ; premiers compléments régionaux ajoutés le 12 octobre.
 
 ## Écritures réseau et concurrence
 
@@ -158,7 +158,7 @@ Pour chaque nouvelle décision, renseigne : **contexte → choix et raison → a
 
 ### Déconnexion Safari au retour du partage
 
-Signalement du 1er octobre : déconnexion au retour du partage d'invitation, sans utilisation du lien. Cause non identifiée, non reproduite localement ; **ne pas déclarer corrigé**. Contournement : Copier le lien. Déblocage : reproduire sur Safari et relever le statut des requêtes/session au retour, sans publier cookies ou secrets.
+Signalement du 1er octobre : déconnexion au retour du partage d'invitation, sans utilisation du lien. Le **12 octobre, l'utilisateur indique que ce n'est plus le cas** : retiré des problèmes actifs. La cause et une éventuelle correction technique ne sont pas établies ; ce retour ne constitue pas une reproduction locale. En cas de réapparition, relever les statuts de session au retour sans publier cookies ou secrets ; « Copier le lien » reste disponible.
 
 ### Image Docker publiée
 
@@ -170,7 +170,7 @@ SMTP testé avec messagerie simulée et refus STARTTLS réel local, sans envoyer
 
 ### Évolutions différées
 
-Vraie adaptation tablette/PC, prix indicatifs, saison par région, carte restaurants et foyers isolés nécessitent des décisions séparées. Aucun travail automatique ne doit reprendre après une demande d'arrêt. Les captures/inspirations ne suffisent pas à autoriser une nouvelle refonte : maquette approuvée avant gros changement visuel.
+Vraie adaptation tablette/PC, prix indicatifs, extension des calendriers régionaux, carte restaurants et foyers isolés nécessitent des décisions séparées. Aucun travail automatique ne doit reprendre après une demande d'arrêt. Les captures/inspirations ne suffisent pas à autoriser une nouvelle refonte : maquette approuvée avant gros changement visuel.
 
 ## Regroupement documentaire du 10 octobre 2026
 
@@ -185,3 +185,13 @@ Vraie adaptation tablette/PC, prix indicatifs, saison par région, carte restaur
 **Corrections :** retirer les affirmations périmées « pas de restauration dans l'interface » et « aucun achat hors connexion envoyé plus tard ». Documenter séparément ce qui est automatique et volontaire, ainsi que les validations historiques et actuelles. Aucune nouvelle fonction applicative ni règle métier introduite.
 
 **Vérification effectuée :** 13 documents et leurs liens/ancres locaux contrôlés ; tous les blocs de commandes transférés à l'identique, passages historiques préservés hors corrections explicitement listées. Contrôle du nombre de recettes et des points d'entrée de l'architecture dans le code. Aucun code applicatif ni donnée personnelle modifié. La suite applicative n'est pas relancée pour ce changement Markdown ; aucun nouveau test téléphone ou serveur effectué. Tout ancien résultat cité reste daté et attribué à son lot.
+
+## Premiers calendriers régionaux — 12 octobre 2026
+
+**Contexte et choix :** conserver le filtre facultatif et le calendrier national existants. Ajouter un sélecteur natif « Calendrier », uniquement visible avec « De saison », sur sa propre ligne. Apple Design guide les commandes natives, libellés explicites et cibles tactiles ; Ponytail guide la réutilisation du module existant, sans nouvelle dépendance, écran ou migration. Le calendrier choisi se mémorise dans `manger-season-region-v1` sur l'appareil, comme l'apparence ; un stockage refusé ou une valeur inconnue ne bloque pas l'ouverture. Le mois, les ingrédients, le planning, les goûts et le menu automatique ne sont pas modifiés. Aucun GPS, appel externe ou écriture SQLite lors du filtrage.
+
+**Sources et couverture :** [Manger Bouger](https://www.mangerbouger.fr/manger-mieux/bien-manger-sans-se-ruiner/calendrier-de-saison) reste la base nationale partielle (consultée le 7 octobre). [Région Bretagne](https://www.bretagne.bzh/actualites/de-janvier-a-decembre-mangez-breton-sans-vous-tromper/), publication du 22 janvier 2026 consultée le 12 octobre, fournit des listes mensuelles : seuls les produits déjà reconnus et non ambigus sont repris ; « chou, tous types » inclut les choux reconnus, et mars pour l'asperge signifie fin mars. Le céleri-rave n'est pas étendu au céleri-branche ; les céleris, panais et potimarrons gardent le repère national. [Où acheter local, Hauts-de-France](https://ouacheterlocal.fr/produits-de-saison/janvier/), consulté le 12 octobre, donne explicitement septembre–mai pour la pomme et octobre–mars pour la betterave : seuls ces deux repères sont repris. Les longues listes « on déguste aussi » ne sont pas retenues car leur extraction contient des produits estivaux en janvier. Les autres produits restent nationaux ; l'aide expose ce complément et la source sélectionnée.
+
+**Alternatives écartées et limites :** pas de décalage climatique arbitraire nord/sud, pas de région déduite de l'adresse ou du profil et pas de faux calendrier exhaustif pour les treize régions. Un ancien PDF redirigé vers une page d'accueil ne fait pas office de donnée vérifiée. La saison ne prouve ni l'origine des achats, ni le mode de culture ou de conservation ; les sources mensuelles peuvent inclure des produits stockés. Ingrédients inconnus et transformés ne créent toujours pas de repère positif. Désactiver le filtre retrouve toutes les recettes. Les autres régions et l'extension Hauts-de-France restent à documenter avant ajout.
+
+**Validation locale :** 189 tests Node réussis, aucun ignoré, HTTPS réel inclus. Parcours Chromium sur base isolée : trois calendriers et douze mois, références et couverture, sélection mémorisée puis rechargement, valeur périmée/invalide, recherche/univers/durée/réinitialisation sans perdre le mois ou le calendrier, aucune écriture du foyer. Contrôle 320/390/760 px clair/sombre, absence de chevauchement des sélecteurs, texte à 200 % et inspection des captures. Échec de lecture/écriture du stockage simulé dans les tests. Pas d'essai Safari réel ni de changement sur Ubuntu ; saison sans test culinaire ni preuve de provenance des produits.
