@@ -357,8 +357,9 @@
     #recipe-season-filter[aria-pressed="false"] .filter-check { display: none; }
     .recipe-season-tools label { display: flex; align-items: center; gap: 8px; color: var(--muted); min-width: 0; }
     .recipe-season-tools select { min-height: 44px; min-width: 0; max-width: 100%; color: var(--text); background: var(--surface); border: 1px solid var(--line); border-radius: 24px; padding: 8px 12px; font-size: 1rem; }
-    #recipe-season-month-field, #recipe-season-region-field { flex-basis: 100%; font-size: .875rem; }
-    #recipe-season-month, #recipe-season-region { flex: 1; }
+    #recipe-season-month-field { flex-basis: 100%; margin: 0; color: var(--muted); font-size: .875rem; }
+    #recipe-season-region-field { flex-basis: 100%; font-size: .875rem; }
+    #recipe-season-region { flex: 1; }
     #reset-recipe-filters { margin: -8px 0 16px; padding: 8px 0; font-size: .875rem; }
     #recipe-season-note { margin: 0 0 24px; }
     #recipe-season-note summary { color: var(--muted); font-size: 13px; min-height: 44px; cursor: pointer; }
@@ -498,7 +499,7 @@
         <div class="recipe-season-tools" role="group" aria-label="Filtrer les recettes">
           <label id="recipe-time-filter-field" class="recipe-time-filter"><span class="sr-only">Durée maximale de la recette</span><select id="recipe-time-filter"><option value="">Toutes durées</option><option value="30">30 min max</option><option value="45">45 min max</option><option value="60">1 h max</option></select></label>
           <button id="recipe-season-filter" type="button" aria-pressed="false" aria-controls="recipes recipe-season-month-field recipe-season-region-field recipe-season-note"><span aria-hidden="true">🌿</span> De saison <span class="filter-check" aria-hidden="true">✓</span></button>
-          <label id="recipe-season-month-field" hidden><span>Mois</span><select id="recipe-season-month" aria-label="Mois des recettes de saison"></select></label>
+          <p id="recipe-season-month-field" hidden></p>
           <label id="recipe-season-region-field" hidden><span>Calendrier</span><select id="recipe-season-region" aria-label="Calendrier des recettes de saison" aria-describedby="recipe-season-note"></select></label>
         </div>
         <button id="reset-recipe-filters" class="text-action" type="button" hidden>Réinitialiser les filtres</button>
@@ -971,9 +972,7 @@
     const categoryLabels = { plant: 'Graines & plantes', egg: 'Veggie', fish: 'Team océan', meat: 'Viandard·e' };
     const recipeCategories = { rat: '🐀 Recettes du rat', date: '♥ Recettes de date', mijote: '🍲 Plats mijotés', japon: '🇯🇵 Japon', chine: '🇨🇳 Chine', terroir: '🥖 Terroir français', chef: '✦ Côté chef', express: '⚡ Express · 30 min max', batch: '📦 Batch cooking', emporter: '🥡 À emporter', comfort: '🛋️ Doudou food', mediterranee: '☀️ Méditerranée', italie: '🍝 Italie', inde: '🍛 Inde', mexique: '🌮 Mexique' };
     let activeRecipeCategory = '';
-    const seasonMonth = document.getElementById('recipe-season-month');
-    seasonMonth.innerHTML = Array.from({ length: 12 }, (_, index) => `<option value="${index + 1}">${new Intl.DateTimeFormat('fr', { month: 'long' }).format(new Date(2026, index, 1))}</option>`).join('');
-    seasonMonth.value = String(new Date().getMonth() + 1);
+    let renderedSeasonMonth = 0;
     const seasonRegion = document.getElementById('recipe-season-region');
     seasonRegion.innerHTML = Object.entries(MangerSeasons.seasonCalendars).map(([id, info]) => `<option value="${id}">${info.label}</option>`).join('');
     try {
@@ -1142,13 +1141,18 @@
     }
 
     function renderRecipes() {
+      const today = new Date();
+      const month = today.getMonth() + 1;
+      const monthName = new Intl.DateTimeFormat('fr', { month: 'long' }).format(today);
+      renderedSeasonMonth = month;
+      document.getElementById('recipe-season-month-field').textContent = `En ce moment · ${monthName}`;
       const search = document.getElementById('recipe-search');
       const query = search.value.trim().toLocaleLowerCase('fr');
       const category = activeRecipeCategory;
       const maxMinutes = Number(document.getElementById('recipe-time-filter').value) || Infinity;
       const seasonal = document.getElementById('recipe-season-filter').getAttribute('aria-pressed') === 'true';
       const seasonInfo = MangerSeasons.seasonCalendars[seasonRegion.value];
-      const filtered = MangerFoodNames.searchRecipes(state.recipes.filter(recipe => (category === '__favorites' ? recipe.favorite : !category || recipe.tags.includes(category)) && (!seasonal || MangerSeasons.recipeSeason(recipe, Number(seasonMonth.value), seasonRegion.value).matches)), query, maxMinutes);
+      const filtered = MangerFoodNames.searchRecipes(state.recipes.filter(recipe => (category === '__favorites' ? recipe.favorite : !category || recipe.tags.includes(category)) && (!seasonal || MangerSeasons.recipeSeason(recipe, month, seasonRegion.value).matches)), query, maxMinutes);
       document.getElementById('recipe-season-month-field').hidden = !seasonal;
       document.getElementById('recipe-season-region-field').hidden = !seasonal;
       document.getElementById('recipe-season-note').hidden = !seasonal;
@@ -1164,7 +1168,7 @@
       document.getElementById('reset-recipe-filters').hidden = !(query || seasonal || Number.isFinite(maxMinutes));
       document.getElementById('recipe-discovery').hidden = Boolean(query || category || seasonal || Number.isFinite(maxMinutes));
       document.getElementById('recipe-results-heading').hidden = Boolean(category);
-      document.getElementById('recipe-results-title').textContent = seasonal ? `En ${seasonMonth.selectedOptions[0].textContent} · ${seasonInfo.label}` : query || Number.isFinite(maxMinutes) ? 'Résultats de recherche' : 'Toutes les recettes';
+      document.getElementById('recipe-results-title').textContent = seasonal ? `En ${monthName} · ${seasonInfo.label}` : query || Number.isFinite(maxMinutes) ? 'Résultats de recherche' : 'Toutes les recettes';
 
       if (!category && !query) {
         const spotlight = [...state.recipes].sort((a, b) => Number(b.hasPhoto) - Number(a.hasPhoto)).slice(0, 3);
@@ -1181,8 +1185,16 @@
         document.getElementById('browse-more-categories').innerHTML = categories.filter(([key]) => !featuredCategories.includes(key)).map(categoryTile).join('');
       }
       document.getElementById('recipes').innerHTML = filtered.map(recipe => `<article class="recipe"><button class="recipe-main" type="button" data-edit-recipe="${recipe.id}" aria-label="Voir la recette ${escapeHtml(recipe.title)}">${recipeCover(recipe)}<span class="recipe-copy"><strong>${escapeHtml(recipe.title)}</strong><span class="recipe-badges"><small>◷ ${recipe.minutes} min</small><small>${escapeHtml(dietLabels[recipe.diet])}</small></span></span></button><div class="recipe-card-actions">${recipeFavoriteButton(recipe)}<button class="recipe-add" type="button" data-plan-recipe="${recipe.id}">＋ Ajouter</button></div></article>`).join('') || `<div class="empty-state">${Number.isFinite(maxMinutes) ? 'Aucune recette pour cette durée. Choisis un temps plus long.' : 'Aucune recette ici. Essaie un autre mot ou ajoute un plat.'}</div>`;
-      if (seasonal && !filtered.length) document.getElementById('recipes').innerHTML = '<div class="empty-state">Aucune recette avec ces repères et ces filtres. Change de mois ou de calendrier, ou désactive « De saison » pour retrouver les autres plats.</div>';
+      if (seasonal && !filtered.length) document.getElementById('recipes').innerHTML = '<div class="empty-state">Aucune recette avec ces repères et ces filtres pour ce mois. Change de calendrier ou désactive « De saison » pour retrouver les autres plats.</div>';
     }
+
+    function refreshSeasonMonth() {
+      if (document.hidden || document.getElementById('recipes-panel').hidden || new Date().getMonth() + 1 === renderedSeasonMonth) return;
+      renderRecipes();
+    }
+    document.addEventListener('visibilitychange', refreshSeasonMonth);
+    window.addEventListener('focus', refreshSeasonMonth);
+    setInterval(refreshSeasonMonth, 60000);
 
     const pantryDialog = document.getElementById('pantry-dialog');
     let pantryItems = [], pantryEditingId = null, pantryBusy = false, pantryLoadVersion = 0;
@@ -2402,6 +2414,7 @@
       document.getElementById(`${button.dataset.panel}-panel`).hidden = false;
       shoppingSyncVersion++;
       if (button.dataset.panel === 'shopping') syncShopping();
+      if (button.dataset.panel === 'recipes') refreshSeasonMonth();
       window.scrollTo(0, 0);
     });
     document.getElementById('organize-shopping').addEventListener('click', event => {
@@ -2719,7 +2732,6 @@
       renderRecipes();
       document.getElementById('recipe-time-filter').focus();
     });
-    document.getElementById('recipe-season-month').addEventListener('change', renderRecipes);
     seasonRegion.addEventListener('change', () => {
       try { localStorage.setItem('manger-season-region-v1', seasonRegion.value); } catch {}
       renderRecipes();
