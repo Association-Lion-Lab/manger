@@ -3,6 +3,32 @@ const assert = require('node:assert/strict');
 const { recipeSeason, freshProduce, seasonCalendars } = require('./public/seasons.js');
 const recipe = (...names) => ({ ingredients: names.map(name => ({ name })) });
 
+test('quatre recettes réelles du catalogue distinguent les mois, sans saison forcée par le titre', () => {
+  const dishes = require('./catalog').slice(-4);
+  assert.deepEqual(dishes.map(item => item.title), [
+    'Risotto crémeux aux asperges', 'Tian de légumes d’été',
+    'Velouté de potimarron et pommes de terre', 'Endives au jambon gratinées'
+  ]);
+  const expected = { 1: [false, false, false, true], 4: [true, false, false, true],
+    7: [false, true, false, false], 10: [false, false, true, true] };
+  for (const [month, matches] of Object.entries(expected)) {
+    assert.deepEqual(dishes.map(item => recipeSeason(item, Number(month)).matches), matches);
+    assert.deepEqual(dishes.map(item => recipeSeason(item, Number(month), 'hauts-de-france').matches), matches);
+  }
+  assert.deepEqual(dishes.map(item => recipeSeason(item, 10, 'bretagne').matches), [false, false, true, false]);
+  assert.equal(recipeSeason(dishes[3], 11, 'bretagne').matches, true);
+  assert.equal(recipeSeason({ ...dishes[1], title: 'Plat d’hiver', tags: ['hiver'] }, 1).matches, false);
+});
+
+test('un légume frais ajouté hors saison retire le repère sans modifier la recette', () => {
+  const source = require('./catalog').find(item => item.title === 'Velouté de potimarron et pommes de terre');
+  const before = JSON.stringify(source);
+  assert.equal(recipeSeason(source, 10).matches, true);
+  const modified = { ...source, ingredients: [...source.ingredients, { name: 'tomate', amount: 1, unit: 'pièce' }] };
+  assert.equal(recipeSeason(modified, 10).matches, false);
+  assert.equal(JSON.stringify(source), before);
+});
+
 test('repères été et hiver, frontière mensuelle comprise', () => {
   assert.equal(recipeSeason(recipe('tomate', 'courgette'), 7).matches, true);
   assert.equal(recipeSeason(recipe('tomate'), 9).matches, true);

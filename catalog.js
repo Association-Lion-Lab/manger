@@ -1,4 +1,4 @@
-// Original recipe descriptions: CC0-1.0. No third-party recipes or media.
+// Original recipe descriptions: CC0-1.0. Adaptations cite their reference; no copied text or media.
 // Reviewed against the instructions below, not inferred from the presence of a cooking step.
 // Unlisted ingredients remain unknown (notably seasoning or mixed uses).
 const preparations = {
@@ -35,10 +35,15 @@ const preparations = {
   'Semoule, pois chiches et légumes croquants': { cooked: ['semoule de couscous', 'pois chiches cuits égouttés', 'eau'], raw: ['concombre', 'tomate', 'citron', 'huile d’olive'] },
   'Tarte aux poireaux et chèvre': { cooked: ['pâte brisée', 'poireau', 'œuf', 'crème liquide', 'fromage de chèvre', 'huile d’olive'] },
   'Pâtes au thon, tomate et citron': { cooked: ['pâtes sèches sans œuf', 'thon au naturel égoutté', 'tomate concassée', 'ail', 'huile d’olive'], raw: ['citron'] },
-  'Poêlée de pommes de terre, jambon et petits pois': { cooked: ['pomme de terre', 'jambon cuit', 'petits pois surgelés', 'oignon', 'huile d’olive'] }
+  'Poêlée de pommes de terre, jambon et petits pois': { cooked: ['pomme de terre', 'jambon cuit', 'petits pois surgelés', 'oignon', 'huile d’olive'] },
+  'Risotto crémeux aux asperges': { cooked: ['asperge', 'riz arborio', 'oignon', 'bouillon de légumes', 'huile d’olive', 'crème fraîche'] },
+  'Tian de légumes d’été': { cooked: ['aubergine', 'courgette', 'tomate', 'oignon', 'ail', 'huile d’olive', 'herbes de provence'] },
+  'Velouté de potimarron et pommes de terre': { cooked: ['potimarron', 'pomme de terre', 'oignon', 'ail', 'bouillon de légumes', 'huile d’olive', 'curry', 'crème fraîche'] },
+  'Endives au jambon gratinées': { cooked: ['endive', 'jambon cuit', 'beurre', 'farine', 'lait', 'emmental râpé'] }
 };
-const recipe = (title, minutes, diet, tags, ingredients, steps) => ({
+const recipe = (title, minutes, diet, tags, ingredients, steps, sourceUrl) => ({
   title, minutes, diet, tags, servings: 2,
+  ...(sourceUrl ? { sourceUrl } : {}),
   ingredients: ingredients.map(([name, amount, unit]) => ({ name, amount, unit, preparation: preparations[title]?.cooked?.includes(name) ? 'cooked' : preparations[title]?.raw?.includes(name) ? 'raw' : 'unknown' })),
   steps: steps.map(([kind, minutes, instruction]) => ({ kind, minutes, instruction }))
 });
@@ -145,5 +150,21 @@ module.exports = [
     [['prep', 5, 'Mettre une casserole d’eau à chauffer. Hacher l’ail et égoutter le thon en conserve. Laver le citron, puis prélever un peu de zeste avant de le couper en deux.'], ['cook', 15, 'Cuire les pâtes dans l’eau salée selon leur paquet. En parallèle, chauffer l’huile à feu doux, faire revenir l’ail une minute, puis ajouter les tomates. Laisser frémir environ 10 minutes ; incorporer le thon émietté et réchauffer quelques minutes.'], ['serve', 5, 'Réserver une tasse d’eau de cuisson, puis égoutter les pâtes. Mélanger à la sauce et ajouter le zeste ainsi qu’un peu de jus de citron selon le goût. Détendre avec l’eau réservée si nécessaire et servir.']]),
   recipe('Poêlée de pommes de terre, jambon et petits pois', 35, 'omnivore', ['terroir', 'rat', 'comfort'],
     [['pomme de terre', 450, 'g'], ['jambon cuit', 150, 'g'], ['petits pois surgelés', 150, 'g'], ['oignon', 1, 'pièce'], ['huile d’olive', 1, 'c. à soupe'], ['sel', 1, 'pincée'], ['poivre', 1, 'pincée']],
-    [['prep', 8, 'Mettre une casserole d’eau à chauffer. Éplucher les pommes de terre et les couper en petits cubes réguliers. Émincer l’oignon et couper le jambon déjà cuit en lanières.'], ['cook', 22, 'Cuire les pommes de terre dans l’eau frémissante environ 10 à 12 minutes, jusqu’à ce qu’elles soient tendres, puis les égoutter. Pendant ce temps, attendrir l’oignon dans l’huile. Ajouter les pommes de terre, puis les petits pois surgelés ; remuer à feu moyen jusqu’à cuisson des petits pois selon leur paquet.'], ['serve', 5, 'Ajouter le jambon cuit et réchauffer l’ensemble en remuant. Saler légèrement, poivrer et servir bien chaud.']])
+    [['prep', 8, 'Mettre une casserole d’eau à chauffer. Éplucher les pommes de terre et les couper en petits cubes réguliers. Émincer l’oignon et couper le jambon déjà cuit en lanières.'], ['cook', 22, 'Cuire les pommes de terre dans l’eau frémissante environ 10 à 12 minutes, jusqu’à ce qu’elles soient tendres, puis les égoutter. Pendant ce temps, attendrir l’oignon dans l’huile. Ajouter les pommes de terre, puis les petits pois surgelés ; remuer à feu moyen jusqu’à cuisson des petits pois selon leur paquet.'], ['serve', 5, 'Ajouter le jambon cuit et réchauffer l’ensemble en remuant. Saler légèrement, poivrer et servir bien chaud.']]),
+  recipe('Risotto crémeux aux asperges', 40, 'vegetarian', ['date', 'italie', 'chef'],
+    [['asperge', 400, 'g'], ['riz arborio', 160, 'g'], ['oignon', 0.5, 'pièce'], ['bouillon de légumes', 650, 'ml'], ['huile d’olive', 1, 'c. à soupe'], ['crème fraîche', 40, 'g'], ['sel', 1, 'pincée'], ['poivre', 1, 'pincée']],
+    [['prep', 10, 'Rincer les asperges et casser leur base fibreuse. Peler les tiges si nécessaire, puis les découper en petits morceaux en gardant les pointes à part. Émincer l’oignon et chauffer le bouillon.'], ['cook', 5, 'Dans une sauteuse, chauffer l’huile et laisser l’oignon devenir translucide. Ajouter le riz et remuer deux minutes, sans coloration.'], ['cook', 22, 'Ajouter le bouillon chaud par petites louches en remuant régulièrement ; attendre l’absorption avant chaque ajout. Après dix minutes, incorporer les morceaux d’asperges, puis les pointes cinq minutes plus tard. Goûter : riz et asperges doivent être tendres. Prolonger avec un peu d’eau chaude si nécessaire.'], ['serve', 3, 'Incorporer la crème à feu doux. Ajuster le sel selon le bouillon, poivrer et servir dès que le riz est crémeux.']],
+    'https://www.marmiton.org/recettes/recette_risotto-aux-asperges_70270.aspx'),
+  recipe('Tian de légumes d’été', 80, 'vegan', ['mediterranee', 'terroir', 'batch'],
+    [['aubergine', 250, 'g'], ['courgette', 250, 'g'], ['tomate', 350, 'g'], ['oignon', 1, 'pièce'], ['ail', 2, 'gousse'], ['huile d’olive', 2, 'c. à soupe'], ['herbes de provence', 1, 'c. à café'], ['sel', 2, 'pincée'], ['poivre', 1, 'pincée']],
+    [['prep', 15, 'Chauffer le four à 180 °C. Laver les légumes et les tailler en rondelles fines de 3 à 4 mm. Émincer l’oignon et hacher l’ail.'], ['cook', 5, 'Attendrir l’oignon et l’ail dans une poêle avec la moitié de l’huile. Répartir ce mélange au fond d’un plat à four.'], ['cook', 60, 'Ranger les rondelles debout en alternant aubergine, courgette et tomate. Ajouter l’huile restante, les herbes, le sel et le poivre. Cuire environ une heure : vérifier que l’aubergine s’écrase facilement à la fourchette. Si le dessus brunit trop tôt, couvrir le plat ; prolonger au besoin jusqu’à tendreté.']],
+    'https://www.marmiton.org/recettes/recette_tian-provencal_36194.aspx'),
+  recipe('Velouté de potimarron et pommes de terre', 50, 'vegetarian', ['rat', 'terroir', 'comfort', 'batch'],
+    [['potimarron', 500, 'g'], ['pomme de terre', 200, 'g'], ['oignon', 1, 'pièce'], ['ail', 1, 'gousse'], ['bouillon de légumes', 600, 'ml'], ['huile d’olive', 1, 'c. à soupe'], ['curry', 0.5, 'c. à café'], ['crème fraîche', 50, 'g'], ['sel', 1, 'pincée'], ['poivre', 1, 'pincée']],
+    [['prep', 10, 'Peser 500 g de chair de potimarron sans graines ni peau et la couper en cubes. Éplucher les pommes de terre et les découper. Émincer l’oignon et hacher l’ail.'], ['cook', 5, 'Dans une casserole, attendrir l’oignon et l’ail avec l’huile à feu modéré. Ajouter les cubes de légumes et le curry ; remuer.'], ['cook', 30, 'Verser le bouillon et cuire à petits bouillons, partiellement couvert. Vérifier au couteau que les légumes sont tendres ; prolonger si nécessaire.'], ['serve', 5, 'Hors du feu, mixer avec un mixeur plongeant dont la tête reste immergée. Ajouter la crème, détendre avec de l’eau chaude si besoin et réchauffer doucement. Goûter avant de saler, puis poivrer.']],
+    'https://www.marmiton.org/recettes/recette_soupe-veloutee-de-potimarron-et-pommes-de-terre_41161.aspx'),
+  recipe('Endives au jambon gratinées', 80, 'omnivore', ['terroir', 'comfort'],
+    [['endive', 4, 'pièce'], ['jambon cuit', 4, 'tranche'], ['beurre', 20, 'g'], ['farine', 20, 'g'], ['lait', 250, 'ml'], ['emmental râpé', 50, 'g'], ['sel', 1, 'pincée'], ['poivre', 1, 'pincée']],
+    [['prep', 10, 'Rincer les endives et retirer les feuilles abîmées. Ôter une petite portion dure de leur base sans séparer les feuilles. Porter une casserole d’eau à ébullition.'], ['cook', 45, 'Cuire les endives dans l’eau frémissante jusqu’à ce qu’elles soient tendres à cœur. Les transférer dans une passoire.'], ['prep', 5, 'Préchauffer le four à 200 °C. Égoutter soigneusement les endives, puis les presser doucement pour retirer l’eau, sans se brûler. Enrouler chacune dans une tranche de jambon cuit et les placer dans un plat à gratin.'], ['cook', 5, 'Faire fondre le beurre dans une casserole et incorporer la farine. Remuer une minute puis verser le lait progressivement en fouettant. Faire épaissir à feu doux. Saler légèrement et poivrer.'], ['cook', 15, 'Répartir la sauce sur les endives et parsemer d’emmental. Passer au four jusqu’à ce que le fromage soit doré et le centre bien chaud. Prolonger si nécessaire.']],
+    'https://www.marmiton.org/recettes/recette_endives-au-jambon_25868.aspx')
 ];

@@ -135,7 +135,7 @@ test('un date à la maison conserve sa recette et ajoute les ingrédients aux co
   assert.ok(shoppingList(db, '2026-09-14').some(item => item.name === 'pois chiches' && item.amount === 400));
 });
 
-test('le catalogue importe 34 recettes complètes et ajoute les huit nouvelles sans remplacer les anciennes', async t => {
+test('le catalogue importe 38 recettes complètes et conserve les anciennes personnalisations', async t => {
   const db = createDatabase(':memory:');
   const server = createApp(db);
   server.listen(0, '127.0.0.1');
@@ -145,10 +145,10 @@ test('le catalogue importe 34 recettes complètes et ajoute les huit nouvelles s
   const initial = await (await fetch(`${base}/api/week?start=2026-09-14`)).json();
   const imported = await fetch(`${base}/api/catalog/import`, { method: 'POST' });
   assert.equal(imported.status, 200);
-  assert.deepEqual(await imported.json(), { added: 34 });
+  assert.deepEqual(await imported.json(), { added: 38 });
   assert.deepEqual(await (await fetch(`${base}/api/catalog/import`, { method: 'POST' })).json(), { added: 0 });
   const final = await (await fetch(`${base}/api/week?start=2026-09-14`)).json();
-  assert.equal(final.recipes.length, initial.recipes.length + 34);
+  assert.equal(final.recipes.length, initial.recipes.length + 38);
   for (const recipe of initial.recipes) assert.deepEqual(final.recipes.find(item => item.id === recipe.id), recipe);
   const recipes = final.recipes.filter(recipe => !initial.recipes.some(item => item.id === recipe.id));
   for (const recipe of recipes) {
@@ -163,7 +163,7 @@ test('le catalogue importe 34 recettes complètes et ajoute les huit nouvelles s
   assert.equal(recipes.find(recipe => recipe.title === 'Cabillaud citron et poireaux au four').diet, 'pescetarian');
   assert.equal(recipes.find(recipe => recipe.title === 'Poulet aux poivrons et tomates').diet, 'omnivore');
   assert.equal(recipes.find(recipe => recipe.title === 'Gnocchis poêlés aux courgettes et tomates').ingredients.find(item => item.name === 'tomate concassée').preparation, 'cooked');
-  const additions = require('./catalog').slice(-8);
+  const additions = require('./catalog').slice(26, 34);
   assert.deepEqual(additions.map(recipe => recipe.diet), ['vegan', 'vegetarian', 'vegan', 'vegan', 'vegan', 'vegetarian', 'pescetarian', 'omnivore']);
   for (const draft of additions) {
     const saved = recipes.find(recipe => recipe.title === draft.title);

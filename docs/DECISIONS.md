@@ -1,5 +1,13 @@
 # Choix techniques, limites et blocages
 
+## Quatre adaptations saisonnières — 12 octobre 2026
+
+**Demande et choix :** ajouter de vraies recettes de périodes différentes pour vérifier le filtre mensuel actuel. Réutiliser le catalogue volontaire et le champ `sourceUrl`, sans migration, dépendance, nouvel écran ni mois manuel. Les 34 recettes précédentes restent inchangées ; leurs titres et personnalisations ne sont pas remplacés. Ajouter un risotto aux asperges, un tian, un velouté de potimarron et des endives au jambon avec quantités pour deux portions et annotations de préparation vérifiées contre leurs étapes.
+
+**Sources et limites :** quatre pages Marmiton notées de 4,5 à 4,9/5, avec 43 à 298 commentaires affichés ; [références et adaptations](RECETTES-DE-SAISON.md). Textes originaux, sans copier photos, instructions ou avis. Les bonnes notes concernent les références, pas les adaptations Manger! ; celles-ci restent non testées en cuisine. Les ingrédients frais, non les noms des saisons, déterminent l'inclusion. Le gratin d'endives couvre plusieurs saisons et le calendrier breton diffère du national. Le tian est un accompagnement ; aucune promesse d'équilibre nutritionnel ou de prix.
+
+**Contrôles :** 194 tests réussis, aucun ignoré, HTTPS inclus. Catalogue, repères janvier/avril/juillet/octobre, différences bretonnes, ingrédient ajouté hors saison, import de quatre manquantes avec conservation des personnalisations et des sources, import répété sans doublon. Le test de persistance tient compte du tri des ingrédients et de `position` sur les étapes SQLite ; les noms du catalogue restent minuscules comme ceux enregistrés par le serveur. Parcours Chromium isolé des quatre fiches, liens et trois calendriers sur douze mois simulés. Aucune intervention sur Ubuntu ou les appareils réels.
+
 État documentaire au **10 octobre 2026**. Ce registre consolide les choix déjà consignés dans le guide, le code et l'historique. Il ne suppose pas de nouvelles validations sur le serveur utilisateur. Les corrections ponctuelles et résultats par lot sont conservés dans [ROADMAP.md](ROADMAP.md).
 
 ## Cadre de contribution
