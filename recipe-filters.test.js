@@ -65,6 +65,34 @@ test('la saison suit le mois système local et se réactualise uniquement si né
   assert.equal(renders, 2);
 });
 
+test('le compteur saisonnier suit les résultats et reste discret hors filtre', () => {
+  const html = readFileSync(join(__dirname, 'public/index.html'), 'utf8');
+  assert.match(html, /id="recipe-season-month-field" role="status" aria-atomic="true" hidden/);
+  const source = html.match(/^    function renderRecipes\(\) \{[\s\S]*?(?=\n    function refreshSeasonMonth)/m)[0];
+  const controls = {};
+  const element = id => controls[id] ||= { value: '', getAttribute: () => 'true' };
+  const context = {
+    activeRecipeCategory: 'japon', renderedSeasonMonth: null,
+    Date: class extends Date { constructor() { super(2026, 9, 12); } }, Intl,
+    document: { getElementById: element }, seasonRegion: { value: 'france' },
+    MangerSeasons: require('./public/seasons'), MangerFoodNames: require('./public/food-names'),
+    state: { recipes: [] }, recipeCategories: { japon: '🇯🇵 Japon' }, dietLabels: { vegetarian: 'Végétarien' },
+    escapeHtml: value => value, recipeCover: () => '', recipeFavoriteButton: () => '',
+  };
+  new Script(source).runInNewContext(context);
+  for (const count of [0, 1, 2]) {
+    context.state.recipes = Array.from({ length: count }, (_, id) => ({
+      id, title: 'Poireaux', ingredients: [{ name: 'poireau' }], tags: ['japon'], minutes: 20, diet: 'vegetarian',
+    }));
+    context.renderRecipes();
+    assert.equal(element('recipe-season-month-field').textContent, `En ce moment · octobre · ${count} recette${count > 1 ? 's' : ''} de saison`);
+    assert.equal(element('recipe-season-month-field').hidden, false);
+  }
+  element('recipe-season-filter').getAttribute = () => 'false';
+  context.renderRecipes();
+  assert.equal(element('recipe-season-month-field').hidden, true);
+});
+
 test('le calendrier mémorisé est validé et un stockage indisponible ne bloque pas les recettes', () => {
   const html = readFileSync(join(__dirname, 'public/index.html'), 'utf8');
   const source = html.match(/^    const seasonRegion = [\s\S]*?(?=\n    let editingRecipeId)/m)[0];

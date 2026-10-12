@@ -1,5 +1,17 @@
 # Choix techniques, limites et blocages
 
+## Un filtre saisonnier plus distinct du catalogue — 12 octobre 2026
+
+**Contexte :** les premiers plats restaient identiques avec « De saison », car la carotte est disponible les douze mois dans nos calendriers. Les explications et vérifications précédentes n'avaient pas modifié cette règle. Le retour utilisateur « asperges invisibles » confirme uniquement ce cas d'exclusion sur son appareil, pas le présent changement.
+
+**Choix et raison :** modifier une seule règle commune dans `recipeSeason` : au moins un produit frais reconnu du mois avec moins de douze mois de disponibilité dans le calendrier sélectionné, et aucun produit reconnu hors saison. Préserver les tableaux `inSeason` et `outOfSeason`, les calendriers et toutes les recettes. Exiger une période limitée rend le bouton plus sélectif sans prétendre que la carotte est hors saison. En Bretagne, chou-fleur et betterave disponibles toute l'année ne suffisent pas seuls. L'interface reprend le libellé existant du mois pour ajouter un compteur accessible ; l'aide explique la règle sans nouveau réglage. Apple Design guide ce retour discret près du filtre et le maintien de l'aide repliée.
+
+**Alternative écartée et limite :** exclure des ingrédients à partir du titre du plat ou d'une étiquette de saison donnerait des faux résultats. Rejeter tous les ingrédients inconnus cacherait les recettes mal renseignées. Ils restent donc non évalués, de même que les produits transformés ; le filtre n'est pas une garantie exhaustive de saisonnalité, d'origine ou de disponibilité en magasin. Les plats exclus restent accessibles sans filtre ; aucune migration ni réimport n'est nécessaire.
+
+**Blocage de vérification locale :** le premier lancement ciblé échouait sur une connexion `127.0.0.1` refusée (`EACCES`) par l'environnement restreint, après réussite des assertions métier. Relancer les contrôles réseau locaux avec les permissions appropriées, sans modifier le code pour contourner ce refus. Aucun accès au serveur Ubuntu ou aux données réelles.
+
+**Validation :** 197 tests réussis, aucun ignoré, HTTPS inclus, après une relance complète. La première suite complète avait signalé un échec du fichier `dish-proteins.test.js` sans détail exploitable ; ce test a réussi seul puis dans la relance complète, sans modification. Cause de cet échec ponctuel non identifiée. Chromium vérifie les trois calendriers sur douze mois, le compteur, les deux plats témoins, recherche/univers/durée, retour du mois courant, fuseaux, largeurs 320/390/760 px et texte à 200 %. Capture sombre à 390 px inspectée : compteur lisible près du filtre, sans nouveau contrôle. 14 documents et 76 liens/ancres locaux vérifiés. Aucune nouvelle validation réelle sur Safari/iPhone, Android ou Ubuntu.
+
 ## Quatre adaptations saisonnières — 12 octobre 2026
 
 **Demande et choix :** ajouter de vraies recettes de périodes différentes pour vérifier le filtre mensuel actuel. Réutiliser le catalogue volontaire et le champ `sourceUrl`, sans migration, dépendance, nouvel écran ni mois manuel. Les 34 recettes précédentes restent inchangées ; leurs titres et personnalisations ne sont pas remplacés. Ajouter un risotto aux asperges, un tian, un velouté de potimarron et des endives au jambon avec quantités pour deux portions et annotations de préparation vérifiées contre leurs étapes.

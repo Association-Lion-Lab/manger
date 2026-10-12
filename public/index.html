@@ -499,11 +499,11 @@
         <div class="recipe-season-tools" role="group" aria-label="Filtrer les recettes">
           <label id="recipe-time-filter-field" class="recipe-time-filter"><span class="sr-only">Durée maximale de la recette</span><select id="recipe-time-filter"><option value="">Toutes durées</option><option value="30">30 min max</option><option value="45">45 min max</option><option value="60">1 h max</option></select></label>
           <button id="recipe-season-filter" type="button" aria-pressed="false" aria-controls="recipes recipe-season-month-field recipe-season-region-field recipe-season-note"><span aria-hidden="true">🌿</span> De saison <span class="filter-check" aria-hidden="true">✓</span></button>
-          <p id="recipe-season-month-field" hidden></p>
+          <p id="recipe-season-month-field" role="status" aria-atomic="true" hidden></p>
           <label id="recipe-season-region-field" hidden><span>Calendrier</span><select id="recipe-season-region" aria-label="Calendrier des recettes de saison" aria-describedby="recipe-season-note"></select></label>
         </div>
         <button id="reset-recipe-filters" class="text-action" type="button" hidden>Réinitialiser les filtres</button>
-        <details id="recipe-season-note" hidden><summary>Fruits et légumes du mois · repères indicatifs</summary><p class="muted"><span id="recipe-season-coverage"></span> Couverture partielle : l'origine et le mode de culture ne sont pas connus. Les produits transformés ne sont pas évalués. <a id="recipe-season-source" href="https://www.mangerbouger.fr/manger-mieux/bien-manger-sans-se-ruiner/calendrier-de-saison" target="_blank" rel="noopener noreferrer">Manger Bouger</a></p></details>
+        <details id="recipe-season-note" hidden><summary>Fruits et légumes du mois · repères indicatifs</summary><p class="muted"><span id="recipe-season-coverage"></span> Au moins un fruit ou légume saisonnier du mois est nécessaire ; ceux disponibles toute l'année ne suffisent pas. Un fruit ou légume reconnu hors saison exclut la recette. Couverture partielle : l'origine et le mode de culture ne sont pas connus. Les ingrédients inconnus et produits transformés ne sont pas évalués. <a id="recipe-season-source" href="https://www.mangerbouger.fr/manger-mieux/bien-manger-sans-se-ruiner/calendrier-de-saison" target="_blank" rel="noopener noreferrer">Manger Bouger</a></p></details>
         <p id="recipe-feedback" class="error" role="alert" hidden></p>
         <div id="recipe-discovery">
           <div id="recipe-spotlight" class="recipe-spotlight" aria-label="Recettes à découvrir"></div>
@@ -1145,7 +1145,6 @@
       const month = today.getMonth() + 1;
       const monthName = new Intl.DateTimeFormat('fr', { month: 'long' }).format(today);
       renderedSeasonMonth = month;
-      document.getElementById('recipe-season-month-field').textContent = `En ce moment · ${monthName}`;
       const search = document.getElementById('recipe-search');
       const query = search.value.trim().toLocaleLowerCase('fr');
       const category = activeRecipeCategory;
@@ -1153,6 +1152,7 @@
       const seasonal = document.getElementById('recipe-season-filter').getAttribute('aria-pressed') === 'true';
       const seasonInfo = MangerSeasons.seasonCalendars[seasonRegion.value];
       const filtered = MangerFoodNames.searchRecipes(state.recipes.filter(recipe => (category === '__favorites' ? recipe.favorite : !category || recipe.tags.includes(category)) && (!seasonal || MangerSeasons.recipeSeason(recipe, month, seasonRegion.value).matches)), query, maxMinutes);
+      document.getElementById('recipe-season-month-field').textContent = `En ce moment · ${monthName} · ${filtered.length} recette${filtered.length > 1 ? 's' : ''} de saison`;
       document.getElementById('recipe-season-month-field').hidden = !seasonal;
       document.getElementById('recipe-season-region-field').hidden = !seasonal;
       document.getElementById('recipe-season-note').hidden = !seasonal;

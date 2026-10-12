@@ -47,7 +47,7 @@ test('inconnu, conserves et aromates ne créent pas une fausse étiquette', () =
     assert.equal(recipeSeason(recipe(name), 10).matches, false, name);
   }
   assert.equal(recipeSeason(recipe(), 10).matches, false);
-  assert.equal(recipeSeason(recipe('carotte', 'poulet', 'riz'), 10).matches, true);
+  assert.equal(recipeSeason(recipe('carotte', 'poulet', 'riz'), 10).matches, false);
 });
 test('un ingrédient identifié hors saison empêche le repère positif', () => {
   const source = recipe('carotte', 'tomate', 'carotte');
@@ -57,7 +57,7 @@ test('un ingrédient identifié hors saison empêche le repère positif', () => 
 });
 test('mois invalides refusés et 12 mois utilisables', () => {
   for (const month of [0, 13, '10', NaN, 1.5]) assert.throws(() => recipeSeason(recipe('carotte'), month), RangeError);
-  for (let month = 1; month <= 12; month++) assert.equal(recipeSeason(recipe('carotte'), month).matches, true);
+  for (let month = 1; month <= 12; month++) assert.equal(recipeSeason(recipe('carotte'), month).matches, false);
 });
 
 test('le calendrier national reste le défaut et les régions ont des repères distincts', () => {
@@ -80,13 +80,35 @@ test('couverture limitée explicite, complément national et mêmes exclusions',
   for (const region of Object.keys(seasonCalendars)) {
     assert.equal(new URL(seasonCalendars[region].url).protocol, 'https:');
     for (let month = 1; month <= 12; month++) {
-      assert.equal(recipeSeason(recipe('carotte'), month, region).matches, true);
+      assert.equal(recipeSeason(recipe('carotte'), month, region).matches, false);
       assert.deepEqual(recipeSeason(recipe('panais'), month, region), recipeSeason(recipe('panais'), month));
       assert.equal(recipeSeason(recipe('tomate concassée', 'sel', 'poulet'), month, region).matches, false);
     }
     assert.equal(recipeSeason(recipe('carotte', 'tomate'), 1, region).matches, false);
   }
   for (const region of ['', 'inconnue', '__proto__', 'constructor', null]) assert.throws(() => recipeSeason(recipe('carotte'), 10, region), RangeError);
+});
+
+test('les produits disponibles toute l’année ne suffisent pas, selon le calendrier choisi', () => {
+  for (const name of ['betterave', 'chou-fleur']) {
+    assert.equal(recipeSeason(recipe(name), 10, 'france').matches, true);
+    for (let month = 1; month <= 12; month++) {
+      assert.equal(recipeSeason(recipe(name, 'carotte'), month, 'bretagne').matches, false);
+    }
+  }
+  assert.equal(recipeSeason(recipe('betterave', 'poireau'), 10, 'bretagne').matches, true);
+  assert.equal(recipeSeason(recipe('betterave', 'poireau', 'tomate'), 10, 'bretagne').matches, false);
+});
+
+test('le catalogue distingue un plat disponible toute l’année d’un plat du mois', () => {
+  const catalog = require('./catalog');
+  for (const region of Object.keys(seasonCalendars)) {
+    const beef = catalog.find(item => item.title === 'Bœuf carottes du dimanche');
+    const cod = catalog.find(item => item.title === 'Cabillaud citron et poireaux au four');
+    assert.equal(recipeSeason(beef, 10, region).matches, false);
+    assert.equal(recipeSeason(cod, 10, region).matches, true);
+    assert.equal(recipeSeason(cod, 7, region).matches, false);
+  }
 });
 
 test('le navigateur reçoit le module après les noms alimentaires', async t => {

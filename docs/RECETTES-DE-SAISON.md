@@ -20,6 +20,14 @@ Les saisons ci-dessous servent de repères de lecture, pas d'étiquettes forcée
 
 Table pour le calendrier national et les repères actuels Hauts-de-France. En **Bretagne**, les endives sont reconnues de novembre à mars : leur gratin n'apparaît donc pas en octobre ni en avril. Le potimarron conserve le complément national octobre–décembre ; le mot « hiver » ne suffit pas à rendre le velouté positif en janvier.
 
+## Filtre plus sélectif — 12 octobre 2026
+
+Le filtre exige désormais au moins un fruit ou légume reconnu du mois dont le calendrier choisi ne couvre pas les douze mois. Un produit disponible toute l'année, comme la carotte dans nos calendriers, ne suffit plus. Tout fruit ou légume reconnu hors saison reste excluant. Les ingrédients inconnus ou transformés ne sont pas évalués : ce n'est pas une certification exhaustive du plat.
+
+En octobre, **Bœuf carottes du dimanche** sort donc du filtre, tandis que **Cabillaud citron et poireaux au four** et le velouté de potimarron restent proposés. Les carottes restent disponibles toute l'année dans les données ; leur disponibilité n'est pas déclarée fausse. En Bretagne, betterave et chou-fleur sont également disponibles toute l'année et ne suffisent pas seuls ; le calendrier national peut les classer différemment.
+
+Le nombre de résultats figure près du bouton, dans le libellé « En ce moment · octobre · … recettes de saison », y compris dans un univers ou une recherche. Il s'actualise avec les autres filtres et est annoncé comme statut accessible. L'explication détaillée reste repliée : choix Apple Design de retour discret, sans écran ou contrôle supplémentaire. Désactiver le filtre retrouve tous les plats ; aucune recette enregistrée ni repas du planning n'est modifié. **Une mise à jour de l'application suffit, sans réimporter les recettes déjà présentes.**
+
 ## Références et avis
 
 Les pages originales de **Marmiton** consultées le 12 octobre 2026 affichent les notes et nombres de commentaires suivants. Ce sont des indications communautaires, susceptibles d'évoluer, pas une certification culinaire.

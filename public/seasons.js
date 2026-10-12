@@ -87,7 +87,9 @@
     const names = [...new Set((recipe.ingredients || []).map(item => freshProduce(item.name)).filter(Boolean))];
     const inSeason = names.filter(name => months[name].includes(month));
     const outOfSeason = names.filter(name => !months[name].includes(month));
-    return { matches: inSeason.length > 0 && outOfSeason.length === 0, inSeason, outOfSeason };
+    // Un produit disponible toute l'année ne suffit pas à caractériser le mois.
+    const seasonalProduce = inSeason.some(name => months[name].length < 12);
+    return { matches: seasonalProduce && outOfSeason.length === 0, inSeason, outOfSeason };
   }
   return { recipeSeason, freshProduce, seasonCalendars };
 });
