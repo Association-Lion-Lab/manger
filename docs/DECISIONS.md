@@ -1,5 +1,15 @@
 # Choix techniques, limites et blocages
 
+## Même visuel dans le sélecteur de recettes — 14 octobre 2026
+
+**Contexte :** les captures montrent la photo du plat dans Recettes mais une casserole générique dans Semaine → Ajouter → Choisir une recette. La correction précédente couvrait les cartes et repas affichés, pas ce sélecteur qui appelait encore `choice` avec une icône fixe.
+
+**Choix et raison :** passer une recette facultative à `choice` et réutiliser `recipeCover`, déjà responsable de la priorité photo → émoji. Le sélecteur commun repas/invités transmet la recette. Les commandes ordinaires conservent leurs SVG ; les vignettes occupent les 42 × 42 px existants, sans recréer la grille du catalogue. « Favori » dans le texte secondaire conserve cette indication quand la photo remplace le cœur. Textes échappés, images décoratives sans répétition du titre. Pas de logique photo dupliquée, nouveau paquet, écran, API, migration ou modification des photos réelles.
+
+**Validation :** 211 tests réussis, aucun ignoré, HTTPS inclus. Deux régressions échouent avant correction ; désactiver temporairement la couverture fait de nouveau échouer les tests, puis ils repassent après restauration. Chromium isolé : JPEG synthétique décodé, mêmes émojis, favoris, recherche/univers, résultat vide, retour et choix invités au clavier ; 320/390/768/1024/1440 px clair/sombre et texte à 200 % sans débordement, aucune erreur JS. Captures avant/après inspectées. Sauvegardes partagées/individuelles/date/invités/extérieur, protéines, refus réseau, doubles appuis et fermeture protégée revérifiés. Safari/iPhone, Android et Ubuntu non testés pour ce lot ; bases éphémères uniquement.
+
+**Préparation de tests corrigée :** restaurer l'indentation perdue lors d'un patch généré pour que les tests extraient la fonction, sans modifier leurs assertions. Compléter les nouvelles fixtures avec `ingredients`, présent dans les vraies recettes. Lire `Response.ok` comme propriété avec fetch natif, contrairement à la méthode Playwright. Un titre de section documentaire inexact a fait refuser un patch sans écriture : relire le titre puis réappliquer. Aucun assouplissement des validations de production.
+
 ## Photos prioritaires et émojis thématiques — 14 octobre 2026
 
 **Contexte :** après la finition SVG, l'utilisateur trouve les univers et régimes moins parlants sans émojis. Sa demande distingue les commandes de l'illustration d'un plat.

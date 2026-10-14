@@ -42,3 +42,49 @@ test('les assiettes séparées donnent priorité à chaque photo, sans masquer l
   assert.match(markup, /🥗/);
   assert.match(markup, /Personne A/); assert.match(markup, /Personne B/);
 });
+
+function pickerView(mode = 'recipe') {
+  const view = visuals();
+  const elements = { 'picker-search': { value: '' }, 'picker-category': { value: '' }, 'picker-recipes': { dataset: { mode }, innerHTML: '' } };
+  view.document = { getElementById: id => elements[id], querySelector: () => true };
+  view.MangerFoodNames = require('./public/food-names');
+  view.dietLabels = { vegan: 'Végétal', omnivore: 'De tout' };
+  for (const recipe of view.state.recipes) { recipe.ingredients = []; recipe.minutes ||= 20; }
+  view.state.recipes[0].diet = 'omnivore';
+  view.state.recipes[0].favorite = true;
+  const choice = html.match(/^    function choice\([\s\S]*?(?=\n    function openAdd)/m)[0];
+  const picker = html.match(/^    function renderPickerRecipes\([\s\S]*?(?=\n    function openEventSetup)/m)[0];
+  new Script(choice + picker).runInNewContext(view);
+  return { view, elements, markup: () => elements['picker-recipes'].innerHTML };
+}
+
+test('les sélecteurs de repas et invités montrent une photo prioritaire puis le même émoji que le catalogue', () => {
+  for (const mode of ['recipe', 'guestrecipe']) {
+    const { view, markup } = pickerView(mode);
+    view.renderPickerRecipes();
+    assert.match(markup(), /<img class="recipe-cover" src="\/api\/recipes\/1\/photo"/);
+    assert.match(markup(), /🥗/);
+    assert.doesNotMatch(markup(), /<svg/);
+    assert.match(markup(), new RegExp(`data-${mode}="1"`));
+    assert.match(markup(), /Plat photographié/);
+  }
+});
+
+test('la recherche, les univers, les favoris et le résultat vide restent disponibles avec les vignettes', () => {
+  const { view, elements, markup } = pickerView();
+  elements['picker-category'].value = '__favorites'; view.renderPickerRecipes();
+  assert.match(markup(), /Favori/); assert.doesNotMatch(markup(), /Plat sans photo/);
+  elements['picker-category'].value = 'japon'; view.renderPickerRecipes();
+  assert.match(markup(), /\/api\/recipes\/1\/photo/); assert.doesNotMatch(markup(), /Plat sans photo/);
+  elements['picker-category'].value = ''; elements['picker-search'].value = 'sans photo'; view.renderPickerRecipes();
+  assert.match(markup(), /🥗/); assert.doesNotMatch(markup(), /<img/);
+  elements['picker-search'].value = 'introuvablexyz'; view.renderPickerRecipes();
+  assert.match(markup(), /Aucun plat trouvé/);
+});
+
+test('les commandes de types de repas gardent leurs SVG, sans vignette de recette', () => {
+  const { view } = pickerView();
+  const markup = view.choice('people', 'Inviter du monde', 'À la maison', { occasion: 'guests' });
+  assert.match(markup, /data-ui-name="people"/);
+  assert.doesNotMatch(markup, /recipe-cover|<img/);
+});

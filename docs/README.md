@@ -27,6 +27,8 @@ Le dernier lot de code avant ce regroupement est `07b2a97` : suppression de rece
 
 ## Maintenir cette documentation
 
+Dernière correction du **14 octobre 2026** : sélecteur Semaine → Ajouter → Choisir une recette et choix pour invités avec petite photo prioritaire, sinon même émoji que dans Recettes. Liste compacte et indication Favori conservées. **211 tests réussis, aucun ignoré**, HTTPS inclus ; Chromium isolé cinq largeurs clair/sombre, texte à 200 %, captures avant/après et ajout de repas revérifiés. Pas de nouvelle validation sur téléphone ou Ubuntu ; données réelles intactes.
+
 Correction du **14 octobre 2026** après cette finition : univers et régimes en émojis, commandes en SVG ; photos prioritaires dans les recettes et le calendrier maison, dates/invités/restes inclus, sans perdre titres et portions. **208 tests réussis, aucun ignoré**, HTTPS inclus. Contrôle Chromium isolé avec image JPEG synthétique décodée, émojis et largeurs mobiles clair/sombre ; parcours général cinq largeurs et texte à 200 % revérifié, captures inspectées. Restes et assiettes séparées couverts en tests de markup. Aucun essai nouveau sur téléphone ou serveur Ubuntu ; photos et données réelles préservées.
 
 Finition suivante du **14 octobre 2026** : icônes d'action, univers, compte et menus harmonisées en SVG local ; textes accessibles, favoris remplis et navigation conservés. **205 tests réussis, aucun ignoré**, HTTPS inclus. Chromium isolé des quatre onglets, cinq largeurs clair/sombre, texte à 200 % et favoris ; captures inspectées, contrôle des sauvegardes de repas conservé. 14 documents et 77 liens/ancres locaux vérifiés. Pas de nouveau test réel sur iPhone/Android/Ubuntu ; logo et images culinaires inchangés.

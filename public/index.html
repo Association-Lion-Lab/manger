@@ -230,6 +230,7 @@
     .category-options input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 3px; }
     .choice { min-height: 76px; display: grid; grid-template-columns: 42px minmax(0, 1fr); align-items: center; gap: 14px; padding: 14px; text-align: left; border: 1px solid var(--line); border-radius: 18px; background: var(--raised); cursor: pointer; }
     .choice-icon { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 13px; color: var(--accent); background: var(--accent-soft); }
+    .choice-icon .recipe-cover { width: 100%; height: 100%; border-radius: inherit; }
     .choice-copy { display: grid; gap: 2px; }
     .choice-copy small { color: var(--muted); }
     #meal-dialog .choice-copy { min-width: 0; overflow-wrap: anywhere; }
@@ -1397,8 +1398,8 @@
 
     const uiIcon = MangerIcons.icon;
 
-    function choice(icon, title, detail, data) {
-      return `<button class="choice" type="button" ${Object.entries(data).map(([name, value]) => `data-${name}="${escapeHtml(value)}"`).join(' ')}><span class="choice-icon" aria-hidden="true">${uiIcon(icon)}</span><span class="choice-copy"><strong>${escapeHtml(title)}</strong><small>${escapeHtml(detail)}</small></span></button>`;
+    function choice(icon, title, detail, data, recipe = null) {
+      return `<button class="choice" type="button" ${Object.entries(data).map(([name, value]) => `data-${name}="${escapeHtml(value)}"`).join(' ')}><span class="choice-icon" aria-hidden="true">${recipe ? recipeCover(recipe) : uiIcon(icon)}</span><span class="choice-copy"><strong>${escapeHtml(title)}</strong><small>${escapeHtml(detail)}</small></span></button>`;
     }
 
     function openAdd(slot) {
@@ -1720,7 +1721,7 @@
       const category = document.getElementById('picker-category').value;
       const container = document.getElementById('picker-recipes');
       if (!document.querySelector('#picker-category option[value="__favorites"]')) document.getElementById('picker-category').insertAdjacentHTML('beforeend', '<option value="__favorites">★ Mes favoris</option>');
-      container.innerHTML = MangerFoodNames.searchRecipes(state.recipes.filter(recipe => category === '__favorites' ? recipe.favorite : !category || recipe.tags.includes(category)), query).map(recipe => choice(recipe.favorite ? '★' : '♨', recipe.title, `${recipe.minutes} min · ${dietLabels[recipe.diet]}`, { [container.dataset.mode]: recipe.id })).join('') || '<p class="empty-state">Aucun plat trouvé. Changez le mot recherché ou l’univers.</p>';
+      container.innerHTML = MangerFoodNames.searchRecipes(state.recipes.filter(recipe => category === '__favorites' ? recipe.favorite : !category || recipe.tags.includes(category)), query).map(recipe => choice(recipe.favorite ? '★' : '♨', recipe.title, `${recipe.minutes} min · ${dietLabels[recipe.diet]}${recipe.favorite ? ' · Favori' : ''}`, { [container.dataset.mode]: recipe.id }, recipe)).join('') || '<p class="empty-state">Aucun plat trouvé. Changez le mot recherché ou l’univers.</p>';
     }
 
     function openEventSetup(occasion, mode = 'standard', recipe = null) {

@@ -4,6 +4,8 @@
 
 ## 1. Semaine et repas
 
+Dans le sélecteur de recettes du planning et des invités, les lignes compactes montrent la photo du plat en priorité, sinon son émoji de catalogue. Recherche, univers, favoris et indication « Favori » restent disponibles ; les commandes de types de repas conservent leurs SVG.
+
 Les commandes, le compte et les menus utilisent une famille SVG locale harmonisée, sans service externe. Les univers de recettes et les régimes gardent leurs émojis avec un libellé explicite. Une photo personnelle disponible passe avant toute illustration dans les cartes et dans le calendrier des repas à la maison, y compris dates, invités et restes ; les assiettes séparées suivent la même règle. Sans photo, le substitut existant reste affiché. Textes, cibles tactiles et états des favoris sont conservés ; le logo de l'application reste distinct des plats.
 
 - Planning hebdomadaire avec midi et soir, jour courant, navigation entre semaines, retour Aujourd'hui et choix direct d'une date ; aucun horaire de repas.
