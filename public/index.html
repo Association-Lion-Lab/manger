@@ -227,6 +227,7 @@
     .choice-icon { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 13px; color: var(--accent); background: var(--accent-soft); }
     .choice-copy { display: grid; gap: 2px; }
     .choice-copy small { color: var(--muted); }
+    #meal-dialog .choice-copy { min-width: 0; overflow-wrap: anywhere; }
     #restaurant-results .choice-copy { min-width: 0; overflow-wrap: anywhere; }
     .recipe-form { display: grid; gap: 22px; margin-top: 22px; }
     #recipe-fields, #pantry-fields, #recipe-notes-fields { min-width: 0; margin-right: 0; margin-left: 0; padding: 0; border: 0; }
@@ -1396,10 +1397,21 @@
       const currentMeal = mealFor(state.selected, slot);
       document.getElementById('dialog-title').textContent = 'Ajouter un repas';
       document.getElementById('dialog-subtitle').textContent = `${fullDayNames[state.selected]} · ${slot === 'midi' ? 'Midi' : 'Soir'}`;
-      document.getElementById('choices').innerHTML = recipePicker() + choice('⌖', 'Manger à l’extérieur', 'Cantine, restaurant ou repas libre', { location: 'outside' }) + choice('♥', 'Prévoir un date', 'À la maison ou au restaurant', { occasion: 'date' }) + choice('♨', 'Inviter du monde', 'Un repas à partager à la maison', { occasion: 'guests' }) + (currentMeal ? choice('×', 'Retirer ce repas', currentMeal.title, { remove: 'true' }) : '');
-      renderPickerRecipes();
+      document.getElementById('dialog-error').hidden = true;
+      document.getElementById('choices').innerHTML = choice('♨', 'Choisir une recette', 'Cuisiner un plat à la maison', { pickrecipe: 'true' }) + choice('⌖', 'Manger à l’extérieur', 'Cantine, restaurant ou repas libre', { location: 'outside' }) + choice('♥', 'Prévoir un date', 'À la maison ou au restaurant', { occasion: 'date' }) + choice('♨', 'Inviter du monde', 'Un repas à partager à la maison', { occasion: 'guests' }) + (currentMeal ? choice('×', 'Retirer ce repas', currentMeal.title, { remove: 'true' }) : '');
       if (state.members.length) document.getElementById('choices').insertAdjacentHTML('afterbegin', choice('⋈', 'Un plat par personne', 'Chacun choisit son assiette pour ce repas', { editplates: 'true' }));
       if (!dialog.open) dialog.showModal();
+      dialog.scrollTop = 0;
+      document.querySelector('[data-pickrecipe]').focus({ preventScroll: true });
+    }
+
+    function openRecipeChoices() {
+      document.getElementById('dialog-title').textContent = 'Choisir une recette';
+      document.getElementById('dialog-error').hidden = true;
+      document.getElementById('choices').innerHTML = '<button class="text-action" type="button" data-mealback><span aria-hidden="true">‹</span> Types de repas</button>' + recipePicker();
+      renderPickerRecipes();
+      dialog.scrollTop = 0;
+      document.querySelector('[data-mealback]').focus({ preventScroll: true });
     }
 
     function openMealActions(slot) {
@@ -2320,6 +2332,7 @@
     dialog.addEventListener('cancel', event => { if (document.getElementById('meal-fields').disabled) event.preventDefault(); });
     document.getElementById('choices').addEventListener('click', event => {
       if (document.getElementById('meal-fields').disabled) return;
+      if (event.target.closest('[data-mealback]')) return openAdd(state.slot);
       if (event.target.closest('[data-reuse-back]')) return openReuseWeek();
       if (event.target.closest('#retry-suggestions')) return renderSuggestions(document.getElementById('suggestion-minutes').value);
       if (event.target.closest('#find-restaurants')) return findRestaurants();
@@ -2329,6 +2342,7 @@
       if (event.target.closest('#confirm-event')) return saveEvent();
       const button = event.target.closest('.choice');
       if (!button) return;
+      if (button.dataset.pickrecipe) return openRecipeChoices();
       if (button.dataset.reuse) return button.dataset.reuse === 'past' ? openCopyWeek() : openWeekTemplates();
       if (button.dataset.editplates) return openDuoSetup(null, true);
       if (button.dataset.place) {

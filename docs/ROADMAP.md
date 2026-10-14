@@ -4,6 +4,12 @@ Historique des lots et priorités, regroupé dans `docs/` le 10 octobre 2026. Le
 
 Contrainte produit : quatre onglets (Semaine, Recettes, Courses, Compte), actions dans leur contexte, fonctions secondaires regroupées sans surcharger ; préserver une interface sobre en clair et en sombre, au clavier et dès 320 px.
 
+## Lot du 14 octobre 2026 — Ajout de repas allégé
+
+- Menu de types de repas compact ; catalogue révélé seulement après « Choisir une recette », avec recherche, univers/favoris et retour « Types de repas » dans le même dialogue. Jour/créneau conservés, focus explicite sans clavier automatique, verrou de sauvegarde inchangé. Date, invités, extérieur, assiettes et protéines facultatives restent accessibles.
+- Textes longs des choix du dialogue autorisés à revenir à la ligne, notamment à 320 px avec texte à 200 %. Aucune nouvelle modal, dépendance ou migration ; données du foyer préservées.
+- 201 tests réussis, aucun ignoré, HTTPS inclus ; quatre nouveaux tests vérifiés en échec avant changement. Chromium isolé : navigation sans écriture, confirmation du repas partagé, parcours date/invités/assiettes, recherche/univers/favoris/retour clavier, 320/390/768/1024/1440 clair/sombre et texte agrandi. Captures inspectées. Vérification réelle Safari/iPhone/Android/Ubuntu à faire après mise à jour par l'utilisateur.
+
 ## Lot du 12 octobre 2026 — Saison par calendrier
 
 - Ajustement suivant : « De saison » exige un fruit ou légume reconnu du mois non disponible les douze mois dans le calendrier choisi ; les produits reconnus hors saison restent excluants. Bœuf carottes seul sort du filtre, cabillaud aux poireaux reste en octobre. Compteur accessible près du filtre, aide repliée mise à jour ; aucune recette modifiée ni réimport nécessaire. 197 tests réussis, aucun ignoré, après relance complète ; échec ponctuel du test des protéines non reproduit et documenté. Chromium vérifie trois calendriers × douze mois et le compteur, filtres combinés, fuseaux, 320/390/760 px et texte à 200 %. Capture sombre inspectée. Pas de nouveau test réel sur iPhone/Android/Ubuntu.

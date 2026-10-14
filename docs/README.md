@@ -27,6 +27,8 @@ Le dernier lot de code avant ce regroupement est `07b2a97` : suppression de rece
 
 ## Maintenir cette documentation
 
+Dernier lot du **14 octobre 2026** : ajout d'un repas allégé, recettes derrière « Choisir une recette » et retour aux types sans changer de créneau. **201 tests réussis, aucun ignoré**, HTTPS inclus ; parcours Chromium isolé du menu et de ses variantes, recherche/favoris, clavier, cinq largeurs clair/sombre et texte à 200 %. Captures inspectées ; aucune nouvelle validation sur les téléphones ou le serveur Ubuntu. Choix et limites détaillés dans les décisions, utilisation dans le guide.
+
 Dernier contrôle local du **11 octobre 2026** : aide certificat pour les appareils invités, 185 tests réussis (HTTPS réel inclus), téléchargement DER et parcours Chromium isolés. Les limites de Safari et de l’installation distante sont précisées dans [HTTPS.md](HTTPS.md) et [ROADMAP.md](ROADMAP.md).
 
 Contrôle local final du **12 octobre 2026** : premiers calendriers régionaux et mois courant automatique de l'appareil, 190 tests réussis, aucun ignoré (HTTPS inclus). Parcours Chromium isolé des filtres et de la mémorisation, trois calendriers et douze mois simulés, retour visibilité/focus/onglet, transition décembre–janvier et deux fuseaux au même instant UTC, largeurs 320/390/760 px clair/sombre et texte agrandi. Aucun nouveau test sur téléphone ou serveur distant. La déconnexion au retour du partage Safari est retirée des problèmes actifs d'après le retour utilisateur du jour, sans attribuer une cause technique.

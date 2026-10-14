@@ -1,10 +1,11 @@
 # Fonctionnalités réalisées
 
-État du code au **10 octobre 2026**, incluant les protections des sauvegardes et recherches de restaurants. Cette liste distingue les fonctions livrées des idées ; les parcours détaillés et leurs limites sont dans [le guide](GUIDE.md). Les preuves historiques sont dans [la feuille de route](ROADMAP.md), les validations manquantes dans [les décisions](DECISIONS.md).
+État du code au **14 octobre 2026**, incluant l'ajout de repas allégé, les repères saisonniers et les protections des sauvegardes et recherches de restaurants. Cette liste distingue les fonctions livrées des idées ; les parcours détaillés et leurs limites sont dans [le guide](GUIDE.md). Les preuves historiques sont dans [la feuille de route](ROADMAP.md), les validations manquantes dans [les décisions](DECISIONS.md).
 
 ## 1. Semaine et repas
 
 - Planning hebdomadaire avec midi et soir, jour courant, navigation entre semaines, retour Aujourd'hui et choix direct d'une date ; aucun horaire de repas.
+- Ajout compact : les types de repas sont visibles d'abord ; le catalogue, sa recherche, ses univers et favoris sont regroupés derrière « Choisir une recette ». Retour « Types de repas » dans la même fenêtre et sur le même créneau, sans écriture. Assiettes individuelles et choix date/invités/extérieur conservés.
 - Maison, extérieur ou restaurant ; occasion ordinaire, date ou invités. Une sortie peut être enregistrée sans recette ; les invités peuvent avoir une recette ou un repas nommé, par exemple une commande.
 - Date à la maison avec choix de recette ; à l'extérieur avec saisie manuelle ou restaurant recherché. Modification d'une sortie/date/invitation avec reprise de ses champs quand le parcours le permet. Recherches par localisation ou commune protégées contre les demandes concurrentes et réponses tardives ; attente limitée, saisie conservée et planification manuelle disponible.
 - Consultation ou remplacement d'un repas, déplacement et copie vers un créneau libre, export de la semaine en calendrier ICS ; protection des créneaux occupés et des liens de restes.
