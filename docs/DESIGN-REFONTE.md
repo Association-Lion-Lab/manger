@@ -78,6 +78,14 @@ Sur grand écran, la photo et la fiche peuvent se placer côte à côte, avec un
 
 ## Garde-fous
 
+### Proposition restaurants — 14 octobre 2026
+
+[Maquette interactive indépendante](prototypes/restaurant-picker.html), proposée après le retour utilisateur sur la liste trop lourde. Statut : **à valider visuellement ; non intégrée à l'application**. Le choix se fait sur une carte, avec recherche par nom/cuisine visible et petite fiche nom/adresse/distance → Choisir. Ville ou localisation, liste facultative repliée pour l'alternative clavier et saisie libre conservées. Pas de nouvel onglet ni de réservation.
+
+Le prototype contient un plan schématique et quatre restaurants fictifs. Repères, recherche sans accents, zoom/déplacement, confirmation, annulation et nom libre fonctionnent localement ; la géolocalisation et le changement de ville sont explicitement simulés. Aucun appel réseau, accès au foyer ou écriture du planning. Les données géographiques réelles et leur couverture ne sont pas validées par ce prototype. Palette et icônes locales réutilisées ; Apple Design : `modality.md › Best practices` pour une tâche courte et une sortie claire, `searching.md › Best practices` pour recherche visible et portée locale explicite. Principes web, pas une interface iOS native.
+
+Contrôle Chromium : 320/390/768/1024/1440 px clair/sombre, texte à 200 %, repères au clavier, résultats vides et parcours de choix/saisie/annulation ; aucune erreur JS ni requête réseau, captures inspectées. Ce test n'est pas un essai Safari/iPhone ou Ubuntu. L'intégration reste après validation du rendu, suivant les garde-fous ci-dessous.
+
 - La refonte est **visuelle et ergonomique d'abord** : conserver recettes, planning, courses, comptes et données SQLite. Pas de migration de données pour changer une couleur ou un composant.
 - Maquette de Semaine, Recettes, fiche et Courses avant développement ; faire valider le rendu sur téléphone, puis intégrer par écran sans remplacer tout d'un coup.
 - Vérifier Safari iPhone et Android, 320–430 px, texte agrandi, contraste, focus clavier et modes clair/sombre. Les commandes ne doivent pas se chevaucher ni masquer le contenu sous la navigation.

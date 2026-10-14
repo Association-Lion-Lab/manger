@@ -142,7 +142,7 @@ L'utilisateur indique avoir testé les P1 le 1er octobre 2026, sans préciser la
 - Concevoir les interfaces tablette et PC : exploiter la largeur pour le planning et les recettes, adapter la navigation au tactile et au clavier/souris. Les contrôles actuels de largeur ne constituent pas encore ces interfaces.
 - Ajouter le coût indicatif des recettes et de la semaine à partir de prix renseignés.
 - Étendre la saisonnalité régionale : premiers repères Bretagne et Hauts-de-France livrés le 12 octobre, couverture partielle et calendrier national en complément. Autres régions et produits à ajouter après vérification de sources mensuelles fiables.
-- Intégrer une carte des restaurants.
+- Intégrer une carte des restaurants : direction carte + recherche + fiche compacte acceptée le 14 octobre. [Maquette indépendante](prototypes/restaurant-picker.html) prête, en attente de validation visuelle ; données fictives, aucun appel réseau ni changement de production. Contrôles Chromium cinq largeurs clair/sombre et texte agrandi réussis. Intégration géographique réelle toujours à réaliser.
 
 Ordre de travail : P1, puis P2, puis P3. Les interfaces tablette/PC restent différées à la demande de l'utilisateur ; la révision de « Plus d’options » dans le planning a été demandée puis implémentée le 7 octobre. Les défauts visuels qui gênent l'utilisation restent P1.
 

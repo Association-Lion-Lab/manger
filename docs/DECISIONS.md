@@ -1,5 +1,13 @@
 # Choix techniques, limites et blocages
 
+## Proposition de choix des restaurants sur carte — 14 octobre 2026
+
+**Contexte :** l'utilisateur trouve la liste peu agréable et accepte la proposition carte + recherche + fiche compacte. La direction est acceptée, mais le rendu de ce changement visuel important reste à valider conformément aux garde-fous de refonte.
+
+**Choix :** [prototype indépendant](prototypes/restaurant-picker.html) dans la documentation du dépôt, hors des fichiers servis par l'application. Réutiliser le logo, les icônes et la palette, garder un seul choix principal, une liste repliée accessible au clavier et la saisie libre pour les restaurants absents. Recherche locale sans casse/accents et repères numérotés. Le plan et les restaurants sont fictifs, sans localisation réelle ni requête externe. Pas de service cartographique ou bibliothèque choisi à ce stade : ne pas engager une intégration avant validation visuelle, ni présenter un faux plan comme une carte réelle.
+
+**Validation et limites :** Chromium local couvre recherche, repères/clavier, choix, nom libre, annulation, zoom, cinq largeurs clair/sombre et texte à 200 % ; zéro erreur JS et zéro requête réseau, captures inspectées. Le code de production n'a pas changé ; la suite de 211 tests de l'application n'est pas revendiquée comme un nouveau contrôle de ce prototype. Maquette ouverte dans Codex, validation humaine en attente. Vraies tuiles, couverture OSM, refus de localisation, erreurs réseau, Safari/iPhone et serveur Ubuntu restent à vérifier lors de l'intégration. Aucune donnée, invitation, photo, certificat ou base du foyer touchée.
+
 ## Même visuel dans le sélecteur de recettes — 14 octobre 2026
 
 **Contexte :** les captures montrent la photo du plat dans Recettes mais une casserole générique dans Semaine → Ajouter → Choisir une recette. La correction précédente couvrait les cartes et repas affichés, pas ce sélecteur qui appelait encore `choice` avec une icône fixe.
