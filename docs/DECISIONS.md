@@ -2,6 +2,8 @@
 
 ## Intégration de la carte des restaurants — 14 octobre 2026
 
+**Publication confirmée :** le commit fonctionnel `232d6cf` a été reçu sur Codeberg, branche development, avec les deux commits de prototype jusque-là en attente. Le blocage HTTP 504 consigné plus bas est historique et ne bloque plus ce lot. Cette publication ne confirme pas la mise à jour Docker ou le fonctionnement sur téléphone.
+
 **Accord et périmètre :** maquette validée par l'utilisateur. Carte intégrée dans le dialogue actuel des sorties/dates au restaurant ; ville/code postal et localisation regroupés, recherche par nom/cuisine dans les résultats de la zone, fiche compacte et liste repliée. La saisie libre reste le champ Nom du repas. « Choisir ce restaurant » prépare ce nom, sans écrire ; « Ajouter au calendrier » conserve la sauvegarde protégée existante. Pas de réservation, nouvel onglet, recherche mondiale ou extension du rayon : jusqu'à huit établissements OSM dans un rayon de 3 km, selon le service et sa couverture.
 
 **Choix technique :** module `public/restaurant-map.js` propriétaire de la sélection et de la carte, Leaflet 1.9.4 distribué localement avec sa licence BSD-2-Clause. Scripts d'installation non exécutés ; paquet intègre vérifié, audit isolé et audit des dépendances existantes sans vulnérabilité connue signalée. Ne pas écrire un moteur cartographique ni intégrer une iframe qui empêche de choisir les repères. Source : [référence Leaflet 1.9.4](https://leafletjs.com/reference.html). Données de restaurant non fiables rendues avec textContent, pas comme du HTML ; seuls les index numériques entrent dans les DivIcon. Positions invalides sans repère, alternatives toujours disponibles.
