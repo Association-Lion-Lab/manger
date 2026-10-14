@@ -23,12 +23,13 @@ test('un nom inconnu ne peut pas injecter du contenu dans une icône', () => {
   }
 });
 
-test('tous les univers ont un pictogramme, sans modifier leurs clés', () => {
-  const { categoryIcon } = require('./public/ui-icons');
-  for (const key of ['__favorites', 'rat', 'date', 'mijote', 'japon', 'chine', 'terroir', 'chef', 'express', 'batch', 'emporter', 'comfort', 'mediterranee', 'italie', 'inde', 'mexique']) {
-    assert.match(categoryIcon(key), /<svg/);
-    assert.doesNotMatch(categoryIcon(key), /data-ui-name="circle"/);
-  }
+test('les univers gardent leurs émojis et les régimes restent explicites', () => {
+  const { readFileSync } = require('node:fs');
+  const { join } = require('node:path');
+  const html = readFileSync(join(__dirname, 'public/index.html'), 'utf8');
+  assert.match(html, /const \[icon, \.\.\.words\] = label.split/);
+  assert.doesNotMatch(html, /MangerIcons.categoryIcon/);
+  for (const emoji of ['🐀', '🇯🇵', '🇨🇳', '🍲', '🐟', '🥚', '🌱']) assert.ok(html.includes(emoji));
 });
 
 test('le serveur expose les icônes avant le script de l’interface', async t => {

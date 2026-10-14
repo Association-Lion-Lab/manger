@@ -384,8 +384,7 @@
     .spotlight-card .recipe-add { margin-top: auto; }
     .browse-categories { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
     .browse-category { min-width: 0; min-height: 112px; display: grid; place-items: center; align-content: center; gap: 4px; padding: 12px 6px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); text-align: center; cursor: pointer; }
-    .browse-category-icon { display: grid; place-items: center; color: var(--accent); }
-    .browse-category-icon .ui-icon { width: 30px; height: 30px; }
+    .browse-category-icon { font-size: 28px; line-height: 1.2; }
     .browse-category strong { font-size: 13px; line-height: 1.2; overflow-wrap: anywhere; }
     .browse-category small { color: var(--muted); font-size: 11px; }
     .browse-more { margin: 12px 0 30px; }
@@ -1121,8 +1120,9 @@
         return `<div class="split-meal" role="group" aria-label="${slot === 'midi' ? 'Midi' : 'Soir'} · ${dishRecipes.length} recettes">${dishRecipes.map(({ dish, recipe, member }) => `<button class="split-dish" type="button" data-slot="${slot}">${recipe ? recipeCover(recipe) : '<span class="recipe-cover" aria-hidden="true">♨</span>'}<span class="meal-copy"><small>${escapeHtml(member?.name || 'Personne')}</small><strong>${escapeHtml(recipe?.title || meal.title)}</strong><small>${recipe?.minutes || meal.minutes || '—'} min${dish.proteinId ? ` · ${escapeHtml(state.proteins.find(protein => protein.id === dish.proteinId)?.name || 'Supplément')}` : ''}</small></span><span aria-hidden="true">›</span></button>`).join('')}</div>`;
       }
       const singleRecipe = state.recipes.find(recipe => recipe.id === (meal.recipeId || dishRecipes[0]?.dish.recipeId));
-      if (singleRecipe?.hasPhoto && !meal.leftoverOf && meal.location === 'home' && meal.occasion === 'regular') return `<button class="meal photo" type="button" data-slot="${slot}"><img src="/api/recipes/${singleRecipe.id}/photo" alt="" loading="lazy"><span class="meal-copy"><strong>${escapeHtml(singleRecipe.title)}</strong><small>${place} · ${meal.people} personne${meal.people > 1 ? 's' : ''} · ${meal.minutes || singleRecipe.minutes} min</small></span></button>`;
-      return `<button class="meal ${css}" type="button" data-slot="${slot}"><span class="meal-icon">${meal.leftoverOf ? uiIcon('leftovers') : singleRecipe && meal.location === 'home' && meal.occasion === 'regular' ? recipeIcon(singleRecipe) : uiIcon(icon)}</span><span class="meal-copy"><strong>${escapeHtml(dishRecipes.length ? singleRecipe?.title || meal.title : meal.title)}</strong><small>${place} · ${meal.people} personne${meal.people > 1 ? 's' : ''}${meal.extraPortions ? ` · ${meal.people + meal.extraPortions} portions à cuisiner` : !meal.leftoverOf && meal.minutes ? ` · ${meal.minutes} min` : ''}</small></span><span aria-hidden="true">${uiIcon('right')}</span></button>`;
+      const hasPhoto = singleRecipe?.hasPhoto && meal.location === 'home';
+      const cover = hasPhoto ? `<img src="/api/recipes/${singleRecipe.id}/photo" alt="" loading="lazy">` : `<span class="meal-icon">${meal.leftoverOf ? uiIcon('leftovers') : singleRecipe && meal.location === 'home' && meal.occasion === 'regular' ? recipeIcon(singleRecipe) : uiIcon(icon)}</span>`;
+      return `<button class="meal ${css}${hasPhoto ? ' photo' : ''}" type="button" data-slot="${slot}">${cover}<span class="meal-copy"><strong>${escapeHtml(dishRecipes.length ? singleRecipe?.title || meal.title : meal.title)}</strong><small>${place} · ${meal.people} personne${meal.people > 1 ? 's' : ''}${meal.extraPortions ? ` · ${meal.people + meal.extraPortions} portions à cuisiner` : !meal.leftoverOf && meal.minutes ? ` · ${meal.minutes} min` : ''}</small></span><span aria-hidden="true">${uiIcon('right')}</span></button>`;
     }
 
     function renderSchedule() {
@@ -1184,9 +1184,9 @@
         document.getElementById('recipe-spotlight').hidden = !spotlight.length;
         const categories = [['__favorites', '♡ Mes favoris'], ...Object.entries(recipeCategories)];
         const categoryTile = ([key, label]) => {
-          const [, ...words] = label.split(' ');
+          const [icon, ...words] = label.split(' ');
           const count = state.recipes.filter(recipe => key === '__favorites' ? recipe.favorite : recipe.tags.includes(key)).length;
-          return `<button class="browse-category" type="button" data-browse-category="${key}"><span class="browse-category-icon" aria-hidden="true">${MangerIcons.categoryIcon(key)}</span><strong>${escapeHtml(words.join(' '))}</strong><small>${count} recette${count > 1 ? 's' : ''}</small></button>`;
+          return `<button class="browse-category" type="button" data-browse-category="${key}"><span class="browse-category-icon" aria-hidden="true">${icon}</span><strong>${escapeHtml(words.join(' '))}</strong><small>${count} recette${count > 1 ? 's' : ''}</small></button>`;
         };
         const featuredCategories = ['__favorites', 'rat', 'date', 'japon', 'express', 'mijote'];
         document.getElementById('browse-categories').innerHTML = categories.filter(([key]) => featuredCategories.includes(key)).map(categoryTile).join('');

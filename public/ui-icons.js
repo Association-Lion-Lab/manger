@@ -39,12 +39,10 @@
     clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   };
   const aliases = { '♨': 'pot', '⌖': 'location', '♥': 'heart', '♡': 'heart', '★': 'heart', '×': 'trash', '⋈': 'plates', '◉': 'book', '♻': 'leftovers', '↔': 'move', '↻': 'refresh', '⌁': 'bag', '○': 'circle', '▤': 'template' };
-  const categories = { __favorites: 'heart', rat: 'coins', date: 'heart', mijote: 'pot', japon: 'bowl', chine: 'bowl', terroir: 'bread', chef: 'chef', express: 'bolt', batch: 'box', emporter: 'bag', comfort: 'cup', mediterranee: 'sun', italie: 'bowl', inde: 'pot', mexique: 'bowl' };
   function icon(name) {
     const resolved = Object.hasOwn(aliases, name) ? aliases[name] : name;
     const key = Object.hasOwn(paths, resolved) ? resolved : 'circle';
     return `<svg class="ui-icon" data-ui-name="${key}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${paths[key]}</svg>`;
   }
-  function categoryIcon(key) { return icon(Object.hasOwn(categories, key) ? categories[key] : 'book'); }
-  return { icon, categoryIcon };
+  return { icon };
 });

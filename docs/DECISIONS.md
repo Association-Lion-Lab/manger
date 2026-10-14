@@ -1,5 +1,17 @@
 # Choix techniques, limites et blocages
 
+## Photos prioritaires et émojis thématiques — 14 octobre 2026
+
+**Contexte :** après la finition SVG, l'utilisateur trouve les univers et régimes moins parlants sans émojis. Sa demande distingue les commandes de l'illustration d'un plat.
+
+**Choix :** conserver les SVG pour les actions, menus et compte ; restaurer les émojis des univers à 28 px avec leurs libellés. Les quatre cartes de régime utilisaient déjà des émojis et sont conservées. Supprimer uniquement le helper SVG des catégories devenu sans appel. Cette préférence remplace le choix d'illustrer les univers en SVG du lot précédent ; aucune nouvelle bibliothèque.
+
+**Photos :** priorité déjà présente dans les cartes et assiettes séparées. Étendre le calendrier aux recettes à la maison pour dates, invités et restes, sans masquer le titre personnalisé ni les informations de portions. Choisir seulement la couverture dans le markup commun au lieu de garder une branche photo qui duplique le texte. Les événements sans recette ou à l'extérieur restent illustrés comme avant. Aucun changement de schéma, d'API, de fichier photo, de logo ou de données réelles.
+
+**Validation :** 208 tests réussis, aucun ignoré, HTTPS inclus. Régressions vérifiées avant/après et mutation temporaire de la priorité photo détectée puis restaurée. Chromium isolé : JPEG décodé dans le catalogue et calendrier maison/date/invités, titres conservés, émojis des univers/régimes, 320/390 px clair/sombre sans débordement. Contrôle général des quatre onglets, menus et favoris sur cinq largeurs jusqu'à 1440 px et texte à 200 % conservé ; captures inspectées. Les restes et assiettes séparées sont couverts par les tests de markup, pas par un nouvel essai sur téléphone.
+
+**Blocage de vérification résolu :** le script visuel supposait un endpoint de liste et une sélection contenant une date ; utiliser la fixture complète et la conversion du jour sélectionné existantes. Il envoyait aussi un PNG alors que l'API attend du JPEG après conversion côté client : générer un JPEG de test conforme, sans élargir la validation du serveur. Image synthétique et base éphémère, jamais ajoutées au catalogue réel. Safari/iPhone, Android et serveur Ubuntu non vérifiés pour ce lot.
+
 ## Harmoniser les icônes sans refaire les écrans — 14 octobre 2026
 
 **Contexte :** l'interface mélangeait des glyphes texte, des émojis colorés et des SVG de différentes épaisseurs. Le besoin est une finition des commandes et univers, pas une nouvelle disposition, palette ou identité. Les premières captures de recette et de logo restent valides.

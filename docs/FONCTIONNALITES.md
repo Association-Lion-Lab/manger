@@ -4,7 +4,7 @@
 
 ## 1. Semaine et repas
 
-Les icônes d'action, de compte, d'univers et de menus utilisent une famille SVG locale harmonisée, sans service externe. Les textes, cibles tactiles et états des favoris sont conservés ; logo, photos et illustrations des plats restent distincts.
+Les commandes, le compte et les menus utilisent une famille SVG locale harmonisée, sans service externe. Les univers de recettes et les régimes gardent leurs émojis avec un libellé explicite. Une photo personnelle disponible passe avant toute illustration dans les cartes et dans le calendrier des repas à la maison, y compris dates, invités et restes ; les assiettes séparées suivent la même règle. Sans photo, le substitut existant reste affiché. Textes, cibles tactiles et états des favoris sont conservés ; le logo de l'application reste distinct des plats.
 
 - Planning hebdomadaire avec midi et soir, jour courant, navigation entre semaines, retour Aujourd'hui et choix direct d'une date ; aucun horaire de repas.
 - Ajout compact : les types de repas sont visibles d'abord ; le catalogue, sa recherche, ses univers et favoris sont regroupés derrière « Choisir une recette ». Retour « Types de repas » dans la même fenêtre et sur le même créneau, sans écriture. Assiettes individuelles et choix date/invités/extérieur conservés.
