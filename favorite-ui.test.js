@@ -12,7 +12,7 @@ function favorites() {
     if (!nodes.has(id)) nodes.set(id, { id, disabled: false, hidden: true, textContent: '', setAttribute(name, value) { this[name] = value; }, addEventListener(type, listener) { this[type] = listener; } });
     return nodes.get(id);
   };
-  const context = { state: { recipes: [{ id: 1, favorite: false }, { id: 2, favorite: false }] }, pendingFavorites: new Set(), editingRecipeId: 1, recipeDeleteBusy: false, recipeViewDialog: { open: true }, AbortSignal,
+  const context = { state: { recipes: [{ id: 1, favorite: false }, { id: 2, favorite: false }] }, pendingFavorites: new Set(), editingRecipeId: 1, recipeDeleteBusy: false, recipeViewDialog: { open: true }, AbortSignal, uiIcon: require('./public/ui-icons').icon,
     document: { getElementById: node, querySelectorAll: selector => cards.filter(card => selector.includes(`"${card.recipeId}"`)) },
     fetch(path, options) { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); calls.push({ path, options, resolve, reject }); return promise; },
     renderRecipes() { cards.forEach(card => card.disabled = context.pendingFavorites.has(card.recipeId)); }
@@ -45,9 +45,12 @@ test('favoris : confirmation applique la recette courante même après un rechar
   form.context.state.recipes = [{ id: 1, favorite: false }, { id: 2, favorite: false }];
   form.calls[0].resolve({ ok: true, json: async () => ({ favorite: true }) }); await first;
   assert.equal(form.context.state.recipes[0].favorite, true);
+  assert.match(form.node('favorite-recipe').innerHTML, /data-ui-name="heart"/);
+  assert.match(form.node('favorite-recipe').innerHTML, /Retirer des favoris$/);
   const remove = form.click(); assert.deepEqual(JSON.parse(form.calls[1].options.body), { favorite: false });
   form.calls[1].resolve({ ok: true, json: async () => ({ favorite: false }) }); await remove;
   assert.equal(form.context.state.recipes[0].favorite, false); assert.equal(form.node('favorite-recipe')['aria-pressed'], 'false');
+  assert.match(form.node('favorite-recipe').innerHTML, /Ajouter aux favoris$/);
 });
 
 test('favoris : un résultat ne réactive pas la fiche pendant une suppression, aucune nouvelle requête du favori', async () => {

@@ -77,7 +77,7 @@ test('le compteur saisonnier suit les résultats et reste discret hors filtre', 
     document: { getElementById: element }, seasonRegion: { value: 'france' },
     MangerSeasons: require('./public/seasons'), MangerFoodNames: require('./public/food-names'),
     state: { recipes: [] }, recipeCategories: { japon: '🇯🇵 Japon' }, dietLabels: { vegetarian: 'Végétarien' },
-    escapeHtml: value => value, recipeCover: () => '', recipeFavoriteButton: () => '',
+    escapeHtml: value => value, recipeCover: () => '', recipeFavoriteButton: () => '', uiIcon: require('./public/ui-icons').icon,
   };
   new Script(source).runInNewContext(context);
   for (const count of [0, 1, 2]) {

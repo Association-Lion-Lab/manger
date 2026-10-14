@@ -80,7 +80,12 @@
     .brand-logo { width: 42px; height: 42px; flex: none; border-radius: 12px; }
     .tagline, .muted { color: var(--muted); font-size: 13px; }
     .icon-button { width: 44px; height: 44px; flex-shrink: 0; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 50%; background: var(--surface); cursor: pointer; }
-    .ui-icon { width: 22px; height: 22px; display: block; flex-shrink: 0; }
+    .ui-icon { width: 22px; height: 22px; display: block; flex-shrink: 0; stroke-width: 1.8; pointer-events: none; }
+    [data-ui-icon] { display: inline-flex; align-items: center; justify-content: center; }
+    .primary:has(.ui-icon), .secondary:has(.ui-icon), .recipe-add { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+    .recipe-favorite[aria-pressed="true"] .ui-icon, #favorite-recipe[aria-pressed="true"] .ui-icon { fill: currentColor; }
+    .recipe-badges small:has(.ui-icon) { display: inline-flex; align-items: center; gap: 4px; }
+    .recipe-badges .ui-icon { width: 14px; height: 14px; }
     main { padding: 24px 20px calc(118px + env(safe-area-inset-bottom)); }
     h1, h2 { margin: 0; font-weight: 650; }
     h1 { font-size: 30px; letter-spacing: -.04em; line-height: 1.2; }
@@ -379,7 +384,8 @@
     .spotlight-card .recipe-add { margin-top: auto; }
     .browse-categories { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
     .browse-category { min-width: 0; min-height: 112px; display: grid; place-items: center; align-content: center; gap: 4px; padding: 12px 6px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); text-align: center; cursor: pointer; }
-    .browse-category-icon { font-size: 28px; line-height: 1.2; }
+    .browse-category-icon { display: grid; place-items: center; color: var(--accent); }
+    .browse-category-icon .ui-icon { width: 30px; height: 30px; }
     .browse-category strong { font-size: 13px; line-height: 1.2; overflow-wrap: anywhere; }
     .browse-category small { color: var(--muted); font-size: 11px; }
     .browse-more { margin: 12px 0 30px; }
@@ -467,24 +473,24 @@
         <h1 class="page-title">On mange quoi cette semaine ?</h1>
         <p class="muted page-subtitle">Les repas du foyer, sans casse-tête.</p>
         <div class="toolbar">
-          <button id="previous-week" class="icon-button" type="button" aria-label="Semaine précédente">‹</button>
+          <button id="previous-week" class="icon-button" type="button" aria-label="Semaine précédente"><span data-ui-icon="left" aria-hidden="true">‹</span></button>
           <div class="week-heading"><h2><button id="choose-week" type="button" aria-label="Choisir une date du planning" aria-haspopup="dialog"><span id="week-title"></span><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg></button></h2><div class="week-meta"><span id="week-number" class="muted"></span><button id="today" class="text-action" type="button" hidden>Aujourd’hui</button></div></div>
-          <button id="next-week" class="icon-button" type="button" aria-label="Semaine suivante">›</button>
+          <button id="next-week" class="icon-button" type="button" aria-label="Semaine suivante"><span data-ui-icon="right" aria-hidden="true">›</span></button>
         </div>
         <p id="week-status" class="muted" role="status" hidden></p>
         <fieldset id="week-content" aria-label="Repas de la semaine">
         <div id="days" class="days" role="tablist" aria-label="Jours de la semaine"></div>
         <div class="day-heading">
           <div><h2 id="selected-day"></h2><span id="day-summary" class="muted"></span></div>
-          <button id="add-meal" class="text-action" type="button">＋ Ajouter</button>
+          <button id="add-meal" class="text-action" type="button"><span data-ui-icon="plus" aria-hidden="true">＋</span> Ajouter</button>
         </div>
         <div id="schedule" class="schedule" aria-live="polite"></div>
         <div class="week-actions">
-          <button id="suggest" class="primary" type="button">✦ Proposer le prochain repas</button>
-          <button id="compose-week" class="secondary" type="button">✦ Compose ma semaine</button>
+          <button id="suggest" class="primary" type="button"><span data-ui-icon="sparkle" aria-hidden="true">✦</span> Proposer le prochain repas</button>
+          <button id="compose-week" class="secondary" type="button"><span data-ui-icon="sparkle" aria-hidden="true">✦</span> Compose ma semaine</button>
           <div class="week-tools" role="group" aria-label="Réutilisation et export du planning">
             <button id="reuse-week" class="text-action" type="button" aria-haspopup="dialog">Réutiliser un menu</button>
-            <button id="export-calendar" class="text-action" type="button" aria-label="Exporter la semaine dans un calendrier" title="Exporter la semaine dans un calendrier">⇩ Exporter</button>
+            <button id="export-calendar" class="text-action" type="button" aria-label="Exporter la semaine dans un calendrier" title="Exporter la semaine dans un calendrier"><span data-ui-icon="download" aria-hidden="true">⇩</span> Exporter</button>
           </div>
         </div>
         </fieldset>
@@ -492,14 +498,14 @@
 
       <section id="recipes-panel" class="panel" hidden>
         <div class="recipe-page-heading">
-          <button id="recipes-back" class="icon-button" type="button" aria-label="Retour à toutes les recettes" hidden>←</button>
+          <button id="recipes-back" class="icon-button" type="button" aria-label="Retour à toutes les recettes" hidden><span data-ui-icon="back" aria-hidden="true">←</span></button>
           <div class="recipe-page-heading-copy"><span id="recipes-kicker" class="section-kicker">À découvrir</span><h1 id="recipes-title">Explorer les recettes</h1><span id="recipe-count" class="muted"></span></div>
-          <div class="recipe-page-actions"><button id="import-recipes" class="icon-button" type="button" aria-label="Importer une recette">⇩</button><button id="new-recipe" class="icon-button" type="button" aria-label="Ajouter une recette">＋</button></div>
+          <div class="recipe-page-actions"><button id="import-recipes" class="icon-button" type="button" aria-label="Importer une recette"><span data-ui-icon="download" aria-hidden="true">⇩</span></button><button id="new-recipe" class="icon-button" type="button" aria-label="Ajouter une recette"><span data-ui-icon="plus" aria-hidden="true">＋</span></button></div>
         </div>
         <label class="recipe-search-field" for="recipe-search"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg><input id="recipe-search" type="search" placeholder="Un plat, un ingrédient…" autocomplete="off"><span class="sr-only">Chercher une recette</span></label>
         <div class="recipe-season-tools" role="group" aria-label="Filtrer les recettes">
           <label id="recipe-time-filter-field" class="recipe-time-filter"><span class="sr-only">Durée maximale de la recette</span><select id="recipe-time-filter"><option value="">Toutes durées</option><option value="30">30 min max</option><option value="45">45 min max</option><option value="60">1 h max</option></select></label>
-          <button id="recipe-season-filter" type="button" aria-pressed="false" aria-controls="recipes recipe-season-month-field recipe-season-region-field recipe-season-note"><span aria-hidden="true">🌿</span> De saison <span class="filter-check" aria-hidden="true">✓</span></button>
+          <button id="recipe-season-filter" type="button" aria-pressed="false" aria-controls="recipes recipe-season-month-field recipe-season-region-field recipe-season-note"><span data-ui-icon="leaf" aria-hidden="true">🌿</span> De saison <span class="filter-check" aria-hidden="true">✓</span></button>
           <p id="recipe-season-month-field" role="status" aria-atomic="true" hidden></p>
           <label id="recipe-season-region-field" hidden><span>Calendrier</span><select id="recipe-season-region" aria-label="Calendrier des recettes de saison" aria-describedby="recipe-season-note"></select></label>
         </div>
@@ -521,7 +527,7 @@
 
       <section id="shopping-panel" class="panel" hidden>
         <span class="section-kicker">Ma semaine</span>
-        <div class="section-heading"><div><h1>Mes courses</h1><span id="shopping-summary" class="muted"></span></div><button id="share" class="icon-button" type="button" aria-label="Partager la liste">↗</button></div>
+        <div class="section-heading"><div><h1>Mes courses</h1><span id="shopping-summary" class="muted"></span></div><button id="share" class="icon-button" type="button" aria-label="Partager la liste"><span data-ui-icon="share" aria-hidden="true">↗</span></button></div>
         <p id="shopping-share-status" class="muted" role="status" hidden></p>
         <div id="offline-purchases" hidden>
           <p id="offline-purchases-status" class="muted" role="status"></p>
@@ -556,14 +562,14 @@
         <a class="account-hero" href="/account"><span class="account-avatar" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 21c.5-4.2 3.1-6.5 7.5-6.5s7 2.3 7.5 6.5"/></svg></span><span><strong id="account-name">Mon compte</strong><small>Identité et sécurité</small></span><span aria-hidden="true">›</span></a>
         <h2 class="account-heading">Mon foyer</h2>
         <div class="account-group">
-          <button id="account-household" type="button"><span class="account-symbol" aria-hidden="true">♧</span><span><strong>Personnes du foyer</strong><small>Repas partagés ou séparés</small></span><span aria-hidden="true">›</span></button>
-          <button id="account-tastes" type="button"><span class="account-symbol" aria-hidden="true">♡</span><span><strong>Goûts et régimes</strong><small>Les préférences de chacun</small></span><span aria-hidden="true">›</span></button>
-          <a id="account-invite" href="/account" hidden><span class="account-symbol" aria-hidden="true">＋</span><span><strong>Inviter une personne</strong><small>Gérer les accès au foyer</small></span><span aria-hidden="true">›</span></a>
+          <button id="account-household" type="button"><span class="account-symbol" aria-hidden="true" data-ui-icon="people">♧</span><span><strong>Personnes du foyer</strong><small>Repas partagés ou séparés</small></span><span aria-hidden="true">›</span></button>
+          <button id="account-tastes" type="button"><span class="account-symbol" aria-hidden="true" data-ui-icon="heart">♡</span><span><strong>Goûts et régimes</strong><small>Les préférences de chacun</small></span><span aria-hidden="true">›</span></button>
+          <a id="account-invite" href="/account" hidden><span class="account-symbol" aria-hidden="true" data-ui-icon="plus">＋</span><span><strong>Inviter une personne</strong><small>Gérer les accès au foyer</small></span><span aria-hidden="true">›</span></a>
         </div>
         <h2 class="account-heading">Préférences</h2>
         <div class="account-group account-settings">
-          <label><span class="account-symbol" aria-hidden="true">◉</span><span><strong>Couleur</strong><small>Choisie pour cet appareil</small></span><select id="theme-accent" aria-label="Couleur de l'application"><option value="potager">Potager</option><option value="ardoise">Ardoise</option><option value="prune">Prune</option></select></label>
-          <label><span class="account-symbol" aria-hidden="true">◐</span><span><strong>Apparence</strong><small>Suit le téléphone par défaut</small></span><select id="theme-mode" aria-label="Apparence de l'application"><option value="system">Automatique</option><option value="light">Claire</option><option value="dark">Sombre</option></select></label>
+          <label><span class="account-symbol" aria-hidden="true" data-ui-icon="palette">◉</span><span><strong>Couleur</strong><small>Choisie pour cet appareil</small></span><select id="theme-accent" aria-label="Couleur de l'application"><option value="potager">Potager</option><option value="ardoise">Ardoise</option><option value="prune">Prune</option></select></label>
+          <label><span class="account-symbol" aria-hidden="true" data-ui-icon="moon">◐</span><span><strong>Apparence</strong><small>Suit le téléphone par défaut</small></span><select id="theme-mode" aria-label="Apparence de l'application"><option value="system">Automatique</option><option value="light">Claire</option><option value="dark">Sombre</option></select></label>
         </div>
         <p class="account-footnote">Les couleurs restent sur cet appareil. Les données du foyer restent sur ton serveur.</p>
       </section>
@@ -577,7 +583,7 @@
     </nav>
 
     <dialog id="week-date-dialog" aria-labelledby="week-date-title">
-      <div class="section-heading"><h2 id="week-date-title">Aller à une date</h2><button id="close-week-date" class="icon-button" type="button" aria-label="Fermer le choix de date">×</button></div>
+      <div class="section-heading"><h2 id="week-date-title">Aller à une date</h2><button id="close-week-date" class="icon-button" type="button" aria-label="Fermer le choix de date"><span data-ui-icon="close" aria-hidden="true">×</span></button></div>
       <form id="week-date-form" class="recipe-form">
         <label class="field"><span>Jour à afficher</span><input id="week-date" type="date" min="1900-01-01" max="2100-12-31" required></label>
         <button class="primary" type="submit">Afficher cette semaine</button>
@@ -587,14 +593,14 @@
       <div class="handle"></div>
       <div class="section-heading">
         <div><h2 id="dialog-title">Ajouter un repas</h2><span id="dialog-subtitle" class="muted" role="status"></span></div>
-        <button id="close-dialog" class="icon-button" type="button" aria-label="Fermer">×</button>
+        <button id="close-dialog" class="icon-button" type="button" aria-label="Fermer"><span data-ui-icon="close" aria-hidden="true">×</span></button>
       </div>
       <fieldset id="meal-fields" aria-label="Choix du repas"><div id="choices" class="choices"></div></fieldset>
       <p id="dialog-error" class="error" role="alert" hidden></p>
     </dialog>
 
     <dialog id="recipe-import-dialog">
-      <div class="section-heading"><h2>Importer des recettes</h2><button id="close-recipe-import" class="icon-button" type="button" aria-label="Fermer l’import">×</button></div>
+      <div class="section-heading"><h2>Importer des recettes</h2><button id="close-recipe-import" class="icon-button" type="button" aria-label="Fermer l’import"><span data-ui-icon="close" aria-hidden="true">×</span></button></div>
       <form id="recipe-url-form">
         <label class="field"><span>Lien d’une recette internet</span><input id="recipe-import-url" type="url" placeholder="https://…" required maxlength="2000"></label>
         <p class="muted">Ton serveur consulte le site indiqué. Seules les pages HTTPS publiques avec une recette structurée sont compatibles. Pas de contournement des sites bloqués.</p>
@@ -610,7 +616,7 @@
       <div class="handle"></div>
       <div class="section-heading">
         <div><h2 id="recipe-dialog-title">Nouvelle recette</h2><span class="muted">Recette privée du foyer</span></div>
-        <button id="close-recipe-dialog" class="icon-button" type="button" aria-label="Fermer">×</button>
+        <button id="close-recipe-dialog" class="icon-button" type="button" aria-label="Fermer"><span data-ui-icon="close" aria-hidden="true">×</span></button>
       </div>
       <form id="recipe-form">
         <fieldset id="recipe-fields" class="recipe-form" aria-label="Contenu de la recette">
@@ -653,7 +659,7 @@
     <dialog id="recipe-view-dialog" aria-labelledby="recipe-view-title">
       <div class="recipe-sheet-toolbar">
         <button id="favorite-recipe" class="text-action" type="button" aria-pressed="false">☆ Ajouter aux favoris</button>
-        <button id="close-recipe-view" class="icon-button" type="button" aria-label="Fermer la recette" autofocus>×</button>
+        <button id="close-recipe-view" class="icon-button" type="button" aria-label="Fermer la recette" autofocus><span data-ui-icon="close" aria-hidden="true">×</span></button>
       </div>
       <img id="recipe-view-photo" class="recipe-hero" alt="" hidden>
       <h2 id="recipe-view-title"></h2><span id="recipe-view-meta" class="muted"></span>
@@ -690,7 +696,7 @@
     </dialog>
 
     <dialog id="pantry-dialog" aria-labelledby="pantry-title">
-      <div class="section-heading"><h2 id="pantry-title">Mon placard</h2><button id="close-pantry" class="icon-button" type="button" aria-label="Fermer le placard">×</button></div>
+      <div class="section-heading"><h2 id="pantry-title">Mon placard</h2><button id="close-pantry" class="icon-button" type="button" aria-label="Fermer le placard"><span data-ui-icon="close" aria-hidden="true">×</span></button></div>
       <p class="muted">Les quantités restantes sont estimées d’après les repas planifiés depuis ta dernière mise à jour. Vérifie ton stock après avoir cuisiné.</p>
       <div id="pantry-list"></div>
       <details id="pantry-editor" class="quiet-details"><summary>Ajouter un aliment</summary>
@@ -708,7 +714,7 @@
       <p id="pantry-error" class="error" role="alert" hidden></p>
     </dialog>
     <dialog id="cooking-dialog">
-      <div class="section-heading"><div><h2 id="cooking-title"></h2><span class="muted">Mode cuisine</span></div><button id="close-cooking" class="icon-button" type="button" aria-label="Quitter le mode cuisine">×</button></div>
+      <div class="section-heading"><div><h2 id="cooking-title"></h2><span class="muted">Mode cuisine</span></div><button id="close-cooking" class="icon-button" type="button" aria-label="Quitter le mode cuisine"><span data-ui-icon="close" aria-hidden="true">×</span></button></div>
       <p class="muted">Garde cette vue ouverte pour les minuteurs. Les alertes peuvent être retardées si le navigateur est en arrière-plan.</p>
       <details><summary>Voir les ingrédients</summary><ul id="cooking-ingredients" class="detail-list"></ul></details>
       <label class="field"><span>Portions à préparer</span><input id="cooking-portions" type="number" min="1" max="100" step="1" required></label>
@@ -726,7 +732,7 @@
     </dialog>
 
     <dialog id="shopping-move-dialog" aria-labelledby="shopping-move-title">
-      <div class="section-heading"><h2 id="shopping-move-title">Déplacer l’article</h2><button id="close-shopping-move" class="icon-button" type="button" aria-label="Annuler">×</button></div>
+      <div class="section-heading"><h2 id="shopping-move-title">Déplacer l’article</h2><button id="close-shopping-move" class="icon-button" type="button" aria-label="Annuler"><span data-ui-icon="close" aria-hidden="true">×</span></button></div>
       <form id="shopping-edit-form" class="recipe-form">
         <fieldset id="shopping-edit-fields" class="recipe-form">
           <div id="shopping-edit-manual" class="compact-form" hidden>
@@ -745,7 +751,7 @@
       <div class="handle"></div>
       <div class="section-heading">
         <div><h2>Mon foyer</h2><span class="muted">Des goûts différents, une seule tablée.</span></div>
-        <button id="close-household" class="icon-button" type="button" aria-label="Fermer">×</button>
+        <button id="close-household" class="icon-button" type="button" aria-label="Fermer"><span data-ui-icon="close" aria-hidden="true">×</span></button>
       </div>
       <p><a href="/account">Mon compte et les accès au foyer →</a></p>
       <details id="legacy-preferences" class="quiet-details" hidden>
@@ -796,7 +802,7 @@
 
   <article id="recipe-print"></article>
   <dialog id="member-dialog" aria-labelledby="member-question">
-    <div class="section-heading"><button id="member-back" class="text-action" type="button">← Retour</button><button id="close-member" class="icon-button" type="button" aria-label="Annuler les modifications du profil">×</button></div>
+    <div class="section-heading"><button id="member-back" class="text-action" type="button">← Retour</button><button id="close-member" class="icon-button" type="button" aria-label="Annuler les modifications du profil"><span data-ui-icon="close" aria-hidden="true">×</span></button></div>
     <div class="member-progress" role="progressbar" aria-label="Profil alimentaire" aria-valuemin="1" aria-valuemax="3" aria-valuenow="1"><span id="member-progress-bar"></span></div>
     <p id="member-step-label" class="section-kicker"></p>
     <h2 id="member-question" tabindex="-1">Tu manges comment ?</h2>
@@ -827,6 +833,7 @@
       </fieldset>
     </form>
   </dialog>
+  <script src="/ui-icons.js"></script>
   <script src="/tastes.js"></script>
   <script src="/food-names.js"></script>
   <script src="/seasons.js"></script>
@@ -1105,7 +1112,7 @@
     }
 
     function mealMarkup(slot, meal) {
-      if (!meal) return `<button class="meal empty" type="button" data-slot="${slot}"><span class="meal-icon">＋</span><span class="meal-copy"><strong>Rien de prévu</strong><small>Ajouter un repas</small></span><span>›</span></button>`;
+      if (!meal) return `<button class="meal empty" type="button" data-slot="${slot}"><span class="meal-icon" aria-hidden="true">${uiIcon('plus')}</span><span class="meal-copy"><strong>Rien de prévu</strong><small>Ajouter un repas</small></span><span aria-hidden="true">${uiIcon('right')}</span></button>`;
       const css = meal.occasion === 'date' ? 'date' : meal.location === 'home' ? '' : 'outside';
       const icon = meal.occasion === 'date' ? '♥' : meal.location === 'home' ? '♨' : '⌖';
       const place = meal.leftoverOf ? 'Restes' : meal.location === 'home' ? 'Maison' : meal.location === 'restaurant' ? 'Restaurant' : 'Extérieur';
@@ -1115,7 +1122,7 @@
       }
       const singleRecipe = state.recipes.find(recipe => recipe.id === (meal.recipeId || dishRecipes[0]?.dish.recipeId));
       if (singleRecipe?.hasPhoto && !meal.leftoverOf && meal.location === 'home' && meal.occasion === 'regular') return `<button class="meal photo" type="button" data-slot="${slot}"><img src="/api/recipes/${singleRecipe.id}/photo" alt="" loading="lazy"><span class="meal-copy"><strong>${escapeHtml(singleRecipe.title)}</strong><small>${place} · ${meal.people} personne${meal.people > 1 ? 's' : ''} · ${meal.minutes || singleRecipe.minutes} min</small></span></button>`;
-      return `<button class="meal ${css}" type="button" data-slot="${slot}"><span class="meal-icon">${meal.leftoverOf ? '♻' : singleRecipe && meal.location === 'home' && meal.occasion === 'regular' ? recipeIcon(singleRecipe) : icon}</span><span class="meal-copy"><strong>${escapeHtml(dishRecipes.length ? singleRecipe?.title || meal.title : meal.title)}</strong><small>${place} · ${meal.people} personne${meal.people > 1 ? 's' : ''}${meal.extraPortions ? ` · ${meal.people + meal.extraPortions} portions à cuisiner` : !meal.leftoverOf && meal.minutes ? ` · ${meal.minutes} min` : ''}</small></span><span>›</span></button>`;
+      return `<button class="meal ${css}" type="button" data-slot="${slot}"><span class="meal-icon">${meal.leftoverOf ? uiIcon('leftovers') : singleRecipe && meal.location === 'home' && meal.occasion === 'regular' ? recipeIcon(singleRecipe) : uiIcon(icon)}</span><span class="meal-copy"><strong>${escapeHtml(dishRecipes.length ? singleRecipe?.title || meal.title : meal.title)}</strong><small>${place} · ${meal.people} personne${meal.people > 1 ? 's' : ''}${meal.extraPortions ? ` · ${meal.people + meal.extraPortions} portions à cuisiner` : !meal.leftoverOf && meal.minutes ? ` · ${meal.minutes} min` : ''}</small></span><span aria-hidden="true">${uiIcon('right')}</span></button>`;
     }
 
     function renderSchedule() {
@@ -1138,7 +1145,7 @@
     }
 
     function recipeFavoriteButton(recipe) {
-      return `<button class="recipe-favorite" type="button" data-favorite-recipe="${recipe.id}"${pendingFavorites.has(recipe.id) ? ' disabled' : ''} aria-pressed="${Boolean(recipe.favorite)}" aria-label="${recipe.favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'} : ${escapeHtml(recipe.title)}">${recipe.favorite ? '♥' : '♡'}</button>`;
+      return `<button class="recipe-favorite" type="button" data-favorite-recipe="${recipe.id}"${pendingFavorites.has(recipe.id) ? ' disabled' : ''} aria-pressed="${Boolean(recipe.favorite)}" aria-label="${recipe.favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'} : ${escapeHtml(recipe.title)}">${uiIcon('heart')}</button>`;
     }
 
     function renderRecipes() {
@@ -1173,19 +1180,19 @@
 
       if (!category && !query) {
         const spotlight = [...state.recipes].sort((a, b) => Number(b.hasPhoto) - Number(a.hasPhoto)).slice(0, 3);
-        document.getElementById('recipe-spotlight').innerHTML = spotlight.map(recipe => `<article class="spotlight-card"><button class="recipe-main" type="button" data-edit-recipe="${recipe.id}" aria-label="Voir la recette ${escapeHtml(recipe.title)}">${recipeCover(recipe)}<strong>${escapeHtml(recipe.title)}</strong></button><span class="muted">${recipe.minutes} min · ${escapeHtml(dietLabels[recipe.diet])}</span><div class="recipe-card-actions">${recipeFavoriteButton(recipe)}<button class="recipe-add" type="button" data-plan-recipe="${recipe.id}">＋ Ajouter au menu</button></div></article>`).join('');
+        document.getElementById('recipe-spotlight').innerHTML = spotlight.map(recipe => `<article class="spotlight-card"><button class="recipe-main" type="button" data-edit-recipe="${recipe.id}" aria-label="Voir la recette ${escapeHtml(recipe.title)}">${recipeCover(recipe)}<strong>${escapeHtml(recipe.title)}</strong></button><span class="muted">${recipe.minutes} min · ${escapeHtml(dietLabels[recipe.diet])}</span><div class="recipe-card-actions">${recipeFavoriteButton(recipe)}<button class="recipe-add" type="button" data-plan-recipe="${recipe.id}">${uiIcon('plus')} Ajouter au menu</button></div></article>`).join('');
         document.getElementById('recipe-spotlight').hidden = !spotlight.length;
         const categories = [['__favorites', '♡ Mes favoris'], ...Object.entries(recipeCategories)];
         const categoryTile = ([key, label]) => {
-          const [icon, ...words] = label.split(' ');
+          const [, ...words] = label.split(' ');
           const count = state.recipes.filter(recipe => key === '__favorites' ? recipe.favorite : recipe.tags.includes(key)).length;
-          return `<button class="browse-category" type="button" data-browse-category="${key}"><span class="browse-category-icon" aria-hidden="true">${icon}</span><strong>${escapeHtml(words.join(' '))}</strong><small>${count} recette${count > 1 ? 's' : ''}</small></button>`;
+          return `<button class="browse-category" type="button" data-browse-category="${key}"><span class="browse-category-icon" aria-hidden="true">${MangerIcons.categoryIcon(key)}</span><strong>${escapeHtml(words.join(' '))}</strong><small>${count} recette${count > 1 ? 's' : ''}</small></button>`;
         };
         const featuredCategories = ['__favorites', 'rat', 'date', 'japon', 'express', 'mijote'];
         document.getElementById('browse-categories').innerHTML = categories.filter(([key]) => featuredCategories.includes(key)).map(categoryTile).join('');
         document.getElementById('browse-more-categories').innerHTML = categories.filter(([key]) => !featuredCategories.includes(key)).map(categoryTile).join('');
       }
-      document.getElementById('recipes').innerHTML = filtered.map(recipe => `<article class="recipe"><button class="recipe-main" type="button" data-edit-recipe="${recipe.id}" aria-label="Voir la recette ${escapeHtml(recipe.title)}">${recipeCover(recipe)}<span class="recipe-copy"><strong>${escapeHtml(recipe.title)}</strong><span class="recipe-badges"><small>◷ ${recipe.minutes} min</small><small>${escapeHtml(dietLabels[recipe.diet])}</small></span></span></button><div class="recipe-card-actions">${recipeFavoriteButton(recipe)}<button class="recipe-add" type="button" data-plan-recipe="${recipe.id}">＋ Ajouter</button></div></article>`).join('') || `<div class="empty-state">${Number.isFinite(maxMinutes) ? 'Aucune recette pour cette durée. Choisis un temps plus long.' : 'Aucune recette ici. Essaie un autre mot ou ajoute un plat.'}</div>`;
+      document.getElementById('recipes').innerHTML = filtered.map(recipe => `<article class="recipe"><button class="recipe-main" type="button" data-edit-recipe="${recipe.id}" aria-label="Voir la recette ${escapeHtml(recipe.title)}">${recipeCover(recipe)}<span class="recipe-copy"><strong>${escapeHtml(recipe.title)}</strong><span class="recipe-badges"><small>${uiIcon('clock')} ${recipe.minutes} min</small><small>${escapeHtml(dietLabels[recipe.diet])}</small></span></span></button><div class="recipe-card-actions">${recipeFavoriteButton(recipe)}<button class="recipe-add" type="button" data-plan-recipe="${recipe.id}">${uiIcon('plus')} Ajouter</button></div></article>`).join('') || `<div class="empty-state">${Number.isFinite(maxMinutes) ? 'Aucune recette pour cette durée. Choisis un temps plus long.' : 'Aucune recette ici. Essaie un autre mot ou ajoute un plat.'}</div>`;
       if (seasonal && !filtered.length) document.getElementById('recipes').innerHTML = '<div class="empty-state">Aucune recette avec ces repères et ces filtres pour ce mois. Change de calendrier ou désactive « De saison » pour retrouver les autres plats.</div>';
     }
 
@@ -1388,8 +1395,10 @@
       return String(value).replace(/[&<>'"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character]);
     }
 
+    const uiIcon = MangerIcons.icon;
+
     function choice(icon, title, detail, data) {
-      return `<button class="choice" type="button" ${Object.entries(data).map(([name, value]) => `data-${name}="${escapeHtml(value)}"`).join(' ')}><span class="choice-icon">${icon}</span><span class="choice-copy"><strong>${escapeHtml(title)}</strong><small>${escapeHtml(detail)}</small></span></button>`;
+      return `<button class="choice" type="button" ${Object.entries(data).map(([name, value]) => `data-${name}="${escapeHtml(value)}"`).join(' ')}><span class="choice-icon" aria-hidden="true">${uiIcon(icon)}</span><span class="choice-copy"><strong>${escapeHtml(title)}</strong><small>${escapeHtml(detail)}</small></span></button>`;
     }
 
     function openAdd(slot) {
@@ -1398,7 +1407,7 @@
       document.getElementById('dialog-title').textContent = 'Ajouter un repas';
       document.getElementById('dialog-subtitle').textContent = `${fullDayNames[state.selected]} · ${slot === 'midi' ? 'Midi' : 'Soir'}`;
       document.getElementById('dialog-error').hidden = true;
-      document.getElementById('choices').innerHTML = choice('♨', 'Choisir une recette', 'Cuisiner un plat à la maison', { pickrecipe: 'true' }) + choice('⌖', 'Manger à l’extérieur', 'Cantine, restaurant ou repas libre', { location: 'outside' }) + choice('♥', 'Prévoir un date', 'À la maison ou au restaurant', { occasion: 'date' }) + choice('♨', 'Inviter du monde', 'Un repas à partager à la maison', { occasion: 'guests' }) + (currentMeal ? choice('×', 'Retirer ce repas', currentMeal.title, { remove: 'true' }) : '');
+      document.getElementById('choices').innerHTML = choice('♨', 'Choisir une recette', 'Cuisiner un plat à la maison', { pickrecipe: 'true' }) + choice('⌖', 'Manger à l’extérieur', 'Cantine, restaurant ou repas libre', { location: 'outside' }) + choice('♥', 'Prévoir un date', 'À la maison ou au restaurant', { occasion: 'date' }) + choice('people', 'Inviter du monde', 'Un repas à partager à la maison', { occasion: 'guests' }) + (currentMeal ? choice('×', 'Retirer ce repas', currentMeal.title, { remove: 'true' }) : '');
       if (state.members.length) document.getElementById('choices').insertAdjacentHTML('afterbegin', choice('⋈', 'Un plat par personne', 'Chacun choisit son assiette pour ce repas', { editplates: 'true' }));
       if (!dialog.open) dialog.showModal();
       dialog.scrollTop = 0;
@@ -1408,7 +1417,7 @@
     function openRecipeChoices() {
       document.getElementById('dialog-title').textContent = 'Choisir une recette';
       document.getElementById('dialog-error').hidden = true;
-      document.getElementById('choices').innerHTML = '<button class="text-action" type="button" data-mealback><span aria-hidden="true">‹</span> Types de repas</button>' + recipePicker();
+      document.getElementById('choices').innerHTML = `<button class="text-action" type="button" data-mealback>${uiIcon('back')} Types de repas</button>` + recipePicker();
       renderPickerRecipes();
       dialog.scrollTop = 0;
       document.querySelector('[data-mealback]').focus({ preventScroll: true });
@@ -2038,7 +2047,7 @@
       editingRecipeId = recipe.id;
       const favoriteButton = document.getElementById('favorite-recipe');
       favoriteButton.disabled = pendingFavorites.has(recipe.id);
-      favoriteButton.textContent = recipe.favorite ? '★ Retirer des favoris' : '☆ Ajouter aux favoris';
+      favoriteButton.innerHTML = uiIcon('heart') + (recipe.favorite ? 'Retirer des favoris' : 'Ajouter aux favoris');
       favoriteButton.setAttribute('aria-pressed', String(Boolean(recipe.favorite)));
       document.getElementById('recipe-view-error').hidden = true;
       document.getElementById('recipe-view-title').textContent = recipe.title;
@@ -2831,7 +2840,7 @@
         if (recipeViewDialog.open && editingRecipeId === recipe.id) {
           const current = state.recipes.find(item => item.id === recipe.id), favorite = document.getElementById('favorite-recipe');
           favorite.disabled = recipeDeleteBusy;
-          favorite.textContent = current?.favorite ? '★ Retirer des favoris' : '☆ Ajouter aux favoris';
+          favorite.innerHTML = uiIcon('heart') + (current?.favorite ? 'Retirer des favoris' : 'Ajouter aux favoris');
           favorite.setAttribute('aria-pressed', String(Boolean(current?.favorite)));
         }
       }
@@ -3263,6 +3272,7 @@
     try {
       if (isSecureContext && navigator.serviceWorker && localStorage.getItem('manger-offline-enabled') === 'yes') navigator.serviceWorker.getRegistration().then(registration => registration?.update()).catch(() => {});
     } catch {}
+    document.querySelectorAll('[data-ui-icon]').forEach(element => { element.innerHTML = uiIcon(element.dataset.uiIcon); });
     load().catch(() => {}); // The shared loader displays a retry action without replacing the planning.
   </script>
 </body>

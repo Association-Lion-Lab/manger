@@ -16,7 +16,7 @@ function pickerContext(members = [], currentMeal = null) {
     document: { getElementById: element, querySelector: () => element('focused-control') },
     state: { selected: 2, members }, fullDayNames: ['Lundi', 'Mardi', 'Mercredi'],
     dialog: { open: false, scrollTop: 400, showModal() { this.open = true; } },
-    mealFor: () => currentMeal, escapeHtml: String,
+    mealFor: () => currentMeal, escapeHtml: String, uiIcon: require('./public/ui-icons').icon,
     recipePicker: () => '<input id="picker-search"><div id="picker-recipes"></div>',
     renderPickerRecipes() { context.renders++; }, renders: 0,
   };

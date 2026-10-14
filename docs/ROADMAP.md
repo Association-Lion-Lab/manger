@@ -6,6 +6,8 @@ Contrainte produit : quatre onglets (Semaine, Recettes, Courses, Compte), action
 
 ## Lot du 14 octobre 2026 — Ajout de repas allégé
 
+- Finition suivante : famille SVG locale pour commandes, menus, univers et compte ; trait harmonisé avec la navigation, cœurs de favoris remplis, noms accessibles conservés. Logo, photos, illustrations de plats, couleurs et organisation inchangés. Pas de paquet, CDN, migration ou nouvel écran. 205 tests réussis, aucun ignoré, HTTPS inclus ; parcours Chromium des quatre onglets et favoris, cinq largeurs clair/sombre et texte agrandi, captures inspectées. Tests de noms invalides et mutation de la résolution d'icône vérifiés. Sauvegardes et protéines contrôlées sans modification du foyer réel. Validation sur appareils à faire par l'utilisateur.
+
 - Menu de types de repas compact ; catalogue révélé seulement après « Choisir une recette », avec recherche, univers/favoris et retour « Types de repas » dans le même dialogue. Jour/créneau conservés, focus explicite sans clavier automatique, verrou de sauvegarde inchangé. Date, invités, extérieur, assiettes et protéines facultatives restent accessibles.
 - Textes longs des choix du dialogue autorisés à revenir à la ligne, notamment à 320 px avec texte à 200 %. Aucune nouvelle modal, dépendance ou migration ; données du foyer préservées.
 - 201 tests réussis, aucun ignoré, HTTPS inclus ; quatre nouveaux tests vérifiés en échec avant changement. Chromium isolé : navigation sans écriture, confirmation du repas partagé, parcours date/invités/assiettes, recherche/univers/favoris/retour clavier, 320/390/768/1024/1440 clair/sombre et texte agrandi. Captures inspectées. Vérification réelle Safari/iPhone/Android/Ubuntu à faire après mise à jour par l'utilisateur.
