@@ -829,7 +829,12 @@ function createHandler(db, overpassUrl, communesUrl) {
         response.writeHead(200, { 'Content-Type': offlineAssets[url.pathname] + '; charset=utf-8', 'Cache-Control': 'no-cache', 'X-Content-Type-Options': 'nosniff' });
         return response.end(readFileSync(join(__dirname, 'public', url.pathname === '/apple-touch-icon.png' ? 'icon-180.png' : url.pathname.slice(1))));
       }
-      if (request.method === 'GET' && ['/ui-icons.js', '/tastes.js', '/food-names.js', '/seasons.js', '/offline-recipes.js', '/offline-shopping.js'].includes(url.pathname)) {
+      const mapAssets = { '/vendor/leaflet/leaflet.js': 'text/javascript', '/vendor/leaflet/leaflet.css': 'text/css' };
+      if (request.method === 'GET' && Object.hasOwn(mapAssets, url.pathname)) {
+        response.writeHead(200, { 'Content-Type': mapAssets[url.pathname] + '; charset=utf-8', 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-cache' });
+        return response.end(readFileSync(join(__dirname, 'public', url.pathname.slice(1))));
+      }
+      if (request.method === 'GET' && ['/restaurant-map.js', '/ui-icons.js', '/tastes.js', '/food-names.js', '/seasons.js', '/offline-recipes.js', '/offline-shopping.js'].includes(url.pathname)) {
         response.writeHead(200, { 'Content-Type': 'text/javascript; charset=utf-8', 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-cache' });
         return response.end(readFileSync(join(__dirname, 'public', url.pathname.slice(1))));
       }
@@ -837,7 +842,7 @@ function createHandler(db, overpassUrl, communesUrl) {
         response.writeHead(200, {
           'Content-Type': 'text/html; charset=utf-8',
           'Content-Length': INDEX_HTML.length,
-          'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
+          'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://tile.openstreetmap.org; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
           'Referrer-Policy': 'no-referrer',
           'X-Content-Type-Options': 'nosniff'
         });

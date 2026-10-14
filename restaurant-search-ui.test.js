@@ -6,7 +6,7 @@ const { Script } = require('node:vm');
 const html = readFileSync(join(__dirname, 'public/index.html'), 'utf8');
 
 function search() {
-  const nodes = new Map(), requests = [], timers = new Map(), positions = [];
+  const nodes = new Map(), requests = [], timers = new Map(), positions = [], mapMounts = [];
   const node = id => {
     if (!nodes.has(id)) nodes.set(id, { value: '', disabled: false, hidden: false, isConnected: true, innerHTML: '', textContent: '',
       setAttribute(name, value) { this[name] = value; }, querySelectorAll: () => [node('find-restaurants'), node('find-place'), node('restaurant-place')] });
@@ -19,9 +19,14 @@ function search() {
     fetch(path, options) { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); requests.push({ path, options, resolve, reject }); return promise; },
     escapeHtml: value => String(value).replaceAll('<', '&lt;'), choice: (_, name, detail, data) => `<button data-place="${data.place || ''}">${name} ${detail}</button>`
   };
+  context.MangerRestaurantMap = { mount(target, payload, onChoose) {
+    const mounted = { ...payload, onChoose, destroyed: false }; mapMounts.push(mounted);
+    target.innerHTML = payload.restaurants.length ? `${payload.origin} · ${payload.restaurants.map(place => `${place.name} ${place.distance} m`).join(' · ')} · Carte` : 'Aucun restaurant';
+    return { destroy() { mounted.destroyed = true; } };
+  } };
   const source = html.match(/^    let restaurantSearch[\s\S]*?(?=\n    async function saveEvent)/m)[0];
   const actions = new Script(source + ';({findPlaces,findRestaurants,runRestaurantSearch,searchRestaurantPosition,cancelRestaurantSearch})').runInNewContext(context);
-  return { node, requests, positions, timers, context, ...actions,
+  return { node, requests, positions, timers, mapMounts, context, ...actions,
     response: data => ({ ok: true, json: async () => data }),
     place: () => actions.runRestaurantSearch(signal => actions.searchRestaurantPosition(50.29, 2.77, signal, 'Arras'), 'Recherche des restaurants…') };
 }
@@ -107,7 +112,20 @@ test('restaurants : position obtenue et commune choisie passent par la même pro
   assert.ok(form.requests[0].options.signal instanceof AbortSignal);
   form.requests[0].resolve(form.response([])); await pending; assert.match(form.node('restaurant-results').innerHTML, /Aucun restaurant/);
   const next = form.place(); form.requests[1].resolve(form.response([{ name: 'Test', distance: 120, cuisine: 'japanese', latitude: 50, longitude: 2 }])); await next;
-  assert.match(form.node('restaurant-results').innerHTML, /Arras.*120 m.*Voir sur la carte/);
+  assert.match(form.node('restaurant-results').innerHTML, /Arras.*120 m.*Carte/);
   const error = form.findPlaces(); form.requests[2].resolve({ ok: false, json: async () => ({ error: '<script>' }) }); await error;
   assert.match(form.node('restaurant-results').innerHTML, /&lt;script>/); assert.equal(form.requests.length, 3);
+});
+
+test('restaurants : choisir prépare le nom sans écriture, envoi verrouillé et fermeture détruit la carte', async () => {
+  const form = search(), pending = form.place();
+  form.node('confirm-event').focus = () => {};
+  form.node('confirm-event').scrollIntoView = () => {};
+  form.requests[0].resolve(form.response([{ name: 'Restaurant choisi', latitude: 50, longitude: 2 }])); await pending;
+  form.mapMounts[0].onChoose({ name: 'Restaurant choisi' });
+  assert.equal(form.node('event-title').value, 'Restaurant choisi'); assert.equal(form.requests.length, 1);
+  form.node('meal-fields').disabled = true; form.mapMounts[0].onChoose({ name: 'Ne pas remplacer' });
+  assert.equal(form.node('event-title').value, 'Restaurant choisi');
+  form.context.dialog.open = false; form.cancelRestaurantSearch();
+  assert.equal(form.mapMounts[0].destroyed, true);
 });

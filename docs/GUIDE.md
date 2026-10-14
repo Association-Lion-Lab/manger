@@ -367,13 +367,15 @@ Les goûts par personne orientent déjà ce classement sans exclure les prépara
 
 ## Restaurants autour de soi
 
-Les repas au restaurant et les dates peuvent rechercher jusqu'à huit restaurants OpenStreetMap dans un rayon de 3 km, classés par distance. Cliquer sur un résultat remplit le nom du repas ; aucune réservation n'est effectuée.
+Les repas au restaurant et les dates peuvent rechercher jusqu'à huit restaurants OpenStreetMap dans un rayon de 3 km, classés par distance. Ville/code postal et Autour de moi donnent accès à la carte. Le champ « Chercher dans cette zone » filtre ces résultats par nom ou cuisine, sans casse ni accents ; ce n'est pas une recherche mondiale. Touche un repère pour afficher sa fiche puis « Choisir ce restaurant » pour remplir le nom du repas. Le planning n'est modifié qu'après « Ajouter au calendrier » ; aucune réservation.
 
 Cette fonction est optionnelle. Après un clic explicite et l'autorisation de géolocalisation du navigateur, les coordonnées sont transmises au serveur Manger puis à l'API publique Overpass ; Manger ne les enregistre pas. Les données OpenStreetMap peuvent être incomplètes ou anciennes. Vérifiez directement les horaires et le menu du restaurant.
 
 La géolocalisation nécessite HTTPS, sauf sur `localhost`. Pour utiliser une autre instance Overpass, définissez `MANGER_OVERPASS_URL` avec son URL d'API. La planification manuelle reste disponible sans ce service.
 
-En cas de géolocalisation indisponible, saisissez une ville ou un code postal français et choisissez la commune. La recherche est alors centrée sur cette commune. Cette saisie est transmise à l'API officielle `geo.api.gouv.fr`, configurable via `MANGER_COMMUNES_URL`. Les résultats affichent l'adresse lorsqu'elle est renseignée et proposent un lien vers la carte OpenStreetMap.
+En cas de géolocalisation indisponible, saisissez une ville ou un code postal français et choisissez la commune. La recherche est alors centrée sur cette commune. Cette saisie est transmise à l'API officielle `geo.api.gouv.fr`, configurable via `MANGER_COMMUNES_URL`. La fiche affiche l'adresse lorsqu'elle est renseignée. La liste reste disponible sous « Voir les résultats en liste » et s'ouvre si le fond cartographique échoue. Si le restaurant manque, renseignez directement le champ Nom du repas.
+
+Après recherche volontaire, les tuiles OpenStreetMap reçoivent votre IP et la zone affichée. La bibliothèque est servie par Manger, sans CDN ; seule l'origine du site est transmise avec les images de carte, pas le chemin ni un lien d'invitation. Attribution visible ; aucune carte téléchargée pour le hors connexion. Les services peuvent être indisponibles : liste et saisie libre restent utilisables. Politique : https://operations.osmfoundation.org/policies/tiles/.
 
 Une seule recherche est active dans la fenêtre : localisation, commune et choix du centre ne peuvent pas se lancer simultanément. Les boutons de recherche et la saisie de commune sont temporairement bloqués, mais le nom, le lieu, le nombre de personnes et la planification manuelle restent disponibles. La recherche par commune ou centre choisi attend 15 secondes maximum côté navigateur. « Localise-moi » demande une position avec un délai de 20 secondes et borne l'ensemble localisation/recherche à 35 secondes.
 

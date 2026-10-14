@@ -4,6 +4,8 @@
 
 ## 1. Semaine et repas
 
+Carte des restaurants intégrée au choix des sorties et dates au restaurant : après ville/localisation, jusqu'à huit établissements dans 3 km, recherche locale par nom/cuisine, repères et fiche → Choisir. Le choix prépare le nom, sans enregistrer le repas avant confirmation. Liste facultative/repli réseau, saisie libre et protections de recherche/sauvegarde conservées. Fond OSM externe après action volontaire ; aucune réservation.
+
 Dans le sélecteur de recettes du planning et des invités, les lignes compactes montrent la photo du plat en priorité, sinon son émoji de catalogue. Recherche, univers, favoris et indication « Favori » restent disponibles ; les commandes de types de repas conservent leurs SVG.
 
 Les commandes, le compte et les menus utilisent une famille SVG locale harmonisée, sans service externe. Les univers de recettes et les régimes gardent leurs émojis avec un libellé explicite. Une photo personnelle disponible passe avant toute illustration dans les cartes et dans le calendrier des repas à la maison, y compris dates, invités et restes ; les assiettes séparées suivent la même règle. Sans photo, le substitut existant reste affiché. Textes, cibles tactiles et états des favoris sont conservés ; le logo de l'application reste distinct des plats.
@@ -84,4 +86,4 @@ Les protections locales ne constituent pas une garantie universelle d'idempotenc
 
 ## Ce qui n'est pas livré
 
-Les vraies interfaces tablette/PC, l'image Docker préconstruite publiée, l'isolation de plusieurs foyers, les coûts calculés et l'extension des calendriers régionaux restent différés. Il n'y a pas de carte intégrée, commande d'enseigne, réservation de restaurant, application native, réseau social, générateur de recettes par IA ni calcul nutritionnel avancé. Une recherche OSM, un tag budget ou une adaptation de largeur ne vaut pas livraison de ces fonctions.
+Les vraies interfaces tablette/PC, l'image Docker préconstruite publiée, l'isolation de plusieurs foyers, les coûts calculés et l'extension des calendriers régionaux restent différés. Il n'y a pas de commande d'enseigne, réservation de restaurant, application native, réseau social, générateur de recettes par IA ni calcul nutritionnel avancé. Une recherche OSM, un tag budget ou une adaptation de largeur ne vaut pas livraison de ces fonctions.

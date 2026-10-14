@@ -80,6 +80,8 @@ Sur grand écran, la photo et la fiche peuvent se placer côte à côte, avec un
 
 ### Proposition restaurants — 14 octobre 2026
 
+**Suite :** l'utilisateur a validé la maquette ; l'intégration de la vraie carte est réalisée sur development. Le plan fictif ci-dessous reste un prototype historique, pas la carte utilisée par l'application. Ville et localisation regroupées, recherche locale, repères tactiles/clavier, fiche et liste facultative ; Leaflet local et tuiles OSM volontaires. Contrôles locaux avec services simulés, essais sur téléphone/Ubuntu à faire ; voir les décisions pour limites, réseau et validation.
+
 [Maquette interactive indépendante](prototypes/restaurant-picker.html), proposée après le retour utilisateur sur la liste trop lourde. Statut : **à valider visuellement ; non intégrée à l'application**. Le choix se fait sur une carte, avec recherche par nom/cuisine visible et petite fiche nom/adresse/distance → Choisir. Ville ou localisation, liste facultative repliée pour l'alternative clavier et saisie libre conservées. Pas de nouvel onglet ni de réservation.
 
 Le prototype contient un plan schématique et quatre restaurants fictifs. Repères, recherche sans accents, zoom/déplacement, confirmation, annulation et nom libre fonctionnent localement ; la géolocalisation et le changement de ville sont explicitement simulés. Aucun appel réseau, accès au foyer ou écriture du planning. Les données géographiques réelles et leur couverture ne sont pas validées par ce prototype. Palette et icônes locales réutilisées ; Apple Design : `modality.md › Best practices` pour une tâche courte et une sortie claire, `searching.md › Best practices` pour recherche visible et portée locale explicite. Principes web, pas une interface iOS native.

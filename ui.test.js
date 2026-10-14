@@ -62,7 +62,7 @@ test('reprendre une occasion retrouve les champs sans contaminer un autre type o
     return controls.get(id);
   };
   const recipes = [{ id: 1, title: 'Curry', minutes: 30, tags: ['date'] }, { id: 2, title: 'Risotto', minutes: 40, tags: [] }];
-  const context = { state: { selected: 0, slot: 'soir', recipes }, fullDayNames: ['Lundi'], Event, cancelRestaurantSearch() {},
+  const context = { state: { selected: 0, slot: 'soir', recipes }, fullDayNames: ['Lundi'], Event, cancelRestaurantSearch() {}, clearRestaurantMap() {}, uiIcon: require('./public/ui-icons').icon,
     mealFor: () => current, document: { getElementById: control },
     escapeHtml: value => String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;') };
   const open = new Script(source + ';openEventSetup').runInNewContext(context);

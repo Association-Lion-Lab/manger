@@ -11,6 +11,7 @@
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
   <link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180">
+  <link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
   <script>
     try {
       const appearance = JSON.parse(localStorage.getItem('manger-appearance-v1') || '{}');
@@ -235,6 +236,23 @@
     .choice-copy small { color: var(--muted); }
     #meal-dialog .choice-copy { min-width: 0; overflow-wrap: anywhere; }
     #restaurant-results .choice-copy { min-width: 0; overflow-wrap: anywhere; }
+    .restaurant-map { height: 290px; isolation: isolate; border: 1px solid var(--line); border-radius: 20px; background: var(--field); font-family: inherit; }
+    .restaurant-location { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; }
+    .restaurant-location .field { flex: 1; min-width: 140px; margin: 0; }
+    .restaurant-location .secondary { width: auto; min-height: 48px; }
+    #find-place { margin-top: 12px; }
+    .restaurant-pin { display: grid; place-items: center; border: 2px solid var(--line); border-radius: 50%; color: var(--text); background: var(--surface); font: 650 16px/1 system-ui; box-shadow: 0 3px 10px #0002; }
+    .restaurant-pin.selected { border-color: var(--accent); background: var(--accent); color: var(--on-accent); }
+    .restaurant-map .leaflet-control-zoom a { width: 44px; height: 44px; line-height: 44px; color: var(--text); background: var(--surface); }
+    .restaurant-map .leaflet-control-attribution { background: var(--surface); color: var(--muted); font-size: 11px; }
+    .restaurant-map .leaflet-control-attribution a { color: var(--text); }
+    .restaurant-card { padding: 16px; border: 1px solid var(--line); border-radius: 20px; background: var(--field); }
+    .restaurant-card strong { display: block; font-size: 19px; line-height: 1.3; overflow-wrap: anywhere; }
+    .restaurant-card p { margin: 6px 0; overflow-wrap: anywhere; }
+    .restaurant-card .primary { margin-top: 12px; }
+    .restaurant-list summary { min-height: 44px; padding: 12px 0; color: var(--muted); cursor: pointer; }
+    .restaurant-list > div { display: grid; gap: 8px; }
+    .restaurant-list-item { min-height: 48px; padding: 12px; text-align: left; border: 1px solid var(--line); border-radius: 14px; background: var(--field); overflow-wrap: anywhere; }
     .recipe-form { display: grid; gap: 22px; margin-top: 22px; }
     #recipe-fields, #pantry-fields, #recipe-notes-fields { min-width: 0; margin-right: 0; margin-left: 0; padding: 0; border: 0; }
     .field { display: grid; gap: 6px; }
@@ -834,6 +852,8 @@
     </form>
   </dialog>
   <script src="/ui-icons.js"></script>
+  <script src="/vendor/leaflet/leaflet.js"></script>
+  <script src="/restaurant-map.js"></script>
   <script src="/tastes.js"></script>
   <script src="/food-names.js"></script>
   <script src="/seasons.js"></script>
@@ -1726,6 +1746,7 @@
 
     function openEventSetup(occasion, mode = 'standard', recipe = null) {
       cancelRestaurantSearch();
+      clearRestaurantMap();
       state.pendingEvent = { occasion, recipeId: recipe?.id ?? null };
       const isDate = occasion === 'date';
       const isGuests = occasion === 'guests';
@@ -1737,7 +1758,7 @@
       document.getElementById('dialog-title').textContent = recipe ? 'Cuisiner pour les invités' : isDate ? 'Prévoir un date' : mode === 'order' ? 'Commander' : isGuests ? 'Repas sans recette' : 'Manger à l’extérieur';
       document.getElementById('dialog-subtitle').textContent = `${fullDayNames[state.selected]} · ${state.slot === 'midi' ? 'Midi' : 'Soir'}`;
       const places = isGuests ? '<option value="home">À la maison</option>' : '<option value="restaurant">Restaurant</option><option value="outside">Autre lieu</option>' + (isDate ? '<option value="home">À la maison</option>' : '');
-      const restaurantSearch = isGuests ? '' : '<div class="field"><button id="find-restaurants" class="secondary" type="button">⌖ Localise-moi</button><small class="muted">Après autorisation, votre position est transmise à Manger puis à Overpass, sans enregistrement par Manger.</small></div><label class="field"><span>Ou ville / code postal en France</span><input id="restaurant-place" maxlength="80" placeholder="Arras ou 62000" autocomplete="off"></label><button id="find-place" class="secondary" type="button">Rechercher la commune</button><small class="muted">La saisie est envoyée à l’API publique des communes ; le centre choisi est transmis à Overpass.</small><div id="restaurant-results" aria-live="polite"></div>';
+      const restaurantSearch = isGuests ? '' : `<div class="restaurant-location"><label class="field"><span>Ville ou code postal</span><input id="restaurant-place" maxlength="80" placeholder="Arras ou 62000" autocomplete="off"></label><button id="find-restaurants" class="secondary" type="button">${uiIcon('location')} Autour de moi</button></div><button id="find-place" class="secondary" type="button">Rechercher la commune</button><p class="muted restaurant-privacy">Ville : API publique des communes. Position ou centre choisi : Manger puis Overpass, sans enregistrement par Manger. Fond de carte : votre IP et la zone affichée sont transmises à OpenStreetMap.</p><div id="restaurant-results"></div>`;
       const dateRecipes = isDate ? `<div id="date-home-recipes" hidden><label class="field"><span>Recette à préparer</span><select id="date-recipe"><option value="">Sans recette pour le moment</option>${[...state.recipes].sort((a, b) => Number(b.tags.includes('date')) - Number(a.tags.includes('date'))).map(item => `<option value="${item.id}">${escapeHtml(item.title)} · ${item.minutes} min${item.tags.includes('date') ? ' · ♥ Date' : ''}</option>`).join('')}</select></label><p class="muted">Les recettes de date apparaissent en premier. Les ingrédients seront ajoutés aux courses.</p></div>` : '';
       document.getElementById('choices').innerHTML = `<div class="recipe-form"><label class="field"><span>Nom</span><input id="event-title" maxlength="120" value="${escapeHtml(title)}" required></label><label class="field"><span>Lieu</span><select id="event-location">${places}</select></label><div id="event-restaurant-search">${restaurantSearch}</div>${dateRecipes}<label class="field"><span>Nombre de personnes</span><input id="event-people" type="number" min="1" max="100" value="${existing?.people ?? (isGuests ? 4 : isDate ? 2 : 1)}" required></label><button id="confirm-event" class="primary" type="button">${existing ? 'Enregistrer les modifications' : 'Ajouter au calendrier'}</button></div>`;
       if (existing) {
@@ -1746,6 +1767,7 @@
       }
       document.getElementById('event-location').addEventListener('change', () => {
         cancelRestaurantSearch();
+        clearRestaurantMap();
         const location = document.getElementById('event-location').value;
         document.getElementById('event-restaurant-search').hidden = location !== 'restaurant';
         document.getElementById('restaurant-results')?.replaceChildren();
@@ -1759,8 +1781,13 @@
     }
 
     let restaurantSearch = null;
+    let restaurantPicker = null;
+    function clearRestaurantMap() {
+      restaurantPicker?.destroy(); restaurantPicker = null;
+    }
     function cancelRestaurantSearch() {
       restaurantSearch?.controller.abort(); restaurantSearch?.finish();
+      if (!dialog.open) clearRestaurantMap();
     }
 
     async function runRestaurantSearch(work, message, timeout = 15000) {
@@ -1779,11 +1806,22 @@
       };
       restaurantSearch = { controller, finish };
       controls.forEach(({ control }) => control.disabled = true); container.setAttribute('aria-busy', 'true');
+      clearRestaurantMap();
+      results.setAttribute('aria-live', 'polite');
       results.textContent = message;
       const current = () => restaurantSearch?.controller === controller && results.isConnected && dialog.open && !container.hidden;
       try {
         const output = await work(controller.signal);
-        if (current()) results.innerHTML = output;
+        if (current()) {
+          if (typeof output === 'string') results.innerHTML = output;
+          else restaurantPicker = MangerRestaurantMap.mount(results, output, restaurant => {
+            if (document.getElementById('meal-fields').disabled) return;
+            document.getElementById('event-title').value = restaurant.name;
+            document.getElementById('event-location').value = 'restaurant';
+            document.getElementById('confirm-event').focus({ preventScroll: true });
+            document.getElementById('confirm-event').scrollIntoView({ block: 'nearest' });
+          });
+        }
       } catch (error) {
         if (current()) {
           const reason = controller.signal.aborted ? controller.signal.reason : error;
@@ -1827,7 +1865,7 @@
 
     async function searchRestaurantPosition(latitude, longitude, signal, origin = 'votre position') {
       const restaurants = await restaurantResponse('/api/restaurants', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ latitude, longitude }) }, signal);
-      return restaurants.length ? `<small class="muted">À moins de 3 km de ${escapeHtml(origin)}</small><div class="choices">${restaurants.map(restaurant => `<div>${choice('⌖', restaurant.name, `${restaurant.distance} m${restaurant.address ? ` · ${restaurant.address}` : ''}${restaurant.cuisine ? ` · ${restaurant.cuisine}` : ''}`, { restaurant: restaurant.name })}<a href="https://www.openstreetmap.org/?mlat=${Number(restaurant.latitude)}&mlon=${Number(restaurant.longitude)}#map=18/${Number(restaurant.latitude)}/${Number(restaurant.longitude)}" target="_blank" rel="noopener noreferrer">Voir sur la carte</a></div>`).join('')}</div><small class="muted">Données © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">contributeurs OpenStreetMap</a></small>` : '<p class="muted">Aucun restaurant référencé dans un rayon de 3 km.</p>';
+      return { restaurants, latitude, longitude, origin };
     }
 
     function findPlaces() {
