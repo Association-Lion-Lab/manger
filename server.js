@@ -496,18 +496,6 @@ function household(db) {
   };
 }
 
-function restaurantResults(elements, latitude, longitude) {
-  const radians = value => value * Math.PI / 180;
-  return elements.flatMap(element => {
-    const lat = element.lat ?? element.center?.lat;
-    const lon = element.lon ?? element.center?.lon;
-    if (!element.tags?.name || !Number.isFinite(lat) || !Number.isFinite(lon)) return [];
-    const a = Math.sin(radians(lat - latitude) / 2) ** 2 + Math.cos(radians(latitude)) * Math.cos(radians(lat)) * Math.sin(radians(lon - longitude) / 2) ** 2;
-    const address = [element.tags['addr:housenumber'], element.tags['addr:street'], element.tags['addr:postcode'], element.tags['addr:city']].filter(Boolean).join(' ');
-    return [{ id: `${element.type}/${element.id}`, name: element.tags.name, address: address || null, mapUrl: `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=18/${lat}/${lon}`, cuisine: element.tags.cuisine?.replace(/;/g, ', ') || null, distance: Math.round(6_371_000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))), latitude: lat, longitude: lon }];
-  }).sort((left, right) => left.distance - right.distance || left.name.localeCompare(right.name, 'fr')).slice(0, 8);
-}
-
 function validateMember(input) {
   if (!input || typeof input.name !== 'string' || !input.name.trim() || input.name.length > 60) throw new Error('Nom invalide');
   if (!['vegan', 'vegetarian', 'pescetarian', 'omnivore'].includes(input.diet)) throw new Error('Régime invalide');
@@ -779,7 +767,7 @@ async function readJson(request, maxSize = 32_768) {
   }
 }
 
-function createHandler(db, overpassUrl, communesUrl) {
+function createHandler(db) {
   let importingUrl = false;
   let backingUp = false;
   const restoration = createRestore(db);
@@ -829,12 +817,7 @@ function createHandler(db, overpassUrl, communesUrl) {
         response.writeHead(200, { 'Content-Type': offlineAssets[url.pathname] + '; charset=utf-8', 'Cache-Control': 'no-cache', 'X-Content-Type-Options': 'nosniff' });
         return response.end(readFileSync(join(__dirname, 'public', url.pathname === '/apple-touch-icon.png' ? 'icon-180.png' : url.pathname.slice(1))));
       }
-      const mapAssets = { '/vendor/leaflet/leaflet.js': 'text/javascript', '/vendor/leaflet/leaflet.css': 'text/css' };
-      if (request.method === 'GET' && Object.hasOwn(mapAssets, url.pathname)) {
-        response.writeHead(200, { 'Content-Type': mapAssets[url.pathname] + '; charset=utf-8', 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-cache' });
-        return response.end(readFileSync(join(__dirname, 'public', url.pathname.slice(1))));
-      }
-      if (request.method === 'GET' && ['/restaurant-map.js', '/ui-icons.js', '/tastes.js', '/food-names.js', '/seasons.js', '/offline-recipes.js', '/offline-shopping.js'].includes(url.pathname)) {
+      if (request.method === 'GET' && ['/ui-icons.js', '/tastes.js', '/food-names.js', '/seasons.js', '/offline-recipes.js', '/offline-shopping.js'].includes(url.pathname)) {
         response.writeHead(200, { 'Content-Type': 'text/javascript; charset=utf-8', 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-cache' });
         return response.end(readFileSync(join(__dirname, 'public', url.pathname.slice(1))));
       }
@@ -842,7 +825,7 @@ function createHandler(db, overpassUrl, communesUrl) {
         response.writeHead(200, {
           'Content-Type': 'text/html; charset=utf-8',
           'Content-Length': INDEX_HTML.length,
-          'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://tile.openstreetmap.org; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
+          'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
           'Referrer-Policy': 'no-referrer',
           'X-Content-Type-Options': 'nosniff'
         });
@@ -1033,29 +1016,6 @@ function createHandler(db, overpassUrl, communesUrl) {
           db.exec('COMMIT');
         } catch (error) { db.exec('ROLLBACK'); throw error; }
         return sendJson(response, 200, { avoidedIngredients: names });
-      }
-
-      if (request.method === 'GET' && url.pathname === '/api/places') {
-        const query = url.searchParams.get('query')?.trim();
-        if (!query || query.length < 2 || query.length > 80) throw new Error('Ville ou code postal invalide');
-        const target = new URL(communesUrl);
-        target.searchParams.set(/^\d{5}$/.test(query) ? 'codePostal' : 'nom', query);
-        target.searchParams.set('fields', 'nom,code,codesPostaux,centre');
-        target.searchParams.set('boost', 'population');
-        target.searchParams.set('limit', '8');
-        const result = await fetch(target, { signal: AbortSignal.timeout(10_000) });
-        if (!result.ok) throw new Error('La recherche de communes est temporairement indisponible');
-        const places = (await result.json()).filter(place => Array.isArray(place.centre?.coordinates)).slice(0, 8).map(place => ({ name: place.nom, code: place.code, postalCodes: place.codesPostaux, longitude: place.centre.coordinates[0], latitude: place.centre.coordinates[1] }));
-        return sendJson(response, 200, places);
-      }
-
-      if (request.method === 'POST' && url.pathname === '/api/restaurants') {
-        const { latitude, longitude } = await readJson(request);
-        if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90 || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) throw new Error('Position invalide');
-        const query = `[out:json][timeout:8];nwr["amenity"="restaurant"](around:3000,${latitude},${longitude});out center;`;
-        const overpass = await fetch(overpassUrl, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', 'user-agent': 'Manger/0.1' }, body: new URLSearchParams({ data: query }), signal: AbortSignal.timeout(10_000) });
-        if (!overpass.ok) throw new Error('La recherche de restaurants est temporairement indisponible');
-        return sendJson(response, 200, restaurantResults((await overpass.json()).elements || [], latitude, longitude));
       }
 
       if (request.method === 'POST' && url.pathname === '/api/members') {
@@ -1293,12 +1253,12 @@ function createHandler(db, overpassUrl, communesUrl) {
 }
 
 // Supplying a database is the isolated core-test harness; production always opens accounts.
-function createApp(database, overpassUrl = process.env.MANGER_OVERPASS_URL || 'https://overpass-api.de/api/interpreter', communesUrl = process.env.MANGER_COMMUNES_URL || 'https://geo.api.gouv.fr/communes', accounts, tls = tlsOptions(), mailer = null) {
+function createApp(database, accounts, tls = tlsOptions(), mailer = null) {
   const production = database === undefined;
   if (production) mailer = createInvitationMailer();
   database ||= createDatabase(process.env.MANGER_DB || join(__dirname, 'data', 'manger.db'));
   if (production) accounts = openAccounts();
-  const handler = createHandler(database, overpassUrl, communesUrl);
+  const handler = createHandler(database);
   const protectedHandler = accounts ? protectAccounts(accounts, handler, { secure: Boolean(tls) || process.env.MANGER_SECURE_COOKIE === '1', mailer, certificate: localCertificate(tls) }) : handler;
   const server = tls ? createHttpsServer(tls, protectedHandler) : createServer(protectedHandler);
   if (production) server.on('close', () => { accounts.close(); database.close(); });
@@ -1311,4 +1271,4 @@ if (require.main === module) {
   server.listen(port, '0.0.0.0', () => console.log(`Manger! écoute sur ${server.setSecureContext ? 'https' : 'http'}://localhost:${server.address().port}`));
 }
 
-module.exports = { addDays, calendar, createApp, createDatabase, dateKey, household, isCompatible, isDietCompatible, isDateKey, recipes, restaurantResults, saveRecipe, shoppingList, suggestions, validateMeal, validateMember, validateProtein, validateRecipe };
+module.exports = { addDays, calendar, createApp, createDatabase, dateKey, household, isCompatible, isDietCompatible, isDateKey, recipes, saveRecipe, shoppingList, suggestions, validateMeal, validateMember, validateProtein, validateRecipe };

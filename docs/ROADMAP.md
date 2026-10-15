@@ -4,6 +4,12 @@ Historique des lots et priorités, regroupé dans `docs/` le 10 octobre 2026. Le
 
 Contrainte produit : quatre onglets (Semaine, Recettes, Courses, Compte), actions dans leur contexte, fonctions secondaires regroupées sans surcharger ; préserver une interface sobre en clair et en sombre, au clavier et dès 320 px.
 
+## Lot du 15 octobre 2026 — Restaurants manuels
+
+- À la demande de l'utilisateur, retrait complet de la recherche de restaurants et de la carte : pas de fournisseur à configurer, compte, clé ou coût. Champ « Nom du restaurant » pour Restaurant, « Nom du repas » pour les autres lieux ; date maison, invités, personnes et noms existants conservés. Aucun schéma modifié ni migration de données.
+- Appels communes/Overpass, géolocalisation, bibliothèque Leaflet, styles, événements, routes et anciennes variables supprimés ; CSP resserrée. Ancienne maquette retirée, récupérable dans Git. Les paragraphes de recherche/cartographie ci-dessous sont historiques.
+- 204 tests réussis, aucun ignoré, HTTPS inclus ; 14 tests uniquement liés à la fonction abandonnée retirés, trois régressions ajoutées pour la saisie et les ressources/routes supprimées. Chromium sur base isolée : cinq largeurs clair/sombre, texte à 200 %, noms texte, création/modification et date, aucune recherche ni requête externe. Protections d'envoi, protéines et parcours généraux de repas revérifiés. Aucun accès aux données ou au serveur personnel ; Safari/iPhone/Android/Ubuntu à vérifier après mise à jour par l'utilisateur.
+
 ## Lot du 14 octobre 2026 — Ajout de repas allégé
 
 - Carte des restaurants intégrée après accord sur le prototype : ville/localisation regroupées, recherche dans la zone, repères 44 px et fiche, choix préparant le nom sans écriture avant confirmation. Liste/repli et saisie libre conservés, Leaflet servi localement avec licence BSD, fond OSM externe seulement après recherche volontaire. 215 tests réussis, aucun ignoré, HTTPS inclus ; bibliothèque réelle avec API/tuiles simulées dans Chromium, cinq largeurs clair/sombre et texte à 200 %, captures inspectées, sauvegardes repas/protéines revérifiées. Pas de test live du fournisseur ni sur téléphone/Ubuntu.
@@ -144,7 +150,7 @@ L'utilisateur indique avoir testé les P1 le 1er octobre 2026, sans préciser la
 - Concevoir les interfaces tablette et PC : exploiter la largeur pour le planning et les recettes, adapter la navigation au tactile et au clavier/souris. Les contrôles actuels de largeur ne constituent pas encore ces interfaces.
 - Ajouter le coût indicatif des recettes et de la semaine à partir de prix renseignés.
 - Étendre la saisonnalité régionale : premiers repères Bretagne et Hauts-de-France livrés le 12 octobre, couverture partielle et calendrier national en complément. Autres régions et produits à ajouter après vérification de sources mensuelles fiables.
-- Carte des restaurants intégrée le 14 octobre après validation de la [maquette indépendante](prototypes/restaurant-picker.html) : Leaflet local et fond OSM, recherche par nom/cuisine dans huit résultats au maximum sur 3 km, repères/fiche/listes repliées et nom manuel. Pas de réservation. 215 tests réussis, aucun ignoré, HTTPS inclus ; Chromium avec vraie bibliothèque et services simulés, cinq largeurs clair/sombre et texte agrandi, erreurs de tuiles et sauvegardes revérifiées. Contrôle live OSM/Safari/iPhone/Android/Ubuntu à faire, pas une intégration non réalisée.
+- Historique : carte des restaurants intégrée le 14 octobre après validation de la maquette indépendante, puis [retirée le 15 octobre](DECISIONS.md#restaurants-manuels--15-octobre-2026). À l'intégration : 215 tests réussis, aucun ignoré, HTTPS inclus ; Chromium avec vraie bibliothèque et services simulés, cinq largeurs clair/sombre et texte agrandi, erreurs de tuiles et sauvegardes revérifiées. Ce résultat n'établissait pas la disponibilité réelle des fournisseurs et ne décrit plus une fonction présente.
 
 Ordre de travail : P1, puis P2, puis P3. Les interfaces tablette/PC restent différées à la demande de l'utilisateur ; la révision de « Plus d’options » dans le planning a été demandée puis implémentée le 7 octobre. Les défauts visuels qui gênent l'utilisation restent P1.
 

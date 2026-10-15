@@ -55,14 +55,14 @@ test('le planning expose réutilisation et export sans Plus d’options, avec le
 
 test('reprendre une occasion retrouve les champs sans contaminer un autre type ou une nouvelle recette', () => {
   const html = readFileSync(join(__dirname, 'public', 'index.html'), 'utf8');
-  const source = html.match(/    function openEventSetup[\s\S]*?(?=\n    let restaurantSearch)/)[0];
+  const source = html.match(/    function openEventSetup[\s\S]*?(?=\n    async function saveEvent)/)[0];
   const controls = new Map(); let current = null;
   const control = id => {
     if (!controls.has(id)) controls.set(id, { value: '', replaceChildren() {}, addEventListener(name, callback) { this[name] = callback; }, dispatchEvent(event) { this[event.type]?.(event); } });
     return controls.get(id);
   };
   const recipes = [{ id: 1, title: 'Curry', minutes: 30, tags: ['date'] }, { id: 2, title: 'Risotto', minutes: 40, tags: [] }];
-  const context = { state: { selected: 0, slot: 'soir', recipes }, fullDayNames: ['Lundi'], Event, cancelRestaurantSearch() {}, clearRestaurantMap() {}, uiIcon: require('./public/ui-icons').icon,
+  const context = { state: { selected: 0, slot: 'soir', recipes }, fullDayNames: ['Lundi'], Event,
     mealFor: () => current, document: { getElementById: control },
     escapeHtml: value => String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;') };
   const open = new Script(source + ';openEventSetup').runInNewContext(context);
@@ -77,13 +77,13 @@ test('reprendre une occasion retrouve les champs sans contaminer un autre type o
   assert.match(control('choices').innerHTML, /id="event-people"[^>]*value="3"/);
   assert.match(control('choices').innerHTML, /Enregistrer les modifications/);
   assert.equal(control('date-recipe').value, 1); assert.equal(control('event-location').value, 'home');
-  assert.equal(control('event-restaurant-search').hidden, true); assert.equal(control('date-home-recipes').hidden, false);
+  assert.equal(control('event-name-label').textContent, 'Nom du repas'); assert.equal(control('date-home-recipes').hidden, false);
   control('date-recipe').change({ target: { value: '2' } }); assert.equal(control('event-title').value, 'Risotto');
   control('date-recipe').change({ target: { value: '' } }); assert.equal(control('event-title').value, 'Date à organiser');
   assert.match(show('regular'), /value="Repas à l’extérieur"/); assert.match(control('choices').innerHTML, /id="event-people"[^>]*value="1"/);
   current = { occasion: 'regular', location: 'outside', people: 5, recipeId: null, title: 'Pique-nique' };
   assert.match(show('regular'), /value="Pique-nique"/); assert.equal(control('event-location').value, 'outside');
-  assert.equal(control('event-restaurant-search').hidden, true);
+  assert.equal(control('event-name-label').textContent, 'Nom du repas');
   current = { occasion: 'guests', location: 'home', people: 6, recipeId: 1, title: 'Curry pour les amis' };
   assert.match(show('guests', 'recipe', recipes[0]), /value="Curry pour les amis"/);
   assert.match(show('guests', 'recipe', recipes[1]), /value="Risotto"/);
@@ -531,7 +531,7 @@ test('planifier un repas bloque les doubles appuis, garde les choix après un é
   const payload = { date: '2026-10-01', slot: 'soir', location: 'home', occasion: 'regular', people: 2, title: 'Curry', recipeId: null, assignments: [], dishes: [{ memberId: 1, recipeId: 2, portions: 1, proteinId: null }, { memberId: 2, recipeId: 3, portions: 1, proteinId: 4 }] };
   let request, calls = 0, closes = 0, refreshes = 0, failRefresh = false;
   const context = {
-    document: { getElementById: node, activeElement: focused }, AbortSignal, cancelRestaurantSearch() {},
+    document: { getElementById: node, activeElement: focused }, AbortSignal,
     dialog: { close() { closes++; } },
     fetch: (path, options) => { calls++; request = { path, ...options }; return context.reply(); },
     load: async () => { refreshes++; assert.equal(node('meal-fields').disabled, false); if (failRefresh) throw new Error('Lecture indisponible'); }

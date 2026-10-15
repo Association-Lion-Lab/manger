@@ -365,21 +365,15 @@ La version `0.1` n'utilise pas d'IA. Son classement est déterministe et explica
 
 Les goûts par personne orientent déjà ce classement sans exclure les préparations inconnues. Les allergies et contraintes de matériel nécessitent encore des données et contrôles adaptés ; elles ne sont pas garanties par les filtres actuels.
 
-## Restaurants autour de soi
+## Repas au restaurant
 
-Les repas au restaurant et les dates peuvent rechercher jusqu'à huit restaurants OpenStreetMap dans un rayon de 3 km, classés par distance. Ville/code postal et Autour de moi donnent accès à la carte. Le champ « Chercher dans cette zone » filtre ces résultats par nom ou cuisine, sans casse ni accents ; ce n'est pas une recherche mondiale. Touche un repère pour afficher sa fiche puis « Choisir ce restaurant » pour remplir le nom du repas. Le planning n'est modifié qu'après « Ajouter au calendrier » ; aucune réservation.
+Dans Semaine, ouvre Ajouter → Manger à l'extérieur et garde le lieu Restaurant. Renseigne « Nom du restaurant », choisis le nombre de personnes puis « Ajouter au calendrier ». Le nom reste une saisie libre, sans service externe, compte fournisseur ni clé d'API.
 
-Cette fonction est optionnelle. Après un clic explicite et l'autorisation de géolocalisation du navigateur, les coordonnées sont transmises au serveur Manger puis à l'API publique Overpass ; Manger ne les enregistre pas. Les données OpenStreetMap peuvent être incomplètes ou anciennes. Vérifiez directement les horaires et le menu du restaurant.
+Pour un date, le même champ apparaît lorsque le lieu est Restaurant ; À la maison réaffiche le choix de recette et « Nom du repas ». Le changement de lieu ne remplace pas automatiquement le nom saisi. Les invités à la maison et les autres sorties gardent « Nom du repas ».
 
-La géolocalisation nécessite HTTPS, sauf sur `localhost`. Pour utiliser une autre instance Overpass, définissez `MANGER_OVERPASS_URL` avec son URL d'API. La planification manuelle reste disponible sans ce service.
+Les noms de restaurants déjà enregistrés sont conservés. Pour en modifier un, ouvre le repas puis Changer ce repas → Manger à l'extérieur (ou Prévoir un date pour un date) : le nom, le lieu et le nombre de personnes sont repris lorsque le type correspond. Les protections habituelles contre le double envoi, les erreurs de sauvegarde et la perte du brouillon restent actives.
 
-En cas de géolocalisation indisponible, saisissez une ville ou un code postal français et choisissez la commune. La recherche est alors centrée sur cette commune. Cette saisie est transmise à l'API officielle `geo.api.gouv.fr`, configurable via `MANGER_COMMUNES_URL`. La fiche affiche l'adresse lorsqu'elle est renseignée. La liste reste disponible sous « Voir les résultats en liste » et s'ouvre si le fond cartographique échoue. Si le restaurant manque, renseignez directement le champ Nom du repas.
-
-Après recherche volontaire, les tuiles OpenStreetMap reçoivent votre IP et la zone affichée. La bibliothèque est servie par Manger, sans CDN ; seule l'origine du site est transmise avec les images de carte, pas le chemin ni un lien d'invitation. Attribution visible ; aucune carte téléchargée pour le hors connexion. Les services peuvent être indisponibles : liste et saisie libre restent utilisables. Politique : https://operations.osmfoundation.org/policies/tiles/.
-
-Une seule recherche est active dans la fenêtre : localisation, commune et choix du centre ne peuvent pas se lancer simultanément. Les boutons de recherche et la saisie de commune sont temporairement bloqués, mais le nom, le lieu, le nombre de personnes et la planification manuelle restent disponibles. La recherche par commune ou centre choisi attend 15 secondes maximum côté navigateur. « Localise-moi » demande une position avec un délai de 20 secondes et borne l'ensemble localisation/recherche à 35 secondes.
-
-Fermer la fenêtre, changer de lieu, ouvrir une autre configuration ou enregistrer le repas annule l'attente. Les réponses anciennes sont ignorées ; une position obtenue après l'annulation n'est pas transmise par Manger. Le navigateur peut néanmoins terminer sa localisation et le serveur ses appels externes déjà commencés. Un échec conserve les champs saisis et propose de réessayer ou de planifier manuellement, sans renvoi automatique. Les noms de communes et restaurants peuvent passer sur plusieurs lignes pour rester lisibles avec du texte agrandi.
+La recherche par ville, code postal ou position, la carte et les listes de restaurants ont été retirées le 15 octobre 2026 à la demande de l'utilisateur. Aucun appel à Overpass, à l'API des communes ou aux tuiles de carte n'est effectué pour ce parcours. Pas de recherche mondiale ni de réservation. Aucune migration de données ou nouveau réglage n'est nécessaire ; le [choix et les vérifications](DECISIONS.md#restaurants-manuels--15-octobre-2026) sont documentés.
 
 ## Composer sa semaine
 

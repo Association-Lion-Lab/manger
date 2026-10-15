@@ -59,7 +59,7 @@ test('HTTPS validates local CA, preserves authentication and Secure cookies, hea
     assert.deepEqual(localCertificate({...options,ca:bundle}).raw,root.raw);
     await createAccount(accounts,'admin','testing-https-password',true);
     await createAccount(accounts,'member','testing-member-password');
-    server=createApp(data,undefined,undefined,accounts,options);
+    server=createApp(data,accounts,options);
     await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
     const port=server.address().port;env.MANGER_PORT=String(port);
     const request=(path,{method='GET',body,cookie,origin=`https://127.0.0.1:${port}`}={})=>new Promise((resolve,reject)=>{

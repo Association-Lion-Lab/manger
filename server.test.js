@@ -2,10 +2,9 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { once } = require('node:events');
 const { mkdtempSync, rmSync } = require('node:fs');
-const { createServer } = require('node:http');
 const { tmpdir } = require('node:os');
 const { join } = require('node:path');
-const { createApp, createDatabase, restaurantResults, shoppingList, suggestions } = require('./server');
+const { createApp, createDatabase, shoppingList, suggestions } = require('./server');
 
 test('les ajouts aux courses sont indépendants, isolés par semaine et validés', async t => {
   const db = createDatabase(':memory:');
@@ -269,7 +268,6 @@ test('les données non fiables sont refusées', async t => {
   });
   assert.equal(response.status, 400);
   assert.match((await response.json()).error, /invalide/i);
-  assert.equal((await fetch(`http://127.0.0.1:${server.address().port}/api/restaurants`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' })).status, 400);
 });
 
 test('une recette peut être créée puis modifiée avec ses ingrédients et ses étapes', async t => {
@@ -461,58 +459,4 @@ test('la semaine peut être exportée dans un calendrier standard', async t => {
   assert.equal(Number(download.headers.get('content-length')), file.byteLength);
   assert.match(Buffer.from(file).toString('utf8'), /SUMMARY:Soir — Bowl\\, pois chiches/);
   assert.equal((await fetch(`${baseUrl}/api/calendar.ics?start=invalid&download=1`)).status, 400);
-});
-
-test('les restaurants OpenStreetMap sont normalisés et triés par distance', () => {
-  const results = restaurantResults([
-    { type: 'way', id: 2, center: { lat: 50.3, lon: 2.8 }, tags: { name: 'Plus loin', cuisine: 'french;regional' } },
-    { type: 'node', id: 1, lat: 50.291, lon: 2.78, tags: { name: 'Tout près' } },
-    { type: 'node', id: 3, lat: 50.29, lon: 2.78, tags: {} }
-  ], 50.29, 2.78);
-
-  assert.deepEqual(results.map(restaurant => restaurant.name), ['Tout près', 'Plus loin']);
-  assert.equal(results[1].cuisine, 'french, regional');
-});
-
-test('la recherche de restaurants interroge le service configuré', async t => {
-  const overpass = createServer((request, response) => {
-    request.resume();
-    response.writeHead(200, { 'content-type': 'application/json' });
-    response.end(JSON.stringify({ elements: [{ type: 'node', id: 42, lat: 50.291, lon: 2.78, tags: { name: 'Le Petit Jardin', cuisine: 'french' } }] }));
-  });
-  overpass.listen(0, '127.0.0.1');
-  await once(overpass, 'listening');
-  t.after(() => overpass.close());
-
-  const server = createApp(createDatabase(':memory:'), `http://127.0.0.1:${overpass.address().port}`);
-  server.listen(0, '127.0.0.1');
-  await once(server, 'listening');
-  t.after(() => server.close());
-  const response = await fetch(`http://127.0.0.1:${server.address().port}/api/restaurants`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ latitude: 50.29, longitude: 2.78 }) });
-
-  assert.equal(response.status, 200);
-  assert.deepEqual((await response.json()).map(restaurant => restaurant.name), ['Le Petit Jardin']);
-});
-
-test('ville et code postal proposent les communes sans demander de géolocalisation', async t => {
-  const queries = [];
-  const provider = createServer((request, response) => {
-    queries.push(new URL(request.url, 'http://localhost').searchParams);
-    response.writeHead(200, { 'content-type': 'application/json' });
-    response.end(JSON.stringify([{ nom: 'Arras', code: '62041', codesPostaux: ['62000'], centre: { coordinates: [2.78, 50.29] } }]));
-  });
-  provider.listen(0, '127.0.0.1');
-  await once(provider, 'listening');
-  t.after(() => provider.close());
-  const server = createApp(createDatabase(':memory:'), 'http://localhost', `http://127.0.0.1:${provider.address().port}/communes`);
-  server.listen(0, '127.0.0.1');
-  await once(server, 'listening');
-  t.after(() => server.close());
-  const base = `http://127.0.0.1:${server.address().port}`;
-  const response = await fetch(`${base}/api/places?query=62000`);
-  assert.deepEqual(await response.json(), [{ name: 'Arras', code: '62041', postalCodes: ['62000'], longitude: 2.78, latitude: 50.29 }]);
-  await fetch(`${base}/api/places?query=Arras`);
-  assert.equal(queries[0].get('codePostal'), '62000');
-  assert.equal(queries[1].get('nom'), 'Arras');
-  assert.equal((await fetch(`${base}/api/places?query=`)).status, 400);
 });

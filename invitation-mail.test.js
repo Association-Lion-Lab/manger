@@ -72,7 +72,7 @@ async function fixture(t, mailer) {
   const data = createDatabase(':memory:'), accounts = openAccounts(':memory:');
   await createAccount(accounts, 'admin', 'long-password-admin', true);
   await createAccount(accounts, 'member', 'long-password-member');
-  const server = createApp(data, undefined, undefined, accounts, undefined, mailer);
+  const server = createApp(data, accounts, undefined, mailer);
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const base = `http://127.0.0.1:${server.address().port}`;
   t.after(async () => { await new Promise(resolve => server.close(resolve)); data.close(); accounts.close(); });

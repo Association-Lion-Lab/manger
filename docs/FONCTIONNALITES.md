@@ -1,10 +1,10 @@
 # Fonctionnalités réalisées
 
-État du code au **14 octobre 2026**, incluant l'ajout de repas allégé, les repères saisonniers et les protections des sauvegardes et recherches de restaurants. Cette liste distingue les fonctions livrées des idées ; les parcours détaillés et leurs limites sont dans [le guide](GUIDE.md). Les preuves historiques sont dans [la feuille de route](ROADMAP.md), les validations manquantes dans [les décisions](DECISIONS.md).
+État du code au **15 octobre 2026**, incluant l'ajout de repas allégé, les repères saisonniers, les sauvegardes protégées et les restaurants uniquement manuels. Cette liste distingue les fonctions livrées des idées ; les parcours détaillés et leurs limites sont dans [le guide](GUIDE.md). Les preuves historiques sont dans [la feuille de route](ROADMAP.md), les validations manquantes dans [les décisions](DECISIONS.md).
 
 ## 1. Semaine et repas
 
-Carte des restaurants intégrée au choix des sorties et dates au restaurant : après ville/localisation, jusqu'à huit établissements dans 3 km, recherche locale par nom/cuisine, repères et fiche → Choisir. Le choix prépare le nom, sans enregistrer le repas avant confirmation. Liste facultative/repli réseau, saisie libre et protections de recherche/sauvegarde conservées. Fond OSM externe après action volontaire ; aucune réservation.
+Repas au restaurant et dates au restaurant : saisie libre « Nom du restaurant », nombre de personnes puis confirmation. Pas de recherche externe, carte, localisation, compte fournisseur ou clé d'API. Les noms déjà enregistrés et les protections de sauvegarde sont conservés ; aucune réservation.
 
 Dans le sélecteur de recettes du planning et des invités, les lignes compactes montrent la photo du plat en priorité, sinon son émoji de catalogue. Recherche, univers, favoris et indication « Favori » restent disponibles ; les commandes de types de repas conservent leurs SVG.
 
@@ -13,7 +13,7 @@ Les commandes, le compte et les menus utilisent une famille SVG locale harmonis�
 - Planning hebdomadaire avec midi et soir, jour courant, navigation entre semaines, retour Aujourd'hui et choix direct d'une date ; aucun horaire de repas.
 - Ajout compact : les types de repas sont visibles d'abord ; le catalogue, sa recherche, ses univers et favoris sont regroupés derrière « Choisir une recette ». Retour « Types de repas » dans la même fenêtre et sur le même créneau, sans écriture. Assiettes individuelles et choix date/invités/extérieur conservés.
 - Maison, extérieur ou restaurant ; occasion ordinaire, date ou invités. Une sortie peut être enregistrée sans recette ; les invités peuvent avoir une recette ou un repas nommé, par exemple une commande.
-- Date à la maison avec choix de recette ; à l'extérieur avec saisie manuelle ou restaurant recherché. Modification d'une sortie/date/invitation avec reprise de ses champs quand le parcours le permet. Recherches par localisation ou commune protégées contre les demandes concurrentes et réponses tardives ; attente limitée, saisie conservée et planification manuelle disponible.
+- Date à la maison avec choix de recette ; à l'extérieur avec saisie manuelle. Modification d'une sortie/date/invitation avec reprise de ses champs quand le parcours le permet ; nom conservé lors d'un changement de lieu. « Nom du repas » reste utilisé pour Maison et Autre lieu.
 - Consultation ou remplacement d'un repas, déplacement et copie vers un créneau libre, export de la semaine en calendrier ICS ; protection des créneaux occupés et des liens de restes.
 - Composition automatique d'un menu pour les créneaux libres, aperçu modifiable avant confirmation ; copie d'une semaine et jusqu'à 30 semaines types nommées, sans écraser les repas déjà prévus.
 
@@ -86,4 +86,4 @@ Les protections locales ne constituent pas une garantie universelle d'idempotenc
 
 ## Ce qui n'est pas livré
 
-Les vraies interfaces tablette/PC, l'image Docker préconstruite publiée, l'isolation de plusieurs foyers, les coûts calculés et l'extension des calendriers régionaux restent différés. Il n'y a pas de commande d'enseigne, réservation de restaurant, application native, réseau social, générateur de recettes par IA ni calcul nutritionnel avancé. Une recherche OSM, un tag budget ou une adaptation de largeur ne vaut pas livraison de ces fonctions.
+Les vraies interfaces tablette/PC, l'image Docker préconstruite publiée, l'isolation de plusieurs foyers, les coûts calculés et l'extension des calendriers régionaux restent différés. Il n'y a pas de commande d'enseigne, réservation de restaurant, application native, réseau social, générateur de recettes par IA ni calcul nutritionnel avancé. La recherche de restaurants a été abandonnée à la demande de l'utilisateur, pas simplement masquée ou différée. Un tag budget ou une adaptation de largeur ne vaut pas livraison de ces fonctions.

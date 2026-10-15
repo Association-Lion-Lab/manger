@@ -4,7 +4,7 @@ Les commandes s'exécutent depuis la racine du dépôt. Pour les validations dé
 
 Ce mode est **optionnel**. Une mise à jour normale ne l'active pas. Manger peut servir directement en HTTPS sur son port habituel ; il n'ouvre pas un deuxième serveur HTTP. Le volume des données et les comptes restent les mêmes.
 
-Une petite autorité locale auto-signée signe le certificat du serveur. Il faut installer **son certificat public `ca.crt`** sur chacun de vos appareils de confiance. Sans cette étape, une alerte du navigateur est normale ; la contourner ne suffit pas à valider les fonctions hors connexion, géolocalisation ou maintien de l'écran.
+Une petite autorité locale auto-signée signe le certificat du serveur. Il faut installer **son certificat public `ca.crt`** sur chacun de vos appareils de confiance. Sans cette étape, une alerte du navigateur est normale ; la contourner ne suffit pas à valider les fonctions hors connexion ou maintien de l'écran.
 
 ## 1. Préparer les certificats sur le serveur Ubuntu
 
@@ -93,7 +93,7 @@ Compose charge automatiquement `compose.override.yaml` lors des prochaines mises
 
 Ouvrez `https://ADRESSE_IP:3000` (ou votre port configuré avec `MANGER_HTTP_PORT`, dont le nom historique est conservé). L'ancienne URL `http://` ne répond plus : c'est attendu. Reconnectez-vous avec votre compte existant. Le changement HTTP → HTTPS constitue une nouvelle origine pour le navigateur : activez à nouveau les courses hors connexion et recréez le raccourci d'accueil si nécessaire. Une ancienne copie locale HTTP n'est pas effacée à distance ; effacez les données de l'ancien site sur un appareil partagé.
 
-Validation sur téléphone : aucune alerte de certificat, connexion au compte, chargement des repas, activation des courses hors connexion puis essai en mode avion. Vérifiez séparément géolocalisation et maintien de l'écran : HTTPS est nécessaire mais ne garantit pas leur disponibilité ni l'autorisation du navigateur.
+Validation sur téléphone : aucune alerte de certificat, connexion au compte, chargement des repas, activation des courses hors connexion puis essai en mode avion. Vérifiez séparément le maintien de l'écran : HTTPS est nécessaire mais ne garantit pas sa disponibilité ni l'autorisation du navigateur. La géolocalisation des restaurants a été retirée du produit le 15 octobre 2026.
 
 ## Entretien et retour arrière
 

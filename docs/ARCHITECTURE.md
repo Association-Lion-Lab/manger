@@ -9,7 +9,7 @@ Manger! est un **monolithe web auto-hébergé** : un seul processus Node.js sert
 - **Interface :** HTML, CSS et JavaScript dans `public/`, avec quatre onglets : Semaine, Recettes, Courses et Compte.
 - **Serveur :** `server.js` reçoit les requêtes, valide les données et coordonne les modules métier ; `accounts.js` protège les accès au lancement normal.
 - **Persistance :** SQLite conserve le foyer dans `manger.db` et les accès dans `accounts.db`. Les copies hors connexion restent séparées dans le navigateur.
-- **Déploiement :** Node.js directement ou Docker Compose avec un volume persistant ; HTTPS natif facultatif. Les recherches de restaurants/communes, l'import internet et le SMTP contactent des services externes uniquement lorsqu'ils sont utilisés.
+- **Déploiement :** Node.js directement ou Docker Compose avec un volume persistant ; HTTPS natif facultatif. L'import internet et le SMTP contactent des services externes uniquement lorsqu'ils sont utilisés. Les restaurants sont saisis manuellement, sans appel externe.
 
 ### Vue d'ensemble
 
@@ -22,7 +22,7 @@ Serveur Node.js — un seul processus
     |-- Contrôle des accès : accounts.js <--> accounts.db
     |-- Routes et calculs métier : server.js + modules
     |       `-- Données du foyer <--> manger.db
-    `-- Appels externes facultatifs : communes, Overpass, import, SMTP
+    `-- Appels externes facultatifs : import, SMTP
 ```
 
 Les deux fichiers SQLite sont stockés côté serveur. Le volume Docker les conserve lors d'une reconstruction de l'image ; publier le dépôt ne publie pas ces données. Le détail des responsabilités, des flux et des limites figure ci-dessous.
@@ -40,7 +40,6 @@ Manger! est une application web avec **serveur Node.js 24+**, API HTTP/HTTPS nat
 | [`server.js`](../server.js) | Schéma, migrations, recettes, repas, foyer, placard, courses, menus, API et serveur. |
 | [`public/index.html`](../public/index.html) | Quatre onglets, présentation, formulaires, état client et protections réseau. |
 | [`public/ui-icons.js`](../public/ui-icons.js) | Pictogrammes SVG des commandes et du compte, grille 24 × 24, trait 1,8 et couleur héritée. Table fermée, alias des anciennes commandes et noms inconnus ramenés à un cercle ; aucun HTML fourni par l'utilisateur dans les dessins. Chargé avant l'interface et servi par la liste explicite des fichiers publics. Sans dépendance ou requête externe ; logo et illustrations de recettes restent séparés. |
-| [`public/restaurant-map.js`](../public/restaurant-map.js), [Leaflet local](../public/vendor/leaflet/README.md) | Sélection de restaurant, filtre local, DOM texte, repères, repli par liste, destruction carte/observer. Leaflet 1.9.4 distribué avec licence, ressources servies par chemins exacts. Seules les images HTTPS de tile.openstreetmap.org sont ajoutées à la CSP ; Referrer-Policy globale privée conservée, origine seulement sur les tuiles. Pas de persistance de position, nouvelle API ou réservation. |
 | [`accounts.js`](../accounts.js) | Base des accès, authentification, rôles, invitations, sessions et outils administrateur. |
 | [`ingredients.js`](../ingredients.js), [`public/food-names.js`](../public/food-names.js) | Normalisation des aliments, unités, regroupements et vocabulaire anti-gaspi. |
 | [`public/tastes.js`](../public/tastes.js), [`public/seasons.js`](../public/seasons.js) | Classement des goûts et repères saisonniers calculés localement : calendrier national avec compléments régionaux sourcés. Le filtre exige un fruit ou légume du mois non disponible toute l'année et aucun produit reconnu hors saison ; les tableaux explicatifs restent inchangés. L'interface fournit le mois courant de l'horloge et du fuseau local du navigateur, sans réglage manuel, et affiche le nombre de résultats près du filtre. Choix du calendrier dans le stockage du navigateur, sans migration SQLite ni géolocalisation. |
@@ -80,7 +79,7 @@ Pour une écriture client, distingue refus, résultat perdu et confirmation suiv
 | Recettes | `POST /api/recipes`, `PUT/DELETE /api/recipes/:id`, photo, favori et notes ; `/api/recipes/import-preview`, `/api/recipes/export`, `/api/catalog/import`. |
 | Foyer et stocks | `/api/household`, préférences, `/api/members`, `/api/proteins`, `/api/pantry` et modification/retrait par identifiant. |
 | Courses | `GET /api/shopping`, `/api/shopping-checks`, `/api/shopping-checks/sync`, `/api/shopping-manual`, `/api/shopping-aisles`. |
-| Sorties | `GET /api/places` pour les communes, `POST /api/restaurants` pour Overpass. |
+| Sorties | Saisie de « Nom du restaurant » et sauvegarde par `/api/meals`, sans API géographique. Anciennes routes de recherche supprimées (404 sur le harnais authentifié ou de cœur). |
 | Accès | `/api/account`, connexion/déconnexion/mot de passe, `/api/accounts`, invitations et envoi SMTP facultatif ; `GET /api/accounts/certificate`, certificat public DER pour l’administrateur en HTTPS local. |
 | Exploitation | `/api/health`, `/api/calendar.ics`, `/api/backup`, `/api/restore/preview`, `/api/restore/apply`. |
 
@@ -92,7 +91,7 @@ Le lancement normal ouvre les comptes et protège les requêtes. Les mutations e
 
 Les tests de cœur peuvent injecter une base à `createApp()` sans comptes : **ce chemin est un harnais de test isolé, pas une configuration de production anonyme**. Les tests d'accès utilisent la protection des comptes. Ne généralise pas une réussite du premier harnais à la sécurité du lancement normal.
 
-L'import internet vérifie les URL, adresses publiques IPv4, résolutions et redirections ; épinglage DNS, limites de taille/durée et absence d'exécution JavaScript réduisent le risque SSRF. Ne désactive pas ces contrôles pour accepter un site récalcitrant. Les requêtes communes/restaurants et le SMTP restent volontaires ; consulter le guide pour les données transmises.
+L'import internet vérifie les URL, adresses publiques IPv4, résolutions et redirections ; épinglage DNS, limites de taille/durée et absence d'exécution JavaScript réduisent le risque SSRF. Ne désactive pas ces contrôles pour accepter un site récalcitrant. Le SMTP reste volontaire ; consulter le guide pour les données transmises. Le parcours restaurant n'envoie aucune position et ne charge plus de ressource cartographique externe ; CSP images limitée à self et data.
 
 ## Vérifier une modification
 

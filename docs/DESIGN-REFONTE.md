@@ -78,15 +78,11 @@ Sur grand écran, la photo et la fiche peuvent se placer côte à côte, avec un
 
 ## Garde-fous
 
-### Proposition restaurants — 14 octobre 2026
+### Restaurants manuels — 15 octobre 2026
 
-**Suite :** l'utilisateur a validé la maquette ; l'intégration de la vraie carte est réalisée sur development. Le plan fictif ci-dessous reste un prototype historique, pas la carte utilisée par l'application. Ville et localisation regroupées, recherche locale, repères tactiles/clavier, fiche et liste facultative ; Leaflet local et tuiles OSM volontaires. Contrôles locaux avec services simulés, essais sur téléphone/Ubuntu à faire ; voir les décisions pour limites, réseau et validation.
+La recherche et la carte proposées puis intégrées le 14 octobre ont été abandonnées à la demande de l'utilisateur : dépendance externe indisponible et souhait de rester gratuit et simple. L'ancienne maquette a été supprimée avec son code ; son historique reste dans Git. Les [décisions et vérifications](DECISIONS.md#restaurants-manuels--15-octobre-2026) conservent les raisons et limites, sans présenter le prototype comme une fonction courante.
 
-[Maquette interactive indépendante](prototypes/restaurant-picker.html), proposée après le retour utilisateur sur la liste trop lourde. Statut : **à valider visuellement ; non intégrée à l'application**. Le choix se fait sur une carte, avec recherche par nom/cuisine visible et petite fiche nom/adresse/distance → Choisir. Ville ou localisation, liste facultative repliée pour l'alternative clavier et saisie libre conservées. Pas de nouvel onglet ni de réservation.
-
-Le prototype contient un plan schématique et quatre restaurants fictifs. Repères, recherche sans accents, zoom/déplacement, confirmation, annulation et nom libre fonctionnent localement ; la géolocalisation et le changement de ville sont explicitement simulés. Aucun appel réseau, accès au foyer ou écriture du planning. Les données géographiques réelles et leur couverture ne sont pas validées par ce prototype. Palette et icônes locales réutilisées ; Apple Design : `modality.md › Best practices` pour une tâche courte et une sortie claire, `searching.md › Best practices` pour recherche visible et portée locale explicite. Principes web, pas une interface iOS native.
-
-Contrôle Chromium : 320/390/768/1024/1440 px clair/sombre, texte à 200 %, repères au clavier, résultats vides et parcours de choix/saisie/annulation ; aucune erreur JS ni requête réseau, captures inspectées. Ce test n'est pas un essai Safari/iPhone ou Ubuntu. L'intégration reste après validation du rendu, suivant les garde-fous ci-dessous.
+Le dialogue existant garde le nom, le lieu et le nombre de personnes. Le libellé « Nom du restaurant » identifie clairement la saisie manuelle ; Maison/Autre lieu affichent « Nom du repas ». Pas de carte vide, recherche masquée, compte fournisseur, clé d'API ou nouvel écran. Couleurs, contrôles natifs, quatre onglets et protections de sauvegarde inchangés.
 
 - La refonte est **visuelle et ergonomique d'abord** : conserver recettes, planning, courses, comptes et données SQLite. Pas de migration de données pour changer une couleur ou un composant.
 - Maquette de Semaine, Recettes, fiche et Courses avant développement ; faire valider le rendu sur téléphone, puis intégrer par écran sans remplacer tout d'un coup.

@@ -7,7 +7,7 @@ async function fixture(t) {
   const data = createDatabase(':memory:'); const accounts = openAccounts(':memory:');
   const admin = await createAccount(accounts, 'admin', 'long-password-admin', true);
   const member = await createAccount(accounts, 'julie', 'long-password-member');
-  const server = createApp(data, undefined, undefined, accounts);
+  const server = createApp(data, accounts);
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const base = `http://127.0.0.1:${server.address().port}`;
   t.after(async () => { await new Promise(resolve => server.close(resolve)); data.close(); accounts.close(); });
