@@ -4,7 +4,7 @@ const { recipeSeason, freshProduce, seasonCalendars } = require('./public/season
 const recipe = (...names) => ({ ingredients: names.map(name => ({ name })) });
 
 test('quatre recettes réelles du catalogue distinguent les mois, sans saison forcée par le titre', () => {
-  const dishes = require('./catalog').slice(-4);
+  const dishes = require('./catalog').slice(34, 38);
   assert.deepEqual(dishes.map(item => item.title), [
     'Risotto crémeux aux asperges', 'Tian de légumes d’été',
     'Velouté de potimarron et pommes de terre', 'Endives au jambon gratinées'

@@ -4,6 +4,12 @@ Historique des lots et priorités, regroupé dans `docs/` le 10 octobre 2026. Le
 
 Contrainte produit : quatre onglets (Semaine, Recettes, Courses, Compte), actions dans leur contexte, fonctions secondaires regroupées sans surcharger ; préserver une interface sobre en clair et en sombre, au clavier et dès 320 px.
 
+## Lot du 15 octobre 2026 — Catalogue de 100 recettes
+
+- 62 nouvelles fiches complètes dans les univers existants : économique, Japon, Chine, Italie, Inde, Mexique, terroir, Méditerranée et Côté chef, avec étiquettes date, express, mijoté, batch ou emporter selon le plat. Catalogue total de 100, quatre régimes ; [répartition et limites](CATALOGUE.md).
+- Ingrédients quantifiés, deux portions de référence, étapes propres au plat et cru/cuit explicites. Textes originaux, aucun avis ou photo inventé, pas de validation culinaire revendiquée. Import volontaire ajoutant seulement les titres absents, sans remplacer les recettes personnelles ou les 38 précédentes ; aucune nouvelle interface, dépendance ou migration.
+- 207 tests réussis, aucun ignoré, HTTPS inclus. Chromium sur base isolée : ajout de 62 puis réimport zéro, anciennes fiches inchangées, 62 fiches consultées, recherche/univers/durée, cinq largeurs clair/sombre et texte à 200 %. Trois calendriers × douze mois, horloge locale et fuseaux revérifiés. Captures inspectées ; pas de nouvel essai réel sur téléphone/Ubuntu ni d'essai en cuisine. Après mise à jour, l'utilisateur doit toucher Ajouter les recettes manquantes du catalogue.
+
 ## Lot du 15 octobre 2026 — Restaurants manuels
 
 - À la demande de l'utilisateur, retrait complet de la recherche de restaurants et de la carte : pas de fournisseur à configurer, compte, clé ou coût. Champ « Nom du restaurant » pour Restaurant, « Nom du repas » pour les autres lieux ; date maison, invités, personnes et noms existants conservés. Aucun schéma modifié ni migration de données.

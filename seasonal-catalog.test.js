@@ -5,7 +5,7 @@ const { createApp, createDatabase, recipes } = require('./server');
 const catalog = require('./catalog');
 
 test('les quatre adaptations saisonnières sont quantifiées, annotées et liées à leurs références', () => {
-  const additions = catalog.slice(-4);
+  const additions = catalog.slice(34, 38);
   assert.deepEqual(additions.map(item => item.diet), ['vegetarian', 'vegan', 'vegetarian', 'omnivore']);
   assert.equal(new Set(catalog.map(item => item.title)).size, catalog.length);
   for (const item of additions) {
@@ -20,20 +20,20 @@ test('les quatre adaptations saisonnières sont quantifiées, annotées et liée
   }
 });
 
-test('mise à jour depuis 34 recettes : quatre ajouts, références enregistrées et personnalisations préservées', async t => {
+test('réimport des quatre adaptations saisonnières : références enregistrées et personnalisations préservées', async t => {
   const db = createDatabase(':memory:');
   const server = createApp(db);
   t.after(() => { server.close(); db.close(); });
   server.listen(0, '127.0.0.1'); await once(server, 'listening');
   const url = `http://127.0.0.1:${server.address().port}/api/catalog/import`;
   assert.deepEqual(await (await fetch(url, { method: 'POST' })).json(), { added: catalog.length });
-  for (const item of catalog.slice(-4)) db.prepare('DELETE FROM recipes WHERE title=?').run(item.title);
+  for (const item of catalog.slice(34, 38)) db.prepare('DELETE FROM recipes WHERE title=?').run(item.title);
   db.prepare('UPDATE recipes SET minutes=77, source_url=? WHERE title=?').run('https://example.org/ma-recette', catalog[0].title);
   const before = recipes(db);
   assert.deepEqual(await (await fetch(url, { method: 'POST' })).json(), { added: 4 });
   const after = recipes(db);
   for (const item of before) assert.deepEqual(after.find(saved => saved.id === item.id), item);
-  for (const draft of catalog.slice(-4)) {
+  for (const draft of catalog.slice(34, 38)) {
     const saved = after.find(item => item.title === draft.title);
     assert.equal(saved.sourceUrl, draft.sourceUrl);
     assert.equal(saved.ingredients.length, draft.ingredients.length);

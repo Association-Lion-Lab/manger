@@ -44,7 +44,7 @@ const preparations = {
 const recipe = (title, minutes, diet, tags, ingredients, steps, sourceUrl) => ({
   title, minutes, diet, tags, servings: 2,
   ...(sourceUrl ? { sourceUrl } : {}),
-  ingredients: ingredients.map(([name, amount, unit]) => ({ name, amount, unit, preparation: preparations[title]?.cooked?.includes(name) ? 'cooked' : preparations[title]?.raw?.includes(name) ? 'raw' : 'unknown' })),
+  ingredients: ingredients.map(([name, amount, unit, preparation]) => ({ name, amount, unit, preparation: preparation ?? (preparations[title]?.cooked?.includes(name) ? 'cooked' : preparations[title]?.raw?.includes(name) ? 'raw' : 'unknown') })),
   steps: steps.map(([kind, minutes, instruction]) => ({ kind, minutes, instruction }))
 });
 
@@ -166,5 +166,6 @@ module.exports = [
   recipe('Endives au jambon gratinées', 80, 'omnivore', ['terroir', 'comfort'],
     [['endive', 4, 'pièce'], ['jambon cuit', 4, 'tranche'], ['beurre', 20, 'g'], ['farine', 20, 'g'], ['lait', 250, 'ml'], ['emmental râpé', 50, 'g'], ['sel', 1, 'pincée'], ['poivre', 1, 'pincée']],
     [['prep', 10, 'Rincer les endives et retirer les feuilles abîmées. Ôter une petite portion dure de leur base sans séparer les feuilles. Porter une casserole d’eau à ébullition.'], ['cook', 45, 'Cuire les endives dans l’eau frémissante jusqu’à ce qu’elles soient tendres à cœur. Les transférer dans une passoire.'], ['prep', 5, 'Préchauffer le four à 200 °C. Égoutter soigneusement les endives, puis les presser doucement pour retirer l’eau, sans se brûler. Enrouler chacune dans une tranche de jambon cuit et les placer dans un plat à gratin.'], ['cook', 5, 'Faire fondre le beurre dans une casserole et incorporer la farine. Remuer une minute puis verser le lait progressivement en fouettant. Faire épaissir à feu doux. Saler légèrement et poivrer.'], ['cook', 15, 'Répartir la sauce sur les endives et parsemer d’emmental. Passer au four jusqu’à ce que le fromage soit doré et le centre bien chaud. Prolonger si nécessaire.']],
-    'https://www.marmiton.org/recettes/recette_endives-au-jambon_25868.aspx')
+    'https://www.marmiton.org/recettes/recette_endives-au-jambon_25868.aspx'),
+  ...require('./catalog-extra')(recipe)
 ];

@@ -1,11 +1,11 @@
 # Recettes pour vérifier le filtre de saison
 
-Lot du **12 octobre 2026** : quatre ajouts au catalogue, désormais composé de **38 recettes**. Pas de nouveau réglage ni d'import automatique dans les foyers existants.
+Lot historique du **12 octobre 2026** : quatre ajouts portaient alors le catalogue à **38 recettes**. Le [lot du 15 octobre](CATALOGUE.md) le porte à 100, sans remplacer ces quatre fiches ni modifier les repères ci-dessous. Pas de nouveau réglage ni d'import automatique dans les foyers existants.
 
 ## Ajouter et comparer
 
 1. Mettre à jour l'application, puis ouvrir **Recettes**.
-2. Utiliser **Ajouter les recettes manquantes du catalogue** : quatre ajouts si les 34 précédentes sont déjà présentes. Un titre déjà présent reste inchangé, même personnalisé.
+2. Utiliser **Ajouter les recettes manquantes du catalogue** : le bouton ajoute tout titre manquant du catalogue actuel. Les quatre ajouts seuls correspondaient au lot historique ; depuis le 15 octobre, 62 autres fiches sont disponibles. Un titre déjà présent reste inchangé, même personnalisé.
 3. Activer **De saison** avec **France métropolitaine**. Le mois suit la date locale du téléphone ou de l'ordinateur ; la semaine affichée dans le planning ne le change pas.
 4. En octobre, chercher « potimarron », puis « asperges » : le velouté apparaît, le risotto non. Désactiver De saison retrouve le risotto. Les autres filtres actifs peuvent aussi limiter les résultats.
 

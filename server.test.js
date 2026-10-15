@@ -134,7 +134,7 @@ test('un date à la maison conserve sa recette et ajoute les ingrédients aux co
   assert.ok(shoppingList(db, '2026-09-14').some(item => item.name === 'pois chiches' && item.amount === 400));
 });
 
-test('le catalogue importe 38 recettes complètes et conserve les anciennes personnalisations', async t => {
+test('le catalogue importe 100 recettes complètes et conserve les anciennes personnalisations', async t => {
   const db = createDatabase(':memory:');
   const server = createApp(db);
   server.listen(0, '127.0.0.1');
@@ -144,10 +144,10 @@ test('le catalogue importe 38 recettes complètes et conserve les anciennes pers
   const initial = await (await fetch(`${base}/api/week?start=2026-09-14`)).json();
   const imported = await fetch(`${base}/api/catalog/import`, { method: 'POST' });
   assert.equal(imported.status, 200);
-  assert.deepEqual(await imported.json(), { added: 38 });
+  assert.deepEqual(await imported.json(), { added: 100 });
   assert.deepEqual(await (await fetch(`${base}/api/catalog/import`, { method: 'POST' })).json(), { added: 0 });
   const final = await (await fetch(`${base}/api/week?start=2026-09-14`)).json();
-  assert.equal(final.recipes.length, initial.recipes.length + 38);
+  assert.equal(final.recipes.length, initial.recipes.length + 100);
   for (const recipe of initial.recipes) assert.deepEqual(final.recipes.find(item => item.id === recipe.id), recipe);
   const recipes = final.recipes.filter(recipe => !initial.recipes.some(item => item.id === recipe.id));
   for (const recipe of recipes) {
@@ -173,7 +173,7 @@ test('le catalogue importe 38 recettes complètes et conserve les anciennes pers
   const salad = recipes.find(recipe => recipe.title === 'Semoule, pois chiches et légumes croquants');
   assert.equal(salad.ingredients.find(item => item.name === 'tomate').preparation, 'raw');
   assert.equal(salad.ingredients.find(item => item.name === 'pois chiches cuits égouttés').preparation, 'cooked');
-  // Simulate an existing 26-recipe library, including a user-edited original.
+  // Remove only this older eight-recipe lot, preserving all other recipes and a user-edited original.
   for (const recipe of additions) db.prepare('DELETE FROM recipes WHERE title=?').run(recipe.title);
   db.prepare('UPDATE recipes SET minutes=77 WHERE title=?').run('Chili doux aux haricots rouges');
   const beforeUpdate = await (await fetch(`${base}/api/week?start=2026-09-14`)).json();

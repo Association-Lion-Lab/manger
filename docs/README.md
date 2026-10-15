@@ -7,7 +7,7 @@ Documentation versionnée dans le dépôt, regroupée le **10 octobre 2026**. El
 1. [Fonctionnalités réalisées](FONCTIONNALITES.md) : vue d'ensemble par usage, dont les régimes mixtes et l'anti-gaspi.
 2. [Guide complet](GUIDE.md) : installation, utilisation, comptes, invitations, courses, import/export et sauvegarde/restauration.
 3. [HTTPS local](HTTPS.md) : certificats, confiance iPhone/Android, configuration et renouvellement.
-4. [Recettes de saison](RECETTES-DE-SAISON.md) : quatre ajouts, références et résultats attendus selon le mois.
+4. [Catalogue de 100 recettes](CATALOGUE.md) : import volontaire, univers, régimes, contenu et limites des 62 nouveaux plats ; [recettes de saison](RECETTES-DE-SAISON.md) pour les références et comparaisons mensuelles historiques.
 
 Toutes les commandes du guide s'exécutent depuis la racine du dépôt, **pas depuis `docs/`**. Le dépôt sauvegarde le code et cette documentation, pas les bases du foyer.
 
@@ -26,6 +26,8 @@ Toutes les commandes du guide s'exécutent depuis la racine du dépôt, **pas de
 Le dernier lot de code avant ce regroupement est `07b2a97` : suppression de recette protégée. La suite avait 158 tests réussis et un test HTTPS ignoré ; les parcours Chromium de la fiche et de la suppression avaient réussi. Les dernières corrections n'ont pas été validées sur le serveur Ubuntu ou Safari iPhone.
 
 ## Maintenir cette documentation
+
+Lot **catalogue du 15 octobre 2026** : 100 recettes importables, 62 nouvelles fiches complètes pour les 15 univers existants et les quatre régimes. Ingrédients quantifiés et cru/cuit explicites, étapes et durées relues, aucun avis ou photo emprunté. Import volontaire et personnalisations conservées ; [répartition et mode d'emploi](CATALOGUE.md). Pas de nouvelle fonction ou surcharge d'écran.
 
 Lot du **15 octobre 2026** : restaurants uniquement manuels, champ « Nom du restaurant », suppression complète de la recherche, des appels géographiques, de Leaflet et de la maquette. Données conservées sans migration. **204 tests réussis, aucun ignoré**, HTTPS inclus ; parcours Chromium isolés, cinq largeurs clair/sombre et texte à 200 %, aucune recherche ou requête externe dans le formulaire. Le nombre de tests baisse avec le retrait des seuls tests de la fonction abandonnée. Pas de validation nouvelle sur téléphone ou Ubuntu ; voir [la décision et les limites](DECISIONS.md#restaurants-manuels--15-octobre-2026). Les lots cartographiques ci-dessous sont historiques et ne décrivent plus le produit courant.
 
