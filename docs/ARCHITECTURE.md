@@ -31,7 +31,7 @@ Les deux fichiers SQLite sont stockés côté serveur. Le volume Docker les cons
 
 Manger! est une application web avec **serveur Node.js 24+**, API HTTP/HTTPS native et SQLite via `node:sqlite`. L'interface utilise HTML, CSS et JavaScript sans framework ni compilation client. `npm ci --ignore-scripts` installe Nodemailer à la version verrouillée ; son utilisation pour envoyer des invitations reste optionnelle.
 
-`server.js` sert le HTML et les fichiers explicitement autorisés, valide les entrées et coordonne les calculs. Le HTML principal est lu au chargement du module : **redémarre le serveur après une modification de `public/index.html`**. Ouvrir ce fichier directement avec `file://` n'est pas un lancement de l'application : ses appels à l'API ont besoin du serveur.
+`server.js` sert le HTML et les fichiers explicitement autorisés, valide les entrées et coordonne les calculs. `public/information.html` contient le même bloc statique « Confidentialité et licences » inséré côté serveur dans le HTML principal et dans la page des comptes, à la place d'un marqueur fixe. Il n'est pas exposé par une route de fichiers générique et n'inclut aucune donnée d'instance ni script. Les pages restent des buffers UTF-8 avec longueur correcte. Ces contenus sont lus au chargement des modules : **redémarre le serveur après une modification de `public/index.html`, `public/accounts.html` ou `public/information.html`**. Ouvrir les fichiers directement avec `file://` ne lance pas l'application ni n'assemble cette rubrique : ses appels à l'API ont besoin du serveur.
 
 ## Repères dans le code
 

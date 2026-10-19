@@ -1,5 +1,29 @@
 # Choix techniques, limites et blocages
 
+## Information discrète sur Connexion et Compte — 19 octobre 2026
+
+**Demande :** rendre confidentialité et licences accessibles depuis Connexion et Compte, sans alourdir l'écran.
+
+**Choix :** un seul contrôle natif `details/summary`, fermé par défaut, dans les pages concernées ; aucun onglet, fenêtre imposée, consentement, nouveau paramètre personnel ou appel réseau. Un fragment HTML/CSS fixe et partagé est inséré au chargement des deux modules existants ; pas de duplication du texte, chargement JavaScript tardif, dépendance ou route publique générique. Conserver des buffers UTF-8 évite un écart de Content-Length sur les accents. Le `COPY public` existant inclut le nouveau fragment ; cela ne résout pas le défaut antérieur de `catalog-extra.js`.
+
+**Présentation :** palette et police du produit, trait de séparation léger, cible d'au moins 44 px, focus visible, marqueur natif et retour à la ligne. Apple Design oriente la divulgation progressive (`disclosure-controls.md`, Best practices), la lisibilité et les couleurs sémantiques ; Ponytail évite un nouveau gestionnaire de fenêtres ou une page légale obligatoire. Les principes s'appliquent au web, sans revendiquer une conformité native iOS ou un audit RGAA.
+
+**Contenu et limites :** résumé fidèle au dossier préparé, liens projet/AGPL/CC0 et licence de Nodemailer ; pas de coordonnées d'exploitant inventées ni de promesse d'effacement distant. Les liens externes demandés s'ouvrent avec `noopener noreferrer` pour préserver la saisie/session. L'information propre à l'instance et les sources d'une version modifiée restent à fournir par son administrateur ; J1 n'est donc pas déclaré entièrement clos.
+
+**Vérification :** les deux nouvelles régressions échouent avant l'ajout puis réussissent : même rubrique repliée anonyme/membre, compte et app, longueur UTF-8, données toujours protégées et contenu sans nouvelle collecte. Chromium isolé : cinq largeurs 320/390/768/1024/1440 px, clair/sombre effectivement contrôlés, texte du bloc doublé, clavier Entrée/Espace, saisie conservée, comptes admin/membre, 42 rendus et captures inspectées. Aucune requête externe ou erreur JavaScript pendant ces contrôles ; liens externes non suivis. La préparation de test a été corrigée pour appliquer le thème système avant la navigation et le vérifier explicitement, sans changement de thème de production. Suite complète et vérifications documentaires consignées dans le suivi. Pas d'accès aux données réelles, appareil iOS/Android ou Ubuntu ; pas de certification juridique.
+
+## Cadrage France/UE pour instances auto-hébergées — 19 octobre 2026
+
+**Contexte confirmé par l'utilisateur :** chaque administrateur gère son propre serveur Manger!. Ne pas appliquer le modèle d'un SaaS central aux données des foyers ni mélanger avec FDL et le futur scan.
+
+**Choix :** ajouter un [dossier de conformité](CONFORMITE.md) et une [notice technique de confidentialité](CONFIDENTIALITE.md), fondés sur les chemins de code examinés et des sources institutionnelles. Distinguer éditeur, administrateur et prestataires selon les faits ; l'exception domestique est conditionnelle. Aucun bandeau de consentement systématique pour le seul cookie de session et les stockages nécessaires/demandés ; réexamen obligatoire si les finalités changent. Aucun contact juridique fictif ou attestation générale de conformité.
+
+**Constats et blocages :** pas de collecte centrale/SDK d'IA identifié ; absence d'information confidentialité/licence dans l'interface actuelle ; désactivation de compte distincte de l'effacement, export complet du foyer distinct des droits individuels, absence de politique générale de purge. La preuve des droits des contenus distribués reste à constituer. Les paramètres propres à chaque instance et les qualifications conditionnelles ne sont pas déductibles du dépôt. Travaux J1 à J5 listés, non implémentés. Défaut Docker identifié par lecture : `catalog-extra.js` requis par `catalog.js` absent du COPY ; correctif et image neuve encore à contrôler, pas une livraison de ce lot.
+
+**Alternatives écartées :** clause transférant toute responsabilité aux utilisateurs ; désigner l'éditeur comme responsable de toutes les instances ; ajouter un écran juridique envahissant ; supprimer automatiquement des données communes sans cadrage ; confondre open source, gratuité et exemption générale. Les fonctionnalités, données, schémas et paramètres de sécurité ne sont pas modifiés ici.
+
+**Vérification et limites :** lot uniquement documentaire. Revue AI Act précédente : 25 tests ciblés réussis après refus initial EACCES des connexions locales dans le bac à sable, sans assouplissement du code. Aucun test de conformité formelle, audit de marque, autorisation sur les œuvres tierces, contrôle des appareils ou de l'installation Ubuntu n'est revendiqué. Validation documentaire et état Git consignés dans le suivi ; une relecture spécialisée reste nécessaire sur les points juridiques incertains.
+
 ## Catalogue de 100 recettes — 15 octobre 2026
 
 **Demande et périmètre :** enrichir fortement les recettes sans ajouter de complexité côté téléphone. Ajouter 62 fiches pour atteindre un catalogue importable de 100, classées dans les 15 univers existants. Quatre régimes : 43 végétales, 31 végétariennes, 9 poisson/fruits de mer et 17 sans restriction. Plusieurs étiquettes par plat ; pas de nouveau filtre, onglet, fournisseur, génération à la demande ou système de prix.

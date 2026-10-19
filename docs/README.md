@@ -19,6 +19,10 @@ Toutes les commandes du guide s'exécutent depuis la racine du dépôt, **pas de
 4. [Direction visuelle](DESIGN-REFONTE.md) : inspirations Romi/Jow, maquettes approuvées, intégration et garde-fous.
 5. [Consignes de contribution](../AGENTS.md) : doc à chaque modification de code, fonctions lisibles, explication des décisions et blocages.
 
+## Droit français/européen et confidentialité
+
+Le [dossier de conformité](CONFORMITE.md), commencé le **19 octobre 2026**, distingue le logiciel distribué des instances gérées par chaque administrateur. Il documente la qualification AI Act, les sujets RGPD/traceurs, les droits des contenus et licences, la sécurité et les obligations conditionnelles ; travaux J1 à J5 non entièrement clos, aucune certification annoncée. La [notice technique de confidentialité](CONFIDENTIALITE.md) décrit les stockages, échanges externes et limites d'effacement actuels. Son résumé « Confidentialité et licences » est maintenant replié sur Connexion, Mon compte et dans Compte, avec liens projet/AGPL/CC0 ; pas de fenêtre imposée, case à accepter ou collecte supplémentaire. L'information propre à chaque exploitant reste à compléter lorsque nécessaire.
+
 ## Lire les statuts correctement
 
 **Implémenté** signifie que le comportement est présent dans le code. **Testé localement** signifie un essai automatique ou navigateur sur des données isolées. **Confirmé par l'utilisateur** désigne uniquement le cas qu'il a rapporté. **Différé** ne signifie ni livré ni planifié automatiquement.

@@ -315,6 +315,12 @@ Depuis un repas commun ou un repas avec un plat différent par personne, « Pré
 
 Un repas source ne peut pas être remplacé ni supprimé tant que des restes lui sont liés. Retirer les restes réduit automatiquement les quantités à préparer. « Déplacer ou copier » conserve la répartition du repas et refuse les créneaux occupés. Un déplacement respecte l'ordre préparation/restes. Copier un repas cuisiné copie seulement ce repas ; pour ajouter des restes, utilisez l'action dédiée depuis la source.
 
+## Confidentialité et licences
+
+Sur Connexion, au bas de Mon compte et dans l'onglet Compte, ouvre la ligne « Confidentialité et licences ». Elle reste fermée par défaut et se déplie sur place : les champs saisis, la session et les quatre onglets sont conservés, sans case à accepter ni nouvelle fenêtre imposée.
+
+Le texte rappelle le foyer partagé, les copies hors connexion, les échanges demandés, les limites de conservation/suppression et la distinction entre comptes et sauvegarde du foyer. Les liens vers le code source, GNU AGPL et CC0 s'ouvrent uniquement sur action, dans un nouvel onglet protégé ; consulter la rubrique seule n'ajoute aucune requête externe. Les coordonnées, durées et informations spécifiques de l'instance doivent être fournies par son administrateur lorsque nécessaire : le résumé générique n'est pas une certification juridique. Voir la [notice détaillée](CONFIDENTIALITE.md) et les [points ouverts](CONFORMITE.md).
+
 ## Engagements
 
 - auto-hébergeable avec une installation Docker simple ;

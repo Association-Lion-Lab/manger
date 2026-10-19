@@ -7,7 +7,8 @@ const { emailAddress } = require('./invitation-mail');
 const derive = promisify(scrypt);
 const hash = value => createHash('sha256').update(value).digest('hex');
 const DAY = 86400000;
-const PAGE = readFileSync(join(__dirname, 'public', 'accounts.html'));
+const PAGE = Buffer.from(readFileSync(join(__dirname, 'public', 'accounts.html'), 'utf8')
+  .replace('<!-- MANGER_INFORMATION -->', readFileSync(join(__dirname, 'public', 'information.html'), 'utf8')));
 const publicFiles = new Set(['/api/health', '/sw.js', '/offline.html', '/offline-recipes.js', '/offline-shopping.js', '/manifest.webmanifest', '/icon.svg', '/apple-touch-icon.png', '/icon-180.png', '/icon-192.png', '/icon-512.png']);
 
 function accountPath() {

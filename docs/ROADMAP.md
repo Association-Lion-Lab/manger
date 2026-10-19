@@ -4,6 +4,25 @@ Historique des lots et priorités, regroupé dans `docs/` le 10 octobre 2026. Le
 
 Contrainte produit : quatre onglets (Semaine, Recettes, Courses, Compte), actions dans leur contexte, fonctions secondaires regroupées sans surcharger ; préserver une interface sobre en clair et en sombre, au clavier et dès 320 px.
 
+## Informations confidentialité/licences dans l'interface — 19 octobre 2026
+
+- Résumé commun accessible sur Connexion, Mon compte et dans Compte, sous une ligne native repliée « Confidentialité et licences ». Aucun nouvel onglet, fenêtre imposée, champ obligatoire, consentement, collecte ou paramètre d'instance.
+- Contenu : foyer partagé, stockage/copies hors connexion, échanges demandés, conservation/demandes, limites des sauvegardes et licences texte/code/dépendance. Liens projet/AGPL/CC0 protégés ; coordonnées et source d'instance modifiée non inventées. J1 partiellement réalisé ; autres [travaux de conformité](CONFORMITE.md) inchangés.
+- Deux nouvelles régressions observées rouges avant implémentation puis vertes ; vérification Chromium isolée de 42 rendus avec cinq largeurs, thèmes clair/sombre réels, texte du bloc à 200 %, clavier, session/saisie et comptes admin/membre. Captures ouvertes et inspectées ; aucune requête externe ni erreur JavaScript sur le parcours. Pas de test réel iPhone/Android/Ubuntu.
+- Fragment partagé lu au démarrage, sans route nouvelle ni changement de schéma/authentification. Redémarrer après modification des pages ou du fragment ; fichier HTML ouvert seul non assemblé. Défaut Docker préexistant sur `catalog-extra.js` toujours ouvert, non masqué par cette livraison.
+
+Validation finale de ce lot : **209 tests réussis, aucun ignoré**, HTTPS inclus avec OpenSSL local explicitement configuré. 75 liens vers des fichiers locaux contrôlés dans les sept pages concernées, aucune cible absente ; `git diff --check` propre. Ce contrôle ne vérifie pas toutes les ancres ni les destinations externes. Pas de nouvelle validation sur les téléphones ou le serveur de l'utilisateur.
+
+## Cadrage documentaire France/UE — 19 octobre 2026
+
+- Modèle confirmé : chaque administrateur héberge et gère sa propre instance ; pas de SaaS central ni de périmètre FDL/scan ajouté à Manger!.
+- [Dossier de conformité](CONFORMITE.md) et [notice de confidentialité](CONFIDENTIALITE.md) ajoutés : flux réels, responsabilités conditionnelles, cookies/stockage local, conservation et limites des droits, contenus/licences, sécurité, AI Act et autres textes à qualifier.
+- Travaux J1 à J5 ouverts : accès à l'information et aux sources dans l'interface, procédure de conservation/droits, registre des droits des contenus, contact de signalement/exploitation et qualifications juridiques selon l'activité. Pas de formulaire juridique fictif, code, migration, nouvelle collecte ou effacement livré.
+- Défaut Docker issu de la revue : `catalog-extra.js` non inclus dans l'image malgré son chargement par `catalog.js`. À corriger et vérifier sur image neuve ; non corrigé dans ce lot documentaire.
+- Les 25 tests ciblés réussis appartiennent à la revue AI Act précédente ; ils ne valent pas validation juridique, sécurité exhaustive, build Docker, déploiement Ubuntu ou essai téléphone. Aucun accès à des données personnelles ou à un serveur distant. Ne pas annoncer une conformité générale avant clôture des points applicables et validation des éléments qui ne relèvent pas du code.
+
+Validation documentaire de ce lot : 33 liens vers des fichiers locaux contrôlés dans les cinq documents concernés, aucune cible absente ; `git diff --check` sans erreur d'espacement. Ce contrôle de chemins ne vérifie pas chaque ancre ni ne vaut validation des sources externes ou de leur application juridique.
+
 ## Lot du 15 octobre 2026 — Catalogue de 100 recettes
 
 - 62 nouvelles fiches complètes dans les univers existants : économique, Japon, Chine, Italie, Inde, Mexique, terroir, Méditerranée et Côté chef, avec étiquettes date, express, mijoté, batch ou emporter selon le plat. Catalogue total de 100, quatre régimes ; [répartition et limites](CATALOGUE.md).

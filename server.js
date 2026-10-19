@@ -16,7 +16,8 @@ const { createRestore } = require('./restore');
 const { openAccounts, protectAccounts } = require('./accounts');
 const { createInvitationMailer } = require('./invitation-mail');
 
-const INDEX_HTML = readFileSync(join(__dirname, 'public', 'index.html'));
+const INDEX_HTML = Buffer.from(readFileSync(join(__dirname, 'public', 'index.html'), 'utf8')
+  .replace('<!-- MANGER_INFORMATION -->', readFileSync(join(__dirname, 'public', 'information.html'), 'utf8')));
 const DAY_MS = 86_400_000;
 
 function dateKey(date) {

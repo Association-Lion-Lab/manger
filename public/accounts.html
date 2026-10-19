@@ -64,6 +64,7 @@
 <button id="logout" class="quiet">Se déconnecter</button><p><small>La déconnexion efface les copies hors connexion de ce navigateur : courses et recettes.</small></p>
 <details><summary>Connexion sur d’autres appareils</summary><p><small>Ferme toutes tes sessions, y compris celle-ci, sans changer ton mot de passe. Les autres membres restent connectés. Les copies déjà enregistrées sur un appareil hors ligne ne peuvent pas être effacées à distance.</small></p><button id="logout-all" class="quiet" type="button">Déconnecter tous mes appareils</button></details></div>
 <p id="http-warning" hidden><small>Connexion HTTP : utilise uniquement ton réseau de confiance ou ton VPN. Les comptes ne chiffrent pas les échanges ; HTTPS reste à configurer.</small></p>
+<!-- MANGER_INFORMATION -->
 </main><script>
 const $ = id => document.getElementById(id); let me;
 let invitationToken = new URLSearchParams(location.hash.slice(1)).get('invite');
