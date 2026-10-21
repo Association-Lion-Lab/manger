@@ -1,0 +1,101 @@
+# Construction et déploiement Docker
+
+## Incident et correction — 21 octobre 2026
+
+`catalog.js` charge `catalog-extra.js`, absent de l'ancienne liste `COPY` : une image pouvait être construite avec succès puis échouer au démarrage. L'utilisateur rapporte avoir rétabli son instance Ubuntu en ajoutant ce fichier et en reconstruisant. Ce retour ne constitue pas une validation de la nouvelle construction décrite ici.
+
+Le Dockerfile copie maintenant le contexte filtré avec `COPY . .`, après l'installation des dépendances verrouillées (`npm ci --omit=dev --ignore-scripts`). Aucun module JavaScript n'est à ajouter individuellement à cette instruction, y compris dans un nouveau sous-dossier de code. `.dockerignore` refuse les fichiers par défaut, autorise les JavaScript, `public/`, les deux fichiers package et `LICENSE`, puis exclut les tests, outils de développement, dépendances locales, données, sauvegardes, fichiers cachés et matériel TLS. Les fichiers publics nécessaires, dont `information.html` et les icônes PNG/SVG, restent inclus.
+
+Un nouveau type de ressource serveur autre que JavaScript doit être autorisé explicitement et testé. Ne placer aucun secret dans le code JavaScript ou les ressources publiques : un filtre de noms ne peut pas reconnaître une donnée privée cachée dans un fichier source autorisé. Les réglages privés arrivent à l'exécution ; jamais par `COPY` ou `ARG` de construction. L'overlay HTTPS monte seulement `tls/server` en lecture seule, sans intégrer les clés à l'image.
+
+Le code et les dépendances appartiennent à root et sont lisibles, mais non modifiables par l'utilisateur applicatif `node`. Seul `/data` est préparé pour les écritures persistantes. Aucun compilateur, outil de test ou nouvelle dépendance npm n'est ajouté. Une étape multi-stage n'est pas nécessaire pour cette application sans compilation ; le cache npm est nettoyé dans sa couche d'installation. La base reste `node:24-alpine`, donc son tag est mobile : reconstruire avec `--pull` et tester chaque nouvelle image, sans prétendre obtenir un artefact identique bit à bit. Le générateur de certificats est du code source inclus ; la création des certificats reste une opération sur l'hôte avec OpenSSL, pas un service ajouté à l'image.
+
+## Contrôles automatiques
+
+1. **À chaque construction :** `RUN node image-check.js`, sous l'utilisateur `node`, charge les modules JavaScript à la racine et leurs dépendances, les pages assemblées et les icônes du manifeste. Les schémas des deux bases sont ouverts et contrôlés uniquement en mémoire. Un module ou fichier requis manquant interrompt le build ; aucune base du foyer n'est créée dans l'image. Les modules CLI gardent leurs effets de bord derrière `require.main === module`.
+2. **Tests Node :** `npm test` comprend les régressions de packaging. Une copie temporaire du runtime réussit ; retirer `catalog-extra.js`, `public/food-names.js` ou `public/information.html` provoque un échec explicite. Les points de montage Compose et le refus de réautoriser tout le contexte sont également contrôlés. Ce n'est pas une émulation de Docker.
+3. **Vrai contexte Docker :** `node scripts/check-docker-context.js` construit un petit contexte synthétique utilisant le vrai `.dockerignore`. Il exige l'inclusion de nouveaux modules racine/imbriqués et l'exclusion de faux secrets, bases, fichiers inconnus et outils. Aucun fichier privé réel n'est utilisé. Prérequis : Node 24 et Docker Linux accessibles.
+4. **Vraie image :** `sh scripts/test-docker.sh manger:0.1.0` démarre la commande normale dans un nouveau conteneur sans réseau externe ni port publié, code en lecture seule, capacités retirées et contrôle de santé accéléré. Il teste santé, page de connexion, icône, refus des recettes sans connexion, utilisateur non-root et persistance/intégrité des **deux** bases après redémarrage. Le volume anonyme de test est distinct de `manger-data` ; le conteneur et son volume temporaire sont supprimés à la sortie. Aucun service Compose ou volume existant n'est visé.
+
+Ces contrôles ne valident pas tous les parcours métier, l'état d'une base existante, le SMTP réel, les permissions de votre volume ou la confiance TLS de votre téléphone. Le test d'image est HTTP isolé ; les tests Node couvrent HTTPS avec une autorité temporaire. Ne pas désactiver la validation des certificats pour faire passer un test.
+
+## Compose et protection des données
+
+`compose.yaml` et `compose.https.yaml` restent **inchangés** : même service `manger`, volume nommé `manger-data:/data`, base `/data/manger.db` et `accounts.db` à côté. Le mode HTTPS ajoute un montage TLS en lecture seule et ne remplace pas `/data`. Les copies `recovery/` sont aussi dans ce volume. Aucune migration ni modification métier n'est introduite par ce correctif.
+
+Conserver le dossier d'installation, le nom de projet et les fichiers Compose/override utilisés auparavant. Changer `-p`, `COMPOSE_PROJECT_NAME` ou le nom du dossier peut sélectionner un autre volume. Ne pas fixer un nouveau nom global de volume pour « corriger » cela. **Ne jamais utiliser `down -v`, `volume prune`, `system prune --volumes` ou supprimer un volume pendant une mise à jour.** Une reconstruction ne remplace pas une sauvegarde. Les deux bases et les fichiers de journal SQLite doivent être conservés ensemble ; ne pas copier seulement un fichier SQLite pendant que le serveur écrit.
+
+## Mettre à jour une instance existante sur Linux
+
+Toutes les commandes suivantes sont à exécuter par l'administrateur, pas par l'agent sur son serveur. Garder les mêmes options Compose qu'habituellement ; l'exemple suppose le dossier `~/services/manger`, projet par défaut et éventuel `compose.override.yaml` déjà présent.
+
+### 1. Vérifier et sauvegarder avant modification
+
+```sh
+cd ~/services/manger
+git status --short
+docker compose ps
+```
+
+Si `Dockerfile` contient encore le correctif manuel, **arrêter ici et conserver/examiner sa différence** (`git diff -- Dockerfile`) avant de résoudre la mise à jour. Ne pas lancer `git reset --hard`, `git restore` ou écraser `.env`/l'override pour faire passer un pull. Ne pas publier leurs contenus privés.
+
+Télécharger une sauvegarde du foyer depuis l'application. Elle n'inclut pas les accès. Pour une copie complète des deux bases et des journaux, prévoir une courte interruption puis copier **tout** `/data` depuis le conteneur arrêté :
+
+```sh
+backup_dir="$(mktemp -d ../manger-backup.XXXXXX)"
+docker compose stop manger
+docker compose cp manger:/data/. "$backup_dir/"
+docker compose start manger
+```
+
+Vérifier la présence de `manger.db` et `accounts.db` dans ce dossier privé, conserver une copie protégée hors de ce serveur et sauvegarder séparément `.env`/TLS/override si nécessaire. Si une commande échoue, redémarrer l'ancien service si besoin et interrompre la mise à jour ; ne pas considérer la sauvegarde comme acquise. Aucune suppression de sauvegarde n'est incluse dans cette procédure.
+
+### 2. Préparer et tester sans remplacer le service
+
+Seulement avec un état Git propre et une sauvegarde vérifiée :
+
+```sh
+docker image tag "$(docker compose images -q manger)" manger:rollback-local
+git pull --ff-only origin development
+docker compose build --pull manger
+sh scripts/test-docker.sh manger:0.1.0
+```
+
+Exécuter les commandes une par une et s'arrêter au premier échec. Le service courant conserve son ancienne image pendant la construction et le test. Pour contrôler aussi les exclusions avec de faux fichiers, exécuter `node scripts/check-docker-context.js` sur une machine disposant de Node 24 et Docker ; la CI le prévoit. La reconstruction forcée, rarement nécessaire, est `docker compose build --pull --no-cache manger` ; elle ne supprime aucun volume.
+
+### 3. Remplacer seulement après réussite
+
+```sh
+docker compose up -d --no-build --wait --wait-timeout 60
+docker compose ps
+docker compose exec manger node healthcheck.js
+```
+
+Compose v2 récent est requis pour `--wait`. Vérifier ensuite connexion, recettes et planning depuis le téléphone, et les montages via `docker inspect --format '{{json .Mounts}}' "$(docker compose ps -q manger)"`. Ne pas partager les sorties privées de `docker compose config` : elles peuvent contenir les valeurs SMTP résolues. Pour valider la syntaxe sans les afficher, utiliser `docker compose config --quiet`.
+
+### 4. Diagnostic et retour arrière
+
+En cas de problème : `docker compose logs --tail=80 manger` et `docker compose ps`. Ne pas effacer les bases pour faire démarrer une image. Le Dockerfile conserve le healthcheck : `up -d` seul ne signifie pas que l'application est saine.
+
+Pour ce correctif sans migration, l'image sauvegardée peut être remise en place :
+
+```sh
+docker image tag manger:rollback-local manger:0.1.0
+docker compose up -d --no-build --wait --wait-timeout 60
+```
+
+Cela ne restaure pas les données. Pour une future version avec migration incompatible, revenir à une image ne suffit pas : prévoir aussi une restauration hors ligne sur une copie sauvegardée, sans écraser à l'aveugle le volume actif. Le tag de retour arrière doit correspondre à une image réellement fonctionnelle, pas à l'image défectueuse de l'incident.
+
+## CI Codeberg préparée, pas activée par cette modification
+
+Le dépôt n'avait pas de pipeline versionné. `.forgejo/workflows/docker.yaml` prépare tests Node, audit npm, syntaxe Compose HTTP/HTTPS, test du contexte puis construction et test de l'image. Déclenchement sur push `development`/`main` ou manuel ; pas de `pull_request_target`, exécution automatique de code de forks ou publication/déploiement. Checkout figé par SHA, sans conservation des identifiants.
+
+Il faut activer Actions dans les paramètres Codeberg et fournir un runner Linux **dédié, jetable**, étiqueté `manger-docker`, avec Git, shell POSIX, Node 24+, npm, OpenSSL, Docker Engine et Compose v2. Le job doit pouvoir joindre les registres npm/Docker et la source de l'action checkout. L'accès au daemon Docker est privilégié : **ne jamais connecter ce runner au serveur de production, à ses volumes, à un socket Docker de production ou à ses secrets**. L'hôte du runner doit être préparé séparément ; aucune installation distante n'est effectuée ici.
+
+Après un premier passage réussi, l'administrateur peut rendre ce statut obligatoire sur les branches protégées avant livraison. Aucune activation, protection de branche, exécution distante, image publiée ou certification de sécurité n'est revendiquée. Tant que cette CI n'est pas active, le test manuel de l'image reste une étape de livraison obligatoire.
+
+## Preuve disponible et limites
+
+Local Windows/Node 24 : régressions de modules manquants et absence de création de base persistante vérifiées ; tests complets et contrôles de syntaxe consignés dans [le suivi](ROADMAP.md). Docker CLI absent du PATH et de l'installation Docker Desktop habituelle : **aucune image construite ni test Docker/Compose réel exécuté par l'agent**. Les scripts et la CI restent à exécuter sous Linux. Aucune intervention sur Ubuntu, données réelles ou téléphone.
+
+Sources techniques : [contexte et `.dockerignore`](https://docs.docker.com/build/concepts/context/#dockerignore-files), [multi-stage](https://docs.docker.com/build/building/multi-stage/), [identité du projet Compose](https://docs.docker.com/compose/how-tos/project-name/), [Actions sur Codeberg](https://docs.codeberg.org/ci/actions/), [accès Docker des runners Forgejo](https://forgejo.org/docs/latest/admin/actions/docker-access/). Consultées le 21 octobre 2026. Le refus de réautoriser `!**/` tient à la normalisation des motifs Docker : le slash final est supprimé, ce qui réautoriserait tout.

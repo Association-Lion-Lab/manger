@@ -49,6 +49,9 @@ Manger! est une application web avec **serveur Node.js 24+**, API HTTP/HTTPS nat
 | [`invitation-mail.js`](../invitation-mail.js) | Configuration et envoi SMTP facultatif ; pas de fournisseur obligatoire. |
 | [`tls.js`](../tls.js), [`create-local-tls.js`](../create-local-tls.js), [`healthcheck.js`](../healthcheck.js) | TLS natif, génération locale et contrôle de santé. |
 | [`Dockerfile`](../Dockerfile), [`compose.yaml`](../compose.yaml), [`compose.https.yaml`](../compose.https.yaml) | Image locale Node Alpine, volume et modèle HTTPS facultatif. |
+| [`image-check.js`](../image-check.js), [`docker.test.js`](../docker.test.js) | Contrôle des modules, pages/icônes et schémas SQLite en mémoire ; régressions de packaging et conservation des points de montage. |
+
+Depuis le 21 octobre 2026, le Dockerfile utilise `COPY . .` avec un contexte autorisé explicitement dans `.dockerignore`, au lieu d'une liste de modules. Nouveau JavaScript inclus automatiquement ; fichiers privés et outils/tests exclus, dépendances réinstallées depuis le verrou npm. Le build exécute le contrôle sous `node`, sans base persistante. Le code est propriété de root et `/data` reste inscriptible. Les scripts de test du contexte et de l'image ainsi que le pipeline Forgejo restent hors de l'image. Voir [Docker : contrat, sécurité et preuve disponible](DOCKER.md) ; aucun changement de Compose, schéma ou fonctionnalité.
 
 Cette carte ne demande pas de découper tout le serveur pour la modifier : fais le changement utile dans le code existant, avec des fonctions lisibles et des tests ciblés.
 

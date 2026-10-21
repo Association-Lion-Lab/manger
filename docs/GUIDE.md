@@ -38,6 +38,8 @@ npm test
 
 ## Docker
 
+Voir [la procédure de construction et déploiement](DOCKER.md) pour le contrôle des modules, les tests d'image, les sauvegardes incluant les comptes et le retour arrière. La commande rapide ci-dessous convient à une installation neuve ; pour une installation existante, construire et tester avant de remplacer le service.
+
 ```shell
 docker compose up -d --build
 ```
@@ -46,7 +48,7 @@ L'application est ensuite disponible sur <http://localhost:3000>. Le volume Dock
 
 Cette commande construit localement l'image `manger:0.1.0` ; aucune image préconstruite n'est encore publiée. Docker Engine et le module Compose sont nécessaires. L'utilisateur a rapporté une construction Ubuntu fonctionnelle et un service healthy ; aucune nouvelle construction de cette révision documentaire n'a été effectuée sur son serveur. Voir les limites actuelles dans [le suivi](ROADMAP.md).
 
-Pour le téléphone, connecté au même réseau de confiance, ouvrez `http://ADRESSE_IP_DU_SERVEUR:3000`. Autorisez ce port uniquement sur votre réseau privé. `MANGER_HTTP_PORT` permet de choisir un autre port hôte si nécessaire. La géolocalisation et le maintien de l'écran nécessitent HTTPS sur téléphone : Docker seul ne les active pas. La recherche par ville reste disponible en HTTP.
+Pour le téléphone, connecté au même réseau de confiance, ouvrez `http://ADRESSE_IP_DU_SERVEUR:3000`. Autorisez ce port uniquement sur votre réseau privé. `MANGER_HTTP_PORT` permet de choisir un autre port hôte si nécessaire. Le maintien de l'écran nécessite HTTPS sur téléphone : Docker seul ne l'active pas. La recherche par ville a été retirée ; les restaurants sont saisis manuellement.
 
 Contrôle d'une installation neuve :
 
@@ -82,11 +84,13 @@ Le choix de l'adresse d'écoute n'est pas une liste d'adresses clientes autoris�
 
 ### Mettre à jour l'installation
 
-Téléchargez d'abord une sauvegarde depuis « Mon foyer », puis, dans le même dossier et avec le même nom de projet Compose :
+Téléchargez d'abord une sauvegarde depuis « Mon foyer » et préservez aussi les accès : [sauvegarde complète et contrôles préalables](DOCKER.md). En présence du correctif manuel du Dockerfile, examinez la différence avant le pull, sans écraser vos modifications. Ensuite, dans le même dossier et avec le même nom de projet Compose, exécutez chaque commande séparément et arrêtez-vous au premier échec :
 
 ```shell
 git pull --ff-only origin development
-docker compose up -d --build
+docker compose build --pull manger
+sh scripts/test-docker.sh manger:0.1.0
+docker compose up -d --no-build --wait --wait-timeout 60
 docker compose ps
 ```
 

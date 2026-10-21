@@ -6,9 +6,9 @@ LABEL org.opencontainers.image.title="Manger!" \
 
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev --ignore-scripts
-COPY --chown=node:node server.js accounts.js invitation-mail.js tls.js healthcheck.js catalog.js recipe-import.js ingredients.js backup-tools.js restore.js ./
-COPY --chown=node:node public ./public
+RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
+# .dockerignore is an allowlist: new JavaScript modules are included automatically.
+COPY . .
 RUN mkdir /data && chown node:node /data
 
 ENV MANGER_DB=/data/manger.db
@@ -17,5 +17,6 @@ EXPOSE 3000
 VOLUME ["/data"]
 
 USER node
+RUN node image-check.js
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 CMD node healthcheck.js
 CMD ["node", "server.js"]

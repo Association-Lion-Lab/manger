@@ -1,0 +1,38 @@
+name: Docker integrity
+on:
+  push:
+    branches: [development, main]
+  workflow_dispatch:
+
+jobs:
+  docker:
+    # Dedicated, disposable Linux runner; never the production Manger host.
+    runs-on: manger-docker
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      CI_IMAGE: manger-ci:${{ github.sha }}
+    steps:
+      - uses: https://github.com/actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Verify tools and frozen dependencies
+        run: |
+          node -e 'if (Number(process.versions.node.split(".")[0]) < 24) process.exit(1)'
+          command -v openssl
+          docker info > /dev/null
+          docker compose version
+          npm ci --ignore-scripts
+          npm audit --omit=dev --audit-level=high
+      - name: Run application tests and validate Compose
+        run: |
+          npm test
+          docker compose -f compose.yaml config --quiet
+          docker compose -f compose.yaml -f compose.https.yaml config --quiet
+      - name: Check build-context exclusions with synthetic fixtures
+        run: node scripts/check-docker-context.js
+      - name: Build the production image and reject startup failures
+        run: |
+          docker build --pull -t "$CI_IMAGE" .
+          sh scripts/test-docker.sh "$CI_IMAGE"

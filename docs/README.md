@@ -11,6 +11,8 @@ Documentation versionnée dans le dépôt, regroupée le **10 octobre 2026**. El
 
 Toutes les commandes du guide s'exécutent depuis la racine du dépôt, **pas depuis `docs/`**. Le dépôt sauvegarde le code et cette documentation, pas les bases du foyer.
 
+[Construction et déploiement Docker](DOCKER.md) : correctif du 21 octobre, exclusions du contexte, contrôle de modules au build, tests d'image isolés, CI à activer, sauvegarde des deux bases et retour arrière. Compose et ses volumes restent inchangés ; construction réelle de cette révision non vérifiée localement faute de Docker.
+
 ## Comprendre et contribuer
 
 1. [Architecture](ARCHITECTURE.md) : fichiers, données, flux, API principales et vérification.

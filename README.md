@@ -15,6 +15,8 @@ docker compose exec manger node accounts.js create-admin admin
 
 La deuxième commande sert uniquement à créer le premier administrateur si aucun accès n'existe. Conserve le mot de passe généré dans un gestionnaire ; aucun mot de passe par défaut n'est fourni. Le service utilise le port **3000** et le volume `manger-data`. Reste sur un réseau de confiance ou un VPN ; ne l'expose pas directement à Internet.
 
+Pour une installation existante, suivre [la procédure Docker sécurisée](docs/DOCKER.md) : sauvegarder les deux bases, construire et tester l'image avant de remplacer le service. Le build vérifie maintenant le chargement des modules ; ne jamais supprimer les volumes pour mettre à jour.
+
 En développement sans Docker, Node.js **24 ou plus récent** :
 
 ```sh

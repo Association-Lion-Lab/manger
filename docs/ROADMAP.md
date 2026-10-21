@@ -4,6 +4,15 @@ Historique des lots et priorités, regroupé dans `docs/` le 10 octobre 2026. Le
 
 Contrainte produit : quatre onglets (Semaine, Recettes, Courses, Compte), actions dans leur contexte, fonctions secondaires regroupées sans surcharger ; préserver une interface sobre en clair et en sombre, au clavier et dès 320 px.
 
+## Fiabilisation de la livraison Docker — 21 octobre 2026
+
+- Ancienne liste de modules remplacée par `COPY . .` avec contexte autorisé explicitement et exclusions privées. `catalog-extra.js` et tout nouveau module JavaScript non exclu sont inclus sans ajouter leur nom au Dockerfile. Dépendances verrouillées de production, code root et exécution non-root ; aucun changement métier ou de schéma.
+- Contrôle de modules/pages/icônes et SQLite en mémoire au build ; régressions positives et négatives, points de montage et piège d'autorisation globale du contexte. Compose et son volume persistant restent inchangés.
+- Scripts Docker ajoutés : test des exclusions sur faux fichiers et démarrage réel de l'image, accès et persistance des deux bases après redémarrage, sur un volume anonyme jetable. Pipeline Forgejo préparé pour les branches de confiance ; ni runner activé, ni statut obligatoire, ni image publiée ou service déployé.
+- [Instructions Docker](DOCKER.md) : sauvegarde complète des deux bases, correctif manuel à préserver avant pull, construction et test avant remplacement, santé et retour arrière. Aucun accès au serveur Ubuntu ou aux volumes du foyer.
+
+Validation locale finale : **217 tests réussis, aucun ignoré**, HTTPS inclus (OpenSSL local explicitement configuré), dont huit contrôles Docker/packaging sans daemon. Audit npm production : zéro vulnérabilité connue signalée. Désactiver expérimentalement la découverte des nouveaux modules fait échouer sa régression ; code rétabli puis suite complète verte. Syntaxe des scripts JavaScript et shell vérifiée, `git diff --check` propre, 95 liens vers des fichiers locaux contrôlés dans les huit pages concernées (ancres et sites externes non contrôlés). Docker absent ici : tests réels du contexte, build, Compose et conteneur **restent à exécuter sur Linux**. Le workflow a été relu mais ni validé par Forgejo ni exécuté ; aucun analyseur YAML déjà disponible dans les runtimes Python consultés, pas de dépendance ajoutée pour ce contrôle. La résolution du défaut dans le code ne clôt pas cette validation ni les autres travaux J4. Les mentions Docker ouvert dans les lots du 19 octobre ci-dessous sont historiques.
+
 ## Informations confidentialité/licences dans l'interface — 19 octobre 2026
 
 - Résumé commun accessible sur Connexion, Mon compte et dans Compte, sous une ligne native repliée « Confidentialité et licences ». Aucun nouvel onglet, fenêtre imposée, champ obligatoire, consentement, collecte ou paramètre d'instance.

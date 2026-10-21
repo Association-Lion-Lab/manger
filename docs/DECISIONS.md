@@ -1,5 +1,21 @@
 # Choix techniques, limites et blocages
 
+## Livraison Docker complète et vérifiable — 21 octobre 2026
+
+**Contexte :** l'ancien `COPY` explicite omettait `catalog-extra.js`, pourtant appelé par le catalogue. Le défaut avait été signalé lors du cadrage documentaire du 19 octobre sans correctif livré. L'utilisateur rapporte une panne bloquante puis un rétablissement après correction manuelle sur Ubuntu ; l'agent n'intervient pas sur ce serveur.
+
+**Choix :** `COPY . .` et `.dockerignore` en liste d'autorisation, incluant automatiquement les JavaScript, y compris imbriqués, et le contenu public nécessaire ; réexclusion des répertoires privés/de développement, tests, données et clés. Installation npm verrouillée sans scripts ni dépendances de développement, cache supprimé. Sources root/non-root applicatif, volume `/data` et Compose conservés. Pas de schéma, métier ou dépendance supplémentaire. `RUN node image-check.js` bloque la construction en cas d'échec de chargement ; modules CLI sans effet de bord à l'import, schémas contrôlés en mémoire uniquement.
+
+**Alternatives :** ajouter seulement `catalog-extra.js` laisserait l'oubli possible au prochain module. `COPY . .` sans refus par défaut exposerait des fichiers locaux inattendus. Une liste par module reproduirait le problème. Pas de multi-stage sans compilation ou outil de construction lourd à retirer. Ne pas rendre `/data` éphémère ni renommer le volume existant. Attention aux motifs : Docker normalise les slashs finaux ; `!**/` serait en réalité `!**` et réautoriserait tout. Ce piège est explicitement refusé dans les tests. Aucun graphe Graphify existant dans ce dépôt : lecture directe des fichiers et de leurs imports, sans lancer une indexation des données privées pour ce correctif ciblé.
+
+**Vérification prévue sur Docker :** contexte synthétique avec faux secrets et nouveaux modules ; commande normale de l'image dans un conteneur isolé sans port publié, santé, accès protégés, icônes, utilisateur non-root et persistance/intégrité des deux bases après redémarrage. Son volume anonyme est supprimé avec le seul conteneur créé par le test, jamais un volume Compose existant. Pipeline Forgejo sur branches de confiance, checkout figé, pas de publication, déploiement, secrets d'instance ou exécution de forks.
+
+**Preuve locale et blocage :** tests Node de packaging observés rouges avant ajout du contrôle, puis verts, dont suppressions ciblées reproduisant les modules/fichiers manquants. Les premières assertions d'erreur attendaient à tort l'extension `.js` que Node omet dans certains messages ; correction du test seulement, aucun défaut masqué. Contrôle de syntaxe shell initialement refusé par le bac à sable Windows (objets MSYS), réussi avec l'autorisation locale ; aucun assouplissement du produit. Docker CLI absent ici : build, exclusions réelles, Compose rendu et script d'image non exécutés localement. La CI exige l'activation Actions et un runner Linux jetable dédié, jamais l'hôte de production ; son statut ne devient obligatoire qu'après configuration par l'administrateur. Tests complets et audit npm consignés dans le suivi. Ces limites empêchent de déclarer l'image validée sous Linux ou de garantir toute future version sans test.
+
+**Exploitation :** [procédure versionnée](DOCKER.md) avec sauvegarde hors ligne de tout `/data` (foyer, accès et journaux), examen du correctif manuel avant pull, construction/test avant remplacement, attente de santé et image de retour arrière. Conserver dossier/identité Compose, `.env`, TLS, comptes et récupération. Aucune publication ou opération distante réalisée.
+
+**Contrôle final :** 217 tests réussis sans test ignoré, audit npm production sans vulnérabilité connue signalée, syntaxe JavaScript/shell et 95 liens de fichiers documentaires vérifiés. Une mutation de la découverte automatique est détectée par le nouveau test de module futur, puis annulée avant la suite finale. Le workflow YAML a été relu, pas exécuté/validé par Forgejo ; les Python disponibles n'ont pas PyYAML, aucune dépendance n'est ajoutée au produit pour cette vérification auxiliaire.
+
 ## Information discrète sur Connexion et Compte — 19 octobre 2026
 
 **Demande :** rendre confidentialité et licences accessibles depuis Connexion et Compte, sans alourdir l'écran.
