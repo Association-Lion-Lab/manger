@@ -4,6 +4,14 @@ Historique des lots et priorités, regroupé dans `docs/` le 10 octobre 2026. Le
 
 Contrainte produit : quatre onglets (Semaine, Recettes, Courses, Compte), actions dans leur contexte, fonctions secondaires regroupées sans surcharger ; préserver une interface sobre en clair et en sombre, au clavier et dès 320 px.
 
+## Ajustement des exclusions après le premier test Docker Linux — 21 octobre 2026
+
+- Logs utilisateur : construction et contrôle de modules de `a10857b` réussis ; test global interrompu sur `scripts`, dont le fichier `check-docker-context.js` est confirmé dans l'image. Pas de validation complète du déploiement ou de la persistance à partir de cet essai.
+- Motifs de dossiers complétés par leurs descendants explicites pour empêcher la réinclusion des JavaScript sous les arbres interdits. Même protection pour données, clés, sauvegardes, dépendances locales et dossiers cachés ; contrôle strict d'image conservé.
+- Régression rouge puis verte sur les descendants, fixtures du vrai contexte étendues au chemin exact et aux faux JavaScript privés. Aucun changement métier, de volume ou de dépendance. [Reconstruction sans écraser le retour arrière](DOCKER.md) ; nouvel essai Linux requis avant de remplacer le service.
+
+Validation locale finale : **218 tests réussis, aucun ignoré**, HTTPS inclus, syntaxe JavaScript et `git diff --check` vérifiés. Premier passage complet interrompu au niveau de `offline-shopping.test.js` avec le seul résumé « test failed » disponible ; cause non établie. Ses trois tests réussissent isolément, puis la suite complète réussit sans modification, retrait ou désactivation de ce test. Ne pas présenter cet échec ponctuel comme un bug corrigé. Aucune construction Docker locale ou intervention de l'agent sur le serveur ; filtre corrigé encore à valider par reconstruction et même test d'image sous Linux.
+
 ## Fiabilisation de la livraison Docker — 21 octobre 2026
 
 - Ancienne liste de modules remplacée par `COPY . .` avec contexte autorisé explicitement et exclusions privées. `catalog-extra.js` et tout nouveau module JavaScript non exclu sont inclus sans ajouter leur nom au Dockerfile. Dépendances verrouillées de production, code root et exécution non-root ; aucun changement métier ou de schéma.

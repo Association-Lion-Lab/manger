@@ -6,31 +6,50 @@
 !package-lock.json
 !LICENSE
 
-# Re-exclude non-runtime trees, even when they contain JavaScript.
+# Deny directories AND descendants: a JS exception can re-include a child otherwise.
 **/.git
+**/.git/**
 **/.forgejo
+**/.forgejo/**
 **/.github
+**/.github/**
 **/node_modules
+**/node_modules/**
 **/data
+**/data/**
 **/tls
+**/tls/**
 **/secrets
+**/secrets/**
 **/backups
+**/backups/**
 **/recovery
+**/recovery/**
 **/docs
+**/docs/**
 **/work
+**/work/**
 **/test
+**/test/**
 **/tests
+**/tests/**
 **/scripts
+**/scripts/**
 **/coverage
+**/coverage/**
 **/graphify-out
+**/graphify-out/**
 **/*.test.js
 **/*.spec.js
 
 # These must stay excluded even if accidentally placed under public/.
 **/.*
+**/.*/**
 **/.env
+**/.env/**
 **/.env.*
 **/.npmrc
+**/.npmrc/**
 **/*.db*
 **/*.sqlite*
 **/*.key

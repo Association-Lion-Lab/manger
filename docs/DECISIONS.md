@@ -1,5 +1,15 @@
 # Choix techniques, limites et blocages
 
+## Exclure les descendants malgré l'autorisation des JavaScript — 21 octobre 2026
+
+**Constat utilisateur :** construction Linux de `a10857b` et chargement des modules réussis ; test de l'image arrêté sur `scripts`, puis présence de `scripts/check-docker-context.js` confirmée. Ce n'est pas un dossier vide et le contrôle strict a correctement empêché de considérer cette image comme valide. Aucun résultat de persistance de cet essai n'est revendiqué, la vérification ayant été interrompue avant cette phase.
+
+**Cause et correction :** les motifs interdisant seulement le nom du dossier pouvaient laisser réinclure des enfants par `!**/*.js`. Ajouter des motifs explicites `**/nom/**` après les autorisations pour tous les arbres exclus, y compris dépendances locales et dossiers privés/cachés. Ne pas masquer l'erreur en acceptant `scripts` dans le test ni supprimer les fichiers après leur copie dans une couche Docker : ils doivent être exclus du contexte. Aucun changement du métier, de Compose, des volumes, des permissions d'accès ou des dépendances.
+
+**Preuve et limites :** nouvelle régression d'exclusions observée rouge avant correction, puis verte ; neuf tests de packaging locaux réussis. Fixtures synthétiques étendues au chemin de l'incident et à des JavaScript privés ou imbriqués. La suite complète est consignée dans le suivi. Docker reste absent localement : pas d'affirmation que l'image corrigée a déjà passé le test Linux. Le filtre est renforcé pour les dossiers privés sans affirmer une fuite non constatée. Nouvelle reconstruction et même test strict nécessaires ; conserver l'image de retour arrière et la sauvegarde déjà créées. Aucun accès distant de l'agent.
+
+**Validation finale :** 218 tests réussis sans test ignoré, HTTPS inclus. Un premier échec au niveau du fichier `offline-shopping.test.js` n'a pas été reproduit isolément (trois tests réussis), ni lors de la suite complète suivante ; cause indéterminée, aucun code ou seuil de ce test modifié. Le détail initial n'est pas conservé au-delà du résumé de fin ; ne pas attribuer sans preuve cet incident au produit ou au filtre Docker.
+
 ## Livraison Docker complète et vérifiable — 21 octobre 2026
 
 **Contexte :** l'ancien `COPY` explicite omettait `catalog-extra.js`, pourtant appelé par le catalogue. Le défaut avait été signalé lors du cadrage documentaire du 19 octobre sans correctif livré. L'utilisateur rapporte une panne bloquante puis un rétablissement après correction manuelle sur Ubuntu ; l'agent n'intervient pas sur ce serveur.

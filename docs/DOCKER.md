@@ -1,5 +1,15 @@
 # Construction et déploiement Docker
 
+## Exclusions récursives corrigées après le premier essai Linux
+
+Le 21 octobre 2026, les logs fournis par l'utilisateur confirment une construction de `a10857b` réussie, avec contrôle des modules dans l'image. Le test complet s'est ensuite arrêté sur `AssertionError: scripts` ; une inspection distincte a confirmé la présence de `scripts/check-docker-context.js`, pas d'un simple dossier vide. L'image n'est donc pas déclarée validée ni déployée par cet essai.
+
+Les règles de dossier comme `**/scripts` ne suffisaient pas avec l'exception globale `!**/*.js` : un fichier JavaScript descendant pouvait être réinclus. Chaque dossier interdit possède maintenant aussi une exclusion explicite de ses descendants, par exemple `**/scripts/**`, placée après les autorisations. Même traitement pour données, clés, sauvegardes, dépendances locales, outils et dossiers cachés. Cette correction ne prouve pas qu'un secret a été embarqué précédemment ; seul l'outil de contrôle est confirmé par le retour utilisateur. Le contrôle strict de l'image n'est pas assoupli pour accepter ce dossier.
+
+Une régression Node impose les exclusions de descendants ; le contexte Docker synthétique comprend le chemin exact de l'incident, des outils imbriqués et de faux fichiers JavaScript privés. Les motifs de construction suivent [la documentation Docker](https://docs.docker.com/build/concepts/context/#dockerignore-files) et le [moteur Moby](https://github.com/moby/patternmatcher/blob/main/patternmatcher.go). Le nouveau filtre doit encore être vérifié dans une image Linux reconstruite ; aucun Docker local ni accès de l'agent au serveur Ubuntu.
+
+Après récupération du correctif, reconstruire puis retester sans remplacer le service courant : `docker compose build --pull manger`, puis `sh scripts/test-docker.sh manger:0.1.0`. Ne pas refaire le tag `manger:rollback-local` à partir de la nouvelle image non validée : conserver le retour arrière déjà créé. Ne pas lancer `up` tant que le test n'a pas réussi.
+
 ## Incident et correction — 21 octobre 2026
 
 `catalog.js` charge `catalog-extra.js`, absent de l'ancienne liste `COPY` : une image pouvait être construite avec succès puis échouer au démarrage. L'utilisateur rapporte avoir rétabli son instance Ubuntu en ajoutant ce fichier et en reconstruisant. Ce retour ne constitue pas une validation de la nouvelle construction décrite ici.

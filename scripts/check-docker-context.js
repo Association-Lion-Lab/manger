@@ -5,7 +5,19 @@ const { spawnSync } = require('node:child_process');
 
 // Only synthetic fixtures are sent to Docker here, never local user data.
 const included = ['new-module.js', 'lib/nested/module.js', 'public/index.html', 'public/icons/dish.svg', 'package.json', 'package-lock.json', 'LICENSE'];
-const excluded = ['.env', '.env.production', '.npmrc', 'data/manger.db', 'data/accounts.db', 'tls/server.key', 'tls/ca.crt', 'private.pem', 'dump.sqlite-wal', 'backup.zip', 'notes.txt', 'compose.override.yaml', '.git/config', 'docs/prototype.js', 'scripts/local.js', 'node_modules/local.js', 'new-module.test.js', 'public/.env', 'public/token.key', 'public/recovery/save.db', 'public/tests/test.js', 'public/data/local.js', 'lib/.secret.js'];
+const excluded = [
+  '.env', '.env.production', '.npmrc', 'data/manger.db', 'data/accounts.db',
+  'tls/server.key', 'tls/ca.crt', 'private.pem', 'dump.sqlite-wal', 'backup.zip',
+  'notes.txt', 'compose.override.yaml', '.git/config', 'docs/prototype.js',
+  'scripts/local.js', 'scripts/check-docker-context.js', 'scripts/nested/local.js',
+  'node_modules/local.js', 'new-module.test.js', 'public/.env', 'public/token.key',
+  'public/recovery/save.db', 'public/tests/test.js', 'public/data/local.js', 'lib/.secret.js',
+  'data/private.js', 'tls/private.js', 'secrets/private.js', 'backups/private.js',
+  'recovery/private.js', 'public/secrets/private.js', 'lib/node_modules/private.js',
+  'lib/.private/private.js', '.git/private.js', '.forgejo/private.js',
+  'work/private.js', 'test/private.js', 'tests/private.js', 'coverage/private.js',
+  'graphify-out/private.js', '.github/private.js',
+];
 const directory = mkdtempSync(join(tmpdir(), 'manger-docker-context-'));
 try {
   copyFileSync(join(__dirname, '..', '.dockerignore'), join(directory, '.dockerignore'));

@@ -68,3 +68,11 @@ test('Docker context denies unknown files instead of re-including every director
     assert.ok(ignore.split(/\r?\n/).includes(pattern), pattern);
   }
 });
+
+test('Docker exclusions deny descendants explicitly after the JavaScript inclusion rule', () => {
+  const patterns = readFileSync(join(__dirname, '.dockerignore'), 'utf8').split(/\r?\n/);
+  const directories = patterns.filter(pattern => /^\*\*\/[^/*]+$/.test(pattern));
+  assert.ok(directories.includes('**/scripts'));
+  for (const pattern of directories) assert.ok(patterns.includes(`${pattern}/**`), `Missing descendant exclusion: ${pattern}/**`);
+  assert.ok(patterns.includes('**/.*/**'), 'Hidden directory descendants must stay excluded');
+});
