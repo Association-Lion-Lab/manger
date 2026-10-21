@@ -191,7 +191,9 @@
     #member-dialog > .section-heading { position: sticky; top: -28px; z-index: 2; background: var(--background); padding: 12px 0; }
     #member-question { font-size: 1.75rem; line-height: 1.2; margin: 10px 0; }
     #member-list { display: grid; gap: 12px; }
-    #member-list button { width: 100%; min-height: 66px; padding: 16px; border-radius: 20px; text-align: left; overflow-wrap: anywhere; }
+    .member-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    #member-list [data-member] { flex: 1 1 160px; min-width: 0; min-height: 66px; padding: 16px; border-radius: 20px; text-align: left; overflow-wrap: anywhere; }
+    #member-list .member-remove { flex: none; margin-inline-start: auto; min-width: 44px; min-height: 44px; padding: 8px; color: var(--error); font-size: .875rem; }
     .member-progress { height: 4px; margin: 0 0 24px; border-radius: 4px; background: var(--line); }
     .member-progress span { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
     #member-dialog .field { margin-bottom: 16px; }
@@ -1363,7 +1365,7 @@
     function renderHousehold() {
       document.getElementById('avoided-ingredients').value = (state.avoidedIngredients || []).join(', ');
       document.getElementById('legacy-preferences').hidden = !(state.avoidedIngredients || []).length;
-      document.getElementById('member-list').innerHTML = state.members.length ? state.members.map(member => `<button class="food-tag" type="button" data-member="${member.id}" aria-pressed="${member.id === editingMemberId}">${escapeHtml(member.name)} · ${dietLabels[member.diet]}</button>`).join('') : '<span class="muted">Ajoutez les personnes qui mangent régulièrement ici.</span>';
+      document.getElementById('member-list').innerHTML = state.members.length ? state.members.map(member => `<div class="member-row"><button class="food-tag" type="button" data-member="${member.id}" aria-pressed="${member.id === editingMemberId}">${escapeHtml(member.name)} · ${dietLabels[member.diet]}</button><button class="text-action member-remove" type="button" data-remove-member="${member.id}" aria-label="Retirer ${escapeHtml(member.name)} du foyer">Retirer</button></div>`).join('') : '<span class="muted">Ajoutez les personnes qui mangent régulièrement ici.</span>';
       document.getElementById('protein-list').innerHTML = state.proteins.map(protein => `<button class="food-tag" type="button" data-protein="${protein.id}" data-category="${protein.category}" aria-pressed="${protein.id === editingProteinId}" title="${formatAmount(protein.amount)} ${escapeHtml(protein.unit)} par portion">${escapeHtml(protein.name)} · ${categoryLabels[protein.category]}</button>`).join('');
     }
 
@@ -2947,25 +2949,39 @@
       finally { setMemberBusy(false); }
     });
     document.getElementById('member-list').addEventListener('click', event => {
+      const remove = event.target.closest('[data-remove-member]');
+      if (remove) return removeMember(Number(remove.dataset.removeMember), true);
       const button = event.target.closest('[data-member]');
       if (!button) return;
       const member = state.members.find(item => item.id === Number(button.dataset.member));
       openMemberEditor(member);
     });
-    document.getElementById('delete-member').addEventListener('click', async () => {
-      if (memberBusy) return;
-      const member = state.members.find(item => item.id === editingMemberId);
-      if (!member || !confirm(`Retirer ${member.name} du foyer ?`)) return;
+    document.getElementById('delete-member').addEventListener('click', () => removeMember(editingMemberId));
+    async function removeMember(memberId, fromList = false) {
+      if (restoreBusy || proteinBusy || memberBusy) return;
+      const member = state.members.find(item => item.id === memberId);
+      if (!member || !confirm(`Retirer ${member.name} du foyer ? Ses affectations aux repas seront retirées. Son compte de connexion restera inchangé.`)) return;
+      const status = document.getElementById('member-status');
+      let removed = false;
       setMemberBusy(true); memberError('');
+      if (fromList) status.textContent = 'Retrait en cours…';
       try {
         const response = await fetch(`/api/members/${member.id}`, { method: 'DELETE', signal: AbortSignal.timeout(15000) });
         if (!response.ok) throw new Error((await response.json().catch(() => null))?.error || 'Le retrait a été refusé. Le profil est conservé.');
-        memberDialog.close(); clearMemberEditor(); householdDialog.showModal();
-        document.getElementById('member-status').textContent = 'Personne retirée du foyer.';
-        try { if (!await load()) throw new Error('Lecture remplacée'); } catch { document.getElementById('member-status').textContent = 'Personne retirée. L’affichage n’a pas pu être actualisé : utilise Réessayer dans la semaine, sans refaire le retrait.'; }
-      } catch (error) { memberError(error.name === 'TypeError' || error.name === 'TimeoutError' ? 'Impossible de confirmer le retrait. Le profil affiché est conservé : vérifie les personnes du foyer avant un nouvel essai.' : error.message); }
-      finally { setMemberBusy(false); }
-    });
+        removed = true;
+        if (!fromList) { memberDialog.close(); clearMemberEditor(); householdDialog.showModal(); }
+        state.members = state.members.filter(item => item.id !== memberId);
+        renderHousehold(); status.textContent = 'Personne retirée du foyer.';
+        try { if (!await load()) throw new Error('Lecture remplacée'); } catch { status.textContent = 'Personne retirée. L’affichage n’a pas pu être actualisé : utilise Réessayer dans la semaine, sans refaire le retrait.'; }
+      } catch (error) {
+        const message = error.name === 'TypeError' || error.name === 'TimeoutError' ? 'Impossible de confirmer le retrait. Le profil affiché est conservé : vérifie les personnes du foyer avant un nouvel essai.' : error.message;
+        if (fromList) status.textContent = message; else memberError(message);
+      } finally {
+        setMemberBusy(false);
+        if (removed) document.getElementById('new-member').focus();
+        else if (fromList) document.querySelector(`[data-remove-member="${memberId}"]`)?.focus();
+      }
+    }
     async function saveProtein(remove = false) {
       if (restoreBusy || proteinBusy || memberBusy) return;
       const form = document.getElementById('protein-form'), proteinId = editingProteinId;

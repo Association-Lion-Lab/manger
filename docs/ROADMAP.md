@@ -4,6 +4,14 @@ Historique des lots et priorités, regroupé dans `docs/` le 10 octobre 2026. Le
 
 Contrainte produit : quatre onglets (Semaine, Recettes, Courses, Compte), actions dans leur contexte, fonctions secondaires regroupées sans surcharger ; préserver une interface sobre en clair et en sombre, au clavier et dès 320 px.
 
+## Retirer une personne directement depuis le foyer — 21 octobre 2026
+
+- **Compte → Personnes du foyer → Retirer**, à côté du nom, avec confirmation ; l'accès depuis le récapitulatif reste disponible. Les affectations aux repas sont retirées, pas le compte de connexion. Aucun nouvel écran, onglet ou menu.
+- Traitement commun avec les protections existantes : blocage du double appui et de la fermeture, message visible, personne conservée si refus et ligne retirée après confirmation même si la relecture échoue. Aucune écriture automatiquement renvoyée.
+- Deux régressions ajoutées ; **220 tests réussis, aucun ignoré**, HTTPS inclus. Vérification Chromium isolée de 20 rendus, clavier, texte agrandi, clair/sombre et erreurs simulées, ainsi que du parcours complet de profil ; captures inspectées. [Choix et limites](DECISIONS.md), [utilisation](GUIDE.md#comptes-du-foyer).
+
+Validation locale uniquement : aucun essai sur les téléphones ou le serveur Ubuntu et aucun déploiement de ce lot. Le service doit être reconstruit/redémarré après mise à jour des pages.
+
 ## Ajustement des exclusions après le premier test Docker Linux — 21 octobre 2026
 
 - Logs utilisateur : construction et contrôle de modules de `a10857b` réussis ; test global interrompu sur `scripts`, dont le fichier `check-docker-context.js` est confirmé dans l'image. Pas de validation complète du déploiement ou de la persistance à partir de cet essai.

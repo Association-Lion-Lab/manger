@@ -6,8 +6,7 @@ const { Script, createContext } = require('node:vm');
 
 function profileForm(fetch) {
   const html = readFileSync(join(__dirname, 'public/index.html'), 'utf8');
-  const source = html.slice(html.indexOf('    function setMemberBusy('), html.indexOf("    document.getElementById('member-list').addEventListener"))
-    + html.slice(html.indexOf("    document.getElementById('delete-member').addEventListener"), html.indexOf('    async function saveProtein('));
+  const source = html.slice(html.indexOf('    function setMemberBusy('), html.indexOf('    async function saveProtein('));
   const fields = new Map();
   let submit;
   const element = id => {
@@ -17,8 +16,8 @@ function profileForm(fetch) {
   element('member-name').value = 'Camille'; element('member-diet').value = 'pescetarian';
   element('member-avoided').value = 'tomate crue';
   const context = createContext({
-    document: { getElementById(id) { return id === 'member-form' ? { addEventListener(type, handler) { submit = handler; } } : element(id); } },
-    memberBusy: false, memberStep: 0, editingMemberId: null, state: { members: [{ id: 7, name: 'Camille' }] },
+    document: { getElementById(id) { return id === 'member-form' ? { addEventListener(type, handler) { submit = handler; } } : element(id); }, querySelector: () => element('direct-remove') },
+    memberBusy: false, restoreBusy: false, proteinBusy: false, memberStep: 0, editingMemberId: null, state: { members: [{ id: 7, name: 'Camille' }] },
     fetch, AbortSignal,
     confirm: () => context.accept, accept: true,
     renderMemberStep() {}, addMemberTaste() {},
@@ -27,10 +26,12 @@ function profileForm(fetch) {
     memberDialog: { closed: false, close() { this.closed = true; }, setAttribute(name, value) { this[name] = value; } },
     householdDialog: { showModal() {} },
     clearMemberEditor() { element('member-name').value = ''; context.memberStep = 0; },
+    renderHousehold() {},
     load: async () => true,
   });
   new Script(source).runInContext(context);
-  return { context, element, submit: () => submit({ preventDefault() {}, submitter: {} }), remove: () => element('delete-member').click() };
+  const removeFromList = () => element('member-list').click({ target: { closest: selector => selector === '[data-remove-member]' ? { dataset: { removeMember: '7' } } : null } });
+  return { context, element, submit: () => submit({ preventDefault() {}, submitter: {} }), remove: () => element('delete-member').click(), removeFromList };
 }
 
 test('le profil ne s’enregistre qu’après le récapitulatif, un double appui ne double pas la création', async () => {
@@ -113,4 +114,40 @@ test('un profil ne peut pas être remplacé pendant son enregistrement, les prot
   const open = new Script(source + ';openMemberEditor').runInContext(context); open();
   context.memberBusy = false; context.proteinBusy = true; open();
   context.proteinBusy = false; context.restoreBusy = true; open();
+});
+
+test('le retrait direct demande confirmation et bloque doublons, protéines et restauration', async () => {
+  let requests = 0, release;
+  const form = profileForm((path, options) => {
+    requests++; assert.equal(path, '/api/members/7'); assert.equal(options.method, 'DELETE');
+    return new Promise(resolve => release = resolve);
+  });
+  form.context.accept = false; await form.removeFromList(); assert.equal(requests, 0);
+  form.context.accept = true;
+  for (const busy of ['restoreBusy', 'proteinBusy']) {
+    form.context[busy] = true; await form.removeFromList(); assert.equal(requests, 0); form.context[busy] = false;
+  }
+  const removing = form.removeFromList(); await form.removeFromList();
+  assert.equal(requests, 1); assert.equal(form.element('member-list').inert, true);
+  assert.equal(form.element('close-household').disabled, true);
+  release({ ok: true }); await removing;
+  assert.equal(form.context.state.members.length, 0);
+  assert.match(form.element('member-status').textContent, /retirée/);
+  assert.equal(form.context.memberDialog.closed, false);
+  assert.equal(form.context.memberBusy, false);
+});
+
+test('retrait direct : réponse perdue conserve la personne, confirmation retire la ligne malgré une lecture échouée', async () => {
+  let requests = 0;
+  const form = profileForm(async () => { requests++; throw new TypeError('Réseau'); });
+  await form.removeFromList();
+  assert.equal(form.context.state.members.length, 1);
+  assert.match(form.element('member-status').textContent, /Impossible de confirmer le retrait/);
+  assert.equal(form.context.memberBusy, false);
+  form.context.fetch = async () => { requests++; return { ok: true }; };
+  form.context.load = async () => false;
+  await form.removeFromList();
+  assert.equal(form.context.state.members.length, 0);
+  assert.match(form.element('member-status').textContent, /retirée.*sans refaire/);
+  await form.removeFromList(); assert.equal(requests, 2);
 });
