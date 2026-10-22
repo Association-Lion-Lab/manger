@@ -20,6 +20,13 @@ async function fixture(t) {
   };
   return { data, accounts, request, login, admin, member };
 }
+
+test('contrat HTTP connexion/sessions commun sur SQLite', async t => {
+  const f=await fixture(t),{authContract}=require('./test-support/auth-contract');
+  await authContract(t,{...f,memberName:'julie',
+    clearAttempts:()=>f.accounts.exec('DELETE FROM attempts'),expireSessions:()=>f.accounts.exec('UPDATE sessions SET expires=0'),
+    sessions:()=>f.accounts.prepare('SELECT token,expires FROM sessions ORDER BY token').all().map(row=>({...row}))});
+});
 test('authentication protects data, exports and writes; origin is checked', async t => {
   const { request, login, accounts } = await fixture(t);
   assert.equal((await request('/')).status, 303);

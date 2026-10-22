@@ -29,10 +29,16 @@ function postgresAuth(db) {
     return (await tx.query('SELECT password,active FROM auth.accounts WHERE id=$1 FOR UPDATE', [user.id])).rows[0];
   }
   const stillValid = (user, current) => Boolean(current?.active && current.password === user.password);
+  async function hasSession(tx, user) {
+    const row = (await tx.query('SELECT expires FROM auth.sessions WHERE account_id=$1 AND token=$2 FOR UPDATE', [user.id, user.token])).rows[0];
+    return Boolean(row && Number(row.expires) > Date.now());
+  }
 
   async function startSession(user, token) {
-    // Cleanup precedes the account lock: no cross-account session locks inside that transaction.
-    await db.query('DELETE FROM auth.sessions WHERE expires<=$1', [Date.now()]);
+    // Never wait on sessions held by a password change; expiry still rejects skipped rows.
+    await db.query(`WITH expired AS MATERIALIZED (
+      SELECT token FROM auth.sessions WHERE expires<=$1 ORDER BY token LIMIT 100 FOR UPDATE SKIP LOCKED
+    ) DELETE FROM auth.sessions s USING expired e WHERE s.token=e.token`, [Date.now()]);
     return db.transaction(async tx => {
       if (!stillValid(user, await lockAccount(tx, user))) return false;
       await tx.query('INSERT INTO auth.sessions(token,account_id,expires) VALUES($1,$2,$3)', [token, user.id, Date.now() + 7 * DAY]);
@@ -40,17 +46,17 @@ function postgresAuth(db) {
     });
   }
   async function logout(user, all) {
-    await db.transaction(async tx => {
-      await lockAccount(tx, user);
+    return db.transaction(async tx => {
+      if (!stillValid(user, await lockAccount(tx, user)) || !await hasSession(tx, user)) return false;
       if (all) await tx.query('DELETE FROM auth.sessions WHERE account_id=$1', [user.id]);
       else await tx.query('DELETE FROM auth.sessions WHERE account_id=$1 AND token=$2', [user.id, user.token]);
+      return true;
     });
   }
   async function changePassword(user, encoded) {
     return db.transaction(async tx => {
       if (!stillValid(user, await lockAccount(tx, user))) return false;
-      const row = (await tx.query('SELECT expires FROM auth.sessions WHERE account_id=$1 AND token=$2 FOR UPDATE', [user.id, user.token])).rows[0];
-      if (!row || Number(row.expires) <= Date.now()) return false;
+      if (!await hasSession(tx, user)) return false;
       await tx.query('UPDATE auth.accounts SET password=$1 WHERE id=$2', [encoded, user.id]);
       await tx.query('DELETE FROM auth.sessions WHERE account_id=$1', [user.id]);
       return true;

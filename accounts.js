@@ -4,6 +4,7 @@ const { promisify } = require('node:util');
 const { mkdirSync, readFileSync } = require('node:fs');
 const { dirname, join } = require('node:path');
 const { emailAddress } = require('./invitation-mail');
+const { sqliteAuth } = require('./db/auth-sqlite');
 const derive = promisify(scrypt);
 const hash = value => createHash('sha256').update(value).digest('hex');
 const DAY = 86400000;
@@ -14,13 +15,16 @@ const publicFiles = new Set(['/api/health', '/sw.js', '/offline.html', '/offline
 function accountPath() {
   return join(dirname(process.env.MANGER_DB || join(__dirname, 'data', 'manger.db')), 'accounts.db');
 }
+function inputError(message) {
+  const error = new Error(message); error.code = 'MANGER_ACCOUNT_INPUT'; return error;
+}
 function username(value) {
   const name = String(value || '').trim().toLowerCase();
-  if (!/^[a-z0-9][a-z0-9._-]{2,39}$/.test(name)) throw new Error('Identifiant : 3 à 40 lettres sans accent, chiffres, points ou tirets.');
+  if (!/^[a-z0-9][a-z0-9._-]{2,39}$/.test(name)) throw inputError('Identifiant : 3 à 40 lettres sans accent, chiffres, points ou tirets.');
   return name;
 }
 async function passwordHash(value, salt = randomBytes(16).toString('hex')) {
-  if (typeof value !== 'string' || value.length < 12 || value.length > 256) throw new Error('Mot de passe : entre 12 et 256 caractères.');
+  if (typeof value !== 'string' || value.length < 12 || value.length > 256) throw inputError('Mot de passe : entre 12 et 256 caractères.');
   const key = await derive(value, salt, 32, { N: 32768, r: 8, p: 3, maxmem: 64 * 1024 * 1024 });
   return `${salt}:${key.toString('hex')}`;
 }
@@ -54,27 +58,29 @@ async function body(req) {
   const chunks = []; let size = 0;
   for await (const chunk of req) {
     size += chunk.length;
-    if (size > 4096) throw new Error('Requête trop volumineuse.');
+    if (size > 4096) throw inputError('Requête trop volumineuse.');
     chunks.push(chunk);
   }
-  try { return JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch { throw new Error('Requête invalide.'); }
+  try {
+    const value = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+    if (!value || typeof value !== 'object' || Array.isArray(value)) throw inputError('Requête invalide.');
+    return value;
+  } catch { throw inputError('Requête invalide.'); }
 }
 
-function protectAccounts(db, handler, { secure = false, mailer = null, certificate = null } = {}) {
+function protectAccounts(db, handler, { secure = false, mailer = null, certificate = null, auth: repository = null } = {}) {
+  if (repository && db) throw new Error('Fournir un seul stockage de comptes, jamais deux moteurs.');
+  const auth = repository || sqliteAuth(db);
   let busy = 0, mailBusy = false;
   const dummy = `${'0'.repeat(32)}:${'0'.repeat(64)}`;
   const cookie = (res, value, maxAge) => res.setHeader('Set-Cookie', `manger_session=${value}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${secure ? '; Secure' : ''}`);
   const session = req => {
     const token = /(?:^|;\s*)manger_session=([a-f0-9]{64})(?:;|$)/.exec(req.headers.cookie || '')?.[1];
-    return token && db.prepare('SELECT a.id,a.username,a.admin,a.password,s.token FROM sessions s JOIN accounts a ON a.id=s.account_id WHERE s.token=? AND s.expires>? AND a.active=1').get(hash(token), Date.now());
+    return token ? auth.session(hash(token)) : undefined;
   };
   function throttle(req, name) {
-    const now = Date.now();
-    db.prepare('DELETE FROM attempts WHERE expires<=?').run(now);
     const keys = [['global', 60], [`ip:${hash(req.socket.remoteAddress || '')}`, 20], [`name:${hash(name)}`, 8]];
-    if (keys.some(([key, max]) => (db.prepare('SELECT count FROM attempts WHERE key=?').get(key)?.count || 0) >= max)) return false;
-    for (const [key] of keys) db.prepare('INSERT INTO attempts VALUES(?,1,?) ON CONFLICT(key) DO UPDATE SET count=count+1').run(key, now + 15 * 60000);
-    return true;
+    return auth.throttle(keys);
   }
   return async (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
@@ -88,7 +94,7 @@ function protectAccounts(db, handler, { secure = false, mailer = null, certifica
         const origin = `${secure ? 'https' : 'http'}://${req.headers.host}`;
         if (req.headers.origin !== origin || req.headers['sec-fetch-site'] === 'cross-site') return json(res, 403, { error: 'Origine de la requête refusée.' });
       }
-      if (req.method === 'GET' && publicFiles.has(path)) return handler(req, res);
+      if (req.method === 'GET' && publicFiles.has(path)) return await handler(req, res);
       if (req.method === 'GET' && ['/login', '/account'].includes(path)) {
         res.setHeader('Content-Security-Policy', "default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self'; manifest-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
@@ -97,31 +103,30 @@ function protectAccounts(db, handler, { secure = false, mailer = null, certifica
       if (req.method === 'POST' && path === '/api/account/login') {
         const data = await body(req);
         const name = String(data.username || '').trim().toLowerCase().slice(0, 256);
-        if (busy >= 2 || !throttle(req, name)) return json(res, 429, { error: 'Trop de tentatives. Réessaie dans 15 minutes.' });
+        if (busy >= 2) return json(res, 429, { error: 'Trop de tentatives. Réessaie dans 15 minutes.' });
         busy++;
         try {
-          const user = db.prepare('SELECT * FROM accounts WHERE username=?').get(name);
+          if (!await throttle(req, name)) return json(res, 429, { error: 'Trop de tentatives. Réessaie dans 15 minutes.' });
+          const user = await auth.findUser(name);
           const valid = await matches(data.password, user?.password || dummy);
-          // Re-read after asynchronous hashing: a disabled/reset account must not regain access.
-          const current = user && db.prepare('SELECT * FROM accounts WHERE id=?').get(user.id);
-          if (!valid || !current?.active || current.password !== user.password) return json(res, 401, { error: 'Identifiant ou mot de passe incorrect.' });
-          db.prepare('DELETE FROM sessions WHERE expires<=?').run(Date.now());
           const token = randomBytes(32).toString('hex');
-          db.prepare('INSERT INTO sessions VALUES(?,?,?)').run(hash(token), user.id, Date.now() + 7 * DAY);
+          if (!valid || !user || !await auth.startSession(user, hash(token))) return json(res, 401, { error: 'Identifiant ou mot de passe incorrect.' });
           cookie(res, token, 7 * 86400);
           return json(res, 200, { ok: true });
         } finally { busy--; }
       }
       if (req.method === 'POST' && path === '/api/account/join') {
-        if (session(req)) return json(res, 409, { error: 'Tu es déjà connecté. Ouvre le lien sur l’appareil du nouveau membre.' });
+        if (auth.engine === 'postgres') return json(res, 503, { error: 'Ce parcours PostgreSQL n’est pas encore disponible.' });
+        if (await session(req)) return json(res, 409, { error: 'Tu es déjà connecté. Ouvre le lien sur l’appareil du nouveau membre.' });
         const data = await body(req);
-        if (busy >= 2 || !throttle(req, String(data.username || '').trim().toLowerCase().slice(0,256))) return json(res, 429, { error: 'Trop de tentatives. Réessaie dans 15 minutes.' });
-        const token = typeof data.token === 'string' && /^[a-f0-9]{64}$/.test(data.token) ? hash(data.token) : '';
-        const invitation = () => db.prepare('SELECT i.id FROM invitations i JOIN accounts a ON a.id=i.creator WHERE i.token=? AND i.expires>? AND a.active=1 AND a.admin=1').get(token, Date.now());
-        if (!invitation()) return json(res, 400, { error: 'Invitation expirée, utilisée ou annulée. Demande un nouveau lien.' });
-        const name = username(data.username);
+        if (busy >= 2) return json(res, 429, { error: 'Trop de tentatives. Réessaie dans 15 minutes.' });
         busy++;
         try {
+          if (!await throttle(req, String(data.username || '').trim().toLowerCase().slice(0,256))) return json(res, 429, { error: 'Trop de tentatives. Réessaie dans 15 minutes.' });
+          const token = typeof data.token === 'string' && /^[a-f0-9]{64}$/.test(data.token) ? hash(data.token) : '';
+          const invitation = () => db.prepare('SELECT i.id FROM invitations i JOIN accounts a ON a.id=i.creator WHERE i.token=? AND i.expires>? AND a.active=1 AND a.admin=1').get(token, Date.now());
+          if (!invitation()) return json(res, 400, { error: 'Invitation expirée, utilisée ou annulée. Demande un nouveau lien.' });
+          const name = username(data.username);
           const encoded = await passwordHash(data.password);
           db.exec('BEGIN IMMEDIATE');
           try {
@@ -135,42 +140,42 @@ function protectAccounts(db, handler, { secure = false, mailer = null, certifica
           return json(res, 201, { ok: true });
         } finally { busy--; }
       }
-      const user = session(req);
+      const user = await session(req);
       if (!user) {
         if (req.method === 'GET' && path === '/') { res.writeHead(303, { Location: '/login' }); return res.end(); }
         return json(res, 401, { error: 'Connecte-toi pour accéder au foyer.' });
       }
       const certificateReady = secure && certificate && Date.now() < Date.parse(certificate.validTo);
       if (req.method === 'GET' && path === '/api/account') return json(res, 200, {
-        id: user.id, username: user.username, admin: Boolean(user.admin), invitationEmailEnabled: Boolean(user.admin && mailer),
+        id: user.id, username: user.username, admin: Boolean(user.admin), invitationEmailEnabled: Boolean(user.admin && mailer && auth.engine !== 'postgres'),
         localCertificate: user.admin && certificateReady ? { fingerprint: certificate.fingerprint256 } : null,
       });
       if (req.method === 'POST' && path === '/api/account/logout') {
-        db.prepare('DELETE FROM sessions WHERE token=?').run(user.token);
+        if (!await auth.logout(user, false)) return json(res, 401, { error: 'Reconnecte-toi.' });
         cookie(res, '', 0);
         return json(res, 200, { ok: true });
       }
       if (req.method === 'POST' && path === '/api/account/logout-all') {
-        db.prepare('DELETE FROM sessions WHERE account_id=?').run(user.id);
+        if (!await auth.logout(user, true)) return json(res, 401, { error: 'Reconnecte-toi.' });
         cookie(res, '', 0);
         return json(res, 200, { ok: true });
       }
       if (req.method === 'POST' && path === '/api/account/password') {
         const data = await body(req);
-        if (busy >= 2 || !throttle(req, user.username)) return json(res, 429, { error: 'Trop de tentatives. Réessaie dans 15 minutes.' });
+        if (busy >= 2) return json(res, 429, { error: 'Trop de tentatives. Réessaie dans 15 minutes.' });
         busy++;
         try {
+          if (!await throttle(req, user.username)) return json(res, 429, { error: 'Trop de tentatives. Réessaie dans 15 minutes.' });
           if (!await matches(data.current, user.password)) return json(res, 400, { error: 'Mot de passe actuel incorrect.' });
           const encoded = await passwordHash(data.password);
-          if (!session(req) || db.prepare('SELECT password FROM accounts WHERE id=?').get(user.id)?.password !== user.password) return json(res, 401, { error: 'Reconnecte-toi.' });
-          db.prepare('UPDATE accounts SET password=? WHERE id=?').run(encoded, user.id);
-          db.prepare('DELETE FROM sessions WHERE account_id=?').run(user.id);
+          if (!await auth.changePassword(user, encoded)) return json(res, 401, { error: 'Reconnecte-toi.' });
           cookie(res, '', 0);
           return json(res, 200, { ok: true });
         } finally { busy--; }
       }
       const adminRoute = path.startsWith('/api/accounts') || path === '/api/backup' || path.startsWith('/api/restore/');
       if (adminRoute && !user.admin) return json(res, 403, { error: 'Cette action est réservée à l’administrateur.' });
+      if (auth.engine === 'postgres' && adminRoute && path !== '/api/accounts/certificate') return json(res, 503, { error: 'Ce parcours PostgreSQL n’est pas encore disponible.' });
       if (path === '/api/accounts/certificate' && req.method === 'GET') {
         if (!certificateReady) return json(res, 404, { error: 'Certificat local indisponible. Vérifie la configuration HTTPS et MANGER_TLS_CA sur le serveur.' });
         res.writeHead(200, { 'Content-Type': 'application/pkix-cert', 'Content-Disposition': 'attachment; filename="manger-ca.cer"', 'Content-Length': certificate.raw.length });
@@ -179,7 +184,7 @@ function protectAccounts(db, handler, { secure = false, mailer = null, certifica
       if (path === '/api/accounts/invitation/email' && req.method === 'POST') {
         if (!mailer) return json(res, 503, { error: 'L’envoi de courriels n’est pas configuré sur ce serveur. Utilise le partage ou la copie du lien.' });
         const data = await body(req);
-        if (!session(req)?.admin) return json(res, 403, { error: 'Droit administrateur requis.' });
+        if (!(await session(req))?.admin) return json(res, 403, { error: 'Droit administrateur requis.' });
         const to = emailAddress(data?.to);
         const token = typeof data?.token === 'string' && /^[a-f0-9]{64}$/.test(data.token) ? data.token : '';
         const now = Date.now();
@@ -214,7 +219,7 @@ function protectAccounts(db, handler, { secure = false, mailer = null, certifica
         try {
           // Hash before checking the administrator again, to avoid a permission race.
           const name = username(data.username); const encoded = await passwordHash(data.password);
-          if (!session(req)?.admin) return json(res, 403, { error: 'Droit administrateur requis.' });
+          if (!(await session(req))?.admin) return json(res, 403, { error: 'Droit administrateur requis.' });
           if (db.prepare('SELECT 1 FROM accounts WHERE username=?').get(name)) throw new Error('Cet identifiant existe déjà.');
           db.prepare('INSERT INTO accounts(username,password,admin) VALUES(?,?,?)').run(name, encoded, data.admin === true ? 1 : 0);
           return json(res, 201, { ok: true });
@@ -222,7 +227,7 @@ function protectAccounts(db, handler, { secure = false, mailer = null, certifica
       }
       if (req.method === 'PUT' && /^\/api\/accounts\/\d+$/.test(path)) {
         const id = Number(path.split('/').pop()); const data = await body(req);
-        if (!session(req)?.admin) return json(res, 403, { error: 'Droit administrateur requis.' });
+        if (!(await session(req))?.admin) return json(res, 403, { error: 'Droit administrateur requis.' });
         if (id === user.id) throw new Error('Tu ne peux pas désactiver ton propre accès.');
         if (typeof data.active !== 'boolean') throw new Error('État invalide.');
         if (!db.prepare('SELECT 1 FROM accounts WHERE id=?').get(id)) return json(res, 404, { error: 'Compte introuvable.' });
@@ -231,8 +236,11 @@ function protectAccounts(db, handler, { secure = false, mailer = null, certifica
         db.prepare('DELETE FROM sessions WHERE account_id=?').run(id);
         return json(res, 200, { ok: true });
       }
-      return handler(req, res);
-    } catch (error) { return json(res, 400, { error: error.message }); }
+      return await handler(req, res);
+    } catch (error) {
+      if (auth.engine === 'postgres' && error?.code !== 'MANGER_ACCOUNT_INPUT') return json(res, 503, { error: 'Le service est temporairement indisponible. Aucune réussite n’a pu être confirmée.' });
+      return json(res, 400, { error: error.message });
+    }
   };
 }
 

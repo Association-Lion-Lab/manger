@@ -23,7 +23,7 @@ Toutes les commandes du guide s'exécutent depuis la racine du dépôt, **pas de
 
 [Frontière asynchrone PostgreSQL](POSTGRESQL-CONNEXION.md) : configuration explicite, client transactionnel, erreurs et arrêt borné ; socle testé séparément, sans portage métier ni bascule du serveur SQLite.
 
-[Connexion et sessions PostgreSQL](POSTGRESQL-AUTH.md) : dépôt de persistance, verrous/révocations et compteurs partagés ; état et preuves de la tâche 05 en cours, sans activation en production.
+[Connexion et sessions PostgreSQL](POSTGRESQL-AUTH.md) : tâche 05 testée, middleware commun, verrous/révocations et compteurs partagés ; les invitations/administration PostgreSQL et le déploiement restent à porter, sans activation en production.
 
 [Notices des dépendances distribuées](../public/third-party-notices.txt) : versions, textes et copyrights de Nodemailer et du pilote PostgreSQL, sous licences MIT-0/MIT/ISC ; le code du projet reste AGPL-3.0-or-later.
 
