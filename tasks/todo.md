@@ -1,6 +1,6 @@
 # Migration PostgreSQL — tâches et points de contrôle
 
-22 octobre 2026 — **plan validé ; tâches 01–05 réalisées, prochaine tâche 06 : invitations et administration des accès**. [Cadrage et risques](../docs/MIGRATION-POSTGRESQL.md), [ordre de réalisation](plan.md). Les noms des fichiers non encore créés restent des propositions. Chaque tâche comprend la mise à jour de la documentation concernée et de `docs/DECISIONS.md` ; les fichiers listés sont le périmètre technique principal. Si une tranche dépasse environ cinq fichiers techniques ou une session ciblée, la découper avant de coder, sans réduire ses critères.
+22 octobre 2026 — **plan validé ; tâches 01–06 réalisées, prochaine tâche 07 : personnes et protéines**. [Cadrage et risques](../docs/MIGRATION-POSTGRESQL.md), [ordre de réalisation](plan.md). Les noms des fichiers non encore créés restent des propositions. Chaque tâche comprend la mise à jour de la documentation concernée et de `docs/DECISIONS.md` ; les fichiers listés sont le périmètre technique principal. Si une tranche dépasse environ cinq fichiers techniques ou une session ciblée, la découper avant de coder, sans réduire ses critères.
 
 ## Phase 1 — Socle isolé
 
@@ -77,13 +77,14 @@ Preuve : [installation et validations](../docs/POSTGRESQL-TEST.md), **7 tests Po
 
 ### 06 — Invitations et administration des accès
 
-- [ ] Réalisé.
+- [x] Réalisé le 22 octobre 2026, candidat isolé ; aucun déploiement PostgreSQL activé.
 - **Livrable :** invitation, consommation unique, administration et commandes de récupération.
 - **Acceptation :** une seule inscription concurrente gagne ; désactivation et changement de mot de passe révoquent comme avant ; aucun premier visiteur promu administrateur ni reset de mot de passe imposé par le portage.
 - **Vérification :** suites accès et `invitation-mail.test.js`, conflit réel d'invitation et administration pendant hachage, commandes sur fixture dédiée.
 - **Dépendances :** 05.
 - **Fichiers probables :** `accounts.js`, `db/auth.js`, `accounts.test.js`, `postgres-auth.test.js`.
 - **Découpage avant réalisation :** 06a, invitations/administration et réservation SMTP dans les dépôts, avec transactions et tests PostgreSQL réels ; 06b, middleware commun et contrats HTTP/SMTP, courses pendant scrypt ; 06c, commandes locales injectables, tests de récupération et clôture. Aucun parcours foyer, schéma, interface ou lancement normal PostgreSQL ajouté. [Contrat de travail](../docs/POSTGRESQL-ACCES.md).
+- **Preuves 06a–06c :** consommation unique entre deux pools, doublon conservant le lien, expiration/révocation après attente, rollback de désactivation/récupération, compteurs SMTP partagés et même contrat HTTP/commandes sur les deux moteurs. **282 tests généraux et 81 PostgreSQL réussis**, aucun ignoré, HTTPS inclus ; modules vérifiés, audit de production sans vulnérabilité signalée, mutation en mémoire détectée. Pas de publication ou donnée réelle ; lancement standard toujours SQLite. Service de commande interne PostgreSQL testé par injection ; raccordement de sa configuration CLI au lancement complet en 19, pas une commande de déploiement disponible aujourd'hui.
 - **Taille :** M.
 
 ### 07 — Personnes et protéines
@@ -224,6 +225,7 @@ Preuve : [installation et validations](../docs/POSTGRESQL-TEST.md), **7 tests Po
 
 - [ ] Réalisé.
 - **Livrable :** contrôle de build sans base et test réel après construction, Compose candidat volontaire avec volume distinct.
+- **Raccordement des commandes :** utiliser le service `accountCommand` déjà testé en 06 avec un dépôt PostgreSQL ouvert explicitement par la configuration de déploiement, sans repli SQLite ; vérifier les vrais sous-processus CLI sur instance jetable. La garde actuelle refuse volontairement le moteur incomplet avant fichier.
 - **Acceptation :** pas de 5432 hôte/secret embarqué ; santé requêtant réellement les bons schémas et reprise de connexion ; données conservées après recréation des deux conteneurs.
 - **Bootstrap de confiance :** rôles dédiés neufs, sans ACL globales de paramètres/fonctions administratives ni appartenances imprévues ; ne pas recycler un ancien rôle au seul motif que ses flags sont non-superutilisateur. Préflight actuel non assimilé à un audit exhaustif d'un cluster tiers.
 - **Vérification :** build Docker, retrait expérimental d'un module/migration provoquant un échec, test isolé de volume et panne de base ; contrôles TLS inchangés.

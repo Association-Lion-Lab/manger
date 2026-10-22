@@ -4,6 +4,16 @@ Historique des lots et priorités, regroupé dans `docs/` le 10 octobre 2026. Le
 
 Contrainte produit : quatre onglets (Semaine, Recettes, Courses, Compte), actions dans leur contexte, fonctions secondaires regroupées sans surcharger ; préserver une interface sobre en clair et en sombre, au clavier et dès 320 px.
 
+## PostgreSQL — tâche 06, invitations et administration — 22 octobre 2026
+
+- [Contrat accès et limites](POSTGRESQL-ACCES.md) : mêmes invitations privées, membre seulement, durée 24 heures, liste et création/désactivation des accès ; rôle/hachage/session revalidés après attente. Consommation unique entre deux pools et identifiant occupé ne détruisant pas le lien, aucun nouvel écran ou mécanisme d'inscription.
+- Réservation SMTP atomique et partagée, cinq tentatives par heure ; garde locale avant await et envoi hors transaction. Destinataire non stocké, erreurs privées, absence de retry automatique et aucune promesse de réception ; SMTP simulé à sa frontière, aucun courriel réel envoyé.
+- Service local de commande porté par injection, récupération gardant ID/rôle et révoquant les sessions dans une transaction. CLI SQLite existant conservé ; CLI PostgreSQL standard refusé avant fichier tant que candidat incomplet, raccordement de déploiement suivi en 19. Pas de mot de passe réel réinitialisé ni transfert de comptes.
+- **282 tests généraux et 81 PostgreSQL réels réussis, aucun ignoré**, HTTPS inclus ; gardes rouges puis vertes, vraies attentes de verrous, courses pendant scrypt, erreurs après UPDATE et rollbacks. Contrôle modules/image sans connexion réussi, audit npm de production sans vulnérabilité signalée ; mutation en mémoire détectée et contre-relecture séparée en trois cycles, sans outil externe invoqué.
+- Tâches 01–06 closes ; prochaine **07 — personnes et protéines**. Application standard toujours SQLite ; aucune modification de schéma/Compose/volumes/interface, donnée privée, publication, migration réelle ou validation Docker/Linux/CI PostgreSQL/Ubuntu/appareil dans ce lot.
+
+Clôture documentaire : 179 liens locaux existants dans quatorze documents, ancres et sites externes non vérifiés ; six tâches closes et dix-sept restantes, diff propre. Commande dédiée sans binaires en échec attendu sans omission ; aucun cluster temporaire restant observé dans les deux emplacements utilisés. Outils de test ignorés conservés, pas de purge globale.
+
 ## PostgreSQL — tâche 05, connexion et sessions testées — 22 octobre 2026
 
 - [Contrat connexion/sessions](POSTGRESQL-AUTH.md) : six opérations partagées avec SQLite, candidat PostgreSQL injecté sans base SQLite. Vrais hachages scrypt, cookies et expiration absolue conservés ; contrôle des accès toujours attendu avant décision, aucune connexion à l'import ni repli de stockage.

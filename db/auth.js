@@ -131,8 +131,26 @@ function postgresAuth(db) {
       ON CONFLICT(key) DO UPDATE SET count=auth.attempts.count+1`, [now+3600000]);
     return {expires:invite.expires};
   });
+  function createLocalAccount(name, encoded) {
+    return db.transaction(async tx => {
+      await accessLock(tx);
+      const row = await tx.query(`INSERT INTO auth.accounts(username,password,admin) VALUES($1,$2,1)
+        ON CONFLICT(username) DO NOTHING RETURNING id::float8 AS id`, [name,encoded]);
+      return row.rowCount ? row.rows[0].id : 'duplicate';
+    });
+  }
+  function resetLocalPassword(name, encoded) {
+    return db.transaction(async tx => {
+      await accessLock(tx);
+      const row = (await tx.query('SELECT id::float8 AS id FROM auth.accounts WHERE username=$1 FOR UPDATE', [name])).rows[0];
+      if (!row) return 'missing';
+      await tx.query('UPDATE auth.accounts SET password=$1,active=1 WHERE id=$2', [encoded,row.id]);
+      await tx.query('DELETE FROM auth.sessions WHERE account_id=$1', [row.id]);
+      return true;
+    });
+  }
   return Object.freeze({ engine:'postgres', findUser, session, throttle, startSession, logout, changePassword,
-    invitation, issueInvitation, revokeInvitation, join, listAccounts, addAccount, setActive, prepareMail });
+    invitation, issueInvitation, revokeInvitation, join, listAccounts, addAccount, setActive, prepareMail, createLocalAccount, resetLocalPassword });
 }
 
 module.exports = { postgresAuth };

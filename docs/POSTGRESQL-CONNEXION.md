@@ -1,6 +1,6 @@
 # PostgreSQL — frontière asynchrone
 
-22 octobre 2026 — tâche 04 du [plan validé](MIGRATION-POSTGRESQL.md). **Le produit reste sur SQLite.** Ce socle est testé séparément ; la [connexion et les sessions](POSTGRESQL-AUTH.md) sont désormais testées dans le candidat isolé de 05. Invitations, administration, routes du foyer, sauvegardes et déploiement PostgreSQL restent à porter.
+22 octobre 2026 — tâche 04 du [plan validé](MIGRATION-POSTGRESQL.md). **Le produit reste sur SQLite.** Ce socle est testé séparément ; [connexion et sessions](POSTGRESQL-AUTH.md), [invitations et administration](POSTGRESQL-ACCES.md) sont désormais testées dans le candidat isolé de 05–06. Routes du foyer, sauvegardes et déploiement/branchement CLI PostgreSQL restent à porter.
 
 ## Interface interne
 
@@ -61,3 +61,5 @@ Les [notices complètes](../public/third-party-notices.txt), versions et copyrig
 Clôture locale : **249 tests généraux réussis**, HTTPS inclus ; **28 tests PostgreSQL réels réussis**, aucun ignoré. Commande agrégée sans binaires : échec attendu avant création des clusters, pas de succès avec tests omis. `node image-check.js` réussi après installation de production. Point de contrôle A atteint pour le socle isolé ; étape suivante 05, connexion/sessions. Aucun portage métier, transfert privé, accès Ubuntu, build Docker, essai téléphone ou publication Codeberg dans ce lot.
 
 Point de contrôle suivant, 05 réalisé : [contrat connexion/sessions et preuves](POSTGRESQL-AUTH.md), **264 tests généraux et 53 PostgreSQL réels réussis**, aucun ignoré, HTTPS inclus. Les nombres et l'étape suivante du paragraphe précédent sont l'historique de 04 ; prochaine tâche actuelle 06, invitations/administration. La sélection au lancement et les limites de déploiement restent inchangées.
+
+État après 06 : [contrat invitations/administration et récupération](POSTGRESQL-ACCES.md), **282 tests généraux et 81 PostgreSQL réels réussis**, aucun ignoré, HTTPS inclus. Prochaine tâche actuelle 07, personnes/protéines ; la sélection au lancement et les limites de déploiement/CLI restent inchangées.

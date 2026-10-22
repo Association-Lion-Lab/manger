@@ -5,6 +5,7 @@ const { mkdirSync, readFileSync } = require('node:fs');
 const { dirname, join } = require('node:path');
 const { emailAddress } = require('./invitation-mail');
 const { sqliteAuth } = require('./db/auth-sqlite');
+const { storageEngine } = require('./db/storage');
 const derive = promisify(scrypt);
 const hash = value => createHash('sha256').update(value).digest('hex');
 const PAGE = Buffer.from(readFileSync(join(__dirname, 'public', 'accounts.html'), 'utf8')
@@ -235,24 +236,26 @@ function protectAccounts(db, handler, { secure = false, mailer = null, certifica
   };
 }
 
+async function accountCommand(auth, command, name) {
+  if (!['create-admin','reset-password'].includes(command) || !name) throw inputError('Usage : node accounts.js create-admin|reset-password identifiant');
+  const normalized = username(name), password = randomBytes(18).toString('base64url');
+  const encoded = await passwordHash(password);
+  if (command === 'create-admin') checked(await auth.createLocalAccount(normalized, encoded));
+  else checked(await auth.resetLocalPassword(normalized, encoded));
+  return {username:normalized,password};
+}
+
 // Run locally on the server: no public registration or first-visitor administrator.
 if (require.main === module) {
   (async () => {
     const [command, name] = process.argv.slice(2);
     if (!['create-admin', 'reset-password'].includes(command) || !name) throw new Error('Usage : node accounts.js create-admin|reset-password identifiant');
+    if (storageEngine() === 'postgres') throw new Error('Les commandes PostgreSQL ne sont pas activées au lancement normal tant que la migration est incomplète. Aucune base SQLite ouverte.');
     const normalized = username(name); const db = openAccounts();
     try {
-      const password = randomBytes(18).toString('base64url');
-      if (command === 'create-admin') await createAccount(db, normalized, password, true);
-      else {
-        const encoded = await passwordHash(password);
-        const account = db.prepare('SELECT id FROM accounts WHERE username=?').get(normalized);
-        if (!account) throw new Error('Compte introuvable.');
-        db.prepare('UPDATE accounts SET password=?,active=1 WHERE id=?').run(encoded, account.id);
-        db.prepare('DELETE FROM sessions WHERE account_id=?').run(account.id);
-      }
+      const { password } = await accountCommand(sqliteAuth(db), command, normalized);
       console.log(`Identifiant : ${normalized}\nMot de passe généré : ${password}\nConserve-le dans ton gestionnaire de mots de passe. Ne le partage pas dans les journaux ou captures.`);
     } finally { db.close(); }
   })().catch(error => { console.error(error.message); process.exitCode = 1; });
 }
-module.exports = { accountPath, openAccounts, createAccount, protectAccounts };
+module.exports = { accountPath, openAccounts, createAccount, protectAccounts, accountCommand };

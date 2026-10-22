@@ -86,8 +86,17 @@ function sqliteAuth(db) {
     db.prepare(`INSERT INTO attempts VALUES('invitation-mail',1,?) ON CONFLICT(key) DO UPDATE SET count=count+1`).run(now+3600000);
     return {expires:invite.expires};
   });
+  const createLocalAccount = (name, encoded) => atomic(() => {
+    const result = insert(name,encoded,true);
+    return result === true ? findUser(name).id : result;
+  });
+  const resetLocalPassword = (name, encoded) => atomic(() => {
+    const row = findUser(name); if (!row) return 'missing';
+    db.prepare('UPDATE accounts SET password=?,active=1 WHERE id=?').run(encoded,row.id);
+    db.prepare('DELETE FROM sessions WHERE account_id=?').run(row.id); return true;
+  });
   return Object.freeze({ engine:'sqlite', findUser, session, throttle, startSession, logout, changePassword,
-    invitation, issueInvitation, revokeInvitation, join, listAccounts, addAccount, setActive, prepareMail });
+    invitation, issueInvitation, revokeInvitation, join, listAccounts, addAccount, setActive, prepareMail, createLocalAccount, resetLocalPassword });
 }
 
 module.exports = { sqliteAuth };

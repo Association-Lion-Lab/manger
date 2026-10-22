@@ -14,7 +14,7 @@
   "scripts": {
     "start": "node server.js",
     "test": "node --test",
-    "test:postgres": "node --test test-support/postgres.integration.cjs test-support/postgres-schema.integration.cjs test-support/postgres-connection.integration.cjs test-support/postgres-auth.integration.cjs",
+    "test:postgres": "node --test test-support/postgres.integration.cjs test-support/postgres-schema.integration.cjs test-support/postgres-connection.integration.cjs test-support/postgres-auth.integration.cjs test-support/postgres-access.integration.cjs test-support/postgres-access-http.integration.cjs test-support/postgres-account-command.integration.cjs",
     "backup:check": "node backup-tools.js check",
     "backup:restore": "node backup-tools.js restore"
   }
