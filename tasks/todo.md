@@ -38,6 +38,8 @@ Preuve : [installation et validations](../docs/POSTGRESQL-TEST.md), **7 tests Po
 - **Vérification :** cible vide, seconde exécution, échec intermédiaire et deux démarrages concurrents ; contraintes/rôles inspectés sur vrai PostgreSQL.
 - **Dépendances :** 02.
 - **Fichiers probables :** nouveaux `db/postgres.js`, `db/migrations/001-initial.js`, `postgres-schema.test.js`, script de bootstrap privé aux tests dans `test-support/`.
+- **Découpage de réalisation :** 03a, séparer propriétaire/migration et application dans la fixture, avec refus DDL et tests existants conservés ; 03b, DDL des 22 tables, exécuteur versionné, tests locaux sans connexion et intégration réelle (cinq fichiers techniques principaux). Aucun appel au démarrage de Manger! avant les tâches suivantes.
+- **03a réalisée :** deux rôles non-superutilisateurs distincts, aucun DDL/objet temporaire/prise de rôle pour l'application ; huit tests PostgreSQL verts, aucun ignoré, données et nettoyage des deux pools vérifiés. 03b non réalisée à ce point de contrôle.
 - **Taille :** M.
 
 ### 04 — Introduire la frontière asynchrone minimale

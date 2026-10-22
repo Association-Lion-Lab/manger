@@ -1,5 +1,11 @@
 # Choix techniques, limites et blocages
 
+## PostgreSQL : séparer les rôles avant le schéma — 22 octobre 2026
+
+Tranche 03a : la fixture avait un rôle applicatif propriétaire de sa base de sonde ; cela ne permettait pas de prouver l'interdiction de DDL du futur runtime. Nouveau propriétaire de migration non-superutilisateur, application séparée sans appartenance au propriétaire, droits publics de création/objets temporaires retirés. Aucun rôle de production créé. Les sondes SQL sont préparées par la migration, puis accordées en lecture/insertion seulement à l'application ; les assertions de données antérieures restent identiques. Deux pools bornés et fermés dans le même nettoyage protégé.
+
+Preuve : nouveau test rouge avant implémentation, puis **8 tests PostgreSQL réels réussis, aucun ignoré** ; création de table et prise du rôle propriétaire refusées, panne/reprise et nettoyage conservés. Suite générale : **227 réussites, aucune ignorée**, HTTPS inclus. La version SQLite et le déploiement ne changent pas ; schéma cible/versionnement encore à réaliser en 03b. Sources : [schémas et droits](https://www.postgresql.org/docs/18/ddl-schemas.html#DDL-SCHEMAS-PRIV), [retrait de privilèges](https://www.postgresql.org/docs/18/sql-revoke.html).
+
 ## PostgreSQL : environnement local jetable, pas de service système — 22 octobre 2026
 
 **Périmètre autorisé :** préparer un PostgreSQL local de test après accord explicite, sans installation de service Windows, accès Ubuntu ou donnée réelle. Tâche 02 du plan, en deux parties techniques : outils vérifiés puis fixture/tests privés. [Installation, version, intégrité et limites](POSTGRESQL-TEST.md). Le moteur du produit reste SQLite ; aucun paramètre de déploiement modifié, aucun portage métier commencé.

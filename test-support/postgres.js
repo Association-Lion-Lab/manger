@@ -32,7 +32,7 @@ async function postgresFixture(t) {
   const nonce = randomBytes(32).toString('hex'), marker = join(directory, '.manger-test-owner');
   await writeFile(marker, nonce, { mode: 0o600 });
   const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^PG/i.test(key)));
-  let pool, closing;
+  let pool, migrationPool, closing;
 
   async function owned() {
     if (dirname(directory) !== parent || !basename(directory).startsWith('manger-pg-test-') ||
@@ -67,7 +67,7 @@ async function postgresFixture(t) {
     closing = (async () => {
       let timer, poolError;
       try {
-        if (pool) await Promise.race([pool.end(), new Promise((_, reject) => {
+        await Promise.race([Promise.all([pool, migrationPool].filter(Boolean).map(item => item.end())), new Promise((_, reject) => {
           timer = setTimeout(() => reject(new Error('Fermeture du pool de test trop longue.')), 3000);
         })]);
       } catch (error) { poolError = error; }
@@ -100,18 +100,23 @@ async function postgresFixture(t) {
     await rm(passwordFile);
     await start();
     const admin = new Client({ ...config, user: 'manger_test_owner', password: ownerPassword, database: 'postgres' });
-    const password = randomBytes(32).toString('hex');
+    const password = randomBytes(32).toString('hex'), migrationPassword = randomBytes(32).toString('hex');
     try {
       await admin.connect();
-      const { rows: [role] } = await admin.query("SELECT format('CREATE ROLE manger_test_app LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION PASSWORD %L', $1::text) AS sql", [password]);
-      await admin.query(role.sql);
-      await admin.query('CREATE DATABASE manger_test OWNER manger_test_app TEMPLATE template0');
+      for (const [name, secret] of [['manger_test_app', password], ['manger_test_migrator', migrationPassword]]) {
+        const { rows: [role] } = await admin.query("SELECT format('CREATE ROLE %I LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD %L', $1::text, $2::text) AS sql", [name, secret]);
+        await admin.query(role.sql);
+      }
+      await admin.query('CREATE DATABASE manger_test OWNER manger_test_migrator TEMPLATE template0');
+      await admin.query('REVOKE ALL ON DATABASE manger_test FROM PUBLIC; GRANT CONNECT ON DATABASE manger_test TO manger_test_app');
     } finally { await admin.end(); }
     pool = new Pool({ ...config, user: 'manger_test_app', password, database: 'manger_test', max: 4, idleTimeoutMillis: 500 });
+    migrationPool = new Pool({ ...config, user: 'manger_test_migrator', password: migrationPassword, database: 'manger_test', max: 2, idleTimeoutMillis: 500 });
     const connectionErrors = [];
-    pool.on('error', error => connectionErrors.push(error.code || 'CONNECTION_ERROR'));
+    for (const item of [pool, migrationPool]) item.on('error', error => connectionErrors.push(error.code || 'CONNECTION_ERROR'));
+    await migrationPool.query('REVOKE ALL ON SCHEMA public FROM PUBLIC; GRANT USAGE ON SCHEMA public TO manger_test_app');
     await pool.query('SELECT 1');
-    return { pool, directory, port, start, stop, close, connectionErrors };
+    return { pool, migrationPool, directory, port, start, stop, close, connectionErrors };
   } catch (error) {
     try { await close(); }
     catch (cleanup) { throw new AggregateError([error, cleanup], 'Échec de préparation et de nettoyage PostgreSQL local.'); }

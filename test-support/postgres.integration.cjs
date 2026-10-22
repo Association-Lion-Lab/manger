@@ -8,6 +8,17 @@ const { postgresFixture } = require('./postgres');
 
 test('PostgreSQL de test : serveur privé, droits, requêtes bornées et nettoyage', { timeout: 90000 }, async t => {
   const fixture = await postgresFixture(t);
+  await t.test('le propriétaire de migration est distinct et inaccessible au rôle applicatif', async () => {
+    assert.ok(fixture.migrationPool, 'Pool de migration requis');
+    assert.equal((await fixture.migrationPool.query('SELECT current_user AS name')).rows[0].name, 'manger_test_migrator');
+    const { rows: [rights] } = await fixture.pool.query(`SELECT
+      has_database_privilege(current_user, current_database(), 'CREATE') AS create_db_object,
+      has_database_privilege(current_user, current_database(), 'TEMP') AS temp,
+      has_schema_privilege(current_user, 'public', 'CREATE') AS create_public`);
+    assert.deepEqual(rights, { create_db_object: false, temp: false, create_public: false });
+    await assert.rejects(fixture.pool.query('SET ROLE manger_test_migrator'), { code: '42501' });
+    await assert.rejects(fixture.pool.query('CREATE TABLE public.forbidden(id integer)'), { code: '42501' });
+  });
   await t.test('serveur réel 18.6 sur loopback et rôle sans privilèges serveur', async () => {
     const { rows: [role] } = await fixture.pool.query(`SELECT current_user AS name,
       host(inet_server_addr()) AS host, current_setting('server_version') AS version,
@@ -19,7 +30,8 @@ test('PostgreSQL de test : serveur privé, droits, requêtes bornées et nettoya
     await assert.rejects(fixture.pool.query('CREATE DATABASE forbidden_test_database'), { code: '42501' });
   });
   await t.test('paramètres, Unicode, octets NUL et rollback sur un client réservé', async () => {
-    await fixture.pool.query('CREATE TABLE probe(id integer PRIMARY KEY, label text NOT NULL, bytes bytea NOT NULL)');
+    await fixture.migrationPool.query('CREATE TABLE public.probe(id integer PRIMARY KEY, label text NOT NULL, bytes bytea NOT NULL)');
+    await fixture.migrationPool.query('GRANT SELECT, INSERT ON public.probe TO manger_test_app');
     const label = "Œuf 🥣 '; DROP TABLE probe; --", bytes = Buffer.from([0, 255, 0, 127]);
     await fixture.pool.query('INSERT INTO probe VALUES ($1,$2,$3)', [1, label, bytes]);
     const { rows: [saved] } = await fixture.pool.query('SELECT * FROM probe WHERE id=$1', [1]);
