@@ -10,13 +10,17 @@ function harness(setup = () => {}) {
   const clients = [], timers = new Set(); let pool;
   class Pool extends EventEmitter {
     constructor(options) { super(); this.options=options; pool=this; setup(this); }
-    async connect() {
-      const client = new EventEmitter(); client.sql=[]; client.releases=[];
-      client.query = async (sql, values) => { client.sql.push(sql); return this.handle ? this.handle(sql,values,client) : { rows:[{n:1}],command:sql.split(' ')[0] }; };
-      client.release = failure => client.releases.push(failure || false);
-      clients.push(client);
-      if(this.acquire) await this.acquire();
-      return client;
+    connect(callback) {
+      const acquire = async () => {
+        const client = new EventEmitter(); client.sql=[]; client.releases=[];
+        client.query = async (sql, values) => { client.sql.push(sql); return this.handle ? this.handle(sql,values,client) : { rows:[{n:1}],command:sql.split(' ')[0] }; };
+        client.release = failure => client.releases.push(failure || false);
+        clients.push(client);
+        if(this.acquire) await this.acquire();
+        return client;
+      };
+      if(callback) { acquire().then(client=>{callback(null,client);this.afterAcquire?.(client);},callback); return; }
+      return acquire().then(client=>{this.afterAcquire?.(client);return client;});
     }
     async end() { this.ended=true; }
   }
@@ -144,4 +148,16 @@ test('ouverture refusée sans fuite de connexion ou de détails privés et erreu
   const next=harness(),db=await next.openPostgres(config);
   next.pool.emit('error',new Error('private connection')); assert.equal(db.lastErrorCode,'POSTGRES_QUERY_FAILED');
   await db.close();
+});
+
+test('coupure immédiatement à la remise du client : surveillance installée avant toute reprise asynchrone', async () => {
+  let protectedAtHandoff;
+  const h=harness(pool=>{pool.afterAcquire=client=>{
+    protectedAtHandoff=client.listenerCount('error')>0;
+    client.on('error',()=>{}); // Témoin : l'absence du vrai listener échoue sans tuer le runner.
+    client.emit('error',Object.assign(new Error('private handoff'),{code:'57P01'}));
+  };});
+  await assert.rejects(h.openPostgres(config),error=>error.code==='57P01');
+  assert.equal(protectedAtHandoff,true); assert.deepEqual(h.clients[0].sql,[]);
+  assert.deepEqual(h.clients[0].releases,[true]); assert.equal(h.pool.ended,true);
 });

@@ -96,13 +96,19 @@ function connectionPool(pool) {
   const recordError = error => { lastErrorCode = databaseError(error).code; };
   pool.on('error', recordError);
 
+  function acquire() {
+    return new Promise((resolve, reject) => {
+      // Install the client listener inside pg's synchronous handoff, before yielding.
+      pool.connect((error, client) => {
+        if (error) { recordError(error); reject(databaseError(error)); return; }
+        if (forced) { client.release(true); reject(failure('POSTGRES_CLOSE_TIMEOUT')); return; }
+        const lease = clientLease(client, recordError);
+        leases.add(lease); resolve(lease);
+      });
+    });
+  }
   async function useClient(work) {
-    let client;
-    try { client = await pool.connect(); }
-    catch (error) { recordError(error); throw databaseError(error); }
-    if (forced) { client.release(true); throw failure('POSTGRES_CLOSE_TIMEOUT'); }
-    const lease = clientLease(client, recordError);
-    leases.add(lease);
+    const lease = await acquire();
     let failed = false;
     try { return await Promise.race([Promise.resolve().then(() => work(lease)), lease.cancelled]); }
     catch (error) { failed = true; throw error; }
