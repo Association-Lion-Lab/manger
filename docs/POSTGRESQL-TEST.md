@@ -20,7 +20,7 @@ Le script télécharge environ **367 Mio** une seule fois dans `.test-tools/`, i
 | Archive | [postgresql-18.6-5-windows-x64-binaries.zip](https://get.enterprisedb.com/postgresql/postgresql-18.6-5-windows-x64-binaries.zip) |
 | SHA-256 | `e2246ba91d22345bc3d017586c09ede52d9df180b1eeb480f050445f1cad84e2` |
 | Référence d'intégrité | [Empreinte publiée par EDB](https://get.enterprisedb.com/postgresql/postgresql-18.6-5-windows-x64-binaries.zip.sha256), consultée le 22 octobre 2026 |
-| Pilote de test | `pg` **8.23.1**, dépendance de développement verrouillée avec ses dépendances transitives dans npm |
+| Pilote verrouillé | `pg` **8.23.1**, initialement de développement, promu en production à la tâche 04 avec ses mêmes transitives |
 
 [PostgreSQL pour Windows](https://www.postgresql.org/download/windows/) renvoie vers les [archives EDB](https://www.enterprisedb.com/download-postgresql-binaries). L'empreinte est obtenue via HTTPS auprès du même éditeur : ce contrôle détecte une archive différente, mais n'est pas une signature indépendante des binaires. Une empreinte incorrecte bloque sans exécuter ni supprimer l'archive. Une extraction partielle ou une version inattendue bloque également, sans réparation destructive automatique.
 
@@ -60,3 +60,5 @@ Références de mise en œuvre : [initdb](https://www.postgresql.org/docs/18/app
 Tranche **03a** du même jour : test rouge constatant l'absence de pool de migration, puis **8 tests PostgreSQL réussis, aucun ignoré**, après séparation des rôles. Création dans `public`, création d'objet dans la base, droit temporaire et `SET ROLE` vers le propriétaire refusés à l'application ; sondes de données, rollback, délais et coupure/reprise conservés. Les deux pools sont fermés par le nettoyage existant. Le schéma métier cible restait à créer à ce point de contrôle.
 
 **État après tâche 03 :** [schéma cible versionné](POSTGRESQL-SCHEMA.md) créé et réellement testé sans amorçage ni appel par l'application. La commande PostgreSQL commune passe **18 tests**, la suite générale **229**, aucune omission et HTTPS inclus. L'« étape suivante 03 » du compte rendu 02 ci-dessus est historique ; prochaine étape actuelle : 04. Pas de pilote promu en production, transfert de données, publication ou accès Ubuntu.
+
+**État actuel après tâche 04 :** les mentions devDependency et étapes suivantes ci-dessus décrivent leurs lots historiques. `pg` est désormais en production, version inchangée, avec notices distribuées. La commande dédiée agrège fixture, schéma et [frontière asynchrone](POSTGRESQL-CONNEXION.md) : **28 tests réels réussis**, aucune omission ; **249 tests généraux réussis**, HTTPS inclus. Les helpers/outils restent exclus de l'image. Le produit reste SQLite ; PostgreSQL incomplet refusé avant ouverture des bases, pas de déploiement ou transfert. Prochaine étape : 05, connexion/sessions.

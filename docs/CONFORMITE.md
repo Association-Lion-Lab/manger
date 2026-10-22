@@ -2,6 +2,8 @@
 
 État au **19 octobre 2026**, code examiné : `034311b`, branche `development`. Cette page est un cadrage documenté, **pas une certification de conformité ni un avis juridique**. Les points ouverts ci-dessous ne sont pas déclarés résolus par la seule création de cette documentation.
 
+Ajout de distribution du 22 octobre : pilote `pg@8.23.1` promu en production pour le socle asynchrone, textes MIT/ISC et copyrights des dépendances conservés dans les [notices](../public/third-party-notices.txt), mention sobre Connexion/Compte et garde de présence intégrale. Ce complément de licences n'est pas une nouvelle revue juridique exhaustive ; le produit reste SQLite et aucun traitement externe n'est ajouté par ce socle non branché.
+
 ## 1. Modèle confirmé et limites de la revue
 
 Le porteur du projet a confirmé le 19 octobre : **chaque administrateur gère son propre serveur Manger!**. Le modèle examiné est donc celui d'un logiciel distribué et auto-hébergeable, avec un foyer partagé par instance. Ce n'est pas un hébergement central de plusieurs foyers par l'éditeur.

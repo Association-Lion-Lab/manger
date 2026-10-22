@@ -8,16 +8,14 @@
     "node": ">=24"
   },
   "dependencies": {
-    "nodemailer": "10.0.16"
+    "nodemailer": "10.0.16",
+    "pg": "8.23.1"
   },
   "scripts": {
     "start": "node server.js",
     "test": "node --test",
-    "test:postgres": "node --test test-support/postgres.integration.cjs test-support/postgres-schema.integration.cjs",
+    "test:postgres": "node --test test-support/postgres.integration.cjs test-support/postgres-schema.integration.cjs test-support/postgres-connection.integration.cjs",
     "backup:check": "node backup-tools.js check",
     "backup:restore": "node backup-tools.js restore"
-  },
-  "devDependencies": {
-    "pg": "8.23.1"
   }
 }
