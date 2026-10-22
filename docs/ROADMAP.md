@@ -4,6 +4,14 @@ Historique des lots et priorités, regroupé dans `docs/` le 10 octobre 2026. Le
 
 Contrainte produit : quatre onglets (Semaine, Recettes, Courses, Compte), actions dans leur contexte, fonctions secondaires regroupées sans surcharger ; préserver une interface sobre en clair et en sombre, au clavier et dès 320 px.
 
+## PostgreSQL — tâche 01 réalisée après validation du plan — 22 octobre 2026
+
+- [Inventaire et contrats](POSTGRESQL-CONTRATS.md) : 22 tables/colonnes métier, frontières synchrones, consommateurs, routes et fixtures ; conservation des accès/IDs/photos/dates et contrat de sauvegarde du foyer. Clé opaque NUL et ordre historique des rayons identifiés comme adaptations nécessaires, sans conversion actuelle.
+- Cinq tests SQLite de caractérisation ajoutés ; mutation en mémoire perdant le lien source détectée. **225 tests réussis, aucun ignoré**, HTTPS inclus, et `node image-check.js` réussi. Premier passage inchangé en échec au niveau du fichier préférences, non reproduit isolément ni lors des deux suites complètes suivantes ; cause inconnue, aucun test supprimé ou affaibli et aucun correctif produit revendiqué.
+- Tâche 01 cochée ; tâche 02 exige encore un environnement PostgreSQL isolé. Aucune modification applicative, de dépendance, schéma actif ou configuration Docker ; aucun accès aux bases privées, à Ubuntu, aux téléphones, ni publication Codeberg.
+
+Contrôles documentaires : 98 liens locaux vérifiés dans huit documents, aucune cible manquante (ancres non contrôlées) ; checklist avec une tâche réalisée et 22 non réalisées, syntaxe du nouveau fichier de tests et `git diff --check` propres. Aucun test métier existant modifié.
+
 ## Préparer la migration PostgreSQL — 22 octobre 2026
 
 - [Plan en cinq phases](MIGRATION-POSTGRESQL.md) et [23 tâches avec critères et dépendances](../tasks/todo.md), toutes non commencées : socle, parcours métier, reprise/sauvegardes, Docker/CI, répétition/bascule administrateur. Node.js et interface conservés.

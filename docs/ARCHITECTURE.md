@@ -57,6 +57,8 @@ Cette carte ne demande pas de découper tout le serveur pour la modifier : fais 
 
 ## Données et frontières
 
+Migration PostgreSQL en préparation après validation du plan le 22 octobre : [inventaire des 22 tables, consommateurs et contrats](POSTGRESQL-CONTRATS.md). Le runtime reste SQLite ; les tests de référence ne signifient pas que PostgreSQL est disponible. Points à porter explicitement : séparateur NUL des clés opaques du placard et ordre `rowid` des corrections de rayon, en plus des sauvegardes et appels synchrones.
+
 `MANGER_DB` choisit la base du foyer ; par défaut `data/manger.db`, ou `/data/manger.db` dans Docker. Elle contient recettes, ingrédients/étapes, photos, avis/favoris, personnes/protéines, repas/répartitions/restes, courses, corrections de rayons, placard et semaines types. Le schéma actuel est **4**, avec migrations à l'ouverture.
 
 `accounts.db` est un fichier distinct à côté de cette base. Il contient accès, sessions, invitations et compteurs de tentatives. La sauvegarde du foyer et sa restauration **n'incluent pas les comptes**. Le navigateur conserve séparément ses réglages et les copies hors connexion consenties ; celles-ci ne sont pas une deuxième base serveur synchronisée.

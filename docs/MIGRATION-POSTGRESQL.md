@@ -1,6 +1,6 @@
 # Plan de migration vers PostgreSQL
 
-22 octobre 2026 — **proposition à valider, aucune migration implémentée ou lancée**.
+22 octobre 2026 — **plan validé par l'utilisateur ; préparation commencée, aucune migration implémentée ou lancée**.
 
 Ce plan décrit le remplacement du stockage de Manger!, pas une refonte visuelle. Node.js 24+, les quatre onglets, l'API et le modèle « une instance = un foyer partagé » restent la base. Rust, FDL, le scan de recettes, le SaaS multi-foyers et un nouveau framework client sont hors périmètre.
 
@@ -12,7 +12,7 @@ Ce plan décrit le remplacement du stockage de Manger!, pas une refonte visuelle
 4. La bascule est volontaire, précédée d'une répétition et d'une sauvegarde vérifiée ; un simple pull ne convertit aucune base.
 5. Aucun changement graphique ni nouveau réglage technique dans les écrans clients, hormis les libellés de sauvegarde nécessaires.
 
-L'autorisation actuelle porte sur **le plan seulement**. Implémentation, publication Codeberg et intervention de l'administrateur sur Ubuntu sont des étapes distinctes.
+L'utilisateur a validé le plan et le démarrage de sa préparation. Publication Codeberg et intervention de l'administrateur sur Ubuntu restent des étapes distinctes ; aucune conversion automatique des données n'est autorisée par une mise à jour du code.
 
 ## État de départ vérifié
 
@@ -27,6 +27,8 @@ Lecture du checkout `development`, code `5679528`. Le 22 octobre, ouverture en m
 | Contrats | Tests `*.test.js`, interface et copies hors connexion | Beaucoup de tests injectent une base en mémoire et appellent directement des fonctions synchrones ; faire évoluer les fixtures sans retirer leurs assertions. |
 
 Les 220 tests du lot précédent constituent un **repère historique**, pas un passage PostgreSQL. Docker, `psql` et `pg_dump` ne sont pas disponibles dans le PATH local observé. Il faudra un environnement de test PostgreSQL isolé avant toute implémentation validable ; le serveur personnel Ubuntu n'est pas cet environnement.
+
+Inventaire détaillé, contrats de sauvegarde/sessions et écarts de représentation : [contrats de référence](POSTGRESQL-CONTRATS.md). La clé opaque du placard contient un NUL à stocker en `bytea` côté PostgreSQL ; l'ordre historique `rowid` des corrections de rayon devra aussi être conservé explicitement.
 
 ## Architecture proposée
 
@@ -129,4 +131,4 @@ Découpage détaillé, dépendances et validations : [plan d'implémentation](..
 
 Le format exact du fichier de sauvegarde, le contrat asynchrone minimal, les versions/digests et le mode de distribution final de PostgreSQL doivent être figés pendant les tâches 01 à 04. Base par défaut proposée : une base PostgreSQL dédiée par instance, deux schémas, une interruption contrôlée et aucun double-write. Ne pas introduire une couche multi-foyers ou maintenir deux implémentations indéfiniment sans décision dédiée.
 
-Pas de calendrier de livraison ferme : le précédent ordre de grandeur de plusieurs jours n'est pas un devis établi après portage. Réestimer après les tâches de socle et la première tranche de connexion ; mesurer la maintenance séparément. **Prochaine action après validation du plan : tâche 01**, qui fixe l'inventaire et les contrats, sans modifier le stockage de production.
+Pas de calendrier de livraison ferme : le précédent ordre de grandeur de plusieurs jours n'est pas un devis établi après portage. Réestimer après les tâches de socle et la première tranche de connexion ; mesurer la maintenance séparément. L'avancement et le prérequis d'environnement isolé sont suivis dans la liste de tâches ; aucun changement de stockage en production.

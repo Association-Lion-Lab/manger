@@ -1,12 +1,12 @@
 # Migration PostgreSQL — tâches et points de contrôle
 
-22 octobre 2026 — **aucune tâche d'implémentation commencée**. [Cadrage et risques](../docs/MIGRATION-POSTGRESQL.md), [ordre de réalisation](plan.md). Noms des nouveaux fichiers ci-dessous proposés, pas encore créés. Chaque tâche comprend la mise à jour de la documentation concernée et de `docs/DECISIONS.md` ; les fichiers listés sont le périmètre technique principal. Si une tranche dépasse environ cinq fichiers techniques ou une session ciblée, la découper avant de coder, sans réduire ses critères.
+22 octobre 2026 — **plan validé ; tâche 01 réalisée, tâche 02 en attente de son environnement de test**. [Cadrage et risques](../docs/MIGRATION-POSTGRESQL.md), [ordre de réalisation](plan.md). Les noms des fichiers non encore créés restent des propositions. Chaque tâche comprend la mise à jour de la documentation concernée et de `docs/DECISIONS.md` ; les fichiers listés sont le périmètre technique principal. Si une tranche dépasse environ cinq fichiers techniques ou une session ciblée, la découper avant de coder, sans réduire ses critères.
 
 ## Phase 1 — Socle isolé
 
 ### 01 — Figer l'inventaire et les contrats
 
-- [ ] Réalisé.
+- [x] Réalisé le 22 octobre 2026.
 - **Livrable :** matrice des 22 tables, routes/callers, types et effets observables ; compléter les cas de parité sans lire de données réelles.
 - **Acceptation :** inventaire des appels synchrones et des fixtures complet ; cas limites dates/accents/JSON/photos/IDs notés ; base de référence SQLite verte et contrats de sauvegarde/sessions explicites.
 - **Vérification :** `npm test`, `node image-check.js` et relecture de la matrice ; consigner le résultat réel, sans reprendre le nombre historique comme nouvelle preuve.
@@ -14,9 +14,12 @@
 - **Fichiers probables :** `docs/MIGRATION-POSTGRESQL.md`, `docs/ARCHITECTURE.md`, nouveau `postgres-contract.test.js`.
 - **Taille :** M.
 
+Preuve : [matrice des 22 tables, consommateurs, routes et fixtures](../docs/POSTGRESQL-CONTRATS.md), cinq tests de caractérisation et mutation en mémoire détectée. Suite finale : **225 tests réussis, aucun ignoré**, HTTPS inclus ; `node image-check.js` réussi. Aucun changement applicatif, de schéma actif ou de dépendance. L'échec initial non reproduit est consigné, pas déclaré corrigé.
+
 ### 02 — Disposer d'un PostgreSQL de test privé
 
 - [ ] Réalisé.
+- **Prérequis manquant constaté le 22 octobre :** Docker/PostgreSQL non trouvés dans le PATH et aux emplacements usuels contrôlés. Environnement local jetable à préparer/fournir avant les validations de cette tâche ; aucune installation système ou connexion au serveur personnel effectuée.
 - **Livrable :** environnement reproductible, `pg` verrouillé et fixture isolée avec timeout/fermeture.
 - **Acceptation :** version/digest et rôle non-superutilisateur figés ; aucun secret réel/port hôte/volume existant ; absence de PostgreSQL requise signalée en échec, pas ignorée.
 - **Vérification :** installation npm verrouillée scripts désactivés, audit natif, connexion réelle avec paramètres, panne et arrêt propre de la fixture.

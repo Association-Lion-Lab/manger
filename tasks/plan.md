@@ -1,6 +1,6 @@
 # Migration PostgreSQL — plan d'implémentation
 
-22 octobre 2026 — **proposé, à valider avant implémentation**. Ce fichier est le point d'entrée de travail ; le [plan technique et opérationnel](../docs/MIGRATION-POSTGRESQL.md) précise les hypothèses, risques et critères. Les cases de réalisation sont uniquement dans [todo.md](todo.md).
+22 octobre 2026 — **plan validé par l'utilisateur, préparation commencée**. Ce fichier est le point d'entrée de travail ; le [plan technique et opérationnel](../docs/MIGRATION-POSTGRESQL.md) précise les hypothèses, risques et critères. Les cases de réalisation sont uniquement dans [todo.md](todo.md).
 
 ## Objectif et périmètre
 
@@ -50,4 +50,4 @@ Commandes existantes vérifiées : `npm test`, `node image-check.js`, `node scri
 
 ## État
 
-Inventaire initial et sources officielles réunis ; schémas ouverts uniquement en mémoire et contrôle d'image local réussi. Pas de PostgreSQL/Docker local disponible dans le PATH observé, pas de validation de migration ni nouveau passage complet des tests. Aucun délai de bascule promis avant répétition. Prochaine étape après accord : tâche 01.
+Plan approuvé. [Inventaire détaillé et contrats](../docs/POSTGRESQL-CONTRATS.md) établis ; cinq tests de référence SQLite ajoutés, aucune modification du code applicatif ni du schéma existant. Pas de PostgreSQL/Docker local disponible aux emplacements vérifiés : la tâche 02 exige un environnement isolé avant d'être considérée réalisée. Résultats des vérifications dans le suivi et la checklist. Aucun délai de bascule promis avant répétition.

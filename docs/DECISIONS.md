@@ -1,5 +1,15 @@
 # Choix techniques, limites et blocages
 
+## PostgreSQL : figer les contrats avant le portage — 22 octobre 2026
+
+**Autorisation et périmètre :** l'utilisateur a validé le plan. Tâche 01 réalisée : [inventaire et contrats](POSTGRESQL-CONTRATS.md), cinq tests de référence sur SQLite, état de travail actualisé. Pas de code applicatif, dépendance, schéma ou configuration d'instance modifiés ; ni publication ni accès Ubuntu.
+
+**Choix techniques :** comparer les valeurs JSON observables et les octets, pas les prototypes internes du pilote. Conserver IDs au-delà de 32 bits, précision des recettes, dates de jour, alias, goûts et normalisation existante. Deux écarts matériels anticipés : `pantry.food_key` contient un séparateur NUL refusé par les champs texte PostgreSQL (type cible `bytea` pour la clé opaque, sans perte) ; `shopping_aisles ORDER BY rowid` exige un ordre technique explicite à reprendre. Les autres textes contenant un NUL seront signalés au précontrôle, pas nettoyés silencieusement. Contrat JSON versionné de sauvegarde du foyer fixé pour les tâches ultérieures, sans comptes et sans exécuter de SQL de fichier. Réinitialisation des mots de passe et prolongation des sessions exclues.
+
+**Vérification :** première suite inchangée arrêtée au niveau du fichier `preferences.test.js` (« test failed » ; cause non établie), ses deux tests réussissent isolément, puis la suite inchangée réussit à 220 tests. Aucun correctif ni affaiblissement de test attribué à cet échec. Cinq caractérisations ajoutées ; perte de source injectée uniquement en mémoire correctement détectée, sans modifier `server.js`. Suite finale : **225 tests réussis, aucun ignoré**, HTTPS inclus ; contrôle des modules/pages/icônes et SQLite en mémoire réussi. Les attentes du nouveau test ont été précisées selon le code existant (tags normalisés et JSON public, pas prototypes SQLite), pas selon une refonte souhaitée.
+
+**Limite pour la suite :** Docker, `psql`, `pg_ctl`, `initdb` absents du PATH consulté ; emplacements usuels de Docker Desktop et PostgreSQL non présents. Cela ne prouve pas une absence sur tout le disque. Tâche 02 non réalisée : fournir/préparer un PostgreSQL de test isolé, sans utiliser le serveur personnel ni installer silencieusement un service système. Aucun test PostgreSQL, build Docker ou essai iPhone/Ubuntu revendiqué pour ce lot.
+
 ## Plan PostgreSQL, sans migration exécutée — 22 octobre 2026
 
 **Demande et statut :** construire le plan d'action avant de changer la base. [Plan technique](MIGRATION-POSTGRESQL.md), [ordre](../tasks/plan.md) et [tâches](../tasks/todo.md) proposés à validation ; aucune implémentation, dépendance installée, publication ou intervention Ubuntu. Node.js, interface et foyer partagé conservés, refonte visuelle et services FDL/scan hors périmètre.

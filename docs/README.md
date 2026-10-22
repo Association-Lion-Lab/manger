@@ -15,7 +15,7 @@ Toutes les commandes du guide s'exécutent depuis la racine du dépôt, **pas de
 
 ## Comprendre et contribuer
 
-**Projet de migration :** [plan PostgreSQL du 22 octobre](MIGRATION-POSTGRESQL.md), avec [tâches et points de contrôle](../tasks/todo.md). Proposition documentaire uniquement : Node.js et l'interface conservés, aucune base convertie, nouveau service ou configuration déployés. Les instructions SQLite existantes restent valables.
+**Migration en préparation :** [plan PostgreSQL validé le 22 octobre](MIGRATION-POSTGRESQL.md), [inventaire et contrats de référence](POSTGRESQL-CONTRATS.md), [tâches et points de contrôle](../tasks/todo.md). Node.js et l'interface conservés ; moteur actuel toujours SQLite, aucune base convertie, aucun nouveau service ou configuration déployés. Les instructions SQLite existantes restent valables.
 
 1. [Architecture](ARCHITECTURE.md) : fichiers, données, flux, API principales et vérification.
 2. [Décisions et blocages](DECISIONS.md) : raisons, compromis, erreurs connues et validations manquantes.
