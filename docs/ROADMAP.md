@@ -4,6 +4,17 @@ Historique des lots et priorités, regroupé dans `docs/` le 10 octobre 2026. Le
 
 Contrainte produit : quatre onglets (Semaine, Recettes, Courses, Compte), actions dans leur contexte, fonctions secondaires regroupées sans surcharger ; préserver une interface sobre en clair et en sombre, au clavier et dès 320 px.
 
+## PostgreSQL — tâche 03, schéma et migrations testés — 22 octobre 2026
+
+- [Schéma cible](POSTGRESQL-SCHEMA.md) : 18 tables de foyer, quatre d'accès et métadonnées privées ; aucune donnée amorcée. Identités sûres même en import explicite, NUL/photos binaires, précision et dates/JSON texte, ordre de rayon technique, contraintes et suppressions conservées.
+- Rôles de fixture séparés, application sans propriété/DDL ou accès aux versions ; droits publics et défauts trop larges testés. Exécuteur explicite sans connexion à l'import, verrou transactionnel et READ COMMITTED imposé, contrôle de préfixe/empreintes et refus de cible non reconnue (table/collation).
+- **18 tests PostgreSQL réussis, aucun ignoré**, via la commande dédiée agrégée ; échec après DDL annulant toute la création, deux migrateurs réellement bloqués, redémarrage, données/contraintes/droits/historique et nettoyage. Mutation en mémoire d'une condition détectée. **229 tests généraux réussis, aucun ignoré**, HTTPS inclus, contrôle d'image en mémoire réussi.
+- Limites explicites : rôles neufs de confiance, pas d'audit exhaustif de toutes les ACL globales ou de dérive DDL manuelle ; import/restauration/recalage à traiter en 15–17/19. Aucun parcours applicatif porté, Compose modifié, pilote promu en production, déploiement Docker/Linux, lecture de données privées, essai Ubuntu/téléphone ou publication.
+
+Tâches 01–03 réalisées, étape suivante 04. La production utilise toujours SQLite ; ce lot n'autorise aucune bascule automatique.
+
+Contrôle documentaire final : 117 liens locaux existants dans dix documents (ancres et liens externes non contrôlés), checklist à trois tâches réalisées et 20 en attente, `git diff --check` propre. Commande PostgreSQL sans binaires en échec attendu pour les deux suites, aucun test ignoré ; fichiers de production et verrou de dépendances inchangés, aucun cluster temporaire restant observé.
+
 ## PostgreSQL — tâche 02, tests locaux réels — 22 octobre 2026
 
 - [Environnement de test](POSTGRESQL-TEST.md) préparé après autorisation : archive officielle EDB PostgreSQL 18.6-5 vérifiée par SHA-256, outils portables ignorés, sans service Windows ni changement du PATH. `pg@8.23.1` verrouillé en développement seulement.

@@ -28,7 +28,7 @@ Si une politique Windows interdit les scripts, ne pas modifier la politique glob
 
 ## Exécuter et isoler
 
-`npm run test:postgres` lance exclusivement les tests réels de `test-support/postgres.integration.cjs`. `npm test` conserve la suite générale et les deux tests de garde de cette installation ; il ne remplace pas le passage PostgreSQL. Si les binaires nécessaires sont absents ou leur version différente, la commande PostgreSQL **échoue**, sans test ignoré ni connexion à une instance existante.
+`npm run test:postgres` lance les tests réels de `test-support/postgres.integration.cjs` et `test-support/postgres-schema.integration.cjs`. `npm test` conserve la suite générale et les gardes sans serveur ; il ne remplace pas le passage PostgreSQL. Si les binaires nécessaires sont absents ou leur version différente, la commande PostgreSQL **échoue**, sans test ignoré ni connexion à une instance existante.
 
 La fixture crée un répertoire temporaire neuf `manger-pg-test-*`, un marqueur aléatoire d'appartenance et un cluster avec authentification **SCRAM-SHA-256**. Le serveur écoute uniquement sur **127.0.0.1**, avec un port libre éphémère, sans socket Unix. Aucun port 5432 fixe ou accès réseau extérieur. La réservation du port est relâchée avant le démarrage ; si une autre application le prend entre-temps, le démarrage échoue, sans utiliser cette autre instance.
 
@@ -57,4 +57,6 @@ Pour réutiliser des binaires locaux de confiance dans un autre emplacement, `MA
 
 Références de mise en œuvre : [initdb](https://www.postgresql.org/docs/18/app-initdb.html), [pg_ctl](https://www.postgresql.org/docs/18/app-pg-ctl.html), [connexion du pilote](https://node-postgres.com/features/connecting), [pool et cycle de vie](https://node-postgres.com/apis/pool). Étape suivante : tâche 03, schéma versionné sur cette fixture, sans import de données réelles.
 
-Tranche **03a** du même jour : test rouge constatant l'absence de pool de migration, puis **8 tests PostgreSQL réussis, aucun ignoré**, après séparation des rôles. Création dans `public`, création d'objet dans la base, droit temporaire et `SET ROLE` vers le propriétaire refusés à l'application ; sondes de données, rollback, délais et coupure/reprise conservés. Les deux pools sont fermés par le nettoyage existant. Le schéma métier cible reste à créer en 03b.
+Tranche **03a** du même jour : test rouge constatant l'absence de pool de migration, puis **8 tests PostgreSQL réussis, aucun ignoré**, après séparation des rôles. Création dans `public`, création d'objet dans la base, droit temporaire et `SET ROLE` vers le propriétaire refusés à l'application ; sondes de données, rollback, délais et coupure/reprise conservés. Les deux pools sont fermés par le nettoyage existant. Le schéma métier cible restait à créer à ce point de contrôle.
+
+**État après tâche 03 :** [schéma cible versionné](POSTGRESQL-SCHEMA.md) créé et réellement testé sans amorçage ni appel par l'application. La commande PostgreSQL commune passe **18 tests**, la suite générale **229**, aucune omission et HTTPS inclus. L'« étape suivante 03 » du compte rendu 02 ci-dessus est historique ; prochaine étape actuelle : 04. Pas de pilote promu en production, transfert de données, publication ou accès Ubuntu.

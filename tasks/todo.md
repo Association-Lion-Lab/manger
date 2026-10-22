@@ -1,6 +1,6 @@
 # Migration PostgreSQL — tâches et points de contrôle
 
-22 octobre 2026 — **plan validé ; tâches 01–02 réalisées, prochaine tâche 03 : schéma cible**. [Cadrage et risques](../docs/MIGRATION-POSTGRESQL.md), [ordre de réalisation](plan.md). Les noms des fichiers non encore créés restent des propositions. Chaque tâche comprend la mise à jour de la documentation concernée et de `docs/DECISIONS.md` ; les fichiers listés sont le périmètre technique principal. Si une tranche dépasse environ cinq fichiers techniques ou une session ciblée, la découper avant de coder, sans réduire ses critères.
+22 octobre 2026 — **plan validé ; tâches 01–03 réalisées, prochaine tâche 04 : frontière asynchrone**. [Cadrage et risques](../docs/MIGRATION-POSTGRESQL.md), [ordre de réalisation](plan.md). Les noms des fichiers non encore créés restent des propositions. Chaque tâche comprend la mise à jour de la documentation concernée et de `docs/DECISIONS.md` ; les fichiers listés sont le périmètre technique principal. Si une tranche dépasse environ cinq fichiers techniques ou une session ciblée, la découper avant de coder, sans réduire ses critères.
 
 ## Phase 1 — Socle isolé
 
@@ -32,15 +32,16 @@ Preuve : [installation et validations](../docs/POSTGRESQL-TEST.md), **7 tests Po
 
 ### 03 — Créer et versionner le schéma cible
 
-- [ ] Réalisé.
+- [x] Réalisé le 22 octobre 2026, sur les seuls clusters de test jetables.
 - **Livrable :** schémas `household` et `auth`, rôles et migrations versionnées sans amorçage pendant une reprise.
 - **Acceptation :** 22 tables et contraintes portées ; exécution/reprise/version incompatible contrôlées avec verrou de migration ; rôle applicatif incapable d'administrer le serveur ou les rôles.
 - **Vérification :** cible vide, seconde exécution, échec intermédiaire et deux démarrages concurrents ; contraintes/rôles inspectés sur vrai PostgreSQL.
 - **Dépendances :** 02.
 - **Fichiers probables :** nouveaux `db/postgres.js`, `db/migrations/001-initial.js`, `postgres-schema.test.js`, script de bootstrap privé aux tests dans `test-support/`.
 - **Découpage de réalisation :** 03a, séparer propriétaire/migration et application dans la fixture, avec refus DDL et tests existants conservés ; 03b, DDL des 22 tables, exécuteur versionné, tests locaux sans connexion et intégration réelle (cinq fichiers techniques principaux). Aucun appel au démarrage de Manger! avant les tâches suivantes.
-- **03a réalisée :** deux rôles non-superutilisateurs distincts, aucun DDL/objet temporaire/prise de rôle pour l'application ; huit tests PostgreSQL verts, aucun ignoré, données et nettoyage des deux pools vérifiés. 03b non réalisée à ce point de contrôle.
-- **03b — Schéma réalisé :** quatre fichiers techniques, DDL/exécuteur et deux suites de tests ; dix tests PostgreSQL réels et 229 généraux verts, aucun ignoré, HTTPS inclus. Dernière sous-tranche séparée : agréger la commande dédiée et sa garde (deux fichiers), avant clôture de 03. [Contrat et limites](../docs/POSTGRESQL-SCHEMA.md), notamment rôles frais et restauration/recalage opérateur à traiter en 15–17/19.
+- **03a réalisée (`d2148e0`) :** deux rôles non-superutilisateurs distincts, aucun DDL/objet temporaire/prise de rôle pour l'application ; huit tests PostgreSQL verts, aucun ignoré, données et nettoyage des deux pools vérifiés.
+- **03b — Schéma réalisé (`7cd12c1`) :** quatre fichiers techniques, DDL/exécuteur et deux suites de tests ; dix tests PostgreSQL réels et 229 généraux verts, aucun ignoré, HTTPS inclus. [Contrat et limites](../docs/POSTGRESQL-SCHEMA.md), notamment rôles frais et restauration/recalage opérateur à traiter en 15–17/19.
+- **Commande agrégée réalisée :** deux fichiers supplémentaires, `package.json` et sa garde ; rouge avant modification puis **18 tests PostgreSQL réussis**, aucun ignoré. Suite finale **229/229**, HTTPS inclus ; `node image-check.js` réussi. Aucun module métier, dépendance, Compose, donnée privée ou serveur touché ; pas de publication. La version PostgreSQL de l'application n'est pas encore utilisable.
 - **Taille :** M.
 
 ### 04 — Introduire la frontière asynchrone minimale
@@ -171,6 +172,7 @@ Preuve : [installation et validations](../docs/POSTGRESQL-TEST.md), **7 tests Po
 - [ ] Réalisé.
 - **Livrable :** reprise administrative vers cible vide, analyse préalable et rapport de vérification privé minimal.
 - **Acceptation :** import des 22 tables, IDs/relations/photos/hachages/expirations conservés ; refus de fusion/répétition ; séquences et marqueur de reprise validés sans cible partielle utilisable.
+- **Autorité de séquence :** recalage par l'opérateur sur cible neuve ; `setval` n'est pas annulé par rollback. Panne après recalage = nouvelle cible vierge, pas réutilisation/fusion silencieuse.
 - **Vérification :** comparaison de toutes les valeurs normalisées et photos, interruption injectée, seconde tentative sur cible déjà migrée refusée et création d'un élément après migration.
 - **Dépendances :** 14.
 - **Fichiers probables :** nouveaux `migrate-postgres.js`, `migration-verify.js`, `migration.test.js`, `migration-source.js`.
@@ -191,6 +193,7 @@ Preuve : [installation et validations](../docs/POSTGRESQL-TEST.md), **7 tests Po
 - [ ] Réalisé.
 - **Livrable :** aperçu puis remplacement transactionnel des données du foyer, compatibilité des anciennes sauvegardes SQLite.
 - **Acceptation :** validation stricte/délai/taille et copie de récupération ; pas de SQL de fichier exécuté ; comptes inchangés et blocages des opérations concurrents, erreur après engagement distinguée d'un refus.
+- **Décision à clore avant livraison :** voie administrative contrôlée pour le recalage des seules séquences du foyer, sans distribuer le mot de passe propriétaire au client ni accorder UPDATE général des séquences au rôle applicatif. Conserver et tester le parcours guidé existant ; pas de suppression du bouton comme contournement.
 - **Vérification :** `restore.test.js`, `restore-ui.test.js`, ancien fichier SQLite et JSON, fichier hostile/version inconnue, collision et panne au milieu de restauration ; aucune opération partielle.
 - **Dépendances :** 16 et 14.
 - **Fichiers probables :** `restore.js`, `household-backup.js`, `public/index.html`, `restore.test.js`, `restore-ui.test.js`.
@@ -215,6 +218,7 @@ Preuve : [installation et validations](../docs/POSTGRESQL-TEST.md), **7 tests Po
 - [ ] Réalisé.
 - **Livrable :** contrôle de build sans base et test réel après construction, Compose candidat volontaire avec volume distinct.
 - **Acceptation :** pas de 5432 hôte/secret embarqué ; santé requêtant réellement les bons schémas et reprise de connexion ; données conservées après recréation des deux conteneurs.
+- **Bootstrap de confiance :** rôles dédiés neufs, sans ACL globales de paramètres/fonctions administratives ni appartenances imprévues ; ne pas recycler un ancien rôle au seul motif que ses flags sont non-superutilisateur. Préflight actuel non assimilé à un audit exhaustif d'un cluster tiers.
 - **Vérification :** build Docker, retrait expérimental d'un module/migration provoquant un échec, test isolé de volume et panne de base ; contrôles TLS inchangés.
 - **Dépendances :** 18.
 - **Fichiers probables :** `image-check.js`, `healthcheck.js`, nouveau `compose.postgres.yaml`, nouveau `scripts/test-postgres-image.sh`, `docker.test.js` ; ajustement Dockerfile/ignore à scinder si nécessaire.

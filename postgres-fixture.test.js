@@ -20,7 +20,7 @@ test('PostgreSQL manquant provoque un échec explicite avant de créer une fixtu
 test('les vrais tests PostgreSQL ont une commande dédiée et leurs outils restent hors image', () => {
   const config = require('./package.json');
   assert.equal(config.scripts.test, 'node --test');
-  assert.equal(config.scripts['test:postgres'], 'node --test test-support/postgres.integration.cjs');
+  assert.equal(config.scripts['test:postgres'], 'node --test test-support/postgres.integration.cjs test-support/postgres-schema.integration.cjs');
   assert.equal(config.devDependencies.pg, '8.23.1');
   const patterns = readFileSync(join(__dirname, '.dockerignore'), 'utf8').split(/\r?\n/);
   for (const excluded of ['**/test-support', '**/test-support/**']) {
