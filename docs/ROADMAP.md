@@ -4,6 +4,14 @@ Historique des lots et priorités, regroupé dans `docs/` le 10 octobre 2026. Le
 
 Contrainte produit : quatre onglets (Semaine, Recettes, Courses, Compte), actions dans leur contexte, fonctions secondaires regroupées sans surcharger ; préserver une interface sobre en clair et en sombre, au clavier et dès 320 px.
 
+## Préparer la migration PostgreSQL — 22 octobre 2026
+
+- [Plan en cinq phases](MIGRATION-POSTGRESQL.md) et [23 tâches avec critères et dépendances](../tasks/todo.md), toutes non commencées : socle, parcours métier, reprise/sauvegardes, Docker/CI, répétition/bascule administrateur. Node.js et interface conservés.
+- Schémas actuels relus : 18 tables du foyer, 4 d'accès. Comptes/mots de passe, photos, anciennes sauvegardes et conflits inclus ; nouveau volume séparé et ancien SQLite intact. Retour avant réouverture distingué du cas avec de nouvelles écritures PostgreSQL.
+- Documentation uniquement, proposition à valider ; aucune migration, installation de pilote, publication Codeberg ou intervention sur Ubuntu. `node image-check.js` réussi sur les modules et bases en mémoire ; tests complets/visuels et PostgreSQL non exécutés pour ce lot.
+
+Contrôle documentaire : 59 liens vers des fichiers locaux vérifiés dans les six documents, aucune cible absente ; ancres et destinations externes non contrôlées par ce test. Les 23 tâches sont ordonnées et toutes non réalisées ; `git diff --check` propre. Les sources officielles liées au nouveau plan ont été consultées séparément.
+
 ## Retirer une personne directement depuis le foyer — 21 octobre 2026
 
 - **Compte → Personnes du foyer → Retirer**, à côté du nom, avec confirmation ; l'accès depuis le récapitulatif reste disponible. Les affectations aux repas sont retirées, pas le compte de connexion. Aucun nouvel écran, onglet ou menu.
