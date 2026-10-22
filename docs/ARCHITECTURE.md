@@ -9,6 +9,7 @@ Manger! est un **monolithe web auto-hébergé** : un seul processus Node.js sert
 - **Interface :** HTML, CSS et JavaScript dans `public/`, avec quatre onglets : Semaine, Recettes, Courses et Compte.
 - **Serveur :** `server.js` reçoit les requêtes, valide les données et coordonne les modules métier ; `accounts.js` protège les accès au lancement normal.
 - **Persistance :** SQLite conserve le foyer dans `manger.db` et les accès dans `accounts.db`. Les copies hors connexion restent séparées dans le navigateur.
+- **Migration en développement (22 octobre 2026) :** `db/postgres.js` fournit une frontière asynchrone isolée, sans ouverture à l'import ; schéma et connexions testés sur PostgreSQL jetable. `MANGER_STORAGE` absent/`sqlite` conserve le lancement normal ; `postgres` est explicitement refusé avant ouverture des bases tant que le portage métier est incomplet. [Contrat et limites](POSTGRESQL-CONNEXION.md), aucune bascule de déploiement.
 - **Déploiement :** Node.js directement ou Docker Compose avec un volume persistant ; HTTPS natif facultatif. L'import internet et le SMTP contactent des services externes uniquement lorsqu'ils sont utilisés. Les restaurants sont saisis manuellement, sans appel externe.
 
 ### Vue d'ensemble

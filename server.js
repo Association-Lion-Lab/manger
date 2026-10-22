@@ -15,6 +15,7 @@ const { recipeTaste, tasteRank } = require('./public/tastes');
 const { createRestore } = require('./restore');
 const { openAccounts, protectAccounts } = require('./accounts');
 const { createInvitationMailer } = require('./invitation-mail');
+const { storageEngine } = require('./db/storage');
 
 const INDEX_HTML = Buffer.from(readFileSync(join(__dirname, 'public', 'index.html'), 'utf8')
   .replace('<!-- MANGER_INFORMATION -->', readFileSync(join(__dirname, 'public', 'information.html'), 'utf8')));
@@ -1256,6 +1257,11 @@ function createHandler(db) {
 // Supplying a database is the isolated core-test harness; production always opens accounts.
 function createApp(database, accounts, tls = tlsOptions(), mailer = null) {
   const production = database === undefined;
+  if (production && storageEngine() === 'postgres') {
+    const error = new Error('Portage PostgreSQL incomplet : lancement refusé, aucune base SQLite ouverte.');
+    error.code = 'MANGER_POSTGRES_NOT_READY';
+    throw error;
+  }
   if (production) mailer = createInvitationMailer();
   database ||= createDatabase(process.env.MANGER_DB || join(__dirname, 'data', 'manger.db'));
   if (production) accounts = openAccounts();

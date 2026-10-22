@@ -18,6 +18,8 @@
 
 ## Configuration et TLS
 
+Le serveur normal lit `MANGER_STORAGE` : absent ou `sqlite` garde le lancement SQLite sécurisé, `postgres` provoque pour l'instant `MANGER_POSTGRES_NOT_READY` **avant l'ouverture des bases/comptes et avant l'écoute**. Valeur inconnue, vide ou mal orthographiée = `MANGER_STORAGE_INVALID`, jamais un repli. Ne pas activer `postgres` en déploiement à ce stade. Le harnais avec base explicitement injectée reste un outil de test, pas un mode de production. `db/storage.js` ne lit aucun fichier et n'importe aucun pilote.
+
 Champs admis uniquement : `host`, `port`, `user`, `password`, `database`, `ssl`. Les coordonnées et un mot de passe non vide sont explicites ; pas de `connectionString` ni de mot de passe vide reprenant les variables PG. La configuration est reconstruite, pas étalée dans le constructeur. TLS vérifié par défaut, autorité PEM facultative via `ssl.ca`, impossible de fournir `rejectUnauthorized: false` ou un callback désactivant le contrôle. `ssl: false` est réservé aux adresses littérales `127.0.0.1` et `::1` des tests locaux.
 
 Pool de quatre connexions, acquisition 2 s, délai de requête client 3 s, `statement_timeout` serveur 2 s et session inactive en transaction 10 s. `search_path=pg_catalog`, noms métier à qualifier (`household.…`, `auth.…`), encodage UTF-8, nom d'application constant. Les coordonnées, TLS et options explicites ne sont pas repris depuis PGHOST/PGUSER/PGPASSWORD/PGDATABASE/PGSSLMODE/PGOPTIONS. Ce n'est pas un effacement général de toutes les variables d'environnement reconnues par le pilote.
@@ -41,5 +43,7 @@ Les 5 s ne sont donc pas une promesse de durée totale stricte d'arrêt du proce
 ## Preuves locales de la tranche 04a
 
 Douze tests sans serveur : import/configuration/TLS, erreurs privées, transaction et scope, rollback même si erreur interceptée/exception sans valeur, drainage, perte du client réservé, acquisition tardive et coupure exactement à la remise du client. Dix tests PostgreSQL 18.6 réels, sans omission : paramètres/Unicode, client réservé distinct d'une requête concurrente, rollback, portée, timeout, environnement erroné, mauvaise authentification, panne/reprise, fermeture gracieuse et forcée. Fixture sans données privées, pool fermé avant le cluster et nettoyage protégé.
+
+Trois tests supplémentaires de sélection/lancement normal : modes refusés sans fichier créé ni écoute, SQLite par défaut et explicite avec comptes toujours obligatoires, API du foyer refusée sans session et page de connexion présente. Seules des bases temporaires synthétiques sont ouvertes.
 
 Sources primaires : [pool et événements](https://node-postgres.com/apis/pool), [client et délais](https://node-postgres.com/apis/client), [transactions sur un seul client](https://node-postgres.com/features/transactions), [TLS](https://node-postgres.com/features/ssl). Versions et privilèges : [environnement de test](POSTGRESQL-TEST.md), [schéma](POSTGRESQL-SCHEMA.md). Ni build Docker, essai Ubuntu, migration réelle ou validation téléphone.

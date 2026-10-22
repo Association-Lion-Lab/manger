@@ -11,7 +11,7 @@ function isolatedPackage(t) {
   for (const file of readdirSync(__dirname).filter(file => file.endsWith('.js') && !file.endsWith('.test.js'))) {
     cpSync(join(__dirname, file), join(directory, file));
   }
-  for (const file of ['public', 'package.json', 'node_modules']) cpSync(join(__dirname, file), join(directory, file), { recursive: true });
+  for (const file of ['db', 'public', 'package.json', 'node_modules']) cpSync(join(__dirname, file), join(directory, file), { recursive: true });
   return directory;
 }
 
