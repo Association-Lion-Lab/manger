@@ -4,6 +4,15 @@ Historique des lots et priorités, regroupé dans `docs/` le 10 octobre 2026. Le
 
 Contrainte produit : quatre onglets (Semaine, Recettes, Courses, Compte), actions dans leur contexte, fonctions secondaires regroupées sans surcharger ; préserver une interface sobre en clair et en sombre, au clavier et dès 320 px.
 
+## PostgreSQL — tâche 02, tests locaux réels — 22 octobre 2026
+
+- [Environnement de test](POSTGRESQL-TEST.md) préparé après autorisation : archive officielle EDB PostgreSQL 18.6-5 vérifiée par SHA-256, outils portables ignorés, sans service Windows ni changement du PATH. `pg@8.23.1` verrouillé en développement seulement.
+- Cluster temporaire neuf, écoute loopback éphémère, SCRAM et rôle sans administration serveur ; requêtes et connexions bornées, pool fermé, appartenance vérifiée avant arrêt/nettoyage. Aucun accès à une base existante ou au serveur personnel.
+- **7 tests PostgreSQL réussis, aucun ignoré** ; coupure/reprise et nettoyage réel vérifiés. Commande sans binaires en échec attendu, archive altérée refusée avant extraction. **227 tests généraux réussis, aucun ignoré**, HTTPS inclus, contrôle des modules réussi. Réinstallation npm verrouillée, audit sans vulnérabilité signalée, 15 signatures et une attestation vérifiées.
+- Tâches 01–02 réalisées, schéma cible en 03 encore à écrire. Application et volumes toujours SQLite, aucun fichier métier/Compose changé, aucune migration ou publication. Helpers de test exclus du contexte ; Docker/Linux, Ubuntu et appareils non vérifiés dans ce lot.
+
+Contrôles complémentaires : 107 liens vers des fichiers locaux existants dans neuf documents (ancres et destinations externes non contrôlées), checklist avec deux tâches réalisées et 21 à faire, syntaxe JavaScript/PowerShell valide et `git diff --check` propre. Paquets ajoutés tous marqués développement, sans script d'installation ; tests PostgreSQL repassés après la réinstallation verrouillée.
+
 ## PostgreSQL — tâche 01 réalisée après validation du plan — 22 octobre 2026
 
 - [Inventaire et contrats](POSTGRESQL-CONTRATS.md) : 22 tables/colonnes métier, frontières synchrones, consommateurs, routes et fixtures ; conservation des accès/IDs/photos/dates et contrat de sauvegarde du foyer. Clé opaque NUL et ordre historique des rayons identifiés comme adaptations nécessaires, sans conversion actuelle.

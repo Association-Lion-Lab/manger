@@ -57,7 +57,7 @@ Cette carte ne demande pas de découper tout le serveur pour la modifier : fais 
 
 ## Données et frontières
 
-Migration PostgreSQL en préparation après validation du plan le 22 octobre : [inventaire des 22 tables, consommateurs et contrats](POSTGRESQL-CONTRATS.md). Le runtime reste SQLite ; les tests de référence ne signifient pas que PostgreSQL est disponible. Points à porter explicitement : séparateur NUL des clés opaques du placard et ordre `rowid` des corrections de rayon, en plus des sauvegardes et appels synchrones.
+Migration PostgreSQL en préparation après validation du plan le 22 octobre : [inventaire des 22 tables, consommateurs et contrats](POSTGRESQL-CONTRATS.md). Le runtime reste SQLite. Un [PostgreSQL local jetable de test](POSTGRESQL-TEST.md) est désormais disponible sous Windows, avec `pg@8.23.1` en dépendance de développement uniquement ; la commande dédiée crée puis retire son propre cluster, sans service système ni connexion à une base existante. `.test-tools/` et `test-support/` ne sont pas distribués dans l'image applicative. Aucun schéma cible ou parcours métier porté à ce stade. Points à porter explicitement : séparateur NUL des clés opaques du placard et ordre `rowid` des corrections de rayon, en plus des sauvegardes et appels synchrones.
 
 `MANGER_DB` choisit la base du foyer ; par défaut `data/manger.db`, ou `/data/manger.db` dans Docker. Elle contient recettes, ingrédients/étapes, photos, avis/favoris, personnes/protéines, repas/répartitions/restes, courses, corrections de rayons, placard et semaines types. Le schéma actuel est **4**, avec migrations à l'ouverture.
 

@@ -17,6 +17,8 @@ Toutes les commandes du guide s'exécutent depuis la racine du dépôt, **pas de
 
 **Migration en préparation :** [plan PostgreSQL validé le 22 octobre](MIGRATION-POSTGRESQL.md), [inventaire et contrats de référence](POSTGRESQL-CONTRATS.md), [tâches et points de contrôle](../tasks/todo.md). Node.js et l'interface conservés ; moteur actuel toujours SQLite, aucune base convertie, aucun nouveau service ou configuration déployés. Les instructions SQLite existantes restent valables.
 
+[PostgreSQL de test local](POSTGRESQL-TEST.md) : outils portables Windows 18.6 vérifiés, pilote de développement verrouillé et commande `npm run test:postgres` réellement passée sur un cluster temporaire. Sans service système ou donnée utilisateur ; ce n'est pas une migration ni une validation du déploiement Docker/Linux.
+
 1. [Architecture](ARCHITECTURE.md) : fichiers, données, flux, API principales et vérification.
 2. [Décisions et blocages](DECISIONS.md) : raisons, compromis, erreurs connues et validations manquantes.
 3. [Historique et priorités](ROADMAP.md) : lots livrés et travaux P1/P2/P3, avec la preuve disponible à chaque étape.

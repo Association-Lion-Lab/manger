@@ -1,6 +1,6 @@
 # Migration PostgreSQL — tâches et points de contrôle
 
-22 octobre 2026 — **plan validé ; tâche 01 réalisée, tâche 02 en attente de son environnement de test**. [Cadrage et risques](../docs/MIGRATION-POSTGRESQL.md), [ordre de réalisation](plan.md). Les noms des fichiers non encore créés restent des propositions. Chaque tâche comprend la mise à jour de la documentation concernée et de `docs/DECISIONS.md` ; les fichiers listés sont le périmètre technique principal. Si une tranche dépasse environ cinq fichiers techniques ou une session ciblée, la découper avant de coder, sans réduire ses critères.
+22 octobre 2026 — **plan validé ; tâches 01–02 réalisées, prochaine tâche 03 : schéma cible**. [Cadrage et risques](../docs/MIGRATION-POSTGRESQL.md), [ordre de réalisation](plan.md). Les noms des fichiers non encore créés restent des propositions. Chaque tâche comprend la mise à jour de la documentation concernée et de `docs/DECISIONS.md` ; les fichiers listés sont le périmètre technique principal. Si une tranche dépasse environ cinq fichiers techniques ou une session ciblée, la découper avant de coder, sans réduire ses critères.
 
 ## Phase 1 — Socle isolé
 
@@ -18,14 +18,17 @@ Preuve : [matrice des 22 tables, consommateurs, routes et fixtures](../docs/POST
 
 ### 02 — Disposer d'un PostgreSQL de test privé
 
-- [ ] Réalisé.
-- **Prérequis manquant constaté le 22 octobre :** Docker/PostgreSQL non trouvés dans le PATH et aux emplacements usuels contrôlés. Environnement local jetable à préparer/fournir avant les validations de cette tâche ; aucune installation système ou connexion au serveur personnel effectuée.
+- [x] Réalisé le 22 octobre 2026 après autorisation de l'environnement local jetable.
+- **Prérequis levé :** outils portables Windows PostgreSQL 18.6-5 depuis EDB, empreinte SHA-256 figée et vérifiée ; sans service système, PATH modifié ou serveur personnel. Docker reste indisponible localement : pas de Compose de test ajouté sans preuve d'exécution.
 - **Livrable :** environnement reproductible, `pg` verrouillé et fixture isolée avec timeout/fermeture.
-- **Acceptation :** version/digest et rôle non-superutilisateur figés ; aucun secret réel/port hôte/volume existant ; absence de PostgreSQL requise signalée en échec, pas ignorée.
+- **Acceptation :** version/empreinte des outils et rôle non-superutilisateur figés ; aucun secret réel/port réseau extérieur/volume existant ; absence de PostgreSQL requise signalée en échec, pas ignorée. Port loopback éphémère uniquement pour les tests natifs, pas de publication réseau ; digest de l'image future traité en 19.
 - **Vérification :** installation npm verrouillée scripts désactivés, audit natif, connexion réelle avec paramètres, panne et arrêt propre de la fixture.
 - **Dépendances :** 01 ; environnement Docker/PostgreSQL dédié fourni hors serveur de production.
-- **Fichiers probables :** `package.json`, `package-lock.json`, nouveau `compose.postgres-test.yaml`, nouvelle fixture `test-support/postgres.js`.
+- **02a — Outils et pilote :** `scripts/setup-postgres-test.ps1`, `.gitignore`, `package.json`, `package-lock.json`. Archive officielle contrôlée, extraction limitée, versions vérifiées ; `pg@8.23.1` en développement seulement, installation/audit npm et signatures vérifiés.
+- **02b — Fixture et preuves :** `test-support/postgres.js`, `test-support/postgres.integration.cjs`, `postgres-fixture.test.js`, `.dockerignore`, `scripts/check-docker-context.js`. Test dédié, garde sans binaires et exclusions des helpers ; aucun changement métier.
 - **Taille :** M.
+
+Preuve : [installation et validations](../docs/POSTGRESQL-TEST.md), **7 tests PostgreSQL réussis**, aucune omission, paramètres/Unicode/NUL/rollback, privilèges refusés, timeouts, appartenance et coupure/reprise ; cluster retiré après les tests. Sans binaires : commande en échec attendu (code 1), pas de test ignoré. Archive factice altérée refusée avant extraction/exécution. Suite générale **227 réussites, aucune ignorée**, HTTPS inclus ; `node image-check.js` réussi. Aucun portage, Compose modifié, build Docker, transfert de données, essai Ubuntu/téléphone ou publication.
 
 ### 03 — Créer et versionner le schéma cible
 
@@ -45,6 +48,7 @@ Preuve : [matrice des 22 tables, consommateurs, routes et fixtures](../docs/POST
 - **Vérification :** tests de transaction/rollback/timeout et lancement normal protégé ; SQLite continue à démarrer avec sa configuration actuelle.
 - **Dépendances :** 03.
 - **Fichiers probables :** `db/postgres.js`, `server.js`, nouvelle fixture `test-support/database.js`, `postgres-connection.test.js`.
+- **Distribution :** promouvoir `pg` de développement vers production seulement lorsqu'il devient utilisé ; adapter les mentions de licences distribuées et vérifier l'image sans helpers/outils de tests.
 - **Taille :** M.
 
 **Point de contrôle A :** socle réel testé, version SQLite encore exploitable, frontières et format de sauvegarde proposés relus. Ne pas continuer avec des mocks PostgreSQL comme unique preuve.

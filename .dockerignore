@@ -33,6 +33,8 @@
 **/test/**
 **/tests
 **/tests/**
+**/test-support
+**/test-support/**
 **/scripts
 **/scripts/**
 **/coverage

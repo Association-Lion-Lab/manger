@@ -3,4 +3,5 @@
 /.env
 /tls/
 /compose.override.yaml
+/.test-tools/
 *.key

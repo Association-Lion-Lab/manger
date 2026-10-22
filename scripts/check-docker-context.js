@@ -17,6 +17,7 @@ const excluded = [
   'lib/.private/private.js', '.git/private.js', '.forgejo/private.js',
   'work/private.js', 'test/private.js', 'tests/private.js', 'coverage/private.js',
   'graphify-out/private.js', '.github/private.js',
+  'test-support/postgres.js', 'test-support/nested/private.js', '.test-tools/private.js',
 ];
 const directory = mkdtempSync(join(tmpdir(), 'manger-docker-context-'));
 try {

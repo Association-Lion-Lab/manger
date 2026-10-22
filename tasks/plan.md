@@ -4,7 +4,7 @@
 
 ## Objectif et périmètre
 
-Conserver Node.js, l'interface et le foyer partagé ; remplacer le stockage par PostgreSQL sans perdre données, comptes, photos, protections ni sauvegarde/restauration. Aucun code de migration ou de connexion n'est livré par le présent lot. Pas de publication ni d'accès Ubuntu autorisé par une demande de plan.
+Conserver Node.js, l'interface et le foyer partagé ; remplacer le stockage par PostgreSQL sans perdre données, comptes, photos, protections ni sauvegarde/restauration. Le produit utilise encore SQLite ; les contrats et l'environnement PostgreSQL privé de développement sont préparés, pas le portage applicatif. Pas de publication ni d'accès Ubuntu autorisé par une demande de plan.
 
 ## Décisions proposées
 
@@ -50,4 +50,4 @@ Commandes existantes vérifiées : `npm test`, `node image-check.js`, `node scri
 
 ## État
 
-Plan approuvé. [Inventaire détaillé et contrats](../docs/POSTGRESQL-CONTRATS.md) établis ; cinq tests de référence SQLite ajoutés, aucune modification du code applicatif ni du schéma existant. Pas de PostgreSQL/Docker local disponible aux emplacements vérifiés : la tâche 02 exige un environnement isolé avant d'être considérée réalisée. Résultats des vérifications dans le suivi et la checklist. Aucun délai de bascule promis avant répétition.
+Plan approuvé. [Inventaire détaillé et contrats](../docs/POSTGRESQL-CONTRATS.md) établis ; cinq tests de référence SQLite ajoutés, aucune modification du code applicatif ni du schéma existant. Tâche 02 réalisée après autorisation : [PostgreSQL portable Windows 18.6 vérifié, pilote verrouillé et fixture temporaire](../docs/POSTGRESQL-TEST.md), sept tests réels et suite générale verte. Pas de service système ou accès Ubuntu ; Docker/Linux restent à valider. Prochaine tâche 03 : schéma cible versionné, sans amorçage métier ni import privé. Résultats et limites dans le suivi et la checklist. Aucun délai de bascule promis avant répétition.
