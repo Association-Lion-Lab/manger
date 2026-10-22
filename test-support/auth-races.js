@@ -87,4 +87,4 @@ async function raceContract(t, f) {
   });
 }
 
-module.exports = { raceContract };
+module.exports = { raceContract, controlledAccounts, within };

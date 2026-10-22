@@ -7,7 +7,6 @@ const { emailAddress } = require('./invitation-mail');
 const { sqliteAuth } = require('./db/auth-sqlite');
 const derive = promisify(scrypt);
 const hash = value => createHash('sha256').update(value).digest('hex');
-const DAY = 86400000;
 const PAGE = Buffer.from(readFileSync(join(__dirname, 'public', 'accounts.html'), 'utf8')
   .replace('<!-- MANGER_INFORMATION -->', readFileSync(join(__dirname, 'public', 'information.html'), 'utf8')));
 const publicFiles = new Set(['/api/health', '/sw.js', '/offline.html', '/offline-recipes.js', '/offline-shopping.js', '/manifest.webmanifest', '/icon.svg', '/apple-touch-icon.png', '/icon-180.png', '/icon-192.png', '/icon-512.png']);
@@ -15,8 +14,20 @@ const publicFiles = new Set(['/api/health', '/sw.js', '/offline.html', '/offline
 function accountPath() {
   return join(dirname(process.env.MANGER_DB || join(__dirname, 'data', 'manger.db')), 'accounts.db');
 }
-function inputError(message) {
-  const error = new Error(message); error.code = 'MANGER_ACCOUNT_INPUT'; return error;
+function inputError(message, status = 400) {
+  const error = new Error(message); error.code = 'MANGER_ACCOUNT_INPUT'; error.status = status; return error;
+}
+function checked(result) {
+  const errors = {
+    forbidden:[403,'Droit administrateur requis.'], duplicate:[400,'Cet identifiant existe déjà.'],
+    'duplicate-invitee':[400,'Cet identifiant existe déjà. Choisis-en un autre.'],
+    invitation:[400,'Invitation expirée, utilisée ou annulée. Demande un nouveau lien.'],
+    'invitation-mail':[400,'Invitation expirée, utilisée ou annulée. Crée un nouveau lien.'],
+    self:[400,'Tu ne peux pas désactiver ton propre accès.'], missing:[404,'Compte introuvable.'],
+    'mail-limit':[429,'Limite de 5 envois par heure atteinte. Utilise la copie du lien ou réessaie plus tard.']
+  };
+  if (typeof result === 'string' && errors[result]) {const [status,message] = errors[result];throw inputError(message,status);}
+  return result;
 }
 function username(value) {
   const name = String(value || '').trim().toLowerCase();
@@ -116,7 +127,6 @@ function protectAccounts(db, handler, { secure = false, mailer = null, certifica
         } finally { busy--; }
       }
       if (req.method === 'POST' && path === '/api/account/join') {
-        if (auth.engine === 'postgres') return json(res, 503, { error: 'Ce parcours PostgreSQL n’est pas encore disponible.' });
         if (await session(req)) return json(res, 409, { error: 'Tu es déjà connecté. Ouvre le lien sur l’appareil du nouveau membre.' });
         const data = await body(req);
         if (busy >= 2) return json(res, 429, { error: 'Trop de tentatives. Réessaie dans 15 minutes.' });
@@ -124,19 +134,10 @@ function protectAccounts(db, handler, { secure = false, mailer = null, certifica
         try {
           if (!await throttle(req, String(data.username || '').trim().toLowerCase().slice(0,256))) return json(res, 429, { error: 'Trop de tentatives. Réessaie dans 15 minutes.' });
           const token = typeof data.token === 'string' && /^[a-f0-9]{64}$/.test(data.token) ? hash(data.token) : '';
-          const invitation = () => db.prepare('SELECT i.id FROM invitations i JOIN accounts a ON a.id=i.creator WHERE i.token=? AND i.expires>? AND a.active=1 AND a.admin=1').get(token, Date.now());
-          if (!invitation()) return json(res, 400, { error: 'Invitation expirée, utilisée ou annulée. Demande un nouveau lien.' });
+          if (!await auth.invitation(token)) checked('invitation');
           const name = username(data.username);
           const encoded = await passwordHash(data.password);
-          db.exec('BEGIN IMMEDIATE');
-          try {
-            // Check again under the write lock after hashing: exactly one concurrent acceptance wins.
-            if (!invitation()) throw new Error('Invitation expirée, utilisée ou annulée. Demande un nouveau lien.');
-            if (db.prepare('SELECT 1 FROM accounts WHERE username=?').get(name)) throw new Error('Cet identifiant existe déjà. Choisis-en un autre.');
-            db.prepare('INSERT INTO accounts(username,password,admin) VALUES(?,?,0)').run(name, encoded);
-            db.prepare('DELETE FROM invitations WHERE token=?').run(token);
-            db.exec('COMMIT');
-          } catch (error) { db.exec('ROLLBACK'); throw error; }
+          checked(await auth.join(token, name, encoded));
           return json(res, 201, { ok: true });
         } finally { busy--; }
       }
@@ -147,7 +148,7 @@ function protectAccounts(db, handler, { secure = false, mailer = null, certifica
       }
       const certificateReady = secure && certificate && Date.now() < Date.parse(certificate.validTo);
       if (req.method === 'GET' && path === '/api/account') return json(res, 200, {
-        id: user.id, username: user.username, admin: Boolean(user.admin), invitationEmailEnabled: Boolean(user.admin && mailer && auth.engine !== 'postgres'),
+        id: user.id, username: user.username, admin: Boolean(user.admin), invitationEmailEnabled: Boolean(user.admin && mailer),
         localCertificate: user.admin && certificateReady ? { fingerprint: certificate.fingerprint256 } : null,
       });
       if (req.method === 'POST' && path === '/api/account/logout') {
@@ -175,7 +176,7 @@ function protectAccounts(db, handler, { secure = false, mailer = null, certifica
       }
       const adminRoute = path.startsWith('/api/accounts') || path === '/api/backup' || path.startsWith('/api/restore/');
       if (adminRoute && !user.admin) return json(res, 403, { error: 'Cette action est réservée à l’administrateur.' });
-      if (auth.engine === 'postgres' && adminRoute && path !== '/api/accounts/certificate') return json(res, 503, { error: 'Ce parcours PostgreSQL n’est pas encore disponible.' });
+      if (auth.engine === 'postgres' && (path === '/api/backup' || path.startsWith('/api/restore/'))) return json(res, 503, { error: 'Ce parcours PostgreSQL n’est pas encore disponible.' });
       if (path === '/api/accounts/certificate' && req.method === 'GET') {
         if (!certificateReady) return json(res, 404, { error: 'Certificat local indisponible. Vérifie la configuration HTTPS et MANGER_TLS_CA sur le serveur.' });
         res.writeHead(200, { 'Content-Type': 'application/pkix-cert', 'Content-Disposition': 'attachment; filename="manger-ca.cer"', 'Content-Length': certificate.raw.length });
@@ -184,34 +185,31 @@ function protectAccounts(db, handler, { secure = false, mailer = null, certifica
       if (path === '/api/accounts/invitation/email' && req.method === 'POST') {
         if (!mailer) return json(res, 503, { error: 'L’envoi de courriels n’est pas configuré sur ce serveur. Utilise le partage ou la copie du lien.' });
         const data = await body(req);
-        if (!(await session(req))?.admin) return json(res, 403, { error: 'Droit administrateur requis.' });
-        const to = emailAddress(data?.to);
+        let to;
+        try {to = emailAddress(data.to);} catch (error) {throw inputError(error.message);}
         const token = typeof data?.token === 'string' && /^[a-f0-9]{64}$/.test(data.token) ? data.token : '';
-        const now = Date.now();
-        const invitation = db.prepare('SELECT i.expires FROM invitations i JOIN accounts a ON a.id=i.creator WHERE i.token=? AND i.expires>? AND a.active=1 AND a.admin=1').get(hash(token), now);
-        if (!invitation) return json(res, 400, { error: 'Invitation expirée, utilisée ou annulée. Crée un nouveau lien.' });
         if (mailBusy) return json(res, 429, { error: 'Un envoi est déjà en cours. Attends sa confirmation.' });
-        db.prepare('DELETE FROM attempts WHERE key=? AND expires<=?').run('invitation-mail', now);
-        if ((db.prepare('SELECT count FROM attempts WHERE key=?').get('invitation-mail')?.count || 0) >= 5) return json(res, 429, { error: 'Limite de 5 envois par heure atteinte. Utilise la copie du lien ou réessaie plus tard.' });
-        db.prepare('INSERT INTO attempts VALUES(?,1,?) ON CONFLICT(key) DO UPDATE SET count=count+1').run('invitation-mail', now + 3600000);
         mailBusy = true;
         try {
-          await mailer.send(to, token, invitation.expires);
-          return json(res, 200, { ok: true }); // SMTP acceptance is not proof of inbox delivery.
-        } catch {
-          return json(res, 503, { error: 'L’envoi n’a pas pu être confirmé. Le lien reste disponible. Vérifie la boîte du destinataire avant de réessayer, ou copie le lien.' });
+          const invitation = checked(await auth.prepareMail(user, hash(token)));
+          try {
+            await mailer.send(to, token, invitation.expires);
+            return json(res, 200, { ok: true }); // SMTP acceptance is not proof of inbox delivery.
+          } catch {
+            return json(res, 503, { error: 'L’envoi n’a pas pu être confirmé. Le lien reste disponible. Vérifie la boîte du destinataire avant de réessayer, ou copie le lien.' });
+          }
         } finally { mailBusy = false; }
       }
       if (path === '/api/accounts/invitation' && req.method === 'POST') {
-        const token = randomBytes(32).toString('hex'), expires = Date.now() + DAY;
-        db.prepare('INSERT INTO invitations(id,token,creator,expires) VALUES(1,?,?,?) ON CONFLICT(id) DO UPDATE SET token=excluded.token,creator=excluded.creator,expires=excluded.expires').run(hash(token), user.id, expires);
+        const token = randomBytes(32).toString('hex');
+        const { expires } = checked(await auth.issueInvitation(user, hash(token)));
         return json(res, 201, { token, expires });
       }
       if (path === '/api/accounts/invitation' && req.method === 'DELETE') {
-        db.exec('DELETE FROM invitations');
+        checked(await auth.revokeInvitation(user));
         return json(res, 200, { ok: true });
       }
-      if (req.method === 'GET' && path === '/api/accounts') return json(res, 200, db.prepare('SELECT id,username,admin,active FROM accounts ORDER BY username').all());
+      if (req.method === 'GET' && path === '/api/accounts') return json(res, 200, checked(await auth.listAccounts(user)));
       if (req.method === 'POST' && path === '/api/accounts') {
         const data = await body(req);
         if (busy >= 2) return json(res, 429, { error: 'Réessaie dans un instant.' });
@@ -219,27 +217,20 @@ function protectAccounts(db, handler, { secure = false, mailer = null, certifica
         try {
           // Hash before checking the administrator again, to avoid a permission race.
           const name = username(data.username); const encoded = await passwordHash(data.password);
-          if (!(await session(req))?.admin) return json(res, 403, { error: 'Droit administrateur requis.' });
-          if (db.prepare('SELECT 1 FROM accounts WHERE username=?').get(name)) throw new Error('Cet identifiant existe déjà.');
-          db.prepare('INSERT INTO accounts(username,password,admin) VALUES(?,?,?)').run(name, encoded, data.admin === true ? 1 : 0);
+          checked(await auth.addAccount(user, name, encoded, data.admin === true));
           return json(res, 201, { ok: true });
         } finally { busy--; }
       }
       if (req.method === 'PUT' && /^\/api\/accounts\/\d+$/.test(path)) {
         const id = Number(path.split('/').pop()); const data = await body(req);
-        if (!(await session(req))?.admin) return json(res, 403, { error: 'Droit administrateur requis.' });
-        if (id === user.id) throw new Error('Tu ne peux pas désactiver ton propre accès.');
-        if (typeof data.active !== 'boolean') throw new Error('État invalide.');
-        if (!db.prepare('SELECT 1 FROM accounts WHERE id=?').get(id)) return json(res, 404, { error: 'Compte introuvable.' });
-        db.prepare('UPDATE accounts SET active=? WHERE id=?').run(data.active ? 1 : 0, id);
-        if (!data.active) db.prepare('DELETE FROM invitations WHERE creator=?').run(id);
-        db.prepare('DELETE FROM sessions WHERE account_id=?').run(id);
+        if (!Number.isSafeInteger(id) || id < 1 || typeof data.active !== 'boolean') throw inputError('État invalide.');
+        checked(await auth.setActive(user, id, data.active));
         return json(res, 200, { ok: true });
       }
       return await handler(req, res);
     } catch (error) {
-      if (auth.engine === 'postgres' && error?.code !== 'MANGER_ACCOUNT_INPUT') return json(res, 503, { error: 'Le service est temporairement indisponible. Aucune réussite n’a pu être confirmée.' });
-      return json(res, 400, { error: error.message });
+      if (error?.code !== 'MANGER_ACCOUNT_INPUT') return json(res, 503, { error: 'Le service est temporairement indisponible. Aucune réussite n’a pu être confirmée.' });
+      return json(res, error.status || 400, { error: error.message });
     }
   };
 }

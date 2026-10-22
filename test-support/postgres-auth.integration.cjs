@@ -49,8 +49,8 @@ test('contrat HTTP connexion/sessions sur PostgreSQL réel', { timeout:60000 }, 
     sessions:async()=>(await db.query('SELECT token,expires FROM auth.sessions ORDER BY token')).rows});
   const cookie=await login('admin','replacement-password');
   await t.test('parcours PostgreSQL non portés fermés explicitement, sans appel SQLite',async()=>{
-    assert.equal((await request('/api/account/join','POST',{})).status,503);
-    for(const [path,method] of [['/api/accounts','GET'],['/api/accounts/invitation','POST'],['/api/backup','GET'],['/api/restore/preview','POST']]) {
+    // Access administration is covered by the shared step-06 contract; household backup is not ported yet.
+    for(const [path,method] of [['/api/backup','GET'],['/api/restore/preview','POST']]) {
       assert.equal((await request(path,method,method==='POST'?{}:undefined,cookie)).status,503);
     }
   });
