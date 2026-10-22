@@ -1,6 +1,6 @@
 # Migration PostgreSQL — tâches et points de contrôle
 
-22 octobre 2026 — **plan validé ; tâches 01–04 réalisées, prochaine tâche 05 : connexion et sessions**. [Cadrage et risques](../docs/MIGRATION-POSTGRESQL.md), [ordre de réalisation](plan.md). Les noms des fichiers non encore créés restent des propositions. Chaque tâche comprend la mise à jour de la documentation concernée et de `docs/DECISIONS.md` ; les fichiers listés sont le périmètre technique principal. Si une tranche dépasse environ cinq fichiers techniques ou une session ciblée, la découper avant de coder, sans réduire ses critères.
+22 octobre 2026 — **plan validé ; tâches 01–05 réalisées, prochaine tâche 06 : invitations et administration des accès**. [Cadrage et risques](../docs/MIGRATION-POSTGRESQL.md), [ordre de réalisation](plan.md). Les noms des fichiers non encore créés restent des propositions. Chaque tâche comprend la mise à jour de la documentation concernée et de `docs/DECISIONS.md` ; les fichiers listés sont le périmètre technique principal. Si une tranche dépasse environ cinq fichiers techniques ou une session ciblée, la découper avant de coder, sans réduire ses critères.
 
 ## Phase 1 — Socle isolé
 
@@ -65,13 +65,14 @@ Preuve : [installation et validations](../docs/POSTGRESQL-TEST.md), **7 tests Po
 
 ### 05 — Connexion et sessions
 
-- [ ] Réalisé.
+- [x] Réalisé le 22 octobre 2026, candidat PostgreSQL isolé et SQLite conservé au lancement normal.
 - **Livrable :** connexion/déconnexion et contrôle des requêtes sur `auth`.
 - **Acceptation :** scrypt/cookies/origine/expirations inchangés ; accès et exports toujours refusés sans droit ; révocation pendant le hachage et compteurs de tentatives atomiques.
 - **Vérification :** `node --test accounts.test.js` adapté à la fixture, cas PostgreSQL concurrents avec deux clients ; aucune donnée sensible dans erreurs/journaux.
 - **Dépendances :** 04.
 - **Fichiers probables :** `accounts.js`, nouveau `db/auth.js`, `accounts.test.js`, `postgres-auth.test.js`.
 - **Découpage avant réalisation :** 05a, dépôt PostgreSQL des six opérations connexion/sessions et tests réels ; 05b, petit dépôt SQLite et middleware commun explicitement attendable, sans porter les invitations/administration de 06 ; 05c, tests HTTP communs, concurrence/révocation/erreurs, agrégation et clôture documentaire. Le lancement normal PostgreSQL reste refusé ; aucune donnée réelle ou instance Ubuntu utilisée.
+- **Preuves 05a–05c :** [contrat et limites](../docs/POSTGRESQL-AUTH.md). Même contrat HTTP sur les deux moteurs, vrais hachages scrypt, sessions et cookies inchangés, compteurs atomiques entre pools ; révocation/désactivation pendant le hachage et expiration pendant l'attente de verrou vérifiées. Relecture : purge bornée sans attente des sessions verrouillées et revalidation de la déconnexion ajoutées après régressions rouges ; mutation en mémoire du contrôle de déconnexion détectée. **264 tests généraux et 53 PostgreSQL réels réussis, aucun ignoré**, HTTPS inclus ; `node image-check.js` réussi et audit de production sans vulnérabilité signalée. Aucune donnée réelle transférée, configuration Compose modifiée, publication ou validation Docker/Linux/Ubuntu/appareil ; invitations, administration et récupération restent en 06.
 - **Taille :** M.
 
 ### 06 — Invitations et administration des accès

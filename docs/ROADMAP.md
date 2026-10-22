@@ -4,6 +4,16 @@ Historique des lots et priorités, regroupé dans `docs/` le 10 octobre 2026. Le
 
 Contrainte produit : quatre onglets (Semaine, Recettes, Courses, Compte), actions dans leur contexte, fonctions secondaires regroupées sans surcharger ; préserver une interface sobre en clair et en sombre, au clavier et dès 320 px.
 
+## PostgreSQL — tâche 05, connexion et sessions testées — 22 octobre 2026
+
+- [Contrat connexion/sessions](POSTGRESQL-AUTH.md) : six opérations partagées avec SQLite, candidat PostgreSQL injecté sans base SQLite. Vrais hachages scrypt, cookies et expiration absolue conservés ; contrôle des accès toujours attendu avant décision, aucune connexion à l'import ni repli de stockage.
+- Transactions et compteurs partagés entre pools ; revalidation compte/hachage/jeton après attente, expiration pendant verrou et révocation pendant hachage couvertes. Relecture à contexte neuf : purge bornée `SKIP LOCKED` et revalidation du logout ajoutées après deux régressions rouges, puis mutation en mémoire du contrôle de déconnexion détectée. Aucun audit par modèle/CLI externe revendiqué.
+- **264 tests généraux et 53 PostgreSQL réels réussis, aucun ignoré**, HTTPS inclus. Même contrat HTTP pour les deux moteurs, mauvais mots de passe, types/cookies, refus, déconnexions et changement de mot de passe ; panne/reprise réelle. `node image-check.js` réussi sans base persistante ; audit npm de production sans vulnérabilité signalée, verrou et versions inchangés.
+- Candidat incomplet toujours refusé au lancement normal ; routes PostgreSQL non portées refusées sans accès SQLite de secours. Aucun changement d'interface, Compose ou volume, aucune donnée privée lue/transférée, aucun accès Ubuntu, build Docker, validation Linux/CI/appareil ou publication Codeberg.
+- Tâches 01–05 closes ; prochaine **06 — invitations et administration des accès**. L'application déployable reste SQLite, aucun mot de passe réel réinitialisé ni bascule effectuée.
+
+Contrôles de clôture : 147 liens locaux existants dans douze documents, ancres et sites externes non vérifiés ; checklist à cinq tâches closes et dix-huit restantes. Sans binaires, commande PostgreSQL en échec explicite, aucun test ignoré. Aucun cluster temporaire restant observé dans les deux emplacements utilisés, sans suppression globale ; dépendances, Compose et interface inchangés.
+
 ## PostgreSQL — tâche 04, frontière asynchrone testée — 22 octobre 2026
 
 - [Connexion et cycle de vie](POSTGRESQL-CONNEXION.md) : ouverture explicitement attendue, pool limité, client réservé par transaction, rollback même si erreur interceptée, refus d'un scope échappé, fermeture drainée/forcée et acquisitions tardives suivies. Pas de connexion à l'import, repli SQLite ou retry automatique.

@@ -1,6 +1,6 @@
 # PostgreSQL — frontière asynchrone
 
-22 octobre 2026 — tâche 04 du [plan validé](MIGRATION-POSTGRESQL.md). **Le produit reste sur SQLite.** Ce socle est testé séparément ; les accès, routes métier, sauvegardes et le déploiement PostgreSQL ne sont pas encore portés.
+22 octobre 2026 — tâche 04 du [plan validé](MIGRATION-POSTGRESQL.md). **Le produit reste sur SQLite.** Ce socle est testé séparément ; la [connexion et les sessions](POSTGRESQL-AUTH.md) sont désormais testées dans le candidat isolé de 05. Invitations, administration, routes du foyer, sauvegardes et déploiement PostgreSQL restent à porter.
 
 ## Interface interne
 
@@ -59,3 +59,5 @@ Les [notices complètes](../public/third-party-notices.txt), versions et copyrig
 `image-check.js` charge désormais aussi les modules de `db/` récursivement et exige le module d'entrée PostgreSQL ainsi que les notices ; aucune connexion PostgreSQL au build. Les copies de packaging vérifient l'absence de fichiers et un nouveau module imbriqué. Le vrai contexte/image Docker et l'intégration CI PostgreSQL restent à valider en 19–20, pas simulés comme acquis par ces contrôles Node. Compose et les volumes SQLite restent identiques.
 
 Clôture locale : **249 tests généraux réussis**, HTTPS inclus ; **28 tests PostgreSQL réels réussis**, aucun ignoré. Commande agrégée sans binaires : échec attendu avant création des clusters, pas de succès avec tests omis. `node image-check.js` réussi après installation de production. Point de contrôle A atteint pour le socle isolé ; étape suivante 05, connexion/sessions. Aucun portage métier, transfert privé, accès Ubuntu, build Docker, essai téléphone ou publication Codeberg dans ce lot.
+
+Point de contrôle suivant, 05 réalisé : [contrat connexion/sessions et preuves](POSTGRESQL-AUTH.md), **264 tests généraux et 53 PostgreSQL réels réussis**, aucun ignoré, HTTPS inclus. Les nombres et l'étape suivante du paragraphe précédent sont l'historique de 04 ; prochaine tâche actuelle 06, invitations/administration. La sélection au lancement et les limites de déploiement restent inchangées.
