@@ -83,6 +83,7 @@ Preuve : [installation et validations](../docs/POSTGRESQL-TEST.md), **7 tests Po
 - **Vérification :** suites accès et `invitation-mail.test.js`, conflit réel d'invitation et administration pendant hachage, commandes sur fixture dédiée.
 - **Dépendances :** 05.
 - **Fichiers probables :** `accounts.js`, `db/auth.js`, `accounts.test.js`, `postgres-auth.test.js`.
+- **Découpage avant réalisation :** 06a, invitations/administration et réservation SMTP dans les dépôts, avec transactions et tests PostgreSQL réels ; 06b, middleware commun et contrats HTTP/SMTP, courses pendant scrypt ; 06c, commandes locales injectables, tests de récupération et clôture. Aucun parcours foyer, schéma, interface ou lancement normal PostgreSQL ajouté. [Contrat de travail](../docs/POSTGRESQL-ACCES.md).
 - **Taille :** M.
 
 ### 07 — Personnes et protéines

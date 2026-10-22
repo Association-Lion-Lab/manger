@@ -1,5 +1,9 @@
 # Choix techniques, limites et blocages
 
+## PostgreSQL : préparer les invitations et accès — 22 octobre 2026
+
+Tâche 06 autorisée après 05. [Contrat, menaces et découpage](POSTGRESQL-ACCES.md) avant code : dépôt transactionnel puis HTTP/SMTP communs, puis récupération locale et validations. Verrou consultatif dédié aux opérations rares d'accès pour sérialiser créateur/invitation/administration sans schéma ajouté ; hachage et SMTP hors transaction. Aucune nouvelle fonctionnalité client, collecte, permission SQL ou bascule de moteur. Les tests restent sur bases synthétiques, aucun accès Ubuntu ni publication autorisé.
+
 ## PostgreSQL : connexion et sessions, sans bascule — 22 octobre 2026
 
 05a : [dépôt et contrat de sécurité](POSTGRESQL-AUTH.md), six opérations de persistance nommées et SQL qualifié/paramétré, aucune connexion à la construction. Hachage scrypt hors transaction ; revalidation sous verrou compte puis session, expiration examinée après attente. Limites de tentatives conservées, trois compteurs atomiques sous verrou consultatif transactionnel partagé, pas de nouveau rôle/table ou dépendance. Les guides de migration/sécurité/tests orientent cette tranche vers un dépôt réel avant le branchement HTTP. La relecture indépendante du contrat a demandé d'expliciter compte actif/hachage inchangé/lien session-compte et expiration après verrou ; ces contrôles sont inclus. Ni nouveau mécanisme d'authentification ni repli SQLite. Relecture externe par CLI non lancée, poursuite autonome demandée par l'utilisateur.
