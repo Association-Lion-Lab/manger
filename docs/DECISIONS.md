@@ -1,5 +1,13 @@
 # Choix techniques, limites et blocages
 
+## PostgreSQL : frontière asynchrone isolée — 22 octobre 2026
+
+Tranche 04a : [interface, sécurité et limites d'arrêt](POSTGRESQL-CONNEXION.md). Module sans connexion à l'import, configuration explicite reconstruite, TLS vérifié hors loopback de test, pool limité et même client pendant toute transaction. Aucun ORM, adaptateur faussement synchrone, repli SQLite ou réécriture des routes métier. Le pilote existant est encore de développement dans cette tranche ; sa promotion et les mentions distribuées appartiennent à 04c, avant clôture du lot.
+
+Les guides incrémental/tests/sécurité ont conduit à vérifier les erreurs et l'arrêt avant tout branchement. Contre-relecture indépendante de contexte : listener propre au client réservé, suivi des acquisitions en attente, destruction après timeout client, SQL interne sans contrôle transactionnel manuel, configuration sans URL écrasant TLS. Un callback bloqué perd ses droits SQL après délai ; il n'est pas prétendu interrompu côté JavaScript. Erreur réseau/timeout après écriture = résultat potentiellement indéterminé, pas d'essai automatique. Sonde SELECT 1 distincte de la future readiness métier.
+
+Preuves 04a : absence initiale du module en rouge ; onze tests ciblés verts puis dix tests réels PostgreSQL 18.6 verts, aucun ignoré. Un test supplémentaire `throw undefined` a révélé une décision de commit fondée sur la vérité de l'exception : remplacée par un état explicite d'abandon, rollback vérifié. Panne pendant callback inactif et reprise réelles, arrêt forcé sans commit tardif, authentification refusée sans mot de passe exposé. Clusters jetables uniquement ; aucune donnée privée, instance Ubuntu, configuration Compose ou fonctionnalité métier modifiée. Sélection du candidat incomplet et distribution restent à terminer avant de déclarer 04 réalisée.
+
 ## PostgreSQL : DDL versionné, sans bascule applicative — 22 octobre 2026
 
 Tranche 03b : [schéma, contrat d'exécution et limites](POSTGRESQL-SCHEMA.md). 22 tables du foyer/accès et métadonnées privées, aucune donnée amorcée. Module administratif séparé, import sans connexion/pilote et aucun appel par `server.js` ; SQLite/Compose/UI inchangés. Pas d'ORM ou de traduction automatique de SQL. Types fidèles : doubles, JSON/dates texte, binaire NUL/photos, flags 0/1, identités bornées même pour les valeurs explicites, ordre technique des rayons. Valeurs source non finies/drapeaux hors domaine à signaler au futur précontrôle, pas à corriger silencieusement.

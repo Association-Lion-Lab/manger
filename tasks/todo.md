@@ -53,6 +53,8 @@ Preuve : [installation et validations](../docs/POSTGRESQL-TEST.md), **7 tests Po
 - **Dépendances :** 03.
 - **Fichiers probables :** `db/postgres.js`, `server.js`, nouvelle fixture `test-support/database.js`, `postgres-connection.test.js`.
 - **Distribution :** promouvoir `pg` de développement vers production seulement lorsqu'il devient utilisé ; adapter les mentions de licences distribuées et vérifier l'image sans helpers/outils de tests.
+- **Découpage avant réalisation :** 04a, module PostgreSQL, gardes sans serveur et fixture/intégration réelle (quatre fichiers principaux) ; 04b, sélection explicite et refus du candidat incomplet au lancement normal ; 04c, dépendance de production/licences puis agrégation des tests et clôture. Aucun parcours métier réécrit dans ce lot.
+- **04a réalisée :** frontière sans connexion à l'import, pool et client réservés, rollback, erreurs privées et arrêt avec acquisitions tardives ; onze tests sans serveur et dix tests PostgreSQL réels verts, aucun ignoré. [Contrat et limites](../docs/POSTGRESQL-CONNEXION.md). Sélection/distribution encore à réaliser, tâche 04 non clôturée.
 - **Taille :** M.
 
 **Point de contrôle A :** socle réel testé, version SQLite encore exploitable, frontières et format de sauvegarde proposés relus. Ne pas continuer avec des mocks PostgreSQL comme unique preuve.
