@@ -28,15 +28,17 @@ test('the packaged module check succeeds without creating persistent databases',
   assert.equal(existsSync(join(directory, 'data')), false);
 });
 
-test('the packaged module check discovers new root modules without an explicit list', t => {
-  const directory = isolatedPackage(t);
-  writeFileSync(join(directory, 'future-module.js'), 'throw new Error("new-module-is-checked");');
-  const result = spawnSync(process.execPath, ['image-check.js'], { cwd: directory, encoding: 'utf8', timeout: 15000 });
-  assert.notEqual(result.status, 0);
-  assert.match(result.stderr, /new-module-is-checked/);
-});
+for (const file of ['future-module.js', 'db/future-module.js']) {
+  test(`the packaged module check discovers ${file} without an explicit list`, t => {
+    const directory = isolatedPackage(t);
+    writeFileSync(join(directory, file), 'throw new Error("new-module-is-checked");');
+    const result = spawnSync(process.execPath, ['image-check.js'], { cwd: directory, encoding: 'utf8', timeout: 15000 });
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /new-module-is-checked/);
+  });
+}
 
-for (const missing of ['catalog-extra.js', 'public/information.html', 'public/food-names.js']) {
+for (const missing of ['catalog-extra.js', 'db/postgres.js', 'db/storage.js', 'public/information.html', 'public/food-names.js', 'public/third-party-notices.txt']) {
   test(`the packaged module check rejects a missing ${missing}`, t => {
     const directory = isolatedPackage(t);
     rmSync(join(directory, missing));

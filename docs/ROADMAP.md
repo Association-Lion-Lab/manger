@@ -4,6 +4,16 @@ Historique des lots et priorités, regroupé dans `docs/` le 10 octobre 2026. Le
 
 Contrainte produit : quatre onglets (Semaine, Recettes, Courses, Compte), actions dans leur contexte, fonctions secondaires regroupées sans surcharger ; préserver une interface sobre en clair et en sombre, au clavier et dès 320 px.
 
+## PostgreSQL — tâche 04, frontière asynchrone testée — 22 octobre 2026
+
+- [Connexion et cycle de vie](POSTGRESQL-CONNEXION.md) : ouverture explicitement attendue, pool limité, client réservé par transaction, rollback même si erreur interceptée, refus d'un scope échappé, fermeture drainée/forcée et acquisitions tardives suivies. Pas de connexion à l'import, repli SQLite ou retry automatique.
+- Sélection de moteur explicite : défaut/`sqlite` garde le lancement protégé, `postgres` incomplet refusé avant toute base/écoute ; choix inconnu refusé. Comptes et routes métier encore SQLite, aucune fonctionnalité produit réécrite.
+- `pg@8.23.1` promu en production, mêmes versions/intégrités transitives ; notices complètes MIT/ISC/MIT-0 distribuées, tests de présence et résumé replié Connexion/Compte. Réinstallation depuis le verrou scripts désactivés réussie ; audit sans vulnérabilité signalée, quinze signatures et une attestation vérifiées.
+- **249 tests généraux et 28 PostgreSQL réels réussis, aucun ignoré**, HTTPS inclus ; mutation en mémoire de COMMIT détectée et coupure synchrone à la remise d'un client couverte après relecture. Contrôle des modules `db/`, notices et SQLite en mémoire réussi, pas de connexion PostgreSQL au build. Commande dédiée sans binaires en échec attendu ; les clusters temporaires sont retirés par les tests.
+- Tâches 01–04 closes ; prochaine 05, connexion/sessions. Compose/volumes/données privées intacts par ce lot, sans accès Ubuntu, build Docker local, validation CI PostgreSQL ou appareil, transfert ou publication. Le produit reste SQLite ; le point de contrôle A du socle n'est pas une autorisation de bascule.
+
+Contrôle documentaire final : 130 liens locaux existants dans onze documents, ancres et destinations externes non vérifiées ; checklist à quatre tâches réalisées et 19 en attente. Versions, URLs de registre et empreintes npm inchangées après promotion ; `git diff --check` propre, aucun dossier de cluster temporaire observé dans les deux répertoires temporaires utilisés. Les outils ignorés sont conservés pour l'étape suivante.
+
 ## PostgreSQL — tâche 03, schéma et migrations testés — 22 octobre 2026
 
 - [Schéma cible](POSTGRESQL-SCHEMA.md) : 18 tables de foyer, quatre d'accès et métadonnées privées ; aucune donnée amorcée. Identités sûres même en import explicite, NUL/photos binaires, précision et dates/JSON texte, ordre de rayon technique, contraintes et suppressions conservées.

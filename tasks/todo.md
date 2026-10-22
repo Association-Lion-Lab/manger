@@ -1,6 +1,6 @@
 # Migration PostgreSQL — tâches et points de contrôle
 
-22 octobre 2026 — **plan validé ; tâches 01–03 réalisées, prochaine tâche 04 : frontière asynchrone**. [Cadrage et risques](../docs/MIGRATION-POSTGRESQL.md), [ordre de réalisation](plan.md). Les noms des fichiers non encore créés restent des propositions. Chaque tâche comprend la mise à jour de la documentation concernée et de `docs/DECISIONS.md` ; les fichiers listés sont le périmètre technique principal. Si une tranche dépasse environ cinq fichiers techniques ou une session ciblée, la découper avant de coder, sans réduire ses critères.
+22 octobre 2026 — **plan validé ; tâches 01–04 réalisées, prochaine tâche 05 : connexion et sessions**. [Cadrage et risques](../docs/MIGRATION-POSTGRESQL.md), [ordre de réalisation](plan.md). Les noms des fichiers non encore créés restent des propositions. Chaque tâche comprend la mise à jour de la documentation concernée et de `docs/DECISIONS.md` ; les fichiers listés sont le périmètre technique principal. Si une tranche dépasse environ cinq fichiers techniques ou une session ciblée, la découper avant de coder, sans réduire ses critères.
 
 ## Phase 1 — Socle isolé
 
@@ -46,7 +46,7 @@ Preuve : [installation et validations](../docs/POSTGRESQL-TEST.md), **7 tests Po
 
 ### 04 — Introduire la frontière asynchrone minimale
 
-- [ ] Réalisé.
+- [x] Réalisé le 22 octobre 2026, socle isolé sans bascule métier.
 - **Livrable :** ouverture, choix explicite du moteur, client transactionnel et cycle de vie sans refonte métier générale.
 - **Acceptation :** pas de connexion lors d'un simple import de module ; une transaction conserve son client ; échec PostgreSQL sans repli SQLite, arrêt avec requêtes en cours traité.
 - **Vérification :** tests de transaction/rollback/timeout et lancement normal protégé ; SQLite continue à démarrer avec sa configuration actuelle.
@@ -56,9 +56,10 @@ Preuve : [installation et validations](../docs/POSTGRESQL-TEST.md), **7 tests Po
 - **Découpage avant réalisation :** 04a, module PostgreSQL, gardes sans serveur et fixture/intégration réelle (quatre fichiers principaux) ; 04b, sélection explicite et refus du candidat incomplet au lancement normal ; 04c, dépendance de production/licences puis agrégation des tests et clôture. Aucun parcours métier réécrit dans ce lot.
 - **04a réalisée :** frontière sans connexion à l'import, pool et client réservés, rollback, erreurs privées et arrêt avec acquisitions tardives ; onze tests sans serveur et dix tests PostgreSQL réels verts, aucun ignoré. [Contrat et limites](../docs/POSTGRESQL-CONNEXION.md). Sélection/distribution encore à réaliser, tâche 04 non clôturée.
 - **04b réalisée :** sélection pure et refus explicite du candidat PostgreSQL incomplet avant ouverture des fichiers/écoute ; défaut/choix SQLite toujours protégé par les comptes. Trois tests de lancement normal verts ; régression de remise du client ajoutée, frontière à douze tests sans serveur plus dix réels. Agrégation/distribution finale en attente.
+- **04c réalisée :** pilote promu en production sans changer de version, licences complètes distribuées et vérifiées ; résumé sobre Connexion/Compte. Commande PostgreSQL agrégée à trois suites, contrôle des modules `db/` et notices au build sans connexion. Réinstallation de production réussie, audit/signatures vérifiés ; **249 tests généraux et 28 PostgreSQL réussis**, aucun ignoré, HTTPS inclus, mutation de COMMIT détectée, `node image-check.js` réussi. Commande sans binaires en échec attendu. Pas de build Docker local, déploiement, donnée privée ou publication ; prochaines preuves Docker/CI prévues en 19–20.
 - **Taille :** M.
 
-**Point de contrôle A :** socle réel testé, version SQLite encore exploitable, frontières et format de sauvegarde proposés relus. Ne pas continuer avec des mocks PostgreSQL comme unique preuve.
+**Point de contrôle A atteint pour le socle :** PostgreSQL réel testé, lancement SQLite sécurisé toujours exploitable, frontière et proposition de sauvegarde relues. Aucune sauvegarde/restauration PostgreSQL encore implémentée ni candidat de déploiement prêt ; preuves spécifiques en 14–20. Ne pas continuer avec des mocks PostgreSQL comme unique preuve.
 
 ## Phase 2 — Parcours métier complets
 

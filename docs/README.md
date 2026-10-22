@@ -17,11 +17,13 @@ Toutes les commandes du guide s'exécutent depuis la racine du dépôt, **pas de
 
 **Migration en préparation :** [plan PostgreSQL validé le 22 octobre](MIGRATION-POSTGRESQL.md), [inventaire et contrats de référence](POSTGRESQL-CONTRATS.md), [tâches et points de contrôle](../tasks/todo.md). Node.js et l'interface conservés ; moteur actuel toujours SQLite, aucune base convertie, aucun nouveau service ou configuration déployés. Les instructions SQLite existantes restent valables.
 
-[PostgreSQL de test local](POSTGRESQL-TEST.md) : outils portables Windows 18.6 vérifiés, pilote de développement verrouillé et commande `npm run test:postgres` réellement passée sur un cluster temporaire. Sans service système ou donnée utilisateur ; ce n'est pas une migration ni une validation du déploiement Docker/Linux.
+[PostgreSQL de test local](POSTGRESQL-TEST.md) : outils portables Windows 18.6 vérifiés, pilote verrouillé et commande `npm run test:postgres` réellement passée sur des clusters temporaires. Sans service système ou donnée utilisateur ; ce n'est pas une migration ni une validation du déploiement Docker/Linux.
 
 [Schéma PostgreSQL et migrations](POSTGRESQL-SCHEMA.md) : 22 tables sans amorçage, versionnement atomique, rôles séparés et tests de concurrence/droits ; module encore non branché à l'application. Lire les limites de confiance et les tâches de reprise/restauration avant tout futur déploiement.
 
 [Frontière asynchrone PostgreSQL](POSTGRESQL-CONNEXION.md) : configuration explicite, client transactionnel, erreurs et arrêt borné ; socle testé séparément, sans portage métier ni bascule du serveur SQLite.
+
+[Notices des dépendances distribuées](../public/third-party-notices.txt) : versions, textes et copyrights de Nodemailer et du pilote PostgreSQL, sous licences MIT-0/MIT/ISC ; le code du projet reste AGPL-3.0-or-later.
 
 1. [Architecture](ARCHITECTURE.md) : fichiers, données, flux, API principales et vérification.
 2. [Décisions et blocages](DECISIONS.md) : raisons, compromis, erreurs connues et validations manquantes.

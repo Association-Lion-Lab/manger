@@ -16,6 +16,8 @@
 
 `state` vaut `open`, `closing` ou `closed`. `lastErrorCode` rend observable un incident de connexion/événement idle sans journaliser SQL, hôte ou identifiants. La sonde de démarrage n'autorise pas une bascule du produit.
 
+Les résultats gardent les types par défaut du pilote (`bigint`/`count` notamment en texte) : aucun parseur global ni conversion silencieuse. Les DTO et validations numériques des parcours métier seront portés explicitement à partir de 05 ; ce module n'est pas un adaptateur des fonctions SQLite synchrones.
+
 ## Configuration et TLS
 
 Le serveur normal lit `MANGER_STORAGE` : absent ou `sqlite` garde le lancement SQLite sécurisé, `postgres` provoque pour l'instant `MANGER_POSTGRES_NOT_READY` **avant l'ouverture des bases/comptes et avant l'écoute**. Valeur inconnue, vide ou mal orthographiée = `MANGER_STORAGE_INVALID`, jamais un repli. Ne pas activer `postgres` en déploiement à ce stade. Le harnais avec base explicitement injectée reste un outil de test, pas un mode de production. `db/storage.js` ne lit aucun fichier et n'importe aucun pilote.
@@ -47,3 +49,13 @@ Douze tests sans serveur : import/configuration/TLS, erreurs privées, transacti
 Trois tests supplémentaires de sélection/lancement normal : modes refusés sans fichier créé ni écoute, SQLite par défaut et explicite avec comptes toujours obligatoires, API du foyer refusée sans session et page de connexion présente. Seules des bases temporaires synthétiques sont ouvertes.
 
 Sources primaires : [pool et événements](https://node-postgres.com/apis/pool), [client et délais](https://node-postgres.com/apis/client), [transactions sur un seul client](https://node-postgres.com/features/transactions), [TLS](https://node-postgres.com/features/ssl). Versions et privilèges : [environnement de test](POSTGRESQL-TEST.md), [schéma](POSTGRESQL-SCHEMA.md). Ni build Docker, essai Ubuntu, migration réelle ou validation téléphone.
+
+## Distribution et clôture de 04
+
+Le module runtime existe et son chargement est contrôlé : `pg@8.23.1` devient une dépendance de production, sans changer sa version ni celles des transitives. `npm ci --omit=dev --ignore-scripts` réussi, audit sans vulnérabilité signalée et quinze signatures de registre/une attestation vérifiées le 22 octobre. Premier essai hors ligne interrompu faute de cache npm complet ; réinstallation depuis le registre avec le même verrou, puis suites repassées. Ce n'était pas une régression métier. La première sonde de mutation manquait de `Buffer` dans son contexte VM ; après ajout à la sonde, suppression de COMMIT uniquement en mémoire détectée par l'assertion du contrat, aucun fichier produit modifié.
+
+Les [notices complètes](../public/third-party-notices.txt), versions et copyrights sont repris des fichiers LICENSE ou sections de README installés, y compris pg-types et pgpass ; une garde compare leur présence intégrale à chaque paquet de production. Le résumé partagé Connexion/Compte mentionne MIT/ISC sans nouveau contrôle, requête ou écran. Le guide frontend conduit à garder la rubrique fermée et les styles existants ; seuls des mots sont ajoutés, pas de validation visuelle sur appareil revendiquée.
+
+`image-check.js` charge désormais aussi les modules de `db/` récursivement et exige le module d'entrée PostgreSQL ainsi que les notices ; aucune connexion PostgreSQL au build. Les copies de packaging vérifient l'absence de fichiers et un nouveau module imbriqué. Le vrai contexte/image Docker et l'intégration CI PostgreSQL restent à valider en 19–20, pas simulés comme acquis par ces contrôles Node. Compose et les volumes SQLite restent identiques.
+
+Clôture locale : **249 tests généraux réussis**, HTTPS inclus ; **28 tests PostgreSQL réels réussis**, aucun ignoré. Commande agrégée sans binaires : échec attendu avant création des clusters, pas de succès avec tests omis. `node image-check.js` réussi après installation de production. Point de contrôle A atteint pour le socle isolé ; étape suivante 05, connexion/sessions. Aucun portage métier, transfert privé, accès Ubuntu, build Docker, essai téléphone ou publication Codeberg dans ce lot.
