@@ -71,6 +71,7 @@ Preuve : [installation et validations](../docs/POSTGRESQL-TEST.md), **7 tests Po
 - **Vérification :** `node --test accounts.test.js` adapté à la fixture, cas PostgreSQL concurrents avec deux clients ; aucune donnée sensible dans erreurs/journaux.
 - **Dépendances :** 04.
 - **Fichiers probables :** `accounts.js`, nouveau `db/auth.js`, `accounts.test.js`, `postgres-auth.test.js`.
+- **Découpage avant réalisation :** 05a, dépôt PostgreSQL des six opérations connexion/sessions et tests réels ; 05b, petit dépôt SQLite et middleware commun explicitement attendable, sans porter les invitations/administration de 06 ; 05c, tests HTTP communs, concurrence/révocation/erreurs, agrégation et clôture documentaire. Le lancement normal PostgreSQL reste refusé ; aucune donnée réelle ou instance Ubuntu utilisée.
 - **Taille :** M.
 
 ### 06 — Invitations et administration des accès

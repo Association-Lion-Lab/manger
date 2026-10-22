@@ -1,5 +1,11 @@
 # Choix techniques, limites et blocages
 
+## PostgreSQL : connexion et sessions, sans bascule — 22 octobre 2026
+
+05a : [dépôt et contrat de sécurité](POSTGRESQL-AUTH.md), six opérations de persistance nommées et SQL qualifié/paramétré, aucune connexion à la construction. Hachage scrypt hors transaction ; revalidation sous verrou compte puis session, expiration examinée après attente. Limites de tentatives conservées, trois compteurs atomiques sous verrou consultatif transactionnel partagé, pas de nouveau rôle/table ou dépendance. Les guides de migration/sécurité/tests orientent cette tranche vers un dépôt réel avant le branchement HTTP. La relecture indépendante du contrat a demandé d'expliciter compte actif/hachage inchangé/lien session-compte et expiration après verrou ; ces contrôles sont inclus. Ni nouveau mécanisme d'authentification ni repli SQLite. Relecture externe par CLI non lancée, poursuite autonome demandée par l'utilisateur.
+
+Preuve 05a : module absent en rouge puis sept tests PostgreSQL 18.6 réels réussis, aucun ignoré, dont ID numérique au-delà de 32 bits et dix-huit tentatives réparties sur deux pools pour huit admissions seulement, trois compteurs égaux à huit. Tâche 05 encore ouverte : HTTP, courses pendant scrypt et clôture à réaliser. Données réelles et serveur personnel hors périmètre.
+
 ## PostgreSQL : frontière asynchrone isolée — 22 octobre 2026
 
 Tranche 04a : [interface, sécurité et limites d'arrêt](POSTGRESQL-CONNEXION.md). Module sans connexion à l'import, configuration explicite reconstruite, TLS vérifié hors loopback de test, pool limité et même client pendant toute transaction. Aucun ORM, adaptateur faussement synchrone, repli SQLite ou réécriture des routes métier. Le pilote existant est encore de développement dans cette tranche ; sa promotion et les mentions distribuées appartiennent à 04c, avant clôture du lot.
