@@ -19,6 +19,8 @@ Toutes les commandes du guide s'exécutent depuis la racine du dépôt, **pas de
 
 [PostgreSQL de test local](POSTGRESQL-TEST.md) : outils portables Windows 18.6 vérifiés, pilote de développement verrouillé et commande `npm run test:postgres` réellement passée sur un cluster temporaire. Sans service système ou donnée utilisateur ; ce n'est pas une migration ni une validation du déploiement Docker/Linux.
 
+[Schéma PostgreSQL et migrations](POSTGRESQL-SCHEMA.md) : 22 tables sans amorçage, versionnement atomique, rôles séparés et tests de concurrence/droits ; module encore non branché à l'application. Lire les limites de confiance et les tâches de reprise/restauration avant tout futur déploiement.
+
 1. [Architecture](ARCHITECTURE.md) : fichiers, données, flux, API principales et vérification.
 2. [Décisions et blocages](DECISIONS.md) : raisons, compromis, erreurs connues et validations manquantes.
 3. [Historique et priorités](ROADMAP.md) : lots livrés et travaux P1/P2/P3, avec la preuve disponible à chaque étape.

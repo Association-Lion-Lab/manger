@@ -40,6 +40,7 @@ Preuve : [installation et validations](../docs/POSTGRESQL-TEST.md), **7 tests Po
 - **Fichiers probables :** nouveaux `db/postgres.js`, `db/migrations/001-initial.js`, `postgres-schema.test.js`, script de bootstrap privé aux tests dans `test-support/`.
 - **Découpage de réalisation :** 03a, séparer propriétaire/migration et application dans la fixture, avec refus DDL et tests existants conservés ; 03b, DDL des 22 tables, exécuteur versionné, tests locaux sans connexion et intégration réelle (cinq fichiers techniques principaux). Aucun appel au démarrage de Manger! avant les tâches suivantes.
 - **03a réalisée :** deux rôles non-superutilisateurs distincts, aucun DDL/objet temporaire/prise de rôle pour l'application ; huit tests PostgreSQL verts, aucun ignoré, données et nettoyage des deux pools vérifiés. 03b non réalisée à ce point de contrôle.
+- **03b — Schéma réalisé :** quatre fichiers techniques, DDL/exécuteur et deux suites de tests ; dix tests PostgreSQL réels et 229 généraux verts, aucun ignoré, HTTPS inclus. Dernière sous-tranche séparée : agréger la commande dédiée et sa garde (deux fichiers), avant clôture de 03. [Contrat et limites](../docs/POSTGRESQL-SCHEMA.md), notamment rôles frais et restauration/recalage opérateur à traiter en 15–17/19.
 - **Taille :** M.
 
 ### 04 — Introduire la frontière asynchrone minimale
