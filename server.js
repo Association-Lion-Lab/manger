@@ -10,7 +10,6 @@ const { DatabaseSync, backup } = require('node:sqlite');
 const { randomUUID } = require('node:crypto');
 const catalog = require('./catalog');
 const { foodName, foodKey, inUnit, groupIngredients, isAntiWasteIngredient } = require('./ingredients');
-const { downloadRecipePage, extractRecipeDraft } = require('./recipe-import');
 const { recipeTaste, tasteRank } = require('./public/tastes');
 const { createRestore } = require('./restore');
 const { openAccounts, protectAccounts } = require('./accounts');
@@ -22,6 +21,7 @@ const { householdRoutes } = require('./household-http');
 const { validateRecipe, checkedRecipe } = require('./recipe');
 const { sqliteRecipes } = require('./db/recipes-sqlite');
 const { recipeRoutes } = require('./recipe-http');
+const { recipeExtraRoutes } = require('./recipe-extras-http');
 
 const INDEX_HTML = Buffer.from(readFileSync(join(__dirname, 'public', 'index.html'), 'utf8')
   .replace('<!-- MANGER_INFORMATION -->', readFileSync(join(__dirname, 'public', 'information.html'), 'utf8')));
@@ -636,7 +636,7 @@ async function readJson(request, maxSize = 32_768) {
 function createHandler(db) {
   const handleHousehold = householdRoutes(sqliteHousehold(db), sendJson);
   const handleRecipes = recipeRoutes(sqliteRecipes(db), sendJson);
-  let importingUrl = false;
+  const handleRecipeExtras = recipeExtraRoutes(sqliteRecipes(db), sendJson);
   let backingUp = false;
   const restoration = createRestore(db);
   let restoring = false, activeRequests = 0;
@@ -736,40 +736,7 @@ function createHandler(db) {
         if (!db.prepare('DELETE FROM pantry WHERE id = ?').run(Number(pantryMatch[1])).changes) throw new Error('Aliment inconnu');
         return sendJson(response, 200, pantry(db));
       }
-      const photoMatch = url.pathname.match(/^\/api\/recipes\/(\d+)\/photo$/);
-      if (request.method === 'GET' && photoMatch) {
-        const photo = db.prepare('SELECT data FROM recipe_photos WHERE recipe_id = ?').get(Number(photoMatch[1]));
-        if (!photo) return sendJson(response, 404, { error: 'Photo absente' });
-        response.writeHead(200, { 'Content-Type': 'image/jpeg', 'Content-Length': photo.data.length, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
-        return response.end(photo.data);
-      }
-      if (request.method === 'GET' && url.pathname === '/api/recipes/export') {
-        response.setHeader('Content-Disposition', 'attachment; filename="manger-recettes.json"');
-        return sendJson(response, 200, { format: 'manger-recipes', version: 1, recipes: recipes(db).map(({ id, favorite, hasPhoto, rating, note, ...recipe }) => recipe) });
-      }
-      if (request.method === 'POST' && url.pathname === '/api/recipes/import-preview') {
-        const input = await readJson(request, 1048576);
-        if (!input || !['url', 'file'].includes(input.kind)) throw new Error('Import invalide');
-        let result;
-        if (input.kind === 'url') {
-          if (importingUrl) throw new Error('Un import internet est déjà en cours, réessaie dans un instant');
-          importingUrl = true;
-          try { const page = await downloadRecipePage(input.url); result = extractRecipeDraft(page.html, page.sourceUrl); }
-          finally { importingUrl = false; }
-        } else {
-          if (!input.data || input.data.format !== 'manger-recipes' || input.data.version !== 1 || !Array.isArray(input.data.recipes) || input.data.recipes.length < 1 || input.data.recipes.length > 200) throw new Error('Fichier Manger! version 1 attendu (1 à 200 recettes)');
-          result = { recipes: input.data.recipes, warnings: ['Sélectionne une recette puis vérifie-la. L’import crée une nouvelle recette, sans remplacer les recettes existantes.'] };
-        }
-        const validated = result.recipes.map(recipe => {
-          const missingSteps = input.kind === 'file' && Array.isArray(recipe?.steps) && recipe.steps.length === 0;
-          const safeRecipe = { ...recipe, photo: undefined, photoCopyId: undefined };
-          const draft = validateRecipe(missingSteps ? { ...safeRecipe, steps: [{ kind: 'prep', instruction: 'À compléter', minutes: null }] } : safeRecipe);
-          if (missingSteps) { draft.steps = []; result.warnings.push(`« ${draft.title} » n’a pas encore d’étapes : complète-les dans le brouillon avant d’enregistrer.`); }
-          return draft;
-        });
-        if (validated.some(recipe => recipe.ingredients.some(item => item.preparation === 'unknown'))) result.warnings.push('Cru/cuit non précisé pour certains ingrédients : complète « Servi » dans leurs détails si nécessaire pour les goûts du foyer. Aucune cuisson n’est déduite automatiquement.');
-        return sendJson(response, 200, { recipes: validated, warnings: result.warnings });
-      }
+      if (await handleRecipeExtras(request, response)) return;
 
       if (request.method === 'GET' && url.pathname === '/api/calendar.ics') {
         const start = url.searchParams.get('start');
@@ -947,35 +914,6 @@ function createHandler(db) {
 
       if (await handleRecipes(request, response)) return;
 
-      const favoriteMatch = url.pathname.match(/^\/api\/recipes\/(\d+)\/favorite$/);
-      const notesMatch = url.pathname.match(/^\/api\/recipes\/(\d+)\/notes$/);
-      if (request.method === 'PUT' && notesMatch) {
-        const input = await readJson(request); const id = Number(notesMatch[1]);
-        if (!input || !Number.isInteger(input.rating) || input.rating < 0 || input.rating > 5 || typeof input.note !== 'string' || input.note.length > 2000) throw new Error('Choisis une note de 0 à 5 et un commentaire de 2 000 caractères maximum.');
-        if (!db.prepare('SELECT 1 FROM recipes WHERE id = ?').get(id)) throw new Error('Recette inconnue');
-        db.prepare('INSERT INTO recipe_notes (recipe_id, rating, note) VALUES (?, ?, ?) ON CONFLICT(recipe_id) DO UPDATE SET rating=excluded.rating, note=excluded.note').run(id, input.rating, input.note.trim());
-        return sendJson(response, 200, { rating: input.rating, note: input.note.trim() });
-      }
-      if (request.method === 'PUT' && favoriteMatch) {
-        const input = await readJson(request);
-        const id = Number(favoriteMatch[1]);
-        if (!input || typeof input.favorite !== 'boolean') throw new Error('Favori invalide');
-        if (!db.prepare('SELECT 1 FROM recipes WHERE id = ?').get(id)) throw new Error('Recette inconnue');
-        if (input.favorite) db.prepare('INSERT INTO recipe_favorites (recipe_id) VALUES (?) ON CONFLICT DO NOTHING').run(id);
-        else db.prepare('DELETE FROM recipe_favorites WHERE recipe_id = ?').run(id);
-        return sendJson(response, 200, { favorite: input.favorite });
-      }
-      if (request.method === 'POST' && url.pathname === '/api/catalog/import') {
-        const validated = catalog.map(validateRecipe);
-        let added = 0;
-        for (const recipe of validated) {
-          if (!db.prepare('SELECT 1 FROM recipes WHERE title = ?').get(recipe.title)) {
-            saveRecipe(db, recipe);
-            added++;
-          }
-        }
-        return sendJson(response, 200, { added });
-      }
 
       const placementMatch = url.pathname.match(/^\/api\/meals\/(\d+)\/placement$/);
       if (request.method === 'POST' && placementMatch) {
@@ -1061,10 +999,12 @@ function createHouseholdHandler(home) {
 }
 
 // Internal candidate harness only; callers must wrap this with protectAccounts.
-function createRecipeHandler(store) {
+function createRecipeHandler(store, options = {}) {
   const handle = recipeRoutes(store, sendJson);
+  const extras = recipeExtraRoutes(store, sendJson, options);
   return async (request, response) => {
-    if (!await handle(request, response)) sendJson(response, 503, { error: 'Parcours PostgreSQL non porté.' });
+    if (await handle(request, response)) return;
+    if (!await extras(request, response)) sendJson(response, 503, { error: 'Parcours PostgreSQL non porté.' });
   };
 }
 

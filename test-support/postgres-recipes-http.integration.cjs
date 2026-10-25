@@ -24,5 +24,5 @@ test('contrat HTTP recettes PostgreSQL réel protégé',{timeout:60000},async t=
     async clearPlanning(){await db.query('DELETE FROM household.meals');await db.query('DELETE FROM household.members');},
     async seedLegacyIds(){await db.query("INSERT INTO household.recipes(id,title,minutes,servings,diet) VALUES(0,'Zero',1,1,'vegan'),(5000000001,'Large',1,1,'vegan')");}});
   const cookie=await http.login();
-  for(const [path,method] of [['/api/recipes','GET'],['/api/week','GET'],['/api/recipes/1/photo','GET'],['/api/recipes/1/favorite','PUT'],['/api/catalog/import','POST']])assert.equal((await http.request(path,method,method==='GET'?undefined:{},cookie)).status,503);
+  for(const [path,method] of [['/api/recipes','GET'],['/api/week','GET'],['/api/shopping','GET'],['/api/meals','POST']])assert.equal((await http.request(path,method,method==='GET'?undefined:{},cookie)).status,503);
 });

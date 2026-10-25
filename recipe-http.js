@@ -1,8 +1,8 @@
 const {validateRecipe,checkedRecipe,inputError}=require('./recipe');
 
-async function body(request) {
+async function body(request,maxSize=600000) {
   const chunks=[];let size=0;
-  for await(const chunk of request){size+=chunk.length;if(size>600000)throw inputError('Requête trop volumineuse');chunks.push(chunk);}
+  for await(const chunk of request){size+=chunk.length;if(size>maxSize)throw inputError('Requête trop volumineuse');chunks.push(chunk);}
   try {return JSON.parse(Buffer.concat(chunks).toString('utf8'));}
   catch {throw inputError('JSON invalide');}
 }
@@ -23,4 +23,4 @@ function recipeRoutes(store,sendJson) {
     return true;
   };
 }
-module.exports={recipeRoutes};
+module.exports={recipeRoutes,readRecipeBody:body};
