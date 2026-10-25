@@ -147,6 +147,7 @@ Preuve : [installation et validations](../docs/POSTGRESQL-TEST.md), **7 tests Po
 - **Vérification :** suites semaines/restes sur la fixture et concurrence de deux compositions sur des créneaux communs.
 - **Dépendances :** 10.
 - **Fichiers probables :** `server.js`, `db/meals.js`, `week-copy.test.js`, nouveau `postgres-weeks.test.js`.
+- **Découpage avant code :** 11a règles/dépôts des lots, copies et semaines types ; 11b déplacements/restes atomiques ; 11c routes communes protégées ; 11d contrats/concurrence/rollback, agrégation et clôture. [Contrat et limites](../docs/POSTGRESQL-SEMAINES.md). Calculs et GET agrégé restent en 12–13.
 - **Taille :** M ; séparer restes et semaines si nécessaire.
 
 ### 12 — Placard, suggestions et calcul des courses

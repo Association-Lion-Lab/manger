@@ -2,8 +2,8 @@ const {lockHousehold}=require('./household');
 const {addDays}=require('../dates');
 const {inputError,validateSlot,validateExpectedId,checkExpectedId,validateMealInput,checkMealReferences}=require('../meal');
 function postgresMeals(db) {
-  async function read(start) {
-    const {rows}=await db.query(`SELECT m.id::float8 AS id,m.date,m.slot,m.location,m.occasion,m.people,m.recipe_id::float8 AS "recipeId",
+  async function read(start,tx=db) {
+    const {rows}=await tx.query(`SELECT m.id::float8 AS id,m.date,m.slot,m.location,m.occasion,m.people,m.recipe_id::float8 AS "recipeId",
       m.title,r.minutes,m.leftover_of::float8 AS "leftoverOf",
       COALESCE((SELECT SUM(rest.people) FROM household.meals rest WHERE rest.leftover_of=m.id),0)::float8 AS "extraPortions",
       (EXISTS(SELECT 1 FROM household.meal_assignments WHERE meal_id=m.id))::int AS "hasVariants",
@@ -38,20 +38,21 @@ function postgresMeals(db) {
     if(d.length)await tx.query(`INSERT INTO household.meal_dishes(meal_id,member_id,recipe_id,portions,protein_id)
       SELECT $1,d.* FROM unnest($2::bigint[],$3::bigint[],$4::int[],$5::bigint[]) d(member_id,recipe_id,portions,protein_id)`,[id,d.map(x=>x.memberId),d.map(x=>x.recipeId),d.map(x=>x.portions),d.map(x=>x.proteinId??null)]);
   }
-  function save(input,expectedId) {
-    const meal=validateMealInput(input);validateExpectedId(expectedId);
-    return write(async tx=>{
+  async function saveIn(tx,meal,expectedId) {
       checkMealReferences(meal,await references(tx));await current(tx,meal.date,meal.slot,expectedId);
       const {rows:[row]}=await tx.query(`INSERT INTO household.meals(date,slot,location,occasion,people,recipe_id,title) VALUES($1,$2,$3,$4,$5,$6,$7)
         ON CONFLICT(date,slot) DO UPDATE SET location=excluded.location,occasion=excluded.occasion,people=excluded.people,
         recipe_id=excluded.recipe_id,title=excluded.title,leftover_of=NULL RETURNING id::float8 AS id`,[meal.date,meal.slot,meal.location,meal.occasion,meal.people,meal.recipeId,meal.title]);
-      await children(tx,row.id,meal);return meal;
-    });
+      await children(tx,row.id,meal);return row.id;
+  }
+  function save(input,expectedId) {
+    const meal=validateMealInput(input);validateExpectedId(expectedId);
+    return write(async tx=>{await saveIn(tx,meal,expectedId);return meal;});
   }
   function remove(date,slot,expectedId) {
     validateSlot(date,slot);validateExpectedId(expectedId);
     return write(async tx=>{await current(tx,date,slot,expectedId);await tx.query('DELETE FROM household.meals WHERE date=$1 AND slot=$2',[date,slot]);return true;});
   }
-  return Object.freeze({engine:'postgres',read,save,remove});
+  return Object.freeze({engine:'postgres',read,save,remove,...require('./planning-postgres').postgresPlanning(db,{write,read,references,saveIn,children})});
 }
 module.exports={postgresMeals};

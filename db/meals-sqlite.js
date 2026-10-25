@@ -28,16 +28,18 @@ function sqliteMeals(db) {
       ON CONFLICT(date,slot) DO UPDATE SET location=excluded.location,occasion=excluded.occasion,
       people=excluded.people,recipe_id=excluded.recipe_id,title=excluded.title,leftover_of=NULL`).run(meal.date,meal.slot,meal.location,meal.occasion,meal.people,meal.recipeId,meal.title);
     const id=db.prepare('SELECT id FROM meals WHERE date=? AND slot=?').get(meal.date,meal.slot).id;
+    children(id,meal);return id;
+  }
+  function children(id,meal){
     db.prepare('DELETE FROM meal_assignments WHERE meal_id=?').run(id);db.prepare('DELETE FROM meal_dishes WHERE meal_id=?').run(id);
     const insert=db.prepare('INSERT INTO meal_assignments(meal_id,member_id,protein_id,portions) VALUES(?,?,?,?)');
     for(const a of meal.assignments)insert.run(id,a.memberId,a.proteinId,a.portions);
     const dish=db.prepare('INSERT INTO meal_dishes(meal_id,member_id,recipe_id,portions,protein_id) VALUES(?,?,?,?,?)');
     for(const d of meal.dishes)dish.run(id,d.memberId,d.recipeId,d.portions,d.proteinId??null);
-    return meal;
   }
   function save(input,expectedId) {
     const meal=validateMealInput(input);validateExpectedId(expectedId);
-    return write(()=>saveIn(checkMealReferences(meal,references()),expectedId));
+    return write(()=>{saveIn(checkMealReferences(meal,references()),expectedId);return meal;});
   }
   function remove(date,slot,expectedId) {
     validateSlot(date,slot);validateExpectedId(expectedId);
@@ -45,6 +47,6 @@ function sqliteMeals(db) {
   }
   // Existing week/copy operations own their transaction until their port in step 11.
   const saveValidated=(meal,transactional=true)=>transactional?write(()=>saveIn(meal)):saveIn(meal);
-  return {engine:'sqlite',read,references,save,remove,saveValidated};
+  return {engine:'sqlite',read,references,save,remove,saveValidated,...require('./planning-sqlite').sqlitePlanning(db,{write,read,references,saveIn,children})};
 }
 module.exports={sqliteMeals};
