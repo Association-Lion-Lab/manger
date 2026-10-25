@@ -52,6 +52,18 @@ function postgresRecipes(db) {
     if(used.rowCount)return 'used-recipe';
     return (await tx.query('DELETE FROM household.recipes WHERE id=$1 RETURNING id',[id])).rowCount?true:'unknown-recipe';
   });
-  return Object.freeze({engine:'postgres',read:()=>read(),save,remove});
+  const readPhoto=async id=>(await db.query('SELECT data FROM household.recipe_photos WHERE recipe_id=$1',[id])).rows[0]?.data;
+  const setFavorite=(id,favorite)=>write(async tx=>{
+    if(!(await tx.query('SELECT 1 FROM household.recipes WHERE id=$1',[id])).rowCount)return 'unknown-recipe';
+    if(favorite)await tx.query('INSERT INTO household.recipe_favorites(recipe_id) VALUES($1) ON CONFLICT DO NOTHING',[id]);
+    else await tx.query('DELETE FROM household.recipe_favorites WHERE recipe_id=$1',[id]);
+    return true;
+  });
+  const setNote=(id,rating,note)=>write(async tx=>{
+    if(!(await tx.query('SELECT 1 FROM household.recipes WHERE id=$1',[id])).rowCount)return 'unknown-recipe';
+    await tx.query('INSERT INTO household.recipe_notes(recipe_id,rating,note) VALUES($1,$2,$3) ON CONFLICT(recipe_id) DO UPDATE SET rating=excluded.rating,note=excluded.note',[id,rating,note]);
+    return true;
+  });
+  return Object.freeze({engine:'postgres',read:()=>read(),save,remove,readPhoto,setFavorite,setNote});
 }
 module.exports={postgresRecipes};

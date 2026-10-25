@@ -61,6 +61,21 @@ function sqliteRecipes(db) {
     if(db.prepare('SELECT 1 FROM meals WHERE recipe_id=? UNION ALL SELECT 1 FROM meal_dishes WHERE recipe_id=? LIMIT 1').get(id,id))return 'used-recipe';
     return db.prepare('DELETE FROM recipes WHERE id=?').run(id).changes?true:'unknown-recipe';
   });
-  return Object.freeze({engine:'sqlite',read,save,remove});
+  const readPhoto=id=>{
+    const row=db.prepare('SELECT data FROM recipe_photos WHERE recipe_id=?').get(id);
+    return row?Buffer.from(row.data):undefined;
+  };
+  const setFavorite=(id,favorite)=>write(()=>{
+    if(!db.prepare('SELECT 1 FROM recipes WHERE id=?').get(id))return 'unknown-recipe';
+    if(favorite)db.prepare('INSERT INTO recipe_favorites(recipe_id) VALUES(?) ON CONFLICT DO NOTHING').run(id);
+    else db.prepare('DELETE FROM recipe_favorites WHERE recipe_id=?').run(id);
+    return true;
+  });
+  const setNote=(id,rating,note)=>write(()=>{
+    if(!db.prepare('SELECT 1 FROM recipes WHERE id=?').get(id))return 'unknown-recipe';
+    db.prepare('INSERT INTO recipe_notes(recipe_id,rating,note) VALUES(?,?,?) ON CONFLICT(recipe_id) DO UPDATE SET rating=excluded.rating,note=excluded.note').run(id,rating,note);
+    return true;
+  });
+  return Object.freeze({engine:'sqlite',read,save,remove,readPhoto,setFavorite,setNote});
 }
 module.exports={sqliteRecipes};

@@ -121,6 +121,7 @@ Preuve : [installation et validations](../docs/POSTGRESQL-TEST.md), **7 tests Po
 - **Vérification :** cas existants `photos.test.js`, `favorites.test.js`, `recipe-notes.test.js`, catalogue et import sur PostgreSQL ; matrice suivie en 01, sans supprimer les tests hors fichiers de cette tranche.
 - **Dépendances :** 08.
 - **Fichiers probables :** `server.js`, `db/recipes.js`, `photos.test.js`, nouveau `postgres-recipe-extras.test.js`.
+- **Découpage avant code :** 09a photos/favoris/avis dans les dépôts ; 09b catalogue transactionnel et export ; 09c aperçu réseau/fichier et routes communes ; 09d contrats HTTP, concurrence/rollback et clôture. [Contrat et limites](../docs/POSTGRESQL-ENRICHISSEMENTS.md). Pas de moteur partiel déployé ou de parcours repas commencé.
 - **Taille :** M ; sous-tranches par capacité si le portage l'exige.
 
 ### 10 — Ajout et modification d'un repas

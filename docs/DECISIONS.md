@@ -1,5 +1,15 @@
 # Choix techniques, limites et blocages
 
+## PostgreSQL : préparer les enrichissements et imports — 25 octobre 2026
+
+Tâche 09 autorisée après 08. [Contrat et découpage](POSTGRESQL-ENRICHISSEMENTS.md) avant code : octets photo inchangés, favoris/avis idempotents et retrait cohérent, catalogue conservant les personnalisations, export léger/aperçu sans écriture. Dépôts et verrou foyer existants réutilisés ; enregistrement interne extrait pour importer sous une seule transaction sans emboîtement. La boucle historique de catalogue pouvait laisser un lot partiel ou vérifier un titre hors protection globale : import complet sérialisé retenu, sans contrainte nouvelle d'unicité sur les titres manuels. Downloader/parser existants et limites SSRF intacts ; classification explicite des erreurs prévues, détails techniques privés. Aucun schéma/dépendance/visuel ou lancement normal PostgreSQL ajouté, pas de donnée privée ou publication ; examen externe toujours différé.
+
+09a : contrat de dépôt partagé rouge sur les trois méthodes absentes, puis lecture photo et mutations favoris/avis ajoutées aux dépôts existants. Photo en Buffer des deux côtés, sans conversion globale du pilote ; écriture sous transaction et verrou foyer avant vérification de l'existence, valeurs paramétrées. La remise à zéro d'un avis garde sa ligne et les suppressions restent en cascade. Routes encore non raccordées ; tests réels et première contre-relecture en cours.
+
+Première contre-relecture : contrat imprécis sur deux comportements historiques, précisés sans nouvelle règle (limite de commentaire en unités UTF-16 avant trim ; seul `steps: []` explicite est accepté comme brouillon d'ancien fichier). Pas de défaut concret supplémentaire SSRF/perte relevé dans le contrat. Tests SQLite ciblés à cinq réussites ; preuve PostgreSQL à compléter avec suppression réelle pendant attente du verrou.
+
+Preuve 09a : **cinq tests SQLite et sept PostgreSQL réels réussis**, aucun ignoré. Octets JPEG, favori répété, avis remis à zéro, ID zéro/cascades, erreurs après mutation et suppression réellement intervenue pendant attente du verrou vérifiés. Aucune route encore déplacée ni base utilisateur ouverte.
+
 ## PostgreSQL : recettes portées sans bascule — 25 octobre 2026
 
 Tâche 08 autorisée par « go » après clôture 07. [Contrat et découpage](POSTGRESQL-RECETTES.md) avant le code : préserver le DTO et les trois routes, ordre/normalisation, remplacement atomique des enfants, références du planning et succès après commit seulement. Lecture PostgreSQL agrégée cohérente, insertions paramétrées par tableaux pour borner les allers-retours, verrou foyer déjà existant. Les opérations photo faisant déjà partie de l'enregistrement sont un couplage nécessaire à garder ; pas de portage des routes photo/favoris/avis/imports ni de nouveau GET public. SQLite/export synchrone maintenus ; aucun changement UI, schéma ou lancement normal PostgreSQL. Code et tests de chaque tranche encore à réaliser ; relecture externe toujours différée, aucune base réelle utilisée.

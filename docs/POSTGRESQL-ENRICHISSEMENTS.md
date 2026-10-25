@@ -1,0 +1,23 @@
+# PostgreSQL — photos, favoris, avis et imports
+
+25 octobre 2026 — tâche 09 en cours du [plan](MIGRATION-POSTGRESQL.md), après [l'enregistrement des recettes](POSTGRESQL-RECETTES.md). SQLite reste le moteur normal ; pas de bascule, transfert de données privées, refonte client, schéma ou publication.
+
+## Contrat et découpage
+
+09a : lecture de photo et écritures des favoris/avis dans les deux dépôts. `GET /api/recipes/:id/photo` rend les mêmes octets JPEG et en-têtes privés/no-store, ou 404 « Photo absente » si aucune photo, y compris recette inconnue. Le booléen `hasPhoto`, la priorité photo avant illustration et les copies déjà portées en 08 restent inchangés.
+
+`PUT /api/recipes/:id/favorite` accepte un booléen strict et reste idempotent ; réponse `{favorite}`. `PUT /api/recipes/:id/notes` accepte une note entière 0..5 et un commentaire de 2 000 unités UTF-16 au plus **avant trim**, espaces compris, puis retire les espaces périphériques ; réponse `{rating,note}`. Remise à zéro = ligne conservée, pas effacement implicite des métadonnées. Recette inconnue en 400 pour les deux écritures ; IDs chiffres et entiers sûrs, zéro historique admis. NUL refusé dans la note texte avant SQL sur les deux moteurs. Succès après engagement uniquement ; erreur SQL privée en 503.
+
+09b : import du catalogue fixe et export léger. L'import conserve les recettes existantes de même titre exact, même personnalisées, sans toucher photo/favori/avis. Titres sensibles à la casse comme avant ; pas de nouvelle unicité globale (la création manuelle de deux titres identiques reste permise). Import sérialisé sous verrou foyer `(1296125511,4)` et transaction unique pour tous les ajouts ; une erreur ne doit plus laisser les premières recettes importées. Cette correction de robustesse remplace l'ancienne boucle de transactions indépendantes. Deux imports simultanés ne créent pas de doublons ; import répété renvoie zéro ajout.
+
+Réutiliser l'enregistrement interne dans la même transaction, sans transaction imbriquée ni libération prématurée du verrou. Ne pas modifier le catalogue ou l'initialisation SQLite. Export `{format:'manger-recipes',version:1,recipes:[...]}` avec l'en-tête de téléchargement actuel, sans ID/favori/photo/avis/note ; aucune inclusion des octets photo, comptes ou données de planning. Lecture PostgreSQL cohérente existante réutilisée.
+
+09c : contrôleur commun des routes et aperçu d'import sans écriture. Limite JSON 32 768 octets pour favoris/avis et 1 048 576 pour l'aperçu, format Manger! v1 de 1..200 recettes conservé. Photo et référence de copie reçues dans le fichier/HTML toujours ignorées. Seul un fichier avec `steps: []` explicite devient un brouillon averti à compléter ; un champ absent reste invalide. Cru/cuit manquant donne un avertissement sans inférence. L'enregistrement final reste celui de 08, volontaire, créant une recette.
+
+Le téléchargement internet et le parseur existants sont réutilisés : HTTPS/443 public IPv4, DNS validé et adresse épinglée, redirections revalidées et bornées, délai total 15 s, 1,5 Mo maximum, HTML non compressé, pas d'exécution de code ni chargement d'images distantes. Un aperçu URL à la fois par handler, garde libérée même sur erreur ; aucun verrou SQL pendant le réseau. Pas de retry, contournement d'authentification ou assouplissement SSRF. Les erreurs d'import attendues sont identifiées comme saisie (400) ; les erreurs techniques inattendues ne doivent pas révéler leurs détails (503 privé).
+
+09d : tests de dépôts et contrat HTTP commun sur PostgreSQL réel/SQLite, photos binaires, avis idempotents/remise à zéro, suppression concurrente, rollback/imports concurrents et aperçu sans écriture. Conserver les anciennes suites serveur/client (photos, favoris, notes, catalogue, import et sécurité internet), ajouter les suites à la commande standard, vérifier modules/notices/audit et mettre à jour le suivi. Harnais candidat seulement, routes non portées refusées ; aucun nouveau GET de liste ou parcours repas de 10.
+
+Hypothèse à éprouver : enrichissements et imports conservent leur contrat sans état partiel ni duplication du catalogue sous les écrivains applicatifs coopérants. Pas de garantie contre un SQL externe ignorant le protocole ; futurs écrivains de repas doivent garder le même verrou. Relecture séparée du contrat puis du code, examen externe Gemini toujours différé selon le choix utilisateur.
+
+Sources : [paramètres et Buffer du pilote](https://node-postgres.com/features/queries), [verrous transactionnels PostgreSQL](https://www.postgresql.org/docs/18/explicit-locking.html). Les sources ne remplacent pas les preuves d'exécution à consigner après les tranches.
