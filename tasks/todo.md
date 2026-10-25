@@ -109,6 +109,7 @@ Preuve : [installation et validations](../docs/POSTGRESQL-TEST.md), **7 tests Po
 - **Vérification :** cas CRUD de `server.test.js`, `preparation.test.js`, suppression et conflits sur PostgreSQL réel.
 - **Dépendances :** 07.
 - **Fichiers probables :** `server.js`, nouveau `db/recipes.js`, `server.test.js`, `preparation.test.js`, `postgres-recipes.test.js`.
+- **Découpage avant réalisation :** 08a, dépôt réel et transactions ; 08b, validation/dépôt SQLite/routes communes ; 08c, contrats HTTP protégés, concurrence/rollback et clôture. [Contrat et limites](../docs/POSTGRESQL-RECETTES.md). Les opérations photo déjà incluses dans POST/PUT restent atomiques, sans prétendre clore les enrichissements/imports de 09.
 - **Taille :** M.
 
 ### 09 — Photos, favoris, avis et imports
