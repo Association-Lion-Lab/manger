@@ -34,7 +34,7 @@ function householdRoutes(home,sendJson) {
       } else {
         const kind=collection[1]==='members'?'Member':'Protein';
         const id=collection[2]===undefined?undefined:Number(collection[2]);
-        if(id!==undefined&&(!Number.isSafeInteger(id)||id<1))throw inputError('Identifiant invalide');
+        if(id!==undefined&&!Number.isSafeInteger(id))throw inputError('Identifiant invalide');
         if(method==='DELETE') {checked(await home[`remove${kind}`](id));sendJson(response,200,{});}
         else {
           const value=(kind==='Member'?validateMember:validateProtein)(await body(request));

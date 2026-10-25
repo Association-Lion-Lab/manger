@@ -22,8 +22,8 @@ test('contrat HTTP foyer PostgreSQL réel protégé', {timeout:60000},async t=>{
   await householdContract(t,{...http,
     failRead(){readFails=true;return()=>{readFails=false;};},
     async seedLargeIds(){
-      await db.query("INSERT INTO household.members(id,name,diet) VALUES(5000000001,'Large','vegan')");
-      await db.query("INSERT INTO household.proteins(id,name,category,amount,unit) VALUES(5000000002,'large','plant',1,'g')");
+      await db.query("INSERT INTO household.members(id,name,diet) VALUES(0,'Zero','vegan'),(5000000001,'Large','vegan')");
+      await db.query("INSERT INTO household.proteins(id,name,category,amount,unit) VALUES(0,'zero','plant',1,'g'),(5000000002,'large','plant',1,'g')");
     }});
   const cookie=await http.login();
   for(const path of ['/api/week','/api/recipes'])assert.equal((await http.request(path,'GET',undefined,cookie)).status,503);

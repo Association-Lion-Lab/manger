@@ -60,9 +60,14 @@ async function householdContract(t,{request,login,failRead,seedLargeIds}) {
     finally {undo();}
     assert.equal((await send('/api/household')).status,200);
   });
-  await t.test('IDs sûrs au-delà de 32 bits toujours numériques, retrait et compte séparés',async()=>{
+  await t.test('IDs zéro et au-delà de 32 bits toujours numériques, éditables et séparés du compte',async()=>{
     await seedLargeIds();const state=await home();assert.equal(state.members.find(m=>m.name==='Large').id,5000000001);assert.equal(state.proteins.find(p=>p.name==='large').id,5000000002);
-    for(const [collection,id] of [['members',5000000001],['proteins',5000000002],['members',member.id],['proteins',protein.id]])assert.deepEqual(await (await send(`/api/${collection}/${id}`,'DELETE')).json(),{});
+    assert.equal(state.members.find(m=>m.name==='Zero').id,0);assert.equal(state.proteins.find(p=>p.name==='zero').id,0);
+    assert.equal((await send('/api/members/0','PUT',{name:'Zero',diet:'vegetarian'})).status,200);
+    assert.equal((await send('/api/proteins/0','PUT',{name:'zero',category:'plant',amount:2,unit:'g'})).status,200);
+    for(const [collection,id] of [['members',0],['proteins',0],['members',5000000001],['proteins',5000000002],['members',member.id],['proteins',protein.id]]){
+      const r=await send(`/api/${collection}/${id}`,'DELETE');assert.equal(r.status,200);assert.deepEqual(await r.json(),{});
+    }
     assert.deepEqual(await home(),{avoidedIngredients:[],members:[],proteins:[]});
     assert.equal((await send('/api/account')).status,200);
   });

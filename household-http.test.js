@@ -10,5 +10,5 @@ test('contrat HTTP foyer SQLite normal',async t=>{
   await createAccount(accounts,'member','long-password-member',false);
   await householdContract(t,{...await householdHttp(t,createApp(db,accounts,null)),
     failRead(){const prepare=db.prepare.bind(db);db.prepare=()=>{throw new Error('SELECT private password');};return()=>{db.prepare=prepare;};},
-    seedLargeIds(){db.exec("INSERT INTO members(id,name,diet) VALUES(5000000001,'Large','vegan'); INSERT INTO proteins(id,name,category,amount,unit) VALUES(5000000002,'large','plant',1,'g')");}});
+    seedLargeIds(){db.exec("INSERT INTO members(id,name,diet) VALUES(0,'Zero','vegan'),(5000000001,'Large','vegan'); INSERT INTO proteins(id,name,category,amount,unit) VALUES(0,'zero','plant',1,'g'),(5000000002,'large','plant',1,'g')");}});
 });
