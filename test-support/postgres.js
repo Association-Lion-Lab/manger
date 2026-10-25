@@ -74,7 +74,8 @@ async function postgresFixture(t) {
       finally { clearTimeout(timer); }
       await stop();
       await owned();
-      await rm(directory, { recursive: true, force: true });
+      // Windows may retain a directory handle briefly after the owned cluster exits.
+      await rm(directory, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
       if (poolError) throw poolError;
     })();
     return closing;
