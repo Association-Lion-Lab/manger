@@ -4,6 +4,16 @@ Historique des lots et priorités, regroupé dans `docs/` le 10 octobre 2026. Le
 
 Contrainte produit : quatre onglets (Semaine, Recettes, Courses, Compte), actions dans leur contexte, fonctions secondaires regroupées sans surcharger ; préserver une interface sobre en clair et en sombre, au clavier et dès 320 px.
 
+## PostgreSQL — tâche 07, personnes, goûts et protéines — 25 octobre 2026
+
+- [Contrat foyer et limites](POSTGRESQL-FOYER.md) : huit opérations dans les dépôts, règles et routes communes ; lecture PostgreSQL en un instantané, écritures atomiques sous verrou dédié. SQLite garde ses calculs synchrones et les mêmes données/écrans.
+- Régimes, cru/cuit/état inconnu, goûts personnels/global, assiettes sans supplément conservés. Retrait d'une personne : seules ses affectations/assiettes disparaissent, compte/recette/repas/portions inchangés. Protéines utilisées protégées dans les deux tables ; IDs zéro historiques et grands IDs numériques préservés.
+- **294 tests généraux et 97 PostgreSQL réels réussis, aucun ignoré**, HTTPS inclus ; erreur/rollback/reprise, deux remplacements concurrents, régime revalidé après attente réelle, contrat HTTP protégé identique, mutation de garde détectée et trois cycles de relecture séparée. Chromium SQLite en mémoire : création, édition et réouverture du profil vérifiées, capture inspectée, console propre ; aucune validation téléphone ou application entièrement PostgreSQL.
+- Deux fichiers simultanés pour les tests généraux, un pour PostgreSQL, sans retirer de scénario de concurrence ni augmenter les délais applicatifs. Délai distinct pour le clonage de la base de fixture, justifié par mesure ; garde de binaires absents conservée. Contrôle modules/image réussi, sans build Docker. Alerte npm modérée **Nodemailer** préexistante [triée et à mettre à jour avant publication](DECISIONS.md), aucune dépendance/verrou modifié.
+- Tâches 01–07 closes ; prochaine **08 — création et édition d'une recette**, non commencée. Lancement normal toujours SQLite, candidat incomplet refusé ; aucune base réelle, publication ou bascule, ni changement de schéma/Compose/volumes/interface. Gemini externe reste différé ; serveur Ubuntu hors périmètre.
+
+Ressources de démonstration arrêtées et propres clusters temporaires nettoyés, sans purge générale. Documentation et points de contrôle mis à jour dans le dépôt ; code enregistré localement. Les instructions de déploiement SQLite existantes restent valables ; ne pas activer PostgreSQL avec ce seul lot.
+
 ## PostgreSQL — tâche 06, invitations et administration — 22 octobre 2026
 
 - [Contrat accès et limites](POSTGRESQL-ACCES.md) : mêmes invitations privées, membre seulement, durée 24 heures, liste et création/désactivation des accès ; rôle/hachage/session revalidés après attente. Consommation unique entre deux pools et identifiant occupé ne détruisant pas le lien, aucun nouvel écran ou mécanisme d'inscription.

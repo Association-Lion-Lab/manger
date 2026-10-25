@@ -27,6 +27,8 @@ Toutes les commandes du guide s'exécutent depuis la racine du dépôt, **pas de
 
 [Invitations et administration PostgreSQL](POSTGRESQL-ACCES.md) : tâche 06 testée, inscription membre unique, droits revalidés, réservation SMTP et service de récupération atomique ; commandes standard et serveur restent SQLite, sans bascule ni donnée réelle migrée. Les limites de branchement CLI sont précisées dans ce contrat.
 
+[Personnes, goûts et protéines PostgreSQL](POSTGRESQL-FOYER.md) : règles et routes communes, lecture cohérente et écritures transactionnelles, retraits séparés des comptes ; SQLite normal conservé. Tests réels et limites de validation détaillés dans le contrat, aucun planning ou recette PostgreSQL activé.
+
 [Notices des dépendances distribuées](../public/third-party-notices.txt) : versions, textes et copyrights de Nodemailer et du pilote PostgreSQL, sous licences MIT-0/MIT/ISC ; le code du projet reste AGPL-3.0-or-later.
 
 1. [Architecture](ARCHITECTURE.md) : fichiers, données, flux, API principales et vérification.

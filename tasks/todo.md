@@ -1,6 +1,6 @@
 # Migration PostgreSQL — tâches et points de contrôle
 
-22 octobre 2026 — **plan validé ; tâches 01–06 réalisées, prochaine tâche 07 : personnes et protéines**. [Cadrage et risques](../docs/MIGRATION-POSTGRESQL.md), [ordre de réalisation](plan.md). Les noms des fichiers non encore créés restent des propositions. Chaque tâche comprend la mise à jour de la documentation concernée et de `docs/DECISIONS.md` ; les fichiers listés sont le périmètre technique principal. Si une tranche dépasse environ cinq fichiers techniques ou une session ciblée, la découper avant de coder, sans réduire ses critères.
+25 octobre 2026 — **plan validé ; tâches 01–07 réalisées, prochaine tâche 08 : création et édition d'une recette**. [Cadrage et risques](../docs/MIGRATION-POSTGRESQL.md), [ordre de réalisation](plan.md). Les noms des fichiers non encore créés restent des propositions. Chaque tâche comprend la mise à jour de la documentation concernée et de `docs/DECISIONS.md` ; les fichiers listés sont le périmètre technique principal. Si une tranche dépasse environ cinq fichiers techniques ou une session ciblée, la découper avant de coder, sans réduire ses critères.
 
 ## Phase 1 — Socle isolé
 
@@ -89,13 +89,14 @@ Preuve : [installation et validations](../docs/POSTGRESQL-TEST.md), **7 tests Po
 
 ### 07 — Personnes et protéines
 
-- [ ] Réalisé.
+- [x] Réalisé.
 - **Livrable :** lecture/édition/retrait du foyer et protéines, préférences individuelles/globales préservées.
 - **Acceptation :** régime/goûts/cru-cuit inchangés ; sans supplément conservé ; retrait de personne affectant les repas mais jamais le compte de connexion.
 - **Vérification :** suites `preferences.test.js`, `dish-proteins.test.js`, profil UI et contrat HTTP sur la fixture PostgreSQL.
 - **Dépendances :** 06.
-- **Fichiers probables :** `server.js`, nouveau `db/household.js`, `preferences.test.js`, `dish-proteins.test.js`, `postgres-household.test.js`.
+- **Fichiers réalisés :** `server.js`, `household.js`, `household-http.js`, `db/household.js`, `db/household-sqlite.js`, contrats partagés dans `test-support/` ; anciens tests de préférences/assiettes/formulaires conservés.
 - **Découpage avant réalisation :** 07a, dépôt PostgreSQL et parité de lecture/mutations avec tests réels ; 07b, dépôt SQLite, validateurs purs et routes communes, maintien des exports synchrones utilisés par les calculs ; 07c, contrat HTTP protégé, concurrence/rollback, profil et vérification complète. [Contrat et limites](../docs/POSTGRESQL-FOYER.md). Pas de recettes/planning PostgreSQL portés dans cette étape, ni activation normale du candidat.
+- **Clôture le 25 octobre :** 294 tests généraux et 97 PostgreSQL réels réussis, aucun ignoré, HTTPS inclus ; création/édition/réouverture du profil contrôlées dans Chromium avec SQLite en mémoire. Contrat HTTP commun, IDs zéro/grands, rollback et attentes de verrous vérifiés ; tâche 08 non commencée. Alerte npm Nodemailer préexistante à traiter avant publication, [triage](../docs/DECISIONS.md).
 - **Taille :** M.
 
 **Point de contrôle B :** accès et foyer testés sur les deux moteurs, sécurité/retrait conservés, aucun candidat incomplet proposé au déploiement.

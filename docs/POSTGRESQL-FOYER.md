@@ -1,6 +1,6 @@
 # PostgreSQL — personnes, préférences et protéines
 
-25 octobre 2026 — tâche 07 en cours du [plan](MIGRATION-POSTGRESQL.md). Le produit et les commandes standard restent SQLite ; aucun compte, profil ou planning réel utilisé. Pas de refonte client, nouvelle collecte ou modification du schéma. [Contrats de référence](POSTGRESQL-CONTRATS.md), [accès déjà portés](POSTGRESQL-ACCES.md).
+25 octobre 2026 — tâche 07 réalisée du [plan](MIGRATION-POSTGRESQL.md). Le produit et les commandes standard restent SQLite ; aucun compte, profil ou planning réel utilisé. Pas de refonte client, nouvelle collecte ou modification du schéma. [Contrats de référence](POSTGRESQL-CONTRATS.md), [accès déjà portés](POSTGRESQL-ACCES.md).
 
 ## Contrat et périmètre
 
@@ -37,3 +37,9 @@ Le hachage synthétique du contrat HTTP PostgreSQL est préparé avec le helper 
 Navigateur Chromium local, bases SQLite en mémoire : connexion d'un compte membre, Compte → Personnes du foyer, création de Camille végétarien avec tomate crue, réouverture, ajout du brocoli cuit, enregistrement et nouvelle réouverture conservant les deux goûts. Capture inspectée, aucune erreur ni avertissement capturé en console ; onglet/serveur temporaires fermés. Le rôle « checkbox » du relevé natif différait du bouton dans le DOM ; sélecteurs du harnais ajustés aux commandes observées, aucun fichier UI modifié. Aucun retrait destructif effectué par le navigateur ; les tests HTTP/SQL isolés couvrent le retrait. Les suites VM du profil couvrent aussi double appui, erreurs et confirmation.
 
 Ce parcours ne prouve ni l'interface sur une application entièrement PostgreSQL (recettes/planning non portés), ni Safari/iPhone, Android, Linux/Docker ou le serveur personnel. Les affectations PostgreSQL sont semées par SQL synthétique uniquement pour vérifier les références et cascades, pas pour prétendre que le planning est porté. Une mutation en mémoire supprimant le contrôle d'entier sûr est détectée par le harnais de frontière HTTP, sans altérer la source produit. Relecture séparée du contrat puis du code en trois cycles ; correction de l'identifiant zéro revue une nouvelle fois sur le seul diff.
+
+## Résultat final
+
+**294 tests généraux et 97 tests PostgreSQL réels réussis**, aucun ignoré, HTTPS inclus, après la correction zéro. Neuf fichiers de suites PostgreSQL agrégés ; absence des binaires = refus attendu code 1, onze parents en échec avant préparation, aucun ignoré. Contrôle des modules distribués réussi sans base persistante ; cela ne constitue pas un build Docker. Les réglages d'ordonnancement de tests et la préparation du cluster sont expliqués dans [le guide de test](POSTGRESQL-TEST.md).
+
+Foyer/comptes réels, dépendances/verrou, schéma, interface, Compose et volumes inchangés ; aucun cluster de test restant observé dans les emplacements temporaires utilisés, aucun listener de démonstration conservé. Code enregistré localement, sans publication, sans bascule ou transfert de données ; tâche 08 non commencée. L'audit npm signale une alerte modérée Nodemailer existante, avec [triage et mise à jour à prévoir avant publication](DECISIONS.md) ; aucun audit externe Gemini exécuté.
