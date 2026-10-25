@@ -19,6 +19,8 @@ const { storageEngine } = require('./db/storage');
 const { isCompatible, validateMember, validateProtein } = require('./household');
 const { sqliteHousehold } = require('./db/household-sqlite');
 const { householdRoutes } = require('./household-http');
+const { validateRecipe, checkedRecipe } = require('./recipe');
+const { sqliteRecipes } = require('./db/recipes-sqlite');
 
 const INDEX_HTML = Buffer.from(readFileSync(join(__dirname, 'public', 'index.html'), 'utf8')
   .replace('<!-- MANGER_INFORMATION -->', readFileSync(join(__dirname, 'public', 'information.html'), 'utf8')));
@@ -254,122 +256,9 @@ function seed(db) {
   }
 }
 
-function recipes(db) {
-  const ingredientQuery = db.prepare(`
-    SELECT ingredients.name, ingredients.unit, recipe_ingredients.amount, recipe_ingredients.preparation
-    FROM recipe_ingredients JOIN ingredients ON ingredients.id = recipe_ingredients.ingredient_id
-    WHERE recipe_ingredients.recipe_id = ? ORDER BY ingredients.name
-  `);
-  const stepQuery = db.prepare(`
-    SELECT position, kind, instruction, minutes
-    FROM recipe_steps WHERE recipe_id = ? ORDER BY position
-  `);
-  return db.prepare('SELECT id, title, minutes, servings, tags, diet, source_url AS sourceUrl, EXISTS(SELECT 1 FROM recipe_photos WHERE recipe_id = recipes.id) AS hasPhoto, EXISTS(SELECT 1 FROM recipe_favorites WHERE recipe_id = recipes.id) AS favorite FROM recipes ORDER BY title').all()
-    .map(recipe => ({
-      ...recipe,
-      favorite: Boolean(recipe.favorite),
-      hasPhoto: Boolean(recipe.hasPhoto),
-      ...db.prepare('SELECT rating, note FROM recipe_notes WHERE recipe_id = ?').get(recipe.id),
-      tags: recipe.tags.split(',').filter(Boolean),
-      ingredients: ingredientQuery.all(recipe.id),
-      steps: stepQuery.all(recipe.id)
-    }));
-}
+function recipes(db) { return sqliteRecipes(db).read(); }
 
-function validateRecipe(input) {
-  if (!input || typeof input.title !== 'string' || !input.title.trim() || input.title.length > 120) throw new Error('Titre invalide');
-  if (!Number.isInteger(input.minutes) || input.minutes < 1 || input.minutes > 1_440) throw new Error('Durée invalide');
-  if (!Number.isInteger(input.servings) || input.servings < 1 || input.servings > 100) throw new Error('Nombre de portions invalide');
-  if (!['vegan', 'vegetarian', 'pescetarian', 'omnivore'].includes(input.diet)) throw new Error('Régime de recette invalide');
-  if (!Array.isArray(input.tags) || input.tags.length > 20 || input.tags.some(tag => typeof tag !== 'string' || !tag.trim() || tag.length > 40)) throw new Error('Étiquettes invalides');
-  if (!Array.isArray(input.ingredients) || input.ingredients.length < 1 || input.ingredients.length > 100) throw new Error('Ingrédients invalides');
-
-  const ingredients = input.ingredients.map(ingredient => {
-    if (!ingredient || typeof ingredient.name !== 'string' || !ingredient.name.trim() || ingredient.name.length > 80) throw new Error('Nom d’ingrédient invalide');
-    if (typeof ingredient.unit !== 'string' || !ingredient.unit.trim() || ingredient.unit.length > 24) throw new Error('Unité invalide');
-    if (typeof ingredient.amount !== 'number' || !Number.isFinite(ingredient.amount) || ingredient.amount <= 0 || ingredient.amount > 1_000_000) throw new Error('Quantité invalide');
-    if (ingredient.preparation !== undefined && !['raw', 'cooked', 'unknown'].includes(ingredient.preparation)) throw new Error('État d’ingrédient invalide');
-    return { name: ingredient.name.trim().toLocaleLowerCase('fr'), unit: ingredient.unit.trim(), amount: ingredient.amount, preparation: ingredient.preparation ?? 'unknown' };
-  });
-  const duplicate = new Set(ingredients.map(ingredient => `${ingredient.name}\0${ingredient.unit}`));
-  if (duplicate.size !== ingredients.length) throw new Error('Un ingrédient est présent plusieurs fois');
-
-  const stepKinds = new Set(['prep', 'cook', 'rest', 'serve']);
-  if (!Array.isArray(input.steps) || input.steps.length < 1 || input.steps.length > 50) throw new Error('Étapes invalides');
-  const steps = input.steps.map((step, index) => {
-    if (!step || !stepKinds.has(step.kind)) throw new Error(`Type invalide à l’étape ${index + 1}`);
-    if (typeof step.instruction !== 'string' || !step.instruction.trim() || step.instruction.length > 2_000) throw new Error(`Instruction invalide à l’étape ${index + 1}`);
-    if (step.minutes != null && (!Number.isInteger(step.minutes) || step.minutes < 0 || step.minutes > 1_440)) throw new Error(`Durée invalide à l’étape ${index + 1}`);
-    return { position: index + 1, kind: step.kind, instruction: step.instruction.trim(), minutes: step.minutes ?? null };
-  });
-
-  let sourceUrl = null;
-  if (input.sourceUrl != null && input.sourceUrl !== '') {
-    if (typeof input.sourceUrl !== 'string' || input.sourceUrl.length > 2000) throw new Error('Lien source invalide');
-    let url; try { url = new URL(input.sourceUrl); } catch { throw new Error('Lien source invalide'); }
-    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) throw new Error('Lien source invalide');
-    sourceUrl = url.href;
-  }
-  let photo;
-  if (input.photo !== undefined && input.photo !== null) {
-    if (typeof input.photo !== 'string' || input.photo.length > 400000 || !/^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/.test(input.photo)) throw new Error('Photo JPEG invalide ou trop volumineuse');
-    photo = Buffer.from(input.photo.slice(23), 'base64');
-    if (photo.length < 4 || photo.readUInt16BE(0) !== 0xffd8 || photo.readUInt16BE(photo.length - 2) !== 0xffd9) throw new Error('Photo JPEG invalide');
-  } else photo = input.photo;
-  if (input.photoCopyId !== undefined && (!Number.isSafeInteger(input.photoCopyId) || input.photoCopyId < 1)) throw new Error('Photo source invalide');
-  return {
-    title: input.title.trim(),
-    minutes: input.minutes,
-    servings: input.servings,
-    tags: [...new Set(input.tags.map(tag => tag.trim().toLocaleLowerCase('fr')))],
-    diet: input.diet,
-    sourceUrl,
-    ...(photo !== undefined ? { photo } : {}),
-    ...(input.photoCopyId !== undefined ? { photoCopyId: input.photoCopyId } : {}),
-    ingredients,
-    steps
-  };
-}
-
-function saveRecipe(db, recipe, id = null) {
-  db.exec('BEGIN');
-  try {
-    if (id == null) {
-      id = Number(db.prepare('INSERT INTO recipes (title, minutes, servings, tags, diet, instructions) VALUES (?, ?, ?, ?, ?, ?)')
-        .run(recipe.title, recipe.minutes, recipe.servings, recipe.tags.join(','), recipe.diet, '').lastInsertRowid);
-    } else {
-      const result = db.prepare('UPDATE recipes SET title = ?, minutes = ?, servings = ?, tags = ?, diet = ?, instructions = ? WHERE id = ?')
-        .run(recipe.title, recipe.minutes, recipe.servings, recipe.tags.join(','), recipe.diet, '', id);
-      if (result.changes === 0) throw new Error('Recette inconnue');
-      db.prepare('DELETE FROM recipe_ingredients WHERE recipe_id = ?').run(id);
-      db.prepare('DELETE FROM recipe_steps WHERE recipe_id = ?').run(id);
-      db.prepare('UPDATE meals SET title = ? WHERE recipe_id = ?').run(recipe.title, id);
-    }
-
-    db.prepare('UPDATE recipes SET source_url = ? WHERE id = ?').run(recipe.sourceUrl || null, id);
-    if (recipe.photoCopyId !== undefined && recipe.photo === undefined) {
-      db.prepare('INSERT OR REPLACE INTO recipe_photos (recipe_id, data) SELECT ?, data FROM recipe_photos WHERE recipe_id = ?').run(id, recipe.photoCopyId);
-    }
-    if (recipe.photo === null) db.prepare('DELETE FROM recipe_photos WHERE recipe_id = ?').run(id);
-    else if (recipe.photo !== undefined) db.prepare('INSERT OR REPLACE INTO recipe_photos (recipe_id, data) VALUES (?, ?)').run(id, recipe.photo);
-
-    const insertIngredient = db.prepare('INSERT INTO ingredients (name, unit) VALUES (?, ?) ON CONFLICT (name, unit) DO NOTHING');
-    const findIngredient = db.prepare('SELECT id FROM ingredients WHERE name = ? AND unit = ?');
-    const linkIngredient = db.prepare('INSERT INTO recipe_ingredients (recipe_id, ingredient_id, amount, preparation) VALUES (?, ?, ?, ?)');
-    for (const ingredient of recipe.ingredients) {
-      insertIngredient.run(ingredient.name, ingredient.unit);
-      const ingredientId = findIngredient.get(ingredient.name, ingredient.unit).id;
-      linkIngredient.run(id, ingredientId, ingredient.amount, ingredient.preparation || 'unknown');
-    }
-    const insertStep = db.prepare('INSERT INTO recipe_steps (recipe_id, position, kind, instruction, minutes) VALUES (?, ?, ?, ?, ?)');
-    for (const step of recipe.steps) insertStep.run(id, step.position, step.kind, step.instruction, step.minutes);
-    db.exec('COMMIT');
-    return recipes(db).find(item => item.id === id);
-  } catch (error) {
-    db.exec('ROLLBACK');
-    throw error;
-  }
-}
+function saveRecipe(db, recipe, id = null) { return checkedRecipe(sqliteRecipes(db).save(recipe, id)); }
 
 function meals(db, start) {
   return db.prepare(`
