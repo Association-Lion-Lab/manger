@@ -3,7 +3,7 @@ Manger! — Notices des dépendances distribuées
 Versions de package-lock.json. Les textes ci-dessous sont conservés depuis les paquets installés ; ils ne remplacent pas la licence AGPL du projet.
 
 
-=== nodemailer@10.0.16 — MIT-0 ===
+=== nodemailer@10.2.1 — MIT-0 ===
 
 Copyright (c) 2011-2023 Andris Reinman
 

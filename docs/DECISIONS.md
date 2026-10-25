@@ -1,5 +1,9 @@
 # Choix techniques, limites et blocages
 
+## Mise à jour Nodemailer — 25 octobre 2026
+
+Avant le lot 08, correction de l'alerte signalée en clôture 07 : seul Nodemailer est passé de 10.0.16 à **10.2.1**, version exacte du registre avec intégrité dans le verrou ; installation sans scripts. Pas de `audit fix --force`, ajout de dépendance ou changement de réglage SMTP. [Version publiée par le mainteneur](https://github.com/nodemailer/nodemailer/releases/tag/v10.2.1), au-delà du correctif 10.1.4 des trois avis cités dans le lot précédent. Notice distribuée actualisée, même texte de licence MIT-0 comparé au paquet installé. Audit d'installation sans vulnérabilité signalée ; **10 tests SMTP et information réussis**, dont refus réel de serveur sans STARTTLS, message/enveloppe produits en mémoire, invitations, droits et erreurs privées. Aucun courriel réel, accès fournisseur, envoi de code à un modèle externe ou publication. L'alerte documentée en 07 est close par ce correctif local ; cela ne met pas à jour un serveur déjà déployé.
+
 ## PostgreSQL : foyer et protéines portés sans bascule — 25 octobre 2026
 
 Tâche 07 autorisée après 06, [contrat et découpage](POSTGRESQL-FOYER.md) avant code. Préserver profils/régimes/goûts et sans supplément, retirer seulement les affectations d'une personne, garder les comptes séparés. Dépôt PostgreSQL ciblé et petit dépôt SQLite, validateurs purs partagés, maintien de l'export synchrone utilisé par les calculs non portés. Lecture en une requête pour la cohérence ; mutations sérialisées sous verrou dédié, protocole à reprendre pour les futurs repas. Pas d'ORM, traduction SQL générique, schéma ou refonte client. Bases synthétiques uniquement ; Gemini/relecture externe toujours en attente, aucun lancement autorisé par cette reprise du développement.
