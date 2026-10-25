@@ -4,6 +4,16 @@ Historique des lots et priorités, regroupé dans `docs/` le 10 octobre 2026. Le
 
 Contrainte produit : quatre onglets (Semaine, Recettes, Courses, Compte), actions dans leur contexte, fonctions secondaires regroupées sans surcharger ; préserver une interface sobre en clair et en sombre, au clavier et dès 320 px.
 
+## PostgreSQL — tâche 08, enregistrement et retrait des recettes — 25 octobre 2026
+
+- [Contrat recettes](POSTGRESQL-RECETTES.md) : dépôt PostgreSQL, validation/routes communes et dépôt SQLite synchrone ; lecture cohérente, sauvegarde des enfants/photo et retrait transactionnels, DTO lu avant COMMIT. Titres de repas liés actualisés et suppression protégée par les deux tables de planning.
+- Contrat historique conservé : cru/cuit/inconnu, précision, tags CSV, renumérotation des positions, photo omise/null/copie et priorités. Refus NUL dans les champs SQL texte, IDs zéro/grands sûrs, erreurs internes privées en 503. Pas de nouveau GET public ni d'interface modifiée.
+- **306 tests généraux et 115 PostgreSQL réels réussis**, aucun ignoré, HTTPS inclus ; mêmes sept scénarios HTTP sur les deux moteurs, erreurs injectées après enfants/photo/lecture finale, éditions et lectures concurrentes, attente réelle du verrou. Mutation en mémoire détectée et trois cycles de relecture réconciliés ; aucun modèle/CLI externe utilisé.
+- Alerte Nodemailer corrigée localement en **10.2.1** avec verrou et notice ; licence identique vérifiée, dix tests SMTP/information ciblés puis suite complète verte, audit npm sans vulnérabilité signalée. Contrôle modules/image sans base persistante réussi, pas de vrai build Docker ou mise à jour du serveur déjà déployé.
+- Tâches 01–08 closes ; prochaine **09 — photos, favoris, avis et imports**, non commencée pour ses routes PostgreSQL. Lancement standard/CLI toujours SQLite, aucun transfert de données, schéma/Compose/volume modifié, publication ou validation nouvelle navigateur/appareil/Linux/CI/Ubuntu.
+
+Onze fichiers PostgreSQL agrégés, un à la fois ; sans binaires, treize parents en refus attendu, aucun test ignoré. Clusters jetables nettoyés, documentation versionnée et commits locaux, pas de purge de données du foyer. La preuve du profil Chromium du lot 07 ne vaut pas nouveau test du formulaire de recette du lot 08.
+
 ## PostgreSQL — tâche 07, personnes, goûts et protéines — 25 octobre 2026
 
 - [Contrat foyer et limites](POSTGRESQL-FOYER.md) : huit opérations dans les dépôts, règles et routes communes ; lecture PostgreSQL en un instantané, écritures atomiques sous verrou dédié. SQLite garde ses calculs synchrones et les mêmes données/écrans.

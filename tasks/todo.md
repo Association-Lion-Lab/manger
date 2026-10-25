@@ -1,6 +1,6 @@
 # Migration PostgreSQL — tâches et points de contrôle
 
-25 octobre 2026 — **plan validé ; tâches 01–07 réalisées, prochaine tâche 08 : création et édition d'une recette**. [Cadrage et risques](../docs/MIGRATION-POSTGRESQL.md), [ordre de réalisation](plan.md). Les noms des fichiers non encore créés restent des propositions. Chaque tâche comprend la mise à jour de la documentation concernée et de `docs/DECISIONS.md` ; les fichiers listés sont le périmètre technique principal. Si une tranche dépasse environ cinq fichiers techniques ou une session ciblée, la découper avant de coder, sans réduire ses critères.
+25 octobre 2026 — **plan validé ; tâches 01–08 réalisées, prochaine tâche 09 : enrichissements et imports de recettes**. [Cadrage et risques](../docs/MIGRATION-POSTGRESQL.md), [ordre de réalisation](plan.md). Les noms des fichiers non encore créés restent des propositions. Chaque tâche comprend la mise à jour de la documentation concernée et de `docs/DECISIONS.md` ; les fichiers listés sont le périmètre technique principal. Si une tranche dépasse environ cinq fichiers techniques ou une session ciblée, la découper avant de coder, sans réduire ses critères.
 
 ## Phase 1 — Socle isolé
 
@@ -103,13 +103,14 @@ Preuve : [installation et validations](../docs/POSTGRESQL-TEST.md), **7 tests Po
 
 ### 08 — Création et édition d'une recette
 
-- [ ] Réalisé.
+- [x] Réalisé le 25 octobre 2026, dépôt candidat et routes communes testés, SQLite conservé au lancement normal.
 - **Livrable :** recette avec ingrédients et étapes dans une transaction, lecture et suppression.
-- **Acceptation :** IDs et ordre des étapes conservés ; rollback intégral en cas d'échec ; références repas et restrictions de suppression identiques.
+- **Acceptation :** IDs recette/ingrédients partagés et ordre des étapes conservés ; positions renumérotées 1..N à la validation et IDs techniques d'étape recréés comme avant ; rollback intégral en cas d'échec ; références repas et restrictions de suppression identiques.
 - **Vérification :** cas CRUD de `server.test.js`, `preparation.test.js`, suppression et conflits sur PostgreSQL réel.
 - **Dépendances :** 07.
-- **Fichiers probables :** `server.js`, nouveau `db/recipes.js`, `server.test.js`, `preparation.test.js`, `postgres-recipes.test.js`.
+- **Fichiers réalisés :** `server.js`, `recipe.js`, `recipe-http.js`, `db/recipes.js`, `db/recipes-sqlite.js`, règles/contrat HTTP et deux suites réelles dans `test-support/` ; anciennes suites conservées.
 - **Découpage avant réalisation :** 08a, dépôt réel et transactions ; 08b, validation/dépôt SQLite/routes communes ; 08c, contrats HTTP protégés, concurrence/rollback et clôture. [Contrat et limites](../docs/POSTGRESQL-RECETTES.md). Les opérations photo déjà incluses dans POST/PUT restent atomiques, sans prétendre clore les enrichissements/imports de 09.
+- **Clôture :** 306 tests généraux et 115 PostgreSQL réels verts, aucun ignoré, HTTPS inclus ; contrôle modules/notices réussi, audit npm sans alerte après correctif Nodemailer 10.2.1. Huit tâches closes et quinze restantes ; aucune donnée réelle, publication ou bascule, aucun nouveau navigateur/appareil validé.
 - **Taille :** M.
 
 ### 09 — Photos, favoris, avis et imports

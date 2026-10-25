@@ -1,6 +1,6 @@
 # Choix techniques, limites et blocages
 
-## PostgreSQL : préparer les recettes — 25 octobre 2026
+## PostgreSQL : recettes portées sans bascule — 25 octobre 2026
 
 Tâche 08 autorisée par « go » après clôture 07. [Contrat et découpage](POSTGRESQL-RECETTES.md) avant le code : préserver le DTO et les trois routes, ordre/normalisation, remplacement atomique des enfants, références du planning et succès après commit seulement. Lecture PostgreSQL agrégée cohérente, insertions paramétrées par tableaux pour borner les allers-retours, verrou foyer déjà existant. Les opérations photo faisant déjà partie de l'enregistrement sont un couplage nécessaire à garder ; pas de portage des routes photo/favoris/avis/imports ni de nouveau GET public. SQLite/export synchrone maintenus ; aucun changement UI, schéma ou lancement normal PostgreSQL. Code et tests de chaque tranche encore à réaliser ; relecture externe toujours différée, aucune base réelle utilisée.
 
@@ -25,6 +25,10 @@ Contrat HTTP PostgreSQL : **huit tests réussis**, aucun ignoré, avec les même
 Troisième contre-relecture du code HTTP : seul ajout des suites au lanceur signalé, valide et déjà intégré pendant la lecture. Pas de nouveau défaut métier concret relevé. Arrêt de cette revue au troisième cycle, pas de boucle d'audit indéfinie ; Gemini reste différé selon le choix utilisateur, aucun modèle/CLI externe ni donnée privée invoqué.
 
 Suite générale du code raccordé : **306 tests réussis, aucun ignoré, HTTPS inclus**. Contrôle des modules/pages/notices/icônes réussi sans base persistante ou connexion PostgreSQL, et audit npm de production à zéro vulnérabilité signalée après Nodemailer 10.2.1. Ce contrôle de modules n'est pas un build Docker. Passage global PostgreSQL en cours avant clôture ; pas de publication ou activation de moteur.
+
+Clôture 08 : **115 tests PostgreSQL réels réussis**, aucun ignoré, sur les onze fichiers de suites et 306 tests généraux ci-dessus. Gardes/module absent, saisie NUL, erreur interne et ajout au lanceur vérifiés en rouge avant corrections ; concurrence réelle, rollback photo/enfants/lecture, IDs zéro/grands et références des deux tables vérifiés. Mutation de garde d'ID détectée en mémoire. Absence des binaires : refus attendu code 1, treize parents en échec avant préparation, aucun ignoré. Trois cycles de relecture séparée réconciliés (précisions du contrat, tests photo, lanceur) ; aucun modèle/CLI externe lancé. Aucun nouveau navigateur/appareil, Docker/Linux/CI PostgreSQL/Ubuntu ou donnée réelle validé. Code enregistré localement, sans publication ni activation PostgreSQL ; prochaine 09, enrichissements/imports, non commencée.
+
+Contrôles de clôture : 175 liens locaux existants vérifiés dans dix documents, ancres et destinations externes non contrôlées ; huit tâches closes et quinze restantes. Aucun dossier `manger-pg-test-*` observé dans les deux emplacements temporaires utilisés après la suite complète, sans purge manuelle ; outils portables ignorés conservés. Diff sans erreur de whitespace. Seules dépendances/verrou/notice de Nodemailer changent dans la maintenance préalable ; interface, schéma, Compose/volumes et données privées intacts.
 
 ## Mise à jour Nodemailer — 25 octobre 2026
 

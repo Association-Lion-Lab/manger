@@ -1,6 +1,6 @@
 # PostgreSQL — création, lecture, édition et retrait des recettes
 
-25 octobre 2026 — tâche 08 en cours du [plan](MIGRATION-POSTGRESQL.md), après le [foyer](POSTGRESQL-FOYER.md). Manger! reste lancé sur SQLite ; aucune reprise de données privées, nouvelle interface, ouverture du candidat incomplet ou publication.
+25 octobre 2026 — tâche 08 réalisée du [plan](MIGRATION-POSTGRESQL.md), après le [foyer](POSTGRESQL-FOYER.md). Manger! reste lancé sur SQLite ; aucune reprise de données privées, nouvelle interface, ouverture du candidat incomplet ou publication.
 
 ## Contrat à conserver
 
@@ -35,3 +35,11 @@ Sources : [paramètres et tableaux du pilote](https://node-postgres.com/features
 10 tests du dépôt PostgreSQL réel, puis huit tests HTTP PostgreSQL (les sept mêmes scénarios que SQLite) passent, sans omission. Les cas photo limites et leur annulation, les lectures pendant transaction, éditions simultanées et suppression attendant une nouvelle référence sont exécutés sur le vrai serveur de test. Les quatre tests de règles/rollback SQLite et les anciennes suites ciblées restent verts. Le SQL d'une panne n'est plus rendu au client par les trois routes extraites, mais un message privé en 503.
 
 La relecture séparée en trois cycles a précisé le contrat historique (positions, tags CSV, photos), fait compléter ces preuves photo et relevé l'ajout indispensable des deux fichiers à la commande globale PostgreSQL, maintenant intégré avec sa garde. Le contrôle d'ID dangereux doit refuser avant appel du dépôt ; pas de conversion globale du pilote ni de repli SQLite. Tests complets, conformité de l'image et clôture encore en cours. Aucune nouvelle vérification navigateur ou sur appareil n'est revendiquée pour ce portage sans changement UI.
+
+## Résultat final et limites
+
+**306 tests généraux et 115 PostgreSQL réels réussis**, aucun ignoré, HTTPS inclus. Onze fichiers de suites PostgreSQL agrégés ; sans binaires, code 1 attendu, treize parents en échec avant préparation, aucun ignoré. Mutation en mémoire supprimant la garde d'ID dangereux détectée avant appel du dépôt, source produit intacte. Modules/pages/notices/icônes et bases SQLite en mémoire contrôlés, aucune connexion PostgreSQL à l'import ; cela ne valide pas un vrai build Docker.
+
+Nodemailer 10.2.1 corrige l'alerte signalée en 07 : verrou et notice actualisés, licence comparée, tests SMTP et audit npm de production sans vulnérabilité signalée. Aucune autre dépendance, fonction client ou règle SMTP modifiée. Ce correctif local n'est pas une mise à jour du serveur existant.
+
+Lancement standard et commandes toujours SQLite, candidat PostgreSQL incomplet refusé avant fichiers ; aucun transfert de base, DDL, changement de Compose/volume, accès Ubuntu, publication, validation Docker/Linux/CI PostgreSQL ou Safari/iPhone/Android. Aucun nouveau parcours navigateur réel pour ce lot ; contrôles HTTP réels et tests client existants uniquement. Gemini externe reste différé ; aucun code envoyé à un modèle tiers. Tâche 09 (enrichissements/imports) non commencée.

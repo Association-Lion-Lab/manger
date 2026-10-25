@@ -29,6 +29,8 @@ Toutes les commandes du guide s'exécutent depuis la racine du dépôt, **pas de
 
 [Personnes, goûts et protéines PostgreSQL](POSTGRESQL-FOYER.md) : règles et routes communes, lecture cohérente et écritures transactionnelles, retraits séparés des comptes ; SQLite normal conservé. Tests réels et limites de validation détaillés dans le contrat, aucun planning ou recette PostgreSQL activé.
 
+[Création et édition des recettes PostgreSQL](POSTGRESQL-RECETTES.md) : tâche 08 testée, même contrat d'enregistrement et suppression protégée, enfants/photo atomiques et lecture cohérente ; exports SQLite synchrones préservés. Enrichissements/imports de 09 et lancement normal PostgreSQL restent à porter, aucune donnée réelle convertie.
+
 [Notices des dépendances distribuées](../public/third-party-notices.txt) : versions, textes et copyrights de Nodemailer et du pilote PostgreSQL, sous licences MIT-0/MIT/ISC ; le code du projet reste AGPL-3.0-or-later.
 
 1. [Architecture](ARCHITECTURE.md) : fichiers, données, flux, API principales et vérification.
