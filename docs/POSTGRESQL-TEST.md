@@ -36,6 +36,10 @@ Les rôles de bootstrap, de migration et d'application ont des mots de passe al�
 
 La connexion locale synthétique utilise `ssl: false` uniquement pour ce loopback jetable ; **ne pas reprendre ce choix pour une base distante**. Délai de connexion de 2 secondes, requête côté client de 3 secondes et `statement_timeout` serveur de 1 seconde. Pool de quatre connexions maximum, gestion des erreurs de connexions inactives et fermeture explicite. L'administrateur temporaire est fermé après création du rôle ; le fichier de mot de passe de bootstrap est retiré après `initdb`.
 
+Exception de préparation mesurée le 25 octobre : le clonage physique `CREATE DATABASE … TEMPLATE template0` a dépassé le plafond SQL d'une seconde lors de deux essais, avant tout test métier. Une sonde isolée en mémoire mesure 1 256 ms et confirme que les pools conservent `statement_timeout=1s`. Cette seule commande de bootstrap dispose désormais de 15 s côté serveur / 20 s côté client, puis le plafond est remis à 1 s ; aucun délai runtime, test de requête lente ou assertion métier assoupli. Pas de retry automatique ni désactivation de fsync ; cleanup de la fixture conservé. [Fonctionnement du clonage PostgreSQL](https://www.postgresql.org/docs/18/sql-createdatabase.html).
+
+Validation ciblée du correctif : 14 tests réussis sur PostgreSQL réel (dépôt foyer en cours et fixture), aucun ignoré ; annulation de la requête lente, reprise du pool, arrêt/reprise et nettoyage conservés. Les deux pools sont explicitement contrôlés à `1s` après la préparation.
+
 Les fichiers de test héritent des protections du répertoire temporaire de l'utilisateur ; le mode `0600` demandé n'est pas une preuve d'ACL Windows. Employer un compte et un répertoire de travail locaux de confiance, pas un dossier partagé.
 
 ## Arrêt et nettoyage

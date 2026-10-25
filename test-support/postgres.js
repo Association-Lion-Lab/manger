@@ -107,7 +107,10 @@ async function postgresFixture(t) {
         const { rows: [role] } = await admin.query("SELECT format('CREATE ROLE %I LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD %L', $1::text, $2::text) AS sql", [name, secret]);
         await admin.query(role.sql);
       }
-      await admin.query('CREATE DATABASE manger_test OWNER manger_test_migrator TEMPLATE template0');
+      // Cloning template0 touches disk; this setup deadline is not the application query budget.
+      await admin.query('SET statement_timeout=15000');
+      try { await admin.query({text:'CREATE DATABASE manger_test OWNER manger_test_migrator TEMPLATE template0',query_timeout:20000}); }
+      finally { await admin.query('SET statement_timeout=1000'); }
       await admin.query('REVOKE ALL ON DATABASE manger_test FROM PUBLIC; GRANT CONNECT ON DATABASE manger_test TO manger_test_app');
     } finally { await admin.end(); }
     pool = new Pool({ ...config, user: 'manger_test_app', password, database: 'manger_test', max: 4, idleTimeoutMillis: 500 });
