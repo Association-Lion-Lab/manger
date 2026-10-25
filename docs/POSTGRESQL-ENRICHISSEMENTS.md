@@ -1,6 +1,6 @@
 # PostgreSQL — photos, favoris, avis et imports
 
-25 octobre 2026 — tâche 09 en cours du [plan](MIGRATION-POSTGRESQL.md), après [l'enregistrement des recettes](POSTGRESQL-RECETTES.md). SQLite reste le moteur normal ; pas de bascule, transfert de données privées, refonte client, schéma ou publication.
+25 octobre 2026 — tâche 09 réalisée du [plan](MIGRATION-POSTGRESQL.md), après [l'enregistrement des recettes](POSTGRESQL-RECETTES.md). SQLite reste le moteur normal ; pas de bascule, transfert de données privées, refonte client, schéma ou publication. Prochaine tâche 10 : repas, assiettes et restes, non commencée.
 
 ## Contrat et découpage
 
@@ -21,3 +21,17 @@ Le téléchargement internet et le parseur existants sont réutilisés : HTTPS/4
 Hypothèse à éprouver : enrichissements et imports conservent leur contrat sans état partiel ni duplication du catalogue sous les écrivains applicatifs coopérants. Pas de garantie contre un SQL externe ignorant le protocole ; futurs écrivains de repas doivent garder le même verrou. Relecture séparée du contrat puis du code, examen externe Gemini toujours différé selon le choix utilisateur.
 
 Sources : [paramètres et Buffer du pilote](https://node-postgres.com/features/queries), [verrous transactionnels PostgreSQL](https://www.postgresql.org/docs/18/explicit-locking.html). Les sources ne remplacent pas les preuves d'exécution à consigner après les tranches.
+
+## Preuves ciblées et limites
+
+Les mêmes contrats de dépôt passent sur SQLite et PostgreSQL réel : photo inchangée, écritures idempotentes, remise à zéro, ID zéro/cascades ; erreur après mutation annulée, recette supprimée pendant attente revalidée. Les cinq scénarios de catalogue incluent la vraie liste des 100 recettes, personnalisations, casse, panne après insertion d'enfants, répétition et imports concurrents. Douze tests réels dans cette suite ; pas de comparaison fondée sur un faux dépôt.
+
+Le contrat HTTP commun passe ses sept scénarios sur les deux moteurs : auth/origine, octets/en-têtes JPEG, avis/favoris, export léger, aperçu de fichier, catalogue réel, pannes privées et IDs zéro/grands. Huit tests d'enrichissements et un scénario URL supplémentaire PostgreSQL, avec les huit tests HTTP de 08 repassés verts (17 ciblés au total). URL positive simulée uniquement au transport, parseur réel, SQL non verrouillé pendant la pause, garde URL et reprise vérifiées ; aucun téléchargement internet réel ni nouveau parcours navigateur/appareil revendiqué.
+
+Le compte synthétique de la fixture HTTP PostgreSQL est préparé avec le helper historique SQLite en mémoire ; les requêtes utilisent ensuite PostgreSQL pour authentification et données. Pas de lecture de bases privées, pas de « zéro ouverture SQLite » revendiqué pour cette préparation. Relecture séparée en trois cycles, précisions du contrat réconciliées puis aucun défaut concret relevé sur les deux tranches de code ; examen externe différé selon le choix utilisateur.
+
+Clôture : **329 tests généraux et 136 tests PostgreSQL réels réussis, aucun ignoré**, HTTPS inclus. Les treize fichiers PostgreSQL de la commande standard ont été exécutés successivement avec reporter TAP explicite avant leurs chemins. Module absent, méthodes absentes et erreur privée reproduits en rouge avant les changements ; garde d'ID retirée en mémoire détectée. Sans binaires, la commande standard refuse avant préparation (code 1, quinze parents échoués, aucun ignoré). Contrôle des modules/pages/notices/icônes réussi sans données persistantes, audit npm de production sans vulnérabilité signalée ; dépendances et verrou inchangés dans ce lot.
+
+Limite de fiabilité du harnais : un premier worker général et deux fins de groupes PostgreSQL ont échoué sans diagnostic exploitable. Les relances isolées passent et le passage complet final est vert ; la cause de ces premiers échecs reste inconnue. Fermeture du seul nouveau serveur de test rendue systématique avant les hooks SQL, sans changer le nettoyage commun, les délais ou les assertions. Deux dossiers synthétiques résiduels ont été retirés après vérification des chemins/marqueurs et de l'arrêt de leur cluster ; inventaire final des répertoires temporaires contrôlé séparément. Ces incidents ne sont pas présentés comme des bugs produit corrigés ou comme une garantie de disparition de l'instabilité.
+
+Pas de téléchargement réel d'une recette sur internet, nouveau test navigateur/iPhone/Android, build Docker ou validation Linux/CI PostgreSQL/Ubuntu. Aucun lancement normal PostgreSQL, transfert privé, changement de Compose/volume ou publication Codeberg. Le candidat reste fermé aux parcours non portés ; une suite verte de ce lot ne suffit pas à autoriser une migration de production.

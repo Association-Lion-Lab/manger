@@ -1,6 +1,6 @@
 # Migration PostgreSQL — tâches et points de contrôle
 
-25 octobre 2026 — **plan validé ; tâches 01–08 réalisées, prochaine tâche 09 : enrichissements et imports de recettes**. [Cadrage et risques](../docs/MIGRATION-POSTGRESQL.md), [ordre de réalisation](plan.md). Les noms des fichiers non encore créés restent des propositions. Chaque tâche comprend la mise à jour de la documentation concernée et de `docs/DECISIONS.md` ; les fichiers listés sont le périmètre technique principal. Si une tranche dépasse environ cinq fichiers techniques ou une session ciblée, la découper avant de coder, sans réduire ses critères.
+25 octobre 2026 — **plan validé ; tâches 01–09 réalisées, prochaine tâche 10 : repas, assiettes et restes**. [Cadrage et risques](../docs/MIGRATION-POSTGRESQL.md), [ordre de réalisation](plan.md). Les noms des fichiers non encore créés restent des propositions. Chaque tâche comprend la mise à jour de la documentation concernée et de `docs/DECISIONS.md` ; les fichiers listés sont le périmètre technique principal. Si une tranche dépasse environ cinq fichiers techniques ou une session ciblée, la découper avant de coder, sans réduire ses critères.
 
 ## Phase 1 — Socle isolé
 
@@ -115,13 +115,14 @@ Preuve : [installation et validations](../docs/POSTGRESQL-TEST.md), **7 tests Po
 
 ### 09 — Photos, favoris, avis et imports
 
-- [ ] Réalisé.
+- [x] Réalisé le 25 octobre 2026, routes communes et dépôts isolés ; aucune bascule activée.
 - **Livrable :** enrichissements et import/export de recettes sans changer le format d'échange existant.
 - **Acceptation :** photos identiques et toujours prioritaires ; avis/favoris et import catalogue sans doublons ; garde-fous de l'import internet conservés.
 - **Vérification :** cas existants `photos.test.js`, `favorites.test.js`, `recipe-notes.test.js`, catalogue et import sur PostgreSQL ; matrice suivie en 01, sans supprimer les tests hors fichiers de cette tranche.
 - **Dépendances :** 08.
-- **Fichiers probables :** `server.js`, `db/recipes.js`, `photos.test.js`, nouveau `postgres-recipe-extras.test.js`.
+- **Fichiers réalisés :** dépôts `db/recipes.js` et `db/recipes-sqlite.js`, `recipe.js`, `recipe-http.js`, `recipe-extras-http.js`, `recipe-preview.js`, erreurs prévues de `recipe-import.js` et raccordement `server.js` ; contrats communs et deux suites réelles dans `test-support/`, tests SQLite/règles/aperçus et garde du lanceur standard. Anciennes suites conservées.
 - **Découpage avant code :** 09a photos/favoris/avis dans les dépôts ; 09b catalogue transactionnel et export ; 09c aperçu réseau/fichier et routes communes ; 09d contrats HTTP, concurrence/rollback et clôture. [Contrat et limites](../docs/POSTGRESQL-ENRICHISSEMENTS.md). Pas de moteur partiel déployé ou de parcours repas commencé.
+- **Clôture :** 329 tests généraux et 136 PostgreSQL réels réussis, aucun ignoré, HTTPS inclus ; photos/avis/favoris, catalogue réel et imports concurrents avec rollback, export/aperçu sans écriture, auth/origine/erreurs privées et garde URL vérifiés. Trois cycles de relecture séparée, module/image et audit npm sans alerte ; incidents intermittents de harnais consignés, cause inconnue, passage complet final vert. Neuf tâches closes et quatorze restantes ; pas de nouvelle validation appareil/internet réel/Docker/Linux/Ubuntu, donnée privée, publication ou étape 10 commencée.
 - **Taille :** M ; sous-tranches par capacité si le portage l'exige.
 
 ### 10 — Ajout et modification d'un repas

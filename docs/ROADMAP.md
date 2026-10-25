@@ -4,6 +4,16 @@ Historique des lots et priorités, regroupé dans `docs/` le 10 octobre 2026. Le
 
 Contrainte produit : quatre onglets (Semaine, Recettes, Courses, Compte), actions dans leur contexte, fonctions secondaires regroupées sans surcharger ; préserver une interface sobre en clair et en sombre, au clavier et dès 320 px.
 
+## PostgreSQL — tâche 09, photos, favoris, avis et imports — 25 octobre 2026
+
+- [Contrat enrichissements](POSTGRESQL-ENRICHISSEMENTS.md) : photos binaires inchangées, écritures favoris/avis idempotentes et transactionnelles ; contrôles d'ID/saisie avant SQL, erreurs internes privées, routes communes protégées sur les deux moteurs.
+- Catalogue fixe importé dans une seule transaction sous verrou foyer, sans doublons ni écrasement des titres exacts présents. Les 100 recettes et les personnalisations sont réellement testées ; pas d'unicité imposée aux titres créés manuellement.
+- Aperçu de fichier/URL sans écriture, export léger v1 inchangé ; extraction existante et protections SSRF conservées. Garde URL libérée sur erreur et aucun verrou SQL pendant le transport ; téléchargement positif simulé, parseur et HTTP réels, pas de site internet réellement testé.
+- **329 tests généraux et 136 PostgreSQL réels réussis**, aucun ignoré, HTTPS inclus ; treize fichiers réels exécutés, refus explicite sans binaires, mutation en mémoire détectée, trois cycles de relecture réconciliés. Contrôle modules/pages/notices réussi et audit npm sans vulnérabilité signalée ; incidents de fin de test non reproduits documentés, sans prétendre en avoir établi la cause.
+- Tâches 01–09 closes, prochaine **10 — repas, assiettes et restes**, non commencée. Lancement standard toujours SQLite, candidat PostgreSQL incomplet refusé ; aucune donnée réelle, publication Codeberg, modification de schéma/dépendance/Compose/volume ou validation nouvelle navigateur/appareil/Docker/Linux/CI/Ubuntu.
+
+Les deux clusters résiduels des passages interrompus étaient déjà arrêtés ; cet arrêt et leur appartenance ont été vérifiés avant retrait de leurs seuls dossiers, sans purge globale. Aucun dossier de cluster de test observé dans les deux emplacements temporaires après le passage final. Point de contrôle enregistré dans le dépôt local, suivi et documentation actualisés ; les preuves historiques ci-dessous décrivent chaque lot, pas l'état courant du portage complet.
+
 ## PostgreSQL — tâche 08, enregistrement et retrait des recettes — 25 octobre 2026
 
 - [Contrat recettes](POSTGRESQL-RECETTES.md) : dépôt PostgreSQL, validation/routes communes et dépôt SQLite synchrone ; lecture cohérente, sauvegarde des enfants/photo et retrait transactionnels, DTO lu avant COMMIT. Titres de repas liés actualisés et suppression protégée par les deux tables de planning.

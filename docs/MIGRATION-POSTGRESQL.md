@@ -1,6 +1,6 @@
 # Plan de migration vers PostgreSQL
 
-Plan validé le 22 octobre, état au **25 octobre 2026 : tâches 01–08 réalisées, aucun transfert de données existantes implémenté ou lancé**. Schéma, frontière asynchrone, [connexion/sessions](POSTGRESQL-AUTH.md), [invitations/administration](POSTGRESQL-ACCES.md), [personnes/préférences/protéines](POSTGRESQL-FOYER.md) et [recettes](POSTGRESQL-RECETTES.md) testés séparément ; prochaine tâche 09, enrichissements/imports des recettes. Le lancement normal reste SQLite et refuse le candidat PostgreSQL incomplet, commandes standard comprises. [État des tâches](../tasks/todo.md).
+Plan validé le 22 octobre, état au **25 octobre 2026 : tâches 01–09 réalisées, aucun transfert de données existantes implémenté ou lancé**. Schéma, frontière asynchrone, [connexion/sessions](POSTGRESQL-AUTH.md), [invitations/administration](POSTGRESQL-ACCES.md), [personnes/préférences/protéines](POSTGRESQL-FOYER.md), [recettes](POSTGRESQL-RECETTES.md) et [photos/favoris/avis/imports](POSTGRESQL-ENRICHISSEMENTS.md) testés séparément ; prochaine tâche 10, repas/assiettes/restes. Le lancement normal reste SQLite et refuse le candidat PostgreSQL incomplet, commandes standard comprises. [État des tâches](../tasks/todo.md).
 
 Ce plan décrit le remplacement du stockage de Manger!, pas une refonte visuelle. Node.js 24+, les quatre onglets, l'API et le modèle « une instance = un foyer partagé » restent la base. Rust, FDL, le scan de recettes, le SaaS multi-foyers et un nouveau framework client sont hors périmètre.
 
