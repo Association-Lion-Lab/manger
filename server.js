@@ -15,29 +15,20 @@ const { createRestore } = require('./restore');
 const { openAccounts, protectAccounts } = require('./accounts');
 const { createInvitationMailer } = require('./invitation-mail');
 const { storageEngine } = require('./db/storage');
-const { isCompatible, validateMember, validateProtein } = require('./household');
+const { isCompatible, isDietCompatible, validateMember, validateProtein } = require('./household');
 const { sqliteHousehold } = require('./db/household-sqlite');
 const { householdRoutes } = require('./household-http');
 const { validateRecipe, checkedRecipe } = require('./recipe');
 const { sqliteRecipes } = require('./db/recipes-sqlite');
 const { recipeRoutes } = require('./recipe-http');
 const { recipeExtraRoutes } = require('./recipe-extras-http');
+const { DAY_MS,dateKey,addDays,isDateKey } = require('./dates');
+const { validateMealInput,checkMealReferences,calendarMeals } = require('./meal');
+const { sqliteMeals } = require('./db/meals-sqlite');
 
 const INDEX_HTML = Buffer.from(readFileSync(join(__dirname, 'public', 'index.html'), 'utf8')
   .replace('<!-- MANGER_INFORMATION -->', readFileSync(join(__dirname, 'public', 'information.html'), 'utf8')));
-const DAY_MS = 86_400_000;
 
-function dateKey(date) {
-  return date.toISOString().slice(0, 10);
-}
-
-function addDays(key, days) {
-  return dateKey(new Date(new Date(`${key}T12:00:00Z`).getTime() + days * DAY_MS));
-}
-
-function isDateKey(value) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(value) && dateKey(new Date(`${value}T12:00:00Z`)) === value;
-}
 
 function createDatabase(filename) {
   if (filename !== ':memory:') mkdirSync(dirname(filename), { recursive: true });
@@ -261,20 +252,7 @@ function recipes(db) { return sqliteRecipes(db).read(); }
 
 function saveRecipe(db, recipe, id = null) { return checkedRecipe(sqliteRecipes(db).save(recipe, id)); }
 
-function meals(db, start) {
-  return db.prepare(`
-    SELECT meals.id, date, slot, location, occasion, people, recipe_id AS recipeId,
-           meals.title, recipes.minutes, leftover_of AS leftoverOf,
-           COALESCE((SELECT SUM(rest.people) FROM meals rest WHERE rest.leftover_of = meals.id), 0) AS extraPortions,
-           EXISTS(SELECT 1 FROM meal_assignments WHERE meal_id = meals.id) AS hasVariants
-    FROM meals LEFT JOIN recipes ON recipes.id = meals.recipe_id
-    WHERE date BETWEEN ? AND ? ORDER BY date, slot
-  `).all(start, addDays(start, 6)).map(meal => {
-    const dishes = db.prepare('SELECT member_id AS memberId, recipe_id AS recipeId, protein_id AS proteinId, portions, recipes.minutes FROM meal_dishes JOIN recipes ON recipes.id = meal_dishes.recipe_id WHERE meal_id = ?').all(meal.id);
-    const assignments = db.prepare('SELECT member_id AS memberId, protein_id AS proteinId, portions FROM meal_assignments WHERE meal_id = ?').all(meal.id);
-    return dishes.length ? { ...meal, minutes: Math.max(...dishes.map(dish => dish.minutes)), dishes: dishes.map(({ minutes, proteinId, ...dish }) => ({ ...dish, ...(proteinId == null ? {} : { proteinId }) })) } : { ...meal, assignments };
-  });
-}
+function meals(db,start) { return sqliteMeals(db).read(start); }
 
 function shoppingList(db, start, end = addDays(start, 6)) {
   return groupIngredients(db.prepare(`
@@ -387,14 +365,7 @@ function household(db) {
   return sqliteHousehold(db).read();
 }
 
-function isDietCompatible(memberDiet, recipeDiet) {
-  const rank = { vegan: 0, vegetarian: 1, pescetarian: 2, omnivore: 3 };
-  return rank[recipeDiet] <= rank[memberDiet];
-}
 
-function availablePantry(db, end) {
-  return reservePantry(db, end).stocks.filter(item => !item.ambiguous && item.recordedOn <= end);
-}
 
 function previewMenu(db, input) {
   if (!input || !isDateKey(input.start) || new Date(`${input.start}T12:00:00Z`).getUTCDay() !== 1 || !Number.isInteger(input.maxMinutes) || input.maxMinutes < 1 || input.maxMinutes > 1440 || !Array.isArray(input.memberIds) || !Array.isArray(input.slots) || !input.slots.length || input.slots.length > 14) throw new Error('Critères du menu invalides.');
@@ -488,92 +459,9 @@ function suggestions(db, start = null, maxMinutes = null, memberIds = null, targ
   return ranked.slice(0, 3);
 }
 
-function validateMeal(input, db) {
-  const slots = new Set(['midi', 'soir']);
-  const locations = new Set(['home', 'outside', 'restaurant']);
-  const occasions = new Set(['regular', 'date', 'guests']);
-  if (!input || !isDateKey(input.date)) throw new Error('Date invalide');
-  if (!slots.has(input.slot)) throw new Error('Créneau invalide');
-  if (!locations.has(input.location)) throw new Error('Lieu invalide');
-  if (!occasions.has(input.occasion)) throw new Error('Occasion invalide');
-  if (!Number.isInteger(input.people) || input.people < 1 || input.people > 100) throw new Error('Nombre de personnes invalide');
-  if (typeof input.title !== 'string' || !input.title.trim() || input.title.length > 120) throw new Error('Titre invalide');
-  const baseRecipe = input.recipeId == null ? null : db.prepare('SELECT diet FROM recipes WHERE id = ?').get(input.recipeId);
-  if (input.recipeId != null && !baseRecipe) throw new Error('Recette inconnue');
-  if (input.location !== 'home' && input.recipeId != null) throw new Error('Une recette est réservée aux repas à la maison');
-  const assignments = input.assignments == null ? [] : input.assignments;
-  if (!Array.isArray(assignments) || assignments.length > 100) throw new Error('Répartition invalide');
-  const seenMembers = new Set();
-  const checkedAssignments = assignments.map(assignment => {
-    if (!assignment || !Number.isInteger(assignment.memberId) || !Number.isInteger(assignment.proteinId) || !Number.isInteger(assignment.portions) || assignment.portions < 1 || assignment.portions > 20) throw new Error('Répartition invalide');
-    if (seenMembers.has(assignment.memberId)) throw new Error('Membre présent plusieurs fois');
-    seenMembers.add(assignment.memberId);
-    const member = db.prepare('SELECT diet FROM members WHERE id = ?').get(assignment.memberId);
-    const protein = db.prepare('SELECT category FROM proteins WHERE id = ?').get(assignment.proteinId);
-    if (!member || !protein || !isCompatible(member.diet, protein.category) || (baseRecipe && !isDietCompatible(member.diet, baseRecipe.diet))) throw new Error('Recette ou protéine incompatible avec le régime');
-    return assignment;
-  });
-  if (input.location !== 'home' && checkedAssignments.length) throw new Error('Les variantes sont réservées aux repas à la maison');
-  const dishes = input.dishes == null ? [] : input.dishes;
-  if (!Array.isArray(dishes) || dishes.length > 100 || (dishes.length && checkedAssignments.length)) throw new Error('Répartition invalide');
-  const seenDishMembers = new Set();
-  const checkedDishes = dishes.map(dish => {
-    if (!dish || !Number.isInteger(dish.memberId) || !Number.isInteger(dish.recipeId) || !Number.isInteger(dish.portions) || dish.portions < 1 || dish.portions > 20) throw new Error('Répartition invalide');
-    if (seenDishMembers.has(dish.memberId)) throw new Error('Membre présent plusieurs fois');
-    seenDishMembers.add(dish.memberId);
-    const member = db.prepare('SELECT diet FROM members WHERE id = ?').get(dish.memberId);
-    const recipe = db.prepare('SELECT diet FROM recipes WHERE id = ?').get(dish.recipeId);
-    if (!member || !recipe || !isDietCompatible(member.diet, recipe.diet)) throw new Error('Recette incompatible avec le régime');
-    if (dish.proteinId != null) {
-      if (!Number.isInteger(dish.proteinId)) throw new Error('Protéine invalide');
-      const protein = db.prepare('SELECT category FROM proteins WHERE id = ?').get(dish.proteinId);
-      if (!protein || !isCompatible(member.diet, protein.category)) throw new Error('Protéine incompatible avec le régime');
-    }
-    return dish;
-  });
-  if (input.location !== 'home' && checkedDishes.length) throw new Error('Les recettes sont réservées aux repas à la maison');
-  if (checkedDishes.length && input.recipeId != null) throw new Error('Une base commune et deux recettes ne peuvent pas être combinées');
-  return {
-    date: input.date,
-    slot: input.slot,
-    location: input.location,
-    occasion: input.occasion,
-    people: checkedAssignments.length ? checkedAssignments.reduce((total, item) => total + item.portions, 0) : checkedDishes.length ? checkedDishes.reduce((total, item) => total + item.portions, 0) : input.people,
-    recipeId: input.recipeId ?? null,
-    title: input.title.trim(),
-    assignments: checkedAssignments,
-    dishes: checkedDishes
-  };
-}
+function validateMeal(input,db) { return checkMealReferences(validateMealInput(input),sqliteMeals(db).references()); }
 
-function upsertMeal(db, meal, transactional = true) {
-  if (transactional) db.exec('BEGIN');
-  try {
-    if (db.prepare('SELECT 1 FROM meals rest JOIN meals source ON source.id = rest.leftover_of WHERE source.date = ? AND source.slot = ?').get(meal.date, meal.slot)) throw new Error('Retire d’abord les repas de restes liés à ce repas.');
-    db.prepare(`
-      INSERT INTO meals (date, slot, location, occasion, people, recipe_id, title)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT (date, slot) DO UPDATE SET
-        location = excluded.location,
-        occasion = excluded.occasion,
-        people = excluded.people,
-        recipe_id = excluded.recipe_id,
-        title = excluded.title,
-        leftover_of = NULL
-    `).run(meal.date, meal.slot, meal.location, meal.occasion, meal.people, meal.recipeId, meal.title);
-    const mealId = db.prepare('SELECT id FROM meals WHERE date = ? AND slot = ?').get(meal.date, meal.slot).id;
-    db.prepare('DELETE FROM meal_assignments WHERE meal_id = ?').run(mealId);
-    db.prepare('DELETE FROM meal_dishes WHERE meal_id = ?').run(mealId);
-    const insert = db.prepare('INSERT INTO meal_assignments (meal_id, member_id, protein_id, portions) VALUES (?, ?, ?, ?)');
-    meal.assignments.forEach(assignment => insert.run(mealId, assignment.memberId, assignment.proteinId, assignment.portions));
-    const insertDish = db.prepare('INSERT INTO meal_dishes (meal_id, member_id, recipe_id, portions, protein_id) VALUES (?, ?, ?, ?, ?)');
-    meal.dishes.forEach(dish => insertDish.run(mealId, dish.memberId, dish.recipeId, dish.portions, dish.proteinId ?? null));
-    if (transactional) db.exec('COMMIT');
-  } catch (error) {
-    if (transactional) db.exec('ROLLBACK');
-    throw error;
-  }
-}
+function upsertMeal(db,meal,transactional=true) { return sqliteMeals(db).saveValidated(meal,transactional); }
 
 function copyMealSet(db, source, sourceStart, targetStart) {
   if (!Array.isArray(source) || !source.length) throw new Error('Cette semaine ne contient aucun repas.');
@@ -605,18 +493,7 @@ function sendJson(response, status, value) {
   response.end(body);
 }
 
-function calendar(db, start) {
-  const escape = value => String(value).replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;');
-  const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
-  const events = meals(db, start).flatMap(meal => {
-    const date = meal.date.replace(/-/g, '');
-    const nextDate = addDays(meal.date, 1).replace(/-/g, '');
-    const slot = meal.slot === 'midi' ? 'Midi' : 'Soir';
-    const place = meal.location === 'home' ? 'Maison' : meal.location === 'restaurant' ? 'Restaurant' : 'Extérieur';
-    return ['BEGIN:VEVENT', `UID:meal-${meal.id}@manger`, `DTSTAMP:${stamp}`, `DTSTART;VALUE=DATE:${date}`, `DTEND;VALUE=DATE:${nextDate}`, `SUMMARY:${escape(`${slot} — ${meal.title}`)}`, `DESCRIPTION:${escape(`${place} · ${meal.people} personne${meal.people > 1 ? 's' : ''}`)}`, 'END:VEVENT'];
-  });
-  return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Manger!//FR', 'CALSCALE:GREGORIAN', ...events, 'END:VCALENDAR', ''].join('\r\n');
-}
+function calendar(db,start) { return calendarMeals(meals(db,start)); }
 
 async function readJson(request, maxSize = 32_768) {
   const chunks = [];

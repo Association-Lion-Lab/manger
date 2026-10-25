@@ -36,4 +36,8 @@ function isCompatible(diet, category) {
   return allowed[diet]?.includes(category) === true;
 }
 
-module.exports = { isCompatible, validateMember, validateProtein, validatePreferences, inputError };
+function isDietCompatible(memberDiet,recipeDiet) {
+  const rank={vegan:0,vegetarian:1,pescetarian:2,omnivore:3};
+  return rank[recipeDiet]<=rank[memberDiet];
+}
+module.exports = { isCompatible, isDietCompatible, validateMember, validateProtein, validatePreferences, inputError };

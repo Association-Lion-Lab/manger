@@ -133,6 +133,7 @@ Preuve : [installation et validations](../docs/POSTGRESQL-TEST.md), **7 tests Po
 - **Vérification :** `meal-changes.test.js`, `dish-proteins.test.js`, contrats planning/ICS et conflits d'écriture.
 - **Dépendances :** 09.
 - **Fichiers probables :** `server.js`, nouveau `db/meals.js`, `meal-changes.test.js`, `postgres-meals.test.js`.
+- **Découpage avant code :** 10a règles/dépôts et lecture cohérente ; 10b routes protégées et ICS, précondition additive de créneau ; 10c concurrence/rollback et garde client ; 10d agrégation, vérification complète et clôture. [Contrat et limites](../docs/POSTGRESQL-REPAS.md). Restes/déplacements/semaines restent en 11, leurs références existantes protégées ici.
 - **Taille :** M.
 
 **Point de contrôle C :** parcours recette → repas complet sur PostgreSQL, imports et photos inclus, aucun changement visuel requis.
