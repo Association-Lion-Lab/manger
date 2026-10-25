@@ -16,6 +16,7 @@ const { createRestore } = require('./restore');
 const { openAccounts, protectAccounts } = require('./accounts');
 const { createInvitationMailer } = require('./invitation-mail');
 const { storageEngine } = require('./db/storage');
+const { isCompatible, validateMember, validateProtein } = require('./household');
 
 const INDEX_HTML = Buffer.from(readFileSync(join(__dirname, 'public', 'index.html'), 'utf8')
   .replace('<!-- MANGER_INFORMATION -->', readFileSync(join(__dirname, 'public', 'information.html'), 'utf8')));
@@ -496,31 +497,6 @@ function household(db) {
     members: db.prepare('SELECT id, name, diet, avoided_ingredients FROM members ORDER BY name').all().map(({ avoided_ingredients, ...member }) => ({ ...member, avoidedIngredients: JSON.parse(avoided_ingredients) })),
     proteins: db.prepare('SELECT id, name, category, amount, unit FROM proteins ORDER BY name').all()
   };
-}
-
-function validateMember(input) {
-  if (!input || typeof input.name !== 'string' || !input.name.trim() || input.name.length > 60) throw new Error('Nom invalide');
-  if (!['vegan', 'vegetarian', 'pescetarian', 'omnivore'].includes(input.diet)) throw new Error('Régime invalide');
-  if (input.avoidedIngredients !== undefined && (!Array.isArray(input.avoidedIngredients) || input.avoidedIngredients.length > 50 || input.avoidedIngredients.some(name => typeof name !== 'string' || !name.trim() || name.length > 80))) throw new Error('Préférences invalides : 50 ingrédients maximum');
-  return { name: input.name.trim(), diet: input.diet, ...(input.avoidedIngredients !== undefined ? { avoidedIngredients: [...new Set(input.avoidedIngredients.map(name => name.trim().toLocaleLowerCase('fr')))] } : {}) };
-}
-
-function validateProtein(input) {
-  if (!input || typeof input.name !== 'string' || !input.name.trim() || input.name.length > 60) throw new Error('Protéine invalide');
-  if (!['plant', 'egg', 'fish', 'meat'].includes(input.category)) throw new Error('Catégorie invalide');
-  if (typeof input.amount !== 'number' || !Number.isFinite(input.amount) || input.amount <= 0 || input.amount > 10_000) throw new Error('Quantité invalide');
-  if (typeof input.unit !== 'string' || !input.unit.trim() || input.unit.length > 24) throw new Error('Unité invalide');
-  return { name: input.name.trim().toLocaleLowerCase('fr'), category: input.category, amount: input.amount, unit: input.unit.trim() };
-}
-
-function isCompatible(diet, category) {
-  const allowed = {
-    vegan: ['plant'],
-    vegetarian: ['plant', 'egg'],
-    pescetarian: ['plant', 'egg', 'fish'],
-    omnivore: ['plant', 'egg', 'fish', 'meat']
-  };
-  return allowed[diet]?.includes(category) === true;
 }
 
 function isDietCompatible(memberDiet, recipeDiet) {

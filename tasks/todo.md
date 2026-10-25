@@ -95,6 +95,7 @@ Preuve : [installation et validations](../docs/POSTGRESQL-TEST.md), **7 tests Po
 - **Vérification :** suites `preferences.test.js`, `dish-proteins.test.js`, profil UI et contrat HTTP sur la fixture PostgreSQL.
 - **Dépendances :** 06.
 - **Fichiers probables :** `server.js`, nouveau `db/household.js`, `preferences.test.js`, `dish-proteins.test.js`, `postgres-household.test.js`.
+- **Découpage avant réalisation :** 07a, dépôt PostgreSQL et parité de lecture/mutations avec tests réels ; 07b, dépôt SQLite, validateurs purs et routes communes, maintien des exports synchrones utilisés par les calculs ; 07c, contrat HTTP protégé, concurrence/rollback, profil et vérification complète. [Contrat et limites](../docs/POSTGRESQL-FOYER.md). Pas de recettes/planning PostgreSQL portés dans cette étape, ni activation normale du candidat.
 - **Taille :** M.
 
 **Point de contrôle B :** accès et foyer testés sur les deux moteurs, sécurité/retrait conservés, aucun candidat incomplet proposé au déploiement.
