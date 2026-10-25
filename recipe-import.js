@@ -1,3 +1,4 @@
+const {inputError}=require('./recipe');
 const { lookup } = require('node:dns/promises');
 const { get } = require('node:https');
 const { isIP } = require('node:net');
@@ -14,17 +15,17 @@ function publicIPv4(address) {
 }
 
 function importUrl(value) {
-  if (typeof value !== 'string' || value.length > 2000) throw new Error('Lien HTTPS invalide');
+  if (typeof value !== 'string' || value.length > 2000) throw inputError('Lien HTTPS invalide');
   let url;
-  try { url = new URL(value); } catch { throw new Error('Lien HTTPS invalide'); }
-  if (url.protocol !== 'https:' || (url.port && url.port !== '443') || url.username || url.password || url.hostname.includes(':')) throw new Error('Utilise un lien HTTPS public sur le port standard (IPv4)');
+  try { url = new URL(value); } catch { throw inputError('Lien HTTPS invalide'); }
+  if (url.protocol !== 'https:' || (url.port && url.port !== '443') || url.username || url.password || url.hostname.includes(':')) throw inputError('Utilise un lien HTTPS public sur le port standard (IPv4)');
   url.hash = '';
   return url;
 }
 
 async function resolvePublic(hostname, resolve = lookup) {
   const addresses = await resolve(hostname, { family: 4, all: true });
-  if (!addresses.length || addresses.some(item => !publicIPv4(item.address))) throw new Error('Les adresses privées, locales et réservées sont interdites');
+  if (!addresses.length || addresses.some(item => !publicIPv4(item.address))) throw inputError('Les adresses privées, locales et réservées sont interdites');
   return addresses[0].address;
 }
 
@@ -35,7 +36,7 @@ async function downloadRecipePage(value) {
     let dnsTimer;
     const address = await Promise.race([
       resolvePublic(url.hostname),
-      new Promise((_, reject) => { dnsTimer = setTimeout(() => reject(new Error('Le site met trop de temps à répondre')), Math.max(1, deadline - Date.now())); })
+      new Promise((_, reject) => { dnsTimer = setTimeout(() => reject(inputError('Le site met trop de temps à répondre')), Math.max(1, deadline - Date.now())); })
     ]).finally(() => clearTimeout(dnsTimer));
     const result = await new Promise((resolve, reject) => {
       let timer;
@@ -47,28 +48,28 @@ async function downloadRecipePage(value) {
       }, response => {
         if ([301, 302, 303, 307, 308].includes(response.statusCode)) {
           clearTimeout(timer); response.destroy();
-          if (!response.headers.location) return reject(new Error('Redirection sans destination'));
+          if (!response.headers.location) return reject(inputError('Redirection sans destination'));
           return resolve({ location: response.headers.location });
         }
-        if (response.statusCode !== 200) { response.destroy(); clearTimeout(timer); return reject(new Error(`Le site refuse ou ne trouve pas cette page (HTTP ${response.statusCode})`)); }
-        if (!/^(text\/html|application\/xhtml\+xml)(;|$)/i.test(response.headers['content-type'] || '') || !['identity', undefined].includes(response.headers['content-encoding'])) { response.destroy(); clearTimeout(timer); return reject(new Error('Le site ne renvoie pas une page HTML compatible')); }
+        if (response.statusCode !== 200) { response.destroy(); clearTimeout(timer); return reject(inputError(`Le site refuse ou ne trouve pas cette page (HTTP ${response.statusCode})`)); }
+        if (!/^(text\/html|application\/xhtml\+xml)(;|$)/i.test(response.headers['content-type'] || '') || !['identity', undefined].includes(response.headers['content-encoding'])) { response.destroy(); clearTimeout(timer); return reject(inputError('Le site ne renvoie pas une page HTML compatible')); }
         const chunks = []; let size = 0;
         response.on('data', chunk => {
           size += chunk.length;
-          if (size > 1500000) request.destroy(new Error('Page trop volumineuse (1,5 Mo maximum)'));
+          if (size > 1500000) request.destroy(inputError('Page trop volumineuse (1,5 Mo maximum)'));
           else chunks.push(chunk);
         });
         response.on('error', error => { clearTimeout(timer); reject(error); });
         response.on('end', () => { clearTimeout(timer); resolve({ html: Buffer.concat(chunks).toString('utf8') }); });
       });
-      timer = setTimeout(() => request.destroy(new Error('Le site met trop de temps à répondre')), Math.max(1, deadline - Date.now()));
+      timer = setTimeout(() => request.destroy(inputError('Le site met trop de temps à répondre')), Math.max(1, deadline - Date.now()));
       request.on('error', error => { clearTimeout(timer); reject(error); });
     });
     if (result.html != null) return { html: result.html, sourceUrl: url.href };
     // Validate and resolve every redirect again, including same-host redirects.
     url = importUrl(new URL(result.location, url).href);
   }
-  throw new Error('Trop de redirections sur ce site');
+  throw inputError('Trop de redirections sur ce site');
 }
 
 function cleanText(value) {
@@ -124,7 +125,7 @@ function extractRecipeDraft(html, sourceUrl) {
     if (!/(?:^|\s)type\s*=\s*(["'])application\/ld\+json\1/i.test(html.slice(start + 7, headEnd))) continue;
     try { visit(JSON.parse(html.slice(headEnd + 1, close))); } catch { /* Ignore unrelated malformed JSON-LD. */ }
   }
-  if (!nodes.length) throw new Error('Aucune recette structurée trouvée. Ce site n’est pas compatible avec cet import ; crée la recette manuellement.');
+  if (!nodes.length) throw inputError('Aucune recette structurée trouvée. Ce site n’est pas compatible avec cet import ; crée la recette manuellement.');
   const warnings = ['Vérifie les quantités, unités, portions, durée totale et régime avant d’enregistrer. Les étapes importées sont classées en préparation, sans minuteur automatique.'];
   const drafts = nodes.slice(0, 10).map(node => {
     const rawIngredients = Array.isArray(node.recipeIngredient) ? node.recipeIngredient : [];
@@ -151,7 +152,7 @@ function extractRecipeDraft(html, sourceUrl) {
     if (ingredients.some(item => item.unit === 'à ajuster')) warnings.push('Certains ingrédients n’ont pas de quantité reconnue : les lignes « à ajuster » sont à corriger.');
     return { title: cleanText(node.name), minutes, servings, diet: 'omnivore', tags: [], sourceUrl, ingredients, steps: instructions.map(instruction => ({ kind: 'prep', instruction, minutes: null })) };
   }).filter(Boolean);
-  if (!drafts.length) throw new Error('La recette trouvée ne contient pas d’ingrédients et d’étapes exploitables');
+  if (!drafts.length) throw inputError('La recette trouvée ne contient pas d’ingrédients et d’étapes exploitables');
   return { recipes: drafts, warnings: [...new Set(warnings)] };
 }
 

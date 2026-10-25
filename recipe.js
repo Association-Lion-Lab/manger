@@ -63,4 +63,8 @@ function validateRecipe(input) {
   };
 }
 
-module.exports={validateRecipe,checkedRecipe,inputError};
+function validateNote(input) {
+  if(!input||!Number.isInteger(input.rating)||input.rating<0||input.rating>5||typeof input.note!=='string'||input.note.length>2000||input.note.includes('\0'))throw inputError('Choisis une note de 0 à 5 et un commentaire de 2 000 caractères maximum.');
+  return {rating:input.rating,note:input.note.trim()};
+}
+module.exports={validateRecipe,validateNote,checkedRecipe,inputError};
