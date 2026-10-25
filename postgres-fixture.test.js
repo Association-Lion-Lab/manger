@@ -19,8 +19,8 @@ test('PostgreSQL manquant provoque un échec explicite avant de créer une fixtu
 
 test('les vrais tests PostgreSQL ont une commande dédiée et leurs outils restent hors image', () => {
   const config = require('./package.json');
-  assert.equal(config.scripts.test, 'node --test');
-  assert.equal(config.scripts['test:postgres'], 'node --test test-support/postgres.integration.cjs test-support/postgres-schema.integration.cjs test-support/postgres-connection.integration.cjs test-support/postgres-auth.integration.cjs test-support/postgres-access.integration.cjs test-support/postgres-access-http.integration.cjs test-support/postgres-account-command.integration.cjs test-support/postgres-household.integration.cjs test-support/postgres-household-http.integration.cjs');
+  assert.equal(config.scripts.test, 'node --test --test-concurrency=2');
+  assert.equal(config.scripts['test:postgres'], 'node --test --test-concurrency=1 test-support/postgres.integration.cjs test-support/postgres-schema.integration.cjs test-support/postgres-connection.integration.cjs test-support/postgres-auth.integration.cjs test-support/postgres-access.integration.cjs test-support/postgres-access-http.integration.cjs test-support/postgres-account-command.integration.cjs test-support/postgres-household.integration.cjs test-support/postgres-household-http.integration.cjs');
   assert.equal(config.dependencies.pg, '8.23.1');
   assert.equal(config.devDependencies?.pg, undefined);
   const patterns = readFileSync(join(__dirname, '.dockerignore'), 'utf8').split(/\r?\n/);
