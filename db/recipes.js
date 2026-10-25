@@ -33,7 +33,7 @@ function postgresRecipes(db) {
     if(recipe.photo===null)await tx.query('DELETE FROM household.recipe_photos WHERE recipe_id=$1',[id]);
     else if(recipe.photo!==undefined)await tx.query('INSERT INTO household.recipe_photos(recipe_id,data) VALUES($1,$2) ON CONFLICT(recipe_id) DO UPDATE SET data=excluded.data',[id,recipe.photo]);
   }
-  const save=(recipe,id=null)=>write(async tx=>{
+  async function saveIn(tx,recipe,id) {
     const values=[recipe.title,recipe.minutes,recipe.servings,recipe.tags.join(','),recipe.diet,recipe.sourceUrl||null];
     if(id===null)id=(await tx.query(`INSERT INTO household.recipes(title,minutes,servings,tags,diet,source_url,instructions)
       VALUES($1,$2,$3,$4,$5,$6,'') RETURNING id::float8 AS id`,values)).rows[0].id;
@@ -46,6 +46,15 @@ function postgresRecipes(db) {
     }
     await photo(tx,id,recipe);await children(tx,id,recipe);
     return (await read(id,tx))[0];
+  }
+  const save=(recipe,id=null)=>write(tx=>saveIn(tx,recipe,id));
+  const importCatalog=recipes=>write(async tx=>{
+    let added=0;
+    for(const recipe of recipes){
+      if((await tx.query('SELECT 1 FROM household.recipes WHERE title=$1',[recipe.title])).rowCount)continue;
+      await saveIn(tx,recipe,null);added++;
+    }
+    return added;
   });
   const remove=id=>write(async tx=>{
     const used=await tx.query('SELECT 1 FROM household.meals WHERE recipe_id=$1 UNION ALL SELECT 1 FROM household.meal_dishes WHERE recipe_id=$1 LIMIT 1',[id]);
@@ -64,6 +73,6 @@ function postgresRecipes(db) {
     await tx.query('INSERT INTO household.recipe_notes(recipe_id,rating,note) VALUES($1,$2,$3) ON CONFLICT(recipe_id) DO UPDATE SET rating=excluded.rating,note=excluded.note',[id,rating,note]);
     return true;
   });
-  return Object.freeze({engine:'postgres',read:()=>read(),save,remove,readPhoto,setFavorite,setNote});
+  return Object.freeze({engine:'postgres',read:()=>read(),save,remove,readPhoto,setFavorite,setNote,importCatalog});
 }
 module.exports={postgresRecipes};

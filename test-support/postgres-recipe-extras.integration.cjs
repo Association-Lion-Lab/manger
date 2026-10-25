@@ -3,6 +3,7 @@ const assert=require('node:assert/strict');
 const {databaseFixture}=require('./database');
 const {postgresRecipes}=require('../db/recipes');
 const {extrasStoreContract}=require('./recipe-extras-store');
+const {catalogStoreContract}=require('./recipe-catalog-store');
 const {validateRecipe}=require('../recipe');
 const {recipeDraft}=require('./recipe-fixture');
 const {lockHousehold}=require('../db/household');
@@ -38,4 +39,10 @@ test('photos, favoris et avis PostgreSQL réels',{timeout:60000},async t=>{
       assert.ok(!(await store.read()).some(r=>r.id===saved.id));
     }
   });
+  await db.query('DELETE FROM household.recipes');
+  await catalogStoreContract(t,{store,
+    snapshot:()=>Promise.all(['recipes','ingredients','recipe_ingredients','recipe_steps','recipe_photos','recipe_notes','recipe_favorites'].map(table=>db.query(`SELECT to_jsonb(t) AS row FROM household.${table} t ORDER BY to_jsonb(t)::text`).then(r=>r.rows))),
+    brokenImport(){let steps=0;return postgresRecipes({...db,transaction:work=>db.transaction(tx=>work({...tx,query:async(sql,values)=>{
+      const result=await tx.query(sql,values);if(sql.startsWith('INSERT INTO household.recipe_steps')&&++steps===2)await tx.query('SELECT 1/0');return result;
+    }}))});}});
 });

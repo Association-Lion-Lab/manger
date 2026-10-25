@@ -10,6 +10,12 @@ Première contre-relecture : contrat imprécis sur deux comportements historique
 
 Preuve 09a : **cinq tests SQLite et sept PostgreSQL réels réussis**, aucun ignoré. Octets JPEG, favori répété, avis remis à zéro, ID zéro/cascades, erreurs après mutation et suppression réellement intervenue pendant attente du verrou vérifiés. Aucune route encore déplacée ni base utilisateur ouverte.
 
+09b : cinq scénarios rouges sur l'import absent, puis fonction d'enregistrement interne extraite et réutilisée par le lot dans une seule transaction/verrou, sans modifier le contrat de save. Même comparaison de titre exacte, anciennes recettes intactes ; pas de nouvelle contrainte SQL ou de traduction générique. Tests ajoutés pour personnalisations, casse, répétition, erreur au milieu du lot, deux imports concurrents et les 100 recettes réelles. SQL de panne injecté après des insertions natives d'enfants, pas un faux dépôt en mémoire ; résultats encore attendus.
+
+Ajustement du harnais commun : `assert.rejects` n'intercepte pas une exception synchrone du dépôt SQLite ; le callback du test est devenu async pour capturer les deux formes, sans changer le produit ni retirer la comparaison intégrale après rollback. Erreur localisée au test de panne, autres scénarios de catalogue déjà verts.
+
+Preuve 09b : **15 tests SQLite/règles et 12 PostgreSQL réels réussis**, aucun ignoré. Catalogue réel de 100 recettes importé avec personnalisation préexistante conservée, répétition à zéro et deux imports concurrents sans doublon ; erreur après insertion au milieu du lot annulant parents, dictionnaire et enfants. Aucune transaction imbriquée ; valeurs de séquence non promises sans trous.
+
 ## PostgreSQL : recettes portées sans bascule — 25 octobre 2026
 
 Tâche 08 autorisée par « go » après clôture 07. [Contrat et découpage](POSTGRESQL-RECETTES.md) avant le code : préserver le DTO et les trois routes, ordre/normalisation, remplacement atomique des enfants, références du planning et succès après commit seulement. Lecture PostgreSQL agrégée cohérente, insertions paramétrées par tableaux pour borner les allers-retours, verrou foyer déjà existant. Les opérations photo faisant déjà partie de l'enregistrement sont un couplage nécessaire à garder ; pas de portage des routes photo/favoris/avis/imports ni de nouveau GET public. SQLite/export synchrone maintenus ; aucun changement UI, schéma ou lancement normal PostgreSQL. Code et tests de chaque tranche encore à réaliser ; relecture externe toujours différée, aucune base réelle utilisée.

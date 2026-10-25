@@ -25,7 +25,7 @@ function sqliteRecipes(db) {
         steps: stepQuery.all(recipe.id)
       }));
   }
-  const save=(recipe,id=null)=>write(()=>{
+  function saveIn(recipe,id) {
     if (id == null) {
       id = Number(db.prepare('INSERT INTO recipes (title, minutes, servings, tags, diet, instructions) VALUES (?, ?, ?, ?, ?, ?)')
         .run(recipe.title, recipe.minutes, recipe.servings, recipe.tags.join(','), recipe.diet, '').lastInsertRowid);
@@ -56,6 +56,15 @@ function sqliteRecipes(db) {
     const insertStep = db.prepare('INSERT INTO recipe_steps (recipe_id, position, kind, instruction, minutes) VALUES (?, ?, ?, ?, ?)');
     for (const step of recipe.steps) insertStep.run(id, step.position, step.kind, step.instruction, step.minutes);
     return read().find(item=>item.id===id);
+  }
+  const save=(recipe,id=null)=>write(()=>saveIn(recipe,id));
+  const importCatalog=recipes=>write(()=>{
+    let added=0;
+    for(const recipe of recipes){
+      if(db.prepare('SELECT 1 FROM recipes WHERE title=?').get(recipe.title))continue;
+      saveIn(recipe,null);added++;
+    }
+    return added;
   });
   const remove=id=>write(()=>{
     if(db.prepare('SELECT 1 FROM meals WHERE recipe_id=? UNION ALL SELECT 1 FROM meal_dishes WHERE recipe_id=? LIMIT 1').get(id,id))return 'used-recipe';
@@ -76,6 +85,6 @@ function sqliteRecipes(db) {
     db.prepare('INSERT INTO recipe_notes(recipe_id,rating,note) VALUES(?,?,?) ON CONFLICT(recipe_id) DO UPDATE SET rating=excluded.rating,note=excluded.note').run(id,rating,note);
     return true;
   });
-  return Object.freeze({engine:'sqlite',read,save,remove,readPhoto,setFavorite,setNote});
+  return Object.freeze({engine:'sqlite',read,save,remove,readPhoto,setFavorite,setNote,importCatalog});
 }
 module.exports={sqliteRecipes};
