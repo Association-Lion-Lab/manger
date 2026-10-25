@@ -55,7 +55,7 @@ test('retirer un repas protège la fermeture et les doubles envois, signale les 
     return nodes.get(id);
   };
   let release, closes = 0, loads = 0;
-  const save = new Script(source + ';postMeal').runInNewContext({ document: { getElementById: node }, AbortSignal,
+  const save = new Script(source + ';postMeal').runInNewContext({ document: { getElementById: node }, AbortSignal, URLSearchParams, state: { meals: [] },
     fetch: (path, options) => { requests.push({ path, options }); return new Promise(resolve => { release = resolve; }); },
     dialog: { close() { closes++; } }, load: async () => { loads++; throw new Error('Actualisation échouée'); }
   });

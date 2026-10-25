@@ -25,6 +25,7 @@ const { recipeExtraRoutes } = require('./recipe-extras-http');
 const { DAY_MS,dateKey,addDays,isDateKey } = require('./dates');
 const { validateMealInput,checkMealReferences,calendarMeals } = require('./meal');
 const { sqliteMeals } = require('./db/meals-sqlite');
+const { mealRoutes } = require('./meal-http');
 
 const INDEX_HTML = Buffer.from(readFileSync(join(__dirname, 'public', 'index.html'), 'utf8')
   .replace('<!-- MANGER_INFORMATION -->', readFileSync(join(__dirname, 'public', 'information.html'), 'utf8')));
@@ -367,6 +368,10 @@ function household(db) {
 
 
 
+function availablePantry(db, end) {
+  return reservePantry(db, end).stocks.filter(item => !item.ambiguous && item.recordedOn <= end);
+}
+
 function previewMenu(db, input) {
   if (!input || !isDateKey(input.start) || new Date(`${input.start}T12:00:00Z`).getUTCDay() !== 1 || !Number.isInteger(input.maxMinutes) || input.maxMinutes < 1 || input.maxMinutes > 1440 || !Array.isArray(input.memberIds) || !Array.isArray(input.slots) || !input.slots.length || input.slots.length > 14) throw new Error('Critères du menu invalides.');
   const home = household(db);
@@ -514,6 +519,7 @@ function createHandler(db) {
   const handleHousehold = householdRoutes(sqliteHousehold(db), sendJson);
   const handleRecipes = recipeRoutes(sqliteRecipes(db), sendJson);
   const handleRecipeExtras = recipeExtraRoutes(sqliteRecipes(db), sendJson);
+  const handleMeals = mealRoutes(sqliteMeals(db), sendJson);
   let backingUp = false;
   const restoration = createRestore(db);
   let restoring = false, activeRequests = 0;
@@ -614,17 +620,7 @@ function createHandler(db) {
         return sendJson(response, 200, pantry(db));
       }
       if (await handleRecipeExtras(request, response)) return;
-
-      if (request.method === 'GET' && url.pathname === '/api/calendar.ics') {
-        const start = url.searchParams.get('start');
-        if (!isDateKey(start)) throw new Error('Début de semaine invalide');
-        const body = Buffer.from(calendar(db, start));
-        // Request a regular file download rather than a direct calendar handoff.
-        const contentType = url.searchParams.get('download') === '1' ? 'application/octet-stream' : 'text/calendar; charset=utf-8';
-        response.writeHead(200, { 'Content-Type': contentType, 'Content-Disposition': `attachment; filename="manger-${start}.ics"`, 'Content-Length': body.length, 'Cache-Control': 'no-store' });
-        response.end(body);
-        return;
-      }
+      if (await handleMeals(request, response)) return;
 
       if (request.method === 'GET' && url.pathname === '/api/suggestions') {
         const start = url.searchParams.get('start');
@@ -845,21 +841,6 @@ function createHandler(db) {
         } catch (error) { db.exec('ROLLBACK'); throw error; }
         return sendJson(response, 201, {});
       }
-      if (request.method === 'POST' && url.pathname === '/api/meals') {
-        const meal = validateMeal(await readJson(request), db);
-        upsertMeal(db, meal);
-        return sendJson(response, 200, meal);
-      }
-
-      if (request.method === 'DELETE' && url.pathname === '/api/meals') {
-        const date = url.searchParams.get('date');
-        const slot = url.searchParams.get('slot');
-        if (!isDateKey(date) || !['midi', 'soir'].includes(slot)) throw new Error('Créneau invalide');
-        if (db.prepare('SELECT 1 FROM meals rest JOIN meals source ON source.id = rest.leftover_of WHERE source.date = ? AND source.slot = ?').get(date, slot)) throw new Error('Retire d’abord les repas de restes liés à ce repas.');
-        db.prepare('DELETE FROM meals WHERE date = ? AND slot = ?').run(date, slot);
-        return sendJson(response, 200, {});
-      }
-
       sendJson(response, 404, { error: 'Introuvable' });
     } catch (error) {
       sendJson(response, 400, { error: error.message });
@@ -883,6 +864,12 @@ function createRecipeHandler(store, options = {}) {
     if (await handle(request, response)) return;
     if (!await extras(request, response)) sendJson(response, 503, { error: 'Parcours PostgreSQL non porté.' });
   };
+}
+
+// Internal candidate harness only; callers must wrap this with protectAccounts.
+function createMealHandler(store) {
+  const handle=mealRoutes(store,sendJson);
+  return async(request,response)=>{if(!await handle(request,response))sendJson(response,503,{error:'Parcours PostgreSQL non porté.'});};
 }
 
 // Supplying a database is the isolated core-test harness; production always opens accounts.
@@ -909,4 +896,4 @@ if (require.main === module) {
   server.listen(port, '0.0.0.0', () => console.log(`Manger! écoute sur ${server.setSecureContext ? 'https' : 'http'}://localhost:${server.address().port}`));
 }
 
-module.exports = { addDays, calendar, createApp, createHouseholdHandler, createRecipeHandler, createDatabase, dateKey, household, isCompatible, isDietCompatible, isDateKey, recipes, saveRecipe, shoppingList, suggestions, validateMeal, validateMember, validateProtein, validateRecipe };
+module.exports = { addDays, calendar, createApp, createHouseholdHandler, createRecipeHandler, createMealHandler, createDatabase, dateKey, household, isCompatible, isDietCompatible, isDateKey, recipes, saveRecipe, shoppingList, suggestions, validateMeal, validateMember, validateProtein, validateRecipe };

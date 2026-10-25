@@ -14,7 +14,7 @@
   "scripts": {
     "start": "node server.js",
     "test": "node --test --test-concurrency=2",
-    "test:postgres": "node --test --test-concurrency=1 test-support/postgres.integration.cjs test-support/postgres-schema.integration.cjs test-support/postgres-connection.integration.cjs test-support/postgres-auth.integration.cjs test-support/postgres-access.integration.cjs test-support/postgres-access-http.integration.cjs test-support/postgres-account-command.integration.cjs test-support/postgres-household.integration.cjs test-support/postgres-household-http.integration.cjs test-support/postgres-recipes.integration.cjs test-support/postgres-recipes-http.integration.cjs test-support/postgres-recipe-extras.integration.cjs test-support/postgres-recipe-extras-http.integration.cjs",
+    "test:postgres": "node --test --test-concurrency=1 test-support/postgres.integration.cjs test-support/postgres-schema.integration.cjs test-support/postgres-connection.integration.cjs test-support/postgres-auth.integration.cjs test-support/postgres-access.integration.cjs test-support/postgres-access-http.integration.cjs test-support/postgres-account-command.integration.cjs test-support/postgres-household.integration.cjs test-support/postgres-household-http.integration.cjs test-support/postgres-recipes.integration.cjs test-support/postgres-recipes-http.integration.cjs test-support/postgres-recipe-extras.integration.cjs test-support/postgres-recipe-extras-http.integration.cjs test-support/postgres-meals.integration.cjs test-support/postgres-meals-http.integration.cjs",
     "backup:check": "node backup-tools.js check",
     "backup:restore": "node backup-tools.js restore"
   }

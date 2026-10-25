@@ -531,7 +531,7 @@ test('planifier un repas bloque les doubles appuis, garde les choix après un é
   const payload = { date: '2026-10-01', slot: 'soir', location: 'home', occasion: 'regular', people: 2, title: 'Curry', recipeId: null, assignments: [], dishes: [{ memberId: 1, recipeId: 2, portions: 1, proteinId: null }, { memberId: 2, recipeId: 3, portions: 1, proteinId: 4 }] };
   let request, calls = 0, closes = 0, refreshes = 0, failRefresh = false;
   const context = {
-    document: { getElementById: node, activeElement: focused }, AbortSignal,
+    document: { getElementById: node, activeElement: focused }, AbortSignal, state: { meals: [] },
     dialog: { close() { closes++; } },
     fetch: (path, options) => { calls++; request = { path, ...options }; return context.reply(); },
     load: async () => { refreshes++; assert.equal(node('meal-fields').disabled, false); if (failRefresh) throw new Error('Lecture indisponible'); }
@@ -544,7 +544,7 @@ test('planifier un repas bloque les doubles appuis, garde les choix après un é
   assert.equal(node('meal-fields')['aria-busy'], 'true'); assert.equal(node('dialog-subtitle').textContent, 'Enregistrement…');
   await save(payload); assert.equal(calls, 1);
   assert.equal(request.path, '/api/meals'); assert.equal(request.method, 'POST'); assert.ok(request.signal instanceof AbortSignal);
-  assert.deepEqual(JSON.parse(request.body), payload);
+  assert.deepEqual(JSON.parse(request.body), { ...payload, expectedId: null });
   release({ ok: false, json: async () => ({ error: 'Recette incompatible avec le régime' }) }); await pending;
   assert.equal(closes, 0); assert.equal(refreshes, 0); assert.equal(node('dialog-error').textContent, 'Recette incompatible avec le régime');
   assert.equal(node('meal-fields').disabled, false); assert.equal(node('close-dialog').disabled, false);
@@ -556,7 +556,7 @@ test('planifier un repas bloque les doubles appuis, garde les choix après un é
   await save(payload); assert.match(node('dialog-error').textContent, /Connexion interrompue/);
   context.reply = async () => ({ ok: false, json: async () => { throw new Error('HTML'); } });
   await save(payload); assert.match(node('dialog-error').textContent, /refusée par le serveur/);
-  assert.deepEqual(JSON.parse(request.body), payload);
+  assert.deepEqual(JSON.parse(request.body), { ...payload, expectedId: null });
   context.reply = async () => ({ ok: true }); failRefresh = true;
   await save(payload); assert.equal(calls, 5); assert.equal(closes, 1); assert.equal(refreshes, 1);
   assert.equal(node('dialog-error').hidden, true); assert.equal(node('meal-fields').disabled, false);
