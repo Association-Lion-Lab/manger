@@ -21,6 +21,7 @@ const { sqliteHousehold } = require('./db/household-sqlite');
 const { householdRoutes } = require('./household-http');
 const { validateRecipe, checkedRecipe } = require('./recipe');
 const { sqliteRecipes } = require('./db/recipes-sqlite');
+const { recipeRoutes } = require('./recipe-http');
 
 const INDEX_HTML = Buffer.from(readFileSync(join(__dirname, 'public', 'index.html'), 'utf8')
   .replace('<!-- MANGER_INFORMATION -->', readFileSync(join(__dirname, 'public', 'information.html'), 'utf8')));
@@ -634,6 +635,7 @@ async function readJson(request, maxSize = 32_768) {
 
 function createHandler(db) {
   const handleHousehold = householdRoutes(sqliteHousehold(db), sendJson);
+  const handleRecipes = recipeRoutes(sqliteRecipes(db), sendJson);
   let importingUrl = false;
   let backingUp = false;
   const restoration = createRestore(db);
@@ -943,11 +945,8 @@ function createHandler(db) {
         return sendJson(response, 200, {});
       }
 
-      if (request.method === 'POST' && url.pathname === '/api/recipes') {
-        return sendJson(response, 201, saveRecipe(db, validateRecipe(await readJson(request, 600000))));
-      }
+      if (await handleRecipes(request, response)) return;
 
-      const recipeMatch = url.pathname.match(/^\/api\/recipes\/(\d+)$/);
       const favoriteMatch = url.pathname.match(/^\/api\/recipes\/(\d+)\/favorite$/);
       const notesMatch = url.pathname.match(/^\/api\/recipes\/(\d+)\/notes$/);
       if (request.method === 'PUT' && notesMatch) {
@@ -976,16 +975,6 @@ function createHandler(db) {
           }
         }
         return sendJson(response, 200, { added });
-      }
-      if (request.method === 'PUT' && recipeMatch) {
-        return sendJson(response, 200, saveRecipe(db, validateRecipe(await readJson(request, 600000)), Number(recipeMatch[1])));
-      }
-      if (request.method === 'DELETE' && recipeMatch) {
-        const id = Number(recipeMatch[1]);
-        const planned = db.prepare('SELECT 1 FROM meals WHERE recipe_id = ? UNION SELECT 1 FROM meal_dishes WHERE recipe_id = ?').get(id, id);
-        if (planned) throw new Error('Cette recette est utilisée dans le planning');
-        if (db.prepare('DELETE FROM recipes WHERE id = ?').run(id).changes === 0) throw new Error('Recette inconnue');
-        return sendJson(response, 200, {});
       }
 
       const placementMatch = url.pathname.match(/^\/api\/meals\/(\d+)\/placement$/);
@@ -1071,6 +1060,14 @@ function createHouseholdHandler(home) {
   };
 }
 
+// Internal candidate harness only; callers must wrap this with protectAccounts.
+function createRecipeHandler(store) {
+  const handle = recipeRoutes(store, sendJson);
+  return async (request, response) => {
+    if (!await handle(request, response)) sendJson(response, 503, { error: 'Parcours PostgreSQL non porté.' });
+  };
+}
+
 // Supplying a database is the isolated core-test harness; production always opens accounts.
 function createApp(database, accounts, tls = tlsOptions(), mailer = null) {
   const production = database === undefined;
@@ -1095,4 +1092,4 @@ if (require.main === module) {
   server.listen(port, '0.0.0.0', () => console.log(`Manger! écoute sur ${server.setSecureContext ? 'https' : 'http'}://localhost:${server.address().port}`));
 }
 
-module.exports = { addDays, calendar, createApp, createHouseholdHandler, createDatabase, dateKey, household, isCompatible, isDietCompatible, isDateKey, recipes, saveRecipe, shoppingList, suggestions, validateMeal, validateMember, validateProtein, validateRecipe };
+module.exports = { addDays, calendar, createApp, createHouseholdHandler, createRecipeHandler, createDatabase, dateKey, household, isCompatible, isDietCompatible, isDateKey, recipes, saveRecipe, shoppingList, suggestions, validateMeal, validateMember, validateProtein, validateRecipe };
