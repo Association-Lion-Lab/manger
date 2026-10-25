@@ -4,6 +4,16 @@ Historique des lots et priorités, regroupé dans `docs/` le 10 octobre 2026. Le
 
 Contrainte produit : quatre onglets (Semaine, Recettes, Courses, Compte), actions dans leur contexte, fonctions secondaires regroupées sans surcharger ; préserver une interface sobre en clair et en sombre, au clavier et dès 320 px.
 
+## PostgreSQL — tâche 10, repas, assiettes et calendrier — 25 octobre 2026
+
+- [Contrat repas](POSTGRESQL-REPAS.md) : lecture hebdomadaire en un instantané PostgreSQL, ajout/remplacement/retrait atomiques, même DTO et ICS, journées entières et téléchargement Safari conservés. Wrappers synchrones SQLite et anciens calculs/copies maintenus.
+- Régimes et références revalidés après verrou foyer, protéines facultatives par assiette, portions et occasions/sorties conservées ; source de restes protégée même hors semaine. Erreurs SQL privées et contrôles de saisie/corps/IDs avant accès ; comptes/origine/restore maintenus.
+- Précondition additive `expectedId` pour POST/DELETE, envoyée par le client actuel : création sur créneau vide, remplacement/retrait visant la valeur d'ID connue, refus 409 sans écriture sur écart. Pas de version de contenu ; réutilisation d'ID SQLite et anciens clients sans précondition restent des limites explicites.
+- **347 tests généraux et 155 PostgreSQL réels réussis**, aucun ignoré, HTTPS inclus ; quinze fichiers réels, attentes de verrou et rollback après enfants/retrait, lecture pendant édition et deux créations/remplacements concurrents. Sans binaires refus explicite, mutation en mémoire détectée, trois cycles de relecture réconciliés ; modules/pages/notices vérifiés et audit npm sans vulnérabilité signalée.
+- Tâches 01–10 closes, prochaine **11 — semaines, déplacements et restes**, non commencée. Lancement normal toujours SQLite et candidat incomplet refusé ; pas de donnée réelle, schéma/dépendance/verrou/Compose/volume modifié, publication ou nouveau parcours navigateur/appareil/Docker/Linux/CI/Ubuntu validé.
+
+Régression d'extraction du helper de placard détectée par relecture puis reproduite par les anciennes suites et corrigée à l'identique. Ancienne fixture VM de `postMeal` adaptée à la précondition sans retirer ses assertions. Limites et journaux de vérification détaillés dans les décisions ; pas de garantie de disparition de l'instabilité historique des tests de 09.
+
 ## PostgreSQL — tâche 09, photos, favoris, avis et imports — 25 octobre 2026
 
 - [Contrat enrichissements](POSTGRESQL-ENRICHISSEMENTS.md) : photos binaires inchangées, écritures favoris/avis idempotentes et transactionnelles ; contrôles d'ID/saisie avant SQL, erreurs internes privées, routes communes protégées sur les deux moteurs.

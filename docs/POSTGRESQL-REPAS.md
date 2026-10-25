@@ -1,6 +1,6 @@
 # PostgreSQL — repas, assiettes et calendrier
 
-25 octobre 2026 — tâche 10 en cours du [plan](MIGRATION-POSTGRESQL.md). Le lancement normal reste SQLite ; aucun transfert privé, schéma, déploiement ou publication. Création de restes, déplacements/copies et semaines types restent en 11 ; cette tranche protège leurs liens existants.
+25 octobre 2026 — tâche 10 du [plan](MIGRATION-POSTGRESQL.md) réalisée. Le lancement normal reste SQLite ; aucun transfert privé, schéma, déploiement ou publication. Création de restes, déplacements/copies et semaines types restent en 11 ; cette tranche protège leurs liens existants.
 
 ## Contrat et découpage
 
@@ -21,3 +21,17 @@ Pour ne pas casser les appels historiques, POST sans précondition conserve l'up
 Hypothèse à éprouver : le même verrou coopératif utilisé par foyer/recettes permet de revalider et engager le repas entier sans références périmées, perte partielle ou écrasement d'une création concurrente avec précondition. Un SQL externe ignorant ce protocole n'est pas couvert. Examen externe toujours différé selon le choix utilisateur ; relecture locale du contrat et du code, pas de CLI externe.
 
 Sources : [verrous transactionnels PostgreSQL](https://www.postgresql.org/docs/18/explicit-locking.html), [client réservé dans une transaction node-postgres](https://node-postgres.com/features/transactions), consultés pour cette tranche. Les références ne remplacent pas les tests d'exécution.
+
+## Preuves ciblées et limites
+
+Les cinq scénarios de dépôt passent sur SQLite et PostgreSQL réel : DTO, remplacements, dates, régimes, assiettes, portions, suppléments facultatifs, création concurrente conditionnelle et source de restes hors semaine. Triggers SQLite et vraies requêtes PostgreSQL injectant une erreur après mutation prouvent le rollback complet des repas/enfants et retraits, puis la reprise. Le cas de réutilisation d'ID SQLite est observé et la limitation explicitement testée.
+
+Les six scénarios HTTP communs passent sur les deux moteurs : compte/origine, ajout/remplacement/retrait, saisie/corps borné, ICS/Safari et année nouvelle, pannes privées puis reprise, IDs zéro et supérieurs à 32 bits dans repas/personnes/recettes/protéines. Le harnais PostgreSQL refuse les autres parcours et ne replie pas sur SQLite. Son hachage synthétique est préparé avec un helper SQLite en mémoire ; les requêtes d'authentification et métier vont ensuite sur PostgreSQL. Pas de base privée ou de compte utilisateur réel.
+
+PostgreSQL réel vérifie aussi, avec attente effective du verrou observée sous le rôle applicatif, le changement de régime/protéine, la suppression de recette, le créneau occupé et les restes liés pendant attente. Une lecture extérieure pendant édition voit l'ancien repas entier ; deux remplacements ne mélangent pas les assiettes. Ces deux fichiers comptent 19 tests réussis, aucun ignoré. Les tests de la garde client utilisent une VM ; les 23 anciens tests ciblés de menus/suggestions/repas/protéines/restes/ICS repassent verts. Aucun nouveau navigateur ou appareil validé.
+
+Trois cycles de contre-relecture terminés : garde de retrait précisée, limite de réutilisation d'ID documentée, helper `availablePantry` supprimé par une frontière d'extraction trop large restauré à l'identique après reproduction par les anciens tests ; aucun défaut concret supplémentaire au dernier cycle. Examen externe toujours différé. Contrôle modules/pages/notices/icônes et audit npm de production réussis, aucune dépendance/verrou modifié.
+
+Clôture : **347 tests généraux et 155 PostgreSQL réels réussis, aucun ignoré**, HTTPS inclus. Les quinze fichiers PostgreSQL sont exécutés successivement, même commande standard avec reporter TAP avant chemins. Sans binaires, dix-sept parents échouent avant préparation (code 1), aucun ignoré. Garde de création retirée en mémoire : assertion de refus en échec attendu, source inchangée. Dix tâches closes, treize restantes ; prochaine 11, non commencée.
+
+Les incidents de vérification sont consignés dans les décisions : helper restauré, fixture VM de `postMeal` complétée avec `state.meals` et `expectedId`, aucun scénario ou délai affaibli. Les preuves de garde client sont des tests VM, pas un nouveau parcours navigateur/iPhone/Android ; pas de build Docker, Linux/CI PostgreSQL/Ubuntu ou donnée réelle validés. SQLite reste le moteur normal, candidat incomplet refusé au lancement, aucun push Codeberg ni transfert de base. Les préconditions d'ID ne sont pas une protection de révision complète et les anciens clients gardent l'upsert historique.

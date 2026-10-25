@@ -31,7 +31,9 @@ Toutes les commandes du guide s'exécutent depuis la racine du dépôt, **pas de
 
 [Création et édition des recettes PostgreSQL](POSTGRESQL-RECETTES.md) : tâche 08 testée, même contrat d'enregistrement et suppression protégée, enfants/photo atomiques et lecture cohérente ; exports SQLite synchrones préservés. Lancement normal PostgreSQL encore refusé, aucune donnée réelle convertie.
 
-[Photos, favoris, avis et imports PostgreSQL](POSTGRESQL-ENRICHISSEMENTS.md) : tâche 09 testée, routes communes et catalogue atomique sans écrasement des titres présents ; aperçu sans écriture et export léger conservés. 329 tests généraux et 136 PostgreSQL réels réussis, avec limites du harnais et des transports simulés explicites. Prochaine tâche 10 : repas, sans activer un moteur incomplet.
+[Photos, favoris, avis et imports PostgreSQL](POSTGRESQL-ENRICHISSEMENTS.md) : tâche 09 testée, routes communes et catalogue atomique sans écrasement des titres présents ; aperçu sans écriture et export léger conservés. Résultats et limites du harnais et des transports simulés explicites.
+
+[Repas, assiettes et calendrier PostgreSQL](POSTGRESQL-REPAS.md) : tâche 10 testée, ajout/remplacement/retrait atomiques, régimes et suppléments facultatifs, préconditions de créneau et ICS conservé. 347 tests généraux et 155 PostgreSQL réels réussis, aucun ignoré ; limites des préconditions et des validations locales documentées. Prochaine tâche 11 : semaines, déplacements et restes. Aucun lancement normal PostgreSQL activé.
 
 [Notices des dépendances distribuées](../public/third-party-notices.txt) : versions, textes et copyrights de Nodemailer et du pilote PostgreSQL, sous licences MIT-0/MIT/ISC ; le code du projet reste AGPL-3.0-or-later.
 

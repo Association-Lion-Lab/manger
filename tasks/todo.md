@@ -1,6 +1,6 @@
 # Migration PostgreSQL — tâches et points de contrôle
 
-25 octobre 2026 — **plan validé ; tâches 01–09 réalisées, prochaine tâche 10 : repas, assiettes et restes**. [Cadrage et risques](../docs/MIGRATION-POSTGRESQL.md), [ordre de réalisation](plan.md). Les noms des fichiers non encore créés restent des propositions. Chaque tâche comprend la mise à jour de la documentation concernée et de `docs/DECISIONS.md` ; les fichiers listés sont le périmètre technique principal. Si une tranche dépasse environ cinq fichiers techniques ou une session ciblée, la découper avant de coder, sans réduire ses critères.
+25 octobre 2026 — **plan validé ; tâches 01–10 réalisées, prochaine tâche 11 : semaines, déplacements et restes**. [Cadrage et risques](../docs/MIGRATION-POSTGRESQL.md), [ordre de réalisation](plan.md). Les noms des fichiers non encore créés restent des propositions. Chaque tâche comprend la mise à jour de la documentation concernée et de `docs/DECISIONS.md` ; les fichiers listés sont le périmètre technique principal. Si une tranche dépasse environ cinq fichiers techniques ou une session ciblée, la découper avant de coder, sans réduire ses critères.
 
 ## Phase 1 — Socle isolé
 
@@ -127,16 +127,17 @@ Preuve : [installation et validations](../docs/POSTGRESQL-TEST.md), **7 tests Po
 
 ### 10 — Ajout et modification d'un repas
 
-- [ ] Réalisé.
+- [x] Réalisé le 25 octobre 2026, candidat isolé et SQLite normal conservé.
 - **Livrable :** repas, personnes et assiettes séparées atomiques, calendrier ICS conservé.
 - **Acceptation :** protéines facultatives et régimes respectés ; sorties/date/invités inchangés ; remplacement explicite distingué d'une création qui ne doit pas écraser un créneau.
 - **Vérification :** `meal-changes.test.js`, `dish-proteins.test.js`, contrats planning/ICS et conflits d'écriture.
 - **Dépendances :** 09.
-- **Fichiers probables :** `server.js`, nouveau `db/meals.js`, `meal-changes.test.js`, `postgres-meals.test.js`.
+- **Fichiers réalisés :** `dates.js`, `meal.js`, `meal-http.js`, dépôts `db/meals.js`/`db/meals-sqlite.js`, wrappers et routes `server.js`, envoi `postMeal` dans l'interface ; contrats partagés dans `test-support/`, deux suites réelles et tests règles/SQLite/VM. Lanceur et garde de liste actualisés, anciennes suites conservées.
 - **Découpage avant code :** 10a règles/dépôts et lecture cohérente ; 10b routes protégées et ICS, précondition additive de créneau ; 10c concurrence/rollback et garde client ; 10d agrégation, vérification complète et clôture. [Contrat et limites](../docs/POSTGRESQL-REPAS.md). Restes/déplacements/semaines restent en 11, leurs références existantes protégées ici.
+- **Clôture :** 347 tests généraux et 155 PostgreSQL réels réussis, aucun ignoré, HTTPS inclus ; mêmes contrats HTTP, vrais verrous et rollback après enfants/retrait, DTO/ICS et préconditions de valeur d'ID. Limites anciens clients et IDs SQLite réutilisés documentées, trois cycles de relecture réconciliés ; contrôle modules/image et audit npm sans alerte, sans binaires refus explicite. Dix tâches closes, treize restantes ; aucun déploiement, base réelle, publication ou étape 11 commencée.
 - **Taille :** M.
 
-**Point de contrôle C :** parcours recette → repas complet sur PostgreSQL, imports et photos inclus, aucun changement visuel requis.
+**Point de contrôle C atteint pour les parcours portés :** recette enregistrée → repas et assiettes testés sur PostgreSQL, imports/photos couverts par les contrats de 09, ICS conservé. Aucun portage complet du planning ou déploiement annoncé ; semaines/restes restent en 11, calculs en 12–13.
 
 ### 11 — Semaines, déplacements et restes
 
