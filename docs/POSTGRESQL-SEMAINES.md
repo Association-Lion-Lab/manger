@@ -1,6 +1,6 @@
 # PostgreSQL — semaines, déplacements et restes
 
-25 octobre 2026 — tâche 11 en cours du [plan](MIGRATION-POSTGRESQL.md), après [les repas](POSTGRESQL-REPAS.md). SQLite reste normal, aucun schéma/transfert privé/déploiement/publication. Cette tranche porte les écritures de menus composés, copies, semaines types et restes ; suggestions/aperçus calculés et réponse agrégée GET /api/week restent à 12–13.
+25 octobre 2026 — tâche 11 du [plan](MIGRATION-POSTGRESQL.md) réalisée, après [les repas](POSTGRESQL-REPAS.md). SQLite reste normal, aucun schéma/transfert privé/déploiement/publication. Cette tranche porte les écritures de menus composés, copies, semaines types et restes ; suggestions/aperçus calculés et réponse agrégée GET /api/week restent à 12–13.
 
 ## Contrat et découpage
 
@@ -32,4 +32,10 @@ Contrat HTTP commun protégé : mêmes réponses et statuts, body borné, compte
 
 Les tests natifs injectent une erreur après vraie mutation sur les deux moteurs (lot, remappage, application, restes, déplacement et modèles/retrait). PostgreSQL observe l'attente réelle avant changement de régime, snapshot, occupation et capacité ; une lecture pendant copie ne voit rien avant engagement, deux compositions/copies concurrentes ne laissent pas de mélange ni doublon. 21 tests réels ciblés passent, aucun ignoré ; anciens parcours HTTP SQLite et règles/rollback ciblés également verts. Trois cycles de relecture clos ; précision d'éligibilité et correction de date intégrées, aucun examen externe lancé.
 
-La fixture PostgreSQL a reproduit EBUSY au retrait d'un dossier après arrêt de son cluster. Retrait seul repris de façon bornée par Node après les mêmes vérifications d'appartenance ; erreur persistante toujours bloquante, aucune requête SQL rejouée. Le même fichier repasse entièrement vert ; le dossier du premier échec a été retiré après vérification du chemin/marqueur et de l'arrêt. Les incidents non expliqués de 09 gardent leur statut inconnu. Les preuves globales et limites de clôture restent à compléter.
+La fixture PostgreSQL a reproduit EBUSY au retrait d'un dossier après arrêt de son cluster. Retrait seul repris de façon bornée par Node après les mêmes vérifications d'appartenance ; erreur persistante toujours bloquante, aucune requête SQL rejouée. Le même fichier repasse entièrement vert ; le dossier du premier échec a été retiré après vérification du chemin/marqueur et de l'arrêt. Les incidents non expliqués de 09 gardent leur statut inconnu.
+
+## Clôture et limites
+
+**367 tests généraux et 176 PostgreSQL réels réussis, aucun ignoré**, HTTPS inclus. Les dix-sept fichiers PostgreSQL de la commande standard sont exécutés successivement, reporter TAP avant chemins ; sans binaires dix-neuf parents refusés avant préparation (code 1), aucun ignoré. Mutation en mémoire retirant la limite des restes détectée ; modules/pages/notices/icônes chargés sans base persistante et audit npm de production sans vulnérabilité signalée. Onze tâches closes, douze restantes ; prochaine 12, stock/suggestions/calculs, non commencée.
+
+Le premier passage général attendait encore 400 sur une erreur SQL synthétique : attente changée en 503 avec contrôle supplémentaire de confidentialité, rollback intégral toujours exigé ; seize tests serveur puis suite entière verts. Aucun scénario ou délai de requête affaibli. L'interface est inchangée, pas de nouveau navigateur/iPhone/Android, build Docker ou validation Linux/CI PostgreSQL/Ubuntu. Aucun transfert réel, changement de schéma/dépendance/verrou/Compose/volume ou push Codeberg. Code/docs et points de contrôle locaux ; le candidat incomplet reste refusé au démarrage.

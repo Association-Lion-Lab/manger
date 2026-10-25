@@ -1,6 +1,6 @@
 # Migration PostgreSQL — tâches et points de contrôle
 
-25 octobre 2026 — **plan validé ; tâches 01–10 réalisées, prochaine tâche 11 : semaines, déplacements et restes**. [Cadrage et risques](../docs/MIGRATION-POSTGRESQL.md), [ordre de réalisation](plan.md). Les noms des fichiers non encore créés restent des propositions. Chaque tâche comprend la mise à jour de la documentation concernée et de `docs/DECISIONS.md` ; les fichiers listés sont le périmètre technique principal. Si une tranche dépasse environ cinq fichiers techniques ou une session ciblée, la découper avant de coder, sans réduire ses critères.
+25 octobre 2026 — **plan validé ; tâches 01–11 réalisées, prochaine tâche 12 : stock, suggestions et calculs**. [Cadrage et risques](../docs/MIGRATION-POSTGRESQL.md), [ordre de réalisation](plan.md). Les noms des fichiers non encore créés restent des propositions. Chaque tâche comprend la mise à jour de la documentation concernée et de `docs/DECISIONS.md` ; les fichiers listés sont le périmètre technique principal. Si une tranche dépasse environ cinq fichiers techniques ou une session ciblée, la découper avant de coder, sans réduire ses critères.
 
 ## Phase 1 — Socle isolé
 
@@ -137,17 +137,18 @@ Preuve : [installation et validations](../docs/POSTGRESQL-TEST.md), **7 tests Po
 - **Clôture :** 347 tests généraux et 155 PostgreSQL réels réussis, aucun ignoré, HTTPS inclus ; mêmes contrats HTTP, vrais verrous et rollback après enfants/retrait, DTO/ICS et préconditions de valeur d'ID. Limites anciens clients et IDs SQLite réutilisés documentées, trois cycles de relecture réconciliés ; contrôle modules/image et audit npm sans alerte, sans binaires refus explicite. Dix tâches closes, treize restantes ; aucun déploiement, base réelle, publication ou étape 11 commencée.
 - **Taille :** M.
 
-**Point de contrôle C atteint pour les parcours portés :** recette enregistrée → repas et assiettes testés sur PostgreSQL, imports/photos couverts par les contrats de 09, ICS conservé. Aucun portage complet du planning ou déploiement annoncé ; semaines/restes restent en 11, calculs en 12–13.
+**Point de contrôle C atteint pour les parcours portés :** recette enregistrée → repas et assiettes testés sur PostgreSQL, imports/photos couverts par les contrats de 09, ICS conservé ; écritures semaines/restes complétées en 11 ci-dessous. Aucun déploiement ou portage des calculs/lectures agrégées de 12–13 annoncé.
 
 ### 11 — Semaines, déplacements et restes
 
-- [ ] Réalisé.
+- [x] Réalisé le 25 octobre 2026, candidat isolé et SQLite normal conservé.
 - **Livrable :** menus composés, copie/semaine type et restes avec transactions cohérentes.
 - **Acceptation :** aucune copie partielle ; un créneau concurrent est refusé sans écrasement ; liens de restes et snapshots de semaine préservés.
 - **Vérification :** suites semaines/restes sur la fixture et concurrence de deux compositions sur des créneaux communs.
 - **Dépendances :** 10.
-- **Fichiers probables :** `server.js`, `db/meals.js`, `week-copy.test.js`, nouveau `postgres-weeks.test.js`.
+- **Fichiers réalisés :** `planning.js`, `planning-http.js`, `db/planning-sqlite.js`/`db/planning-postgres.js`, adaptation interne de `db/meals*` et raccordement `server.js` ; contrats partagés, deux suites réelles et tests règles/rollback/HTTP. Gardes/lanceur actualisés, anciens tests conservés et erreur SQL désormais privée vérifiée ; cleanup de la fixture borné après EBUSY réel.
 - **Découpage avant code :** 11a règles/dépôts des lots, copies et semaines types ; 11b déplacements/restes atomiques ; 11c routes communes protégées ; 11d contrats/concurrence/rollback, agrégation et clôture. [Contrat et limites](../docs/POSTGRESQL-SEMAINES.md). Calculs et GET agrégé restent en 12–13.
+- **Clôture :** 367 tests généraux et 176 PostgreSQL réels réussis, aucun ignoré, HTTPS inclus ; snapshots/liens locaux/quotas et capacité, rollback après mutations, concurrence et attente effective de verrou, frontière de date 9999 et IDs zéro/grands. Mutation en mémoire détectée, trois cycles de relecture réconciliés, modules et audit sans alerte ; dix-neuf parents refusés sans binaires. Onze tâches closes et douze restantes, aucune donnée réelle, publication ou étape 12 commencée.
 - **Taille :** M ; séparer restes et semaines si nécessaire.
 
 ### 12 — Placard, suggestions et calcul des courses

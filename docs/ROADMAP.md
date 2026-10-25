@@ -4,6 +4,16 @@ Historique des lots et priorités, regroupé dans `docs/` le 10 octobre 2026. Le
 
 Contrainte produit : quatre onglets (Semaine, Recettes, Courses, Compte), actions dans leur contexte, fonctions secondaires regroupées sans surcharger ; préserver une interface sobre en clair et en sombre, au clavier et dès 320 px.
 
+## PostgreSQL — tâche 11, semaines, déplacements et restes — 25 octobre 2026
+
+- [Contrat semaines](POSTGRESQL-SEMAINES.md) : composition/copie de lots et modèles figés, snapshots périmés refusés, créneaux protégés et liens de restes remappés vers les nouveaux parents. Un échec annule tout le lot ; modèles limités à trente, noms/tri ASCII historiques conservés.
+- Déplacements/copies individuelles et restes sous le même verrou foyer ; sélection depuis la source et capacité totale de 100 portions revalidées, chronologie et suppléments conservés, source ID zéro prise en compte. Aucune nouvelle règle de régime sur un plat déjà préparé ; anciennes branches SQL remplacées par routes communes protégées, interface inchangée.
+- **367 tests généraux et 176 PostgreSQL réels réussis**, aucun ignoré, HTTPS inclus ; dix-sept fichiers réels et refus explicite sans binaires. Vrais conflits après attente, lecture pendant copie, lots concurrents et rollback natif après mutations ; erreur de lecture exacte à la frontière 9999 reproduite puis corrigée. Trois cycles de relecture réconciliés et mutation en mémoire détectée.
+- Cleanup de test corrigé après EBUSY réel, reprises bornées du seul retrait après contrôle/arrêt ; aucune requête SQL rejouée et échec persistant bloquant. Modules/pages/notices/icônes vérifiés, audit npm sans vulnérabilité signalée ; attentes d'erreur technique mises à jour en 503 privé avec rollback toujours vérifié.
+- Tâches 01–11 closes, prochaine **12 — stock, suggestions et calculs**, non commencée. SQLite normal et candidat incomplet refusé ; pas de schéma/dépendance/verrou/Compose/volume modifié, donnée privée, publication ou nouvelle validation navigateur/appareil/Docker/Linux/CI/Ubuntu.
+
+Un seul dossier synthétique du premier échec EBUSY a été retiré après vérification de son chemin/marqueur, absence de PID et arrêt confirmé ; aucune purge globale. Aucun cluster temporaire observé après le passage final. Les incidents non diagnostiqués des lots précédents restent de cause inconnue ; les preuves locales ne valent pas validation du serveur personnel.
+
 ## PostgreSQL — tâche 10, repas, assiettes et calendrier — 25 octobre 2026
 
 - [Contrat repas](POSTGRESQL-REPAS.md) : lecture hebdomadaire en un instantané PostgreSQL, ajout/remplacement/retrait atomiques, même DTO et ICS, journées entières et téléchargement Safari conservés. Wrappers synchrones SQLite et anciens calculs/copies maintenus.
