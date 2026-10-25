@@ -22,10 +22,11 @@ const { validateRecipe, checkedRecipe } = require('./recipe');
 const { sqliteRecipes } = require('./db/recipes-sqlite');
 const { recipeRoutes } = require('./recipe-http');
 const { recipeExtraRoutes } = require('./recipe-extras-http');
-const { DAY_MS,dateKey,addDays,isDateKey } = require('./dates');
+const { dateKey,addDays,isDateKey } = require('./dates');
 const { validateMealInput,checkMealReferences,calendarMeals } = require('./meal');
 const { sqliteMeals } = require('./db/meals-sqlite');
 const { mealRoutes } = require('./meal-http');
+const { planningRoutes } = require('./planning-http');
 
 const INDEX_HTML = Buffer.from(readFileSync(join(__dirname, 'public', 'index.html'), 'utf8')
   .replace('<!-- MANGER_INFORMATION -->', readFileSync(join(__dirname, 'public', 'information.html'), 'utf8')));
@@ -466,28 +467,6 @@ function suggestions(db, start = null, maxMinutes = null, memberIds = null, targ
 
 function validateMeal(input,db) { return checkMealReferences(validateMealInput(input),sqliteMeals(db).references()); }
 
-function upsertMeal(db,meal,transactional=true) { return sqliteMeals(db).saveValidated(meal,transactional); }
-
-function copyMealSet(db, source, sourceStart, targetStart) {
-  if (!Array.isArray(source) || !source.length) throw new Error('Cette semaine ne contient aucun repas.');
-  if (source.some(meal => meal.leftoverOf && !source.some(parent => parent.id === meal.leftoverOf))) throw new Error('Cette semaine contient des restes préparés une autre semaine. Copie ces repas séparément depuis leur préparation.');
-  const offset = Math.round((new Date(`${targetStart}T12:00:00Z`) - new Date(`${sourceStart}T12:00:00Z`)) / DAY_MS);
-  const copied = source.map(meal => validateMeal({ ...meal, date: addDays(meal.date, offset) }, db));
-  db.exec('BEGIN');
-  try {
-    for (const meal of copied) if (db.prepare('SELECT 1 FROM meals WHERE date=? AND slot=?').get(meal.date, meal.slot)) throw new Error('Un créneau de destination est déjà occupé. Aucun repas n’a été ajouté.');
-    const ids = new Map();
-    copied.forEach((meal, index) => {
-      upsertMeal(db, meal, false);
-      const id = db.prepare('SELECT id FROM meals WHERE date=? AND slot=?').get(meal.date, meal.slot).id;
-      ids.set(source[index].id, id);
-      if (source[index].leftoverOf) db.prepare('UPDATE meals SET leftover_of=? WHERE id=?').run(ids.get(source[index].leftoverOf), id);
-    });
-    db.exec('COMMIT');
-  } catch (error) { db.exec('ROLLBACK'); throw error; }
-  return copied.length;
-}
-
 function sendJson(response, status, value) {
   const body = Buffer.from(JSON.stringify(value));
   response.writeHead(status, {
@@ -520,6 +499,7 @@ function createHandler(db) {
   const handleRecipes = recipeRoutes(sqliteRecipes(db), sendJson);
   const handleRecipeExtras = recipeExtraRoutes(sqliteRecipes(db), sendJson);
   const handleMeals = mealRoutes(sqliteMeals(db), sendJson);
+  const handlePlanning = planningRoutes(sqliteMeals(db), sendJson);
   let backingUp = false;
   const restoration = createRestore(db);
   let restoring = false, activeRequests = 0;
@@ -621,6 +601,7 @@ function createHandler(db) {
       }
       if (await handleRecipeExtras(request, response)) return;
       if (await handleMeals(request, response)) return;
+      if (await handlePlanning(request, response)) return;
 
       if (request.method === 'GET' && url.pathname === '/api/suggestions') {
         const start = url.searchParams.get('start');
@@ -636,77 +617,6 @@ function createHandler(db) {
 
       if (request.method === 'POST' && url.pathname === '/api/week/preview') {
         return sendJson(response, 200, previewMenu(db, await readJson(request)));
-      }
-
-      if (request.method === 'GET' && url.pathname === '/api/week-templates') {
-        return sendJson(response, 200, db.prepare('SELECT id, name, created_at AS createdAt, json_array_length(meals_json) AS mealCount FROM week_templates ORDER BY name COLLATE NOCASE').all());
-      }
-      if (request.method === 'POST' && url.pathname === '/api/week-templates') {
-        const input = await readJson(request), name = typeof input?.name === 'string' ? input.name.trim() : '';
-        if (!name || name.length > 60 || !isDateKey(input.start) || new Date(`${input.start}T12:00:00Z`).getUTCDay() !== 1) throw new Error('Nom ou semaine type invalide.');
-        const source = meals(db, input.start);
-        if (!source.length) throw new Error('Cette semaine ne contient aucun repas.');
-        if (source.some(meal => meal.leftoverOf && !source.some(parent => parent.id === meal.leftoverOf))) throw new Error('Cette semaine contient des restes préparés une autre semaine.');
-        if (db.prepare('SELECT COUNT(*) AS n FROM week_templates').get().n >= 30) throw new Error('Tu peux conserver 30 semaines types maximum.');
-        try {
-          const result = db.prepare('INSERT INTO week_templates (name, source_start, meals_json, created_at) VALUES (?, ?, ?, ?)').run(name, input.start, JSON.stringify(source), new Date().toISOString());
-          return sendJson(response, 201, { id: Number(result.lastInsertRowid), name, mealCount: source.length });
-        } catch (error) {
-          if (error.code === 'ERR_SQLITE_ERROR' && /UNIQUE/.test(error.message)) throw new Error('Une semaine type porte déjà ce nom.');
-          throw error;
-        }
-      }
-      const templateApply = url.pathname.match(/^\/api\/week-templates\/(\d+)\/apply$/);
-      if (request.method === 'POST' && templateApply) {
-        const input = await readJson(request), targetStart = input?.targetStart;
-        if (!isDateKey(targetStart) || new Date(`${targetStart}T12:00:00Z`).getUTCDay() !== 1) throw new Error('Semaine de destination invalide.');
-        const template = db.prepare('SELECT source_start AS sourceStart, meals_json AS mealsJson FROM week_templates WHERE id=?').get(Number(templateApply[1]));
-        if (!template) throw new Error('Semaine type inconnue.');
-        return sendJson(response, 200, { added: copyMealSet(db, JSON.parse(template.mealsJson), template.sourceStart, targetStart) });
-      }
-      const templateDelete = url.pathname.match(/^\/api\/week-templates\/(\d+)$/);
-      if (request.method === 'DELETE' && templateDelete) {
-        if (!db.prepare('DELETE FROM week_templates WHERE id=?').run(Number(templateDelete[1])).changes) throw new Error('Semaine type inconnue.');
-        return sendJson(response, 200, { ok: true });
-      }
-
-      if (request.method === 'POST' && url.pathname === '/api/week/copy') {
-        const input = await readJson(request);
-        if (!input || !isDateKey(input.sourceStart) || !isDateKey(input.targetStart) || input.sourceStart === input.targetStart || [input.sourceStart, input.targetStart].some(date => new Date(`${date}T12:00:00Z`).getUTCDay() !== 1)) throw new Error('Choisis deux semaines différentes, commençant un lundi.');
-        const source = meals(db, input.sourceStart);
-        if (input.sourceSnapshot !== JSON.stringify(source)) throw new Error('La semaine source a changé. Recharge son aperçu.');
-        return sendJson(response, 200, { added: copyMealSet(db, source, input.sourceStart, input.targetStart) });
-      }
-
-      if (request.method === 'POST' && url.pathname === '/api/week/plan') {
-        const input = await readJson(request);
-        if (!input || !isDateKey(input.start) || !Array.isArray(input.meals) || input.meals.length < 1 || input.meals.length > 14) throw new Error('Menu hebdomadaire invalide');
-        const seen = new Set();
-        const meals = input.meals.map(item => {
-          const meal = validateMeal(item, db);
-          const slotKey = `${meal.date}/${meal.slot}`;
-          if (meal.date < input.start || meal.date > addDays(input.start, 6) || seen.has(slotKey) || meal.location !== 'home' || meal.occasion !== 'regular' || (!meal.recipeId && !meal.dishes.length)) throw new Error('Créneau du menu invalide');
-          seen.add(slotKey);
-          if (db.prepare('SELECT 1 FROM meals WHERE date = ? AND slot = ?').get(meal.date, meal.slot)) throw new Error('Un repas est déjà prévu sur ce créneau. Recomposez votre menu.');
-          if (meal.recipeId) {
-            const recipe = db.prepare('SELECT diet FROM recipes WHERE id = ?').get(meal.recipeId);
-            const members = db.prepare('SELECT diet FROM members').all();
-            if (!meal.assignments.length && members.some(member => !isDietCompatible(member.diet, recipe.diet))) throw new Error('Recette incompatible avec le foyer');
-          }
-          return meal;
-        });
-        db.exec('BEGIN');
-        try {
-          meals.forEach(meal => {
-            if (db.prepare('SELECT 1 FROM meals WHERE date = ? AND slot = ?').get(meal.date, meal.slot)) throw new Error('Un repas est déjà prévu sur ce créneau. Recomposez votre menu.');
-            upsertMeal(db, meal, false);
-          });
-          db.exec('COMMIT');
-        } catch (error) {
-          db.exec('ROLLBACK');
-          throw error;
-        }
-        return sendJson(response, 200, { added: meals.length });
       }
 
       if (await handleHousehold(request, response)) return;
@@ -788,59 +698,6 @@ function createHandler(db) {
       if (await handleRecipes(request, response)) return;
 
 
-      const placementMatch = url.pathname.match(/^\/api\/meals\/(\d+)\/placement$/);
-      if (request.method === 'POST' && placementMatch) {
-        const input = await readJson(request); const id = Number(placementMatch[1]);
-        if (!input || !['move', 'copy'].includes(input.action) || !isDateKey(input.date) || !['midi', 'soir'].includes(input.slot)) throw new Error('Date ou créneau invalide.');
-        const source = db.prepare('SELECT * FROM meals WHERE id = ?').get(id);
-        if (!source) throw new Error('Repas inconnu.');
-        if (source.date !== input.sourceDate || source.slot !== input.sourceSlot) throw new Error('Le repas a été déplacé entre-temps. Recharge le planning.');
-        if (db.prepare('SELECT 1 FROM meals WHERE date = ? AND slot = ?').get(input.date, input.slot)) throw new Error('Ce créneau est déjà occupé.');
-        if (input.action === 'copy') {
-          if (source.leftover_of) throw new Error('Pour prévoir plus de restes, pars du repas où tu cuisines.');
-          const assignments = db.prepare('SELECT member_id AS memberId, protein_id AS proteinId, portions FROM meal_assignments WHERE meal_id = ?').all(id);
-          const dishes = db.prepare('SELECT member_id AS memberId, recipe_id AS recipeId, portions, protein_id AS proteinId FROM meal_dishes WHERE meal_id = ?').all(id);
-          upsertMeal(db, validateMeal({ ...source, recipeId: source.recipe_id, date: input.date, slot: input.slot, assignments, dishes }, db));
-        } else {
-          const earlier = (a, b) => a.date < b.date || (a.date === b.date && a.slot === 'midi' && b.slot === 'soir');
-          if (source.leftover_of && !earlier(db.prepare('SELECT date, slot FROM meals WHERE id = ?').get(source.leftover_of), input)) throw new Error('Les restes doivent rester après le repas cuisiné.');
-          const rest = db.prepare('SELECT date, slot FROM meals WHERE leftover_of = ?').all(id);
-          if (rest.some(meal => !earlier(input, meal))) throw new Error('Le repas cuisiné doit rester avant ses restes.');
-          db.prepare('UPDATE meals SET date = ?, slot = ? WHERE id = ?').run(input.date, input.slot, id);
-        }
-        return sendJson(response, 200, {});
-      }
-      if (request.method === 'POST' && url.pathname === '/api/meals/leftovers') {
-        const input = await readJson(request);
-        if (!input || !Number.isSafeInteger(input.sourceId) || !isDateKey(input.date) || !['midi', 'soir'].includes(input.slot)) throw new Error('Choisis une date et un créneau valides.');
-        const source = db.prepare('SELECT * FROM meals WHERE id = ?').get(input.sourceId);
-        const sourceDishes = source ? db.prepare('SELECT member_id AS memberId, recipe_id AS recipeId, protein_id AS proteinId FROM meal_dishes WHERE meal_id = ?').all(source.id) : [];
-        if (source?.recipe_id && !sourceDishes.length) sourceDishes.push(...db.prepare('SELECT member_id AS memberId, protein_id AS proteinId FROM meal_assignments WHERE meal_id = ?').all(source.id).map(item => ({ ...item, recipeId: source.recipe_id })));
-        if (!source || source.location !== 'home' || source.leftover_of || (!source.recipe_id && !sourceDishes.length)) throw new Error('Ce repas ne permet pas de prévoir des restes.');
-        if (input.date < source.date || (input.date === source.date && (source.slot === 'soir' || input.slot === 'midi'))) throw new Error('Choisis un repas après celui où tu cuisines.');
-        if (db.prepare('SELECT 1 FROM meals WHERE date = ? AND slot = ?').get(input.date, input.slot)) throw new Error('Ce créneau est déjà occupé.');
-        const extra = db.prepare('SELECT COALESCE(SUM(people), 0) AS n FROM meals WHERE leftover_of = ?').get(source.id).n;
-        let dishes = [], people = input.people;
-        if (sourceDishes.length) {
-          if (!Array.isArray(input.dishes) || !input.dishes.length || input.dishes.length > sourceDishes.length) throw new Error('Choisis au moins une assiette à conserver.');
-          const seen = new Set();
-          dishes = input.dishes.map(dish => {
-            const original = sourceDishes.find(item => item.memberId === dish?.memberId);
-            if (!original || seen.has(dish.memberId) || !Number.isInteger(dish.portions) || dish.portions < 1 || dish.portions > 20) throw new Error('Assiettes de restes invalides.');
-            seen.add(dish.memberId); return { ...original, portions: dish.portions };
-          });
-          people = dishes.reduce((sum, dish) => sum + dish.portions, 0);
-        } else if (!Number.isInteger(people) || people < 1 || people > 100) throw new Error('Choisis un nombre de portions valide.');
-        if (source.people + extra + people > 100) throw new Error('Limite de 100 portions cuisinées par repas.');
-        db.exec('BEGIN');
-        try {
-          const result = db.prepare('INSERT INTO meals (date, slot, location, occasion, people, recipe_id, title, leftover_of) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run(input.date, input.slot, 'home', 'regular', people, sourceDishes.length ? null : source.recipe_id, source.title, source.id);
-          const insert = db.prepare('INSERT INTO meal_dishes (meal_id, member_id, recipe_id, portions, protein_id) VALUES (?, ?, ?, ?, ?)');
-          dishes.forEach(dish => insert.run(Number(result.lastInsertRowid), dish.memberId, dish.recipeId, dish.portions, dish.proteinId));
-          db.exec('COMMIT');
-        } catch (error) { db.exec('ROLLBACK'); throw error; }
-        return sendJson(response, 201, {});
-      }
       sendJson(response, 404, { error: 'Introuvable' });
     } catch (error) {
       sendJson(response, 400, { error: error.message });
@@ -868,8 +725,8 @@ function createRecipeHandler(store, options = {}) {
 
 // Internal candidate harness only; callers must wrap this with protectAccounts.
 function createMealHandler(store) {
-  const handle=mealRoutes(store,sendJson);
-  return async(request,response)=>{if(!await handle(request,response))sendJson(response,503,{error:'Parcours PostgreSQL non porté.'});};
+  const handle=mealRoutes(store,sendJson),planning=planningRoutes(store,sendJson);
+  return async(request,response)=>{if(await handle(request,response))return;if(!await planning(request,response))sendJson(response,503,{error:'Parcours PostgreSQL non porté.'});};
 }
 
 // Supplying a database is the isolated core-test harness; production always opens accounts.

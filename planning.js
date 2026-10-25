@@ -3,9 +3,6 @@ const {inputError,validateMealInput,checkMealReferences,validateSlot}=require('.
 const {isDietCompatible}=require('./household');
 const monday=date=>isDateKey(date)&&new Date(`${date}T12:00:00Z`).getUTCDay()===1;
 const earlier=(a,b)=>a.date<b.date||(a.date===b.date&&a.slot==='midi'&&b.slot==='soir');
-function vacant(rows,meals) {
-  if(meals.some(m=>rows.some(r=>r.date===m.date&&r.slot===m.slot)))throw inputError('Un créneau de destination est déjà occupé. Aucun repas n’a été ajouté.');
-}
 function planMeals(input,refs) {
   if(!input||!isDateKey(input.start)||!Array.isArray(input.meals)||input.meals.length<1||input.meals.length>14)throw inputError('Menu hebdomadaire invalide');
   const seen=new Set();
@@ -79,4 +76,4 @@ function leftoverMeal(input,source){
   if(source.people+source.extraPortions+people>100)throw inputError('Limite de 100 portions cuisinées par repas.');
   return validateMealInput({date:input.date,slot:input.slot,location:'home',occasion:'regular',people,recipeId:original.length?null:source.recipeId,title:source.title,assignments:[],dishes});
 }
-module.exports={monday,earlier,vacant,planMeals,checkedSource,copiedMeals,validateCopy,templateName,targetWeek,validateId,validatePlacement,checkPlacement,validateLeftovers,leftoverMeal};
+module.exports={monday,earlier,planMeals,checkedSource,copiedMeals,validateCopy,templateName,targetWeek,validateId,validatePlacement,checkPlacement,validateLeftovers,leftoverMeal};

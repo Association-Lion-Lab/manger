@@ -2,7 +2,7 @@ const {lockHousehold}=require('./household');
 const {addDays}=require('../dates');
 const {inputError,validateSlot,validateExpectedId,checkExpectedId,validateMealInput,checkMealReferences}=require('../meal');
 function postgresMeals(db) {
-  async function read(start,tx=db) {
+  async function read(start,tx=db,end=addDays(start,6)) {
     const {rows}=await tx.query(`SELECT m.id::float8 AS id,m.date,m.slot,m.location,m.occasion,m.people,m.recipe_id::float8 AS "recipeId",
       m.title,r.minutes,m.leftover_of::float8 AS "leftoverOf",
       COALESCE((SELECT SUM(rest.people) FROM household.meals rest WHERE rest.leftover_of=m.id),0)::float8 AS "extraPortions",
@@ -13,7 +13,7 @@ function postgresMeals(db) {
         (SELECT member_id::float8 AS "memberId",recipe_id::float8 AS "recipeId",protein_id::float8 AS "proteinId",portions,recipes.minutes
           FROM household.meal_dishes JOIN household.recipes ON recipes.id=recipe_id WHERE meal_id=m.id) d),'[]'::json) AS dishes
       FROM household.meals m LEFT JOIN household.recipes r ON r.id=m.recipe_id
-      WHERE m.date BETWEEN $1 AND $2 ORDER BY m.date COLLATE "C",m.slot COLLATE "C"`,[start,addDays(start,6)]);
+      WHERE m.date BETWEEN $1 AND $2 ORDER BY m.date COLLATE "C",m.slot COLLATE "C"`,[start,end]);
     return rows.map(({dishes,assignments,...meal})=>dishes.length?{...meal,minutes:Math.max(...dishes.map(d=>d.minutes)),dishes:dishes.map(({minutes,proteinId,...dish})=>({...dish,...(proteinId==null?{}:{proteinId})}))}:{...meal,assignments});
   }
   const write=work=>db.transaction(async tx=>{await lockHousehold(tx);return work(tx);});

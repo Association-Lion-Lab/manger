@@ -7,12 +7,12 @@ function sqliteMeals(db) {
     try {const result=work();db.exec('COMMIT');return result;}
     catch(error){db.exec('ROLLBACK');throw error;}
   }
-  function read(start) {
+  function read(start,end=addDays(start,6)) {
     return db.prepare(`SELECT meals.id,date,slot,location,occasion,people,recipe_id AS recipeId,
       meals.title,recipes.minutes,leftover_of AS leftoverOf,
       COALESCE((SELECT SUM(rest.people) FROM meals rest WHERE rest.leftover_of=meals.id),0) AS extraPortions,
       EXISTS(SELECT 1 FROM meal_assignments WHERE meal_id=meals.id) AS hasVariants
-      FROM meals LEFT JOIN recipes ON recipes.id=meals.recipe_id WHERE date BETWEEN ? AND ? ORDER BY date,slot`).all(start,addDays(start,6)).map(meal=>{
+      FROM meals LEFT JOIN recipes ON recipes.id=meals.recipe_id WHERE date BETWEEN ? AND ? ORDER BY date,slot`).all(start,end).map(meal=>{
       const dishes=db.prepare('SELECT member_id AS memberId,recipe_id AS recipeId,protein_id AS proteinId,portions,recipes.minutes FROM meal_dishes JOIN recipes ON recipes.id=meal_dishes.recipe_id WHERE meal_id=? ORDER BY member_id').all(meal.id);
       const assignments=db.prepare('SELECT member_id AS memberId,protein_id AS proteinId,portions FROM meal_assignments WHERE meal_id=? ORDER BY member_id').all(meal.id);
       return dishes.length?{...meal,minutes:Math.max(...dishes.map(d=>d.minutes)),dishes:dishes.map(({minutes,proteinId,...d})=>({...d,...(proteinId==null?{}:{proteinId})}))}:{...meal,assignments};
@@ -45,8 +45,6 @@ function sqliteMeals(db) {
     validateSlot(date,slot);validateExpectedId(expectedId);
     return write(()=>{checkExpectedId(db.prepare('SELECT id FROM meals WHERE date=? AND slot=?').get(date,slot),expectedId);protectSource(date,slot);db.prepare('DELETE FROM meals WHERE date=? AND slot=?').run(date,slot);return true;});
   }
-  // Existing week/copy operations own their transaction until their port in step 11.
-  const saveValidated=(meal,transactional=true)=>transactional?write(()=>saveIn(meal)):saveIn(meal);
-  return {engine:'sqlite',read,references,save,remove,saveValidated,...require('./planning-sqlite').sqlitePlanning(db,{write,read,references,saveIn,children})};
+  return {engine:'sqlite',read,references,save,remove,...require('./planning-sqlite').sqlitePlanning(db,{write,read,references,saveIn,children})};
 }
 module.exports={sqliteMeals};

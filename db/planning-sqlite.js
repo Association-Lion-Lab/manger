@@ -1,14 +1,15 @@
 const rules=require('../planning');
 const {inputError,validateMealInput,checkMealReferences}=require('../meal');
 function sqlitePlanning(db,{write,read,references,saveIn,children}) {
+  function vacant(meals){for(const meal of meals)if(db.prepare('SELECT 1 FROM meals WHERE date=? AND slot=?').get(meal.date,meal.slot))throw inputError('Un créneau de destination est déjà occupé. Aucun repas n’a été ajouté.');}
   function copyIn(source,start,target) {
-    const meals=rules.copiedMeals(source,start,target,references());rules.vacant(read(target),meals);
+    const meals=rules.copiedMeals(source,start,target,references());vacant(meals);
     const ids=new Map();for(const [i,meal] of meals.entries())ids.set(source[i].id,saveIn(meal,null));
     for(const meal of source)if(meal.leftoverOf!=null)db.prepare('UPDATE meals SET leftover_of=? WHERE id=?').run(ids.get(meal.leftoverOf),ids.get(meal.id));
     return meals.length;
   }
   const planWeek=input=>write(()=>{
-    const meals=rules.planMeals(input,references());rules.vacant(read(input.start),meals);for(const meal of meals)saveIn(meal,null);return meals.length;
+    const meals=rules.planMeals(input,references());vacant(meals);for(const meal of meals)saveIn(meal,null);return meals.length;
   });
   const copyWeek=input=>{rules.validateCopy(input);return write(()=>{
     const source=read(input.sourceStart);if(input.sourceSnapshot!==JSON.stringify(source))throw inputError('La semaine source a changé. Recharge son aperçu.');
@@ -32,17 +33,17 @@ function sqlitePlanning(db,{write,read,references,saveIn,children}) {
   });};
   const removeTemplate=id=>write(()=>{if(!db.prepare('DELETE FROM week_templates WHERE id=?').run(id).changes)throw inputError('Semaine type inconnue.');return true;});
   function get(id){
-    const row=db.prepare('SELECT date FROM meals WHERE id=?').get(id);if(!row)throw inputError('Repas inconnu.');return read(row.date).find(meal=>meal.id===id);
+    const row=db.prepare('SELECT date FROM meals WHERE id=?').get(id);if(!row)throw inputError('Repas inconnu.');return read(row.date,row.date).find(meal=>meal.id===id);
   }
   const place=(id,input)=>{rules.validatePlacement(id,input);return write(()=>{
     const source=get(id),parent=source.leftoverOf==null?null:get(source.leftoverOf),rest=db.prepare('SELECT date,slot FROM meals WHERE leftover_of=?').all(id);
-    rules.checkPlacement(input,source,parent,rest);rules.vacant(read(input.date),[input]);
+    rules.checkPlacement(input,source,parent,rest);vacant([input]);
     if(input.action==='copy')saveIn(checkMealReferences(validateMealInput({...source,date:input.date,slot:input.slot}),references()),null);
     else db.prepare('UPDATE meals SET date=?,slot=? WHERE id=?').run(input.date,input.slot,id);
     return true;
   });};
   const leftovers=input=>{rules.validateLeftovers(input);return write(()=>{
-    const source=get(input.sourceId),meal=rules.leftoverMeal(input,source);rules.vacant(read(input.date),[meal]);
+    const source=get(input.sourceId),meal=rules.leftoverMeal(input,source);vacant([meal]);
     const result=db.prepare('INSERT INTO meals(date,slot,location,occasion,people,recipe_id,title,leftover_of) VALUES(?,?,?,?,?,?,?,?)').run(meal.date,meal.slot,meal.location,meal.occasion,meal.people,meal.recipeId,meal.title,source.id);
     children(Number(result.lastInsertRowid),meal);return true;
   });};

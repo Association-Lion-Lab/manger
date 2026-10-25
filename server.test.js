@@ -112,7 +112,8 @@ test('la composition hebdomadaire préserve les repas et valide tout avant écri
   assert.equal(week.meals[1].dishes[0].recipeId, vegan.id);
   assert.equal((await post('/api/week/plan', { start, meals: [shared] })).status, 400);
   db.exec("CREATE TRIGGER fail_test_menu BEFORE INSERT ON meals WHEN NEW.date = '2026-09-18' BEGIN SELECT RAISE(ABORT, 'test rollback'); END;");
-  assert.equal((await post('/api/week/plan', { start, meals: [{ ...shared, date: '2026-09-17' }, { ...shared, date: '2026-09-18' }] })).status, 400);
+  const failed = await post('/api/week/plan', { start, meals: [{ ...shared, date: '2026-09-17' }, { ...shared, date: '2026-09-18' }] });
+  assert.equal(failed.status, 503); assert.doesNotMatch(await failed.text(), /test rollback|SQLITE|TRIGGER/);
   assert.equal(db.prepare("SELECT COUNT(*) AS count FROM meals WHERE date >= '2026-09-17'").get().count, 0);
 });
 

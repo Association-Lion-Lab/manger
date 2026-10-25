@@ -25,6 +25,10 @@ async function weekStoreContract(t,{store,home,recipes}) {
     assert.equal(await store.applyTemplate(first.id,{targetStart:'2026-11-23'}),2);assert.equal((await store.read('2026-11-23'))[0].title,'Repas');
     await assert.rejects(async()=>store.applyTemplate(first.id,{targetStart:'2026-11-23'}),{code:'MANGER_MEAL_INPUT'});
     await store.removeTemplate(second.id);await assert.rejects(async()=>store.removeTemplate(second.id),{code:'MANGER_MEAL_INPUT'});
+    const accents=['été','Été','äbc','Äbc'],created=[];
+    for(const name of accents)created.push(await store.saveTemplate({name,start:target}));
+    assert.deepEqual((await store.templates()).filter(row=>accents.includes(row.name)).map(row=>row.name),['Äbc','Été','äbc','été']);
+    for(const row of created)await store.removeTemplate(row.id);
     for(const name of ['', 'x'.repeat(61),'bad\0name'])await assert.rejects(async()=>store.saveTemplate({name,start:'2026-11-23'}),{code:'MANGER_MEAL_INPUT'});
   });
   await t.test('quota de trente semaines types vérifié atomiquement',async()=>{
@@ -79,6 +83,13 @@ async function placementStoreContract(t,{store,home,ids,seedZeroSource}) {
     const external=plain(await store.read('2027-03-08'));await assert.rejects(async()=>store.copyWeek({sourceStart:'2027-03-08',targetStart:'2027-03-15',sourceSnapshot:JSON.stringify(external)}),{code:'MANGER_MEAL_INPUT'});
     await store.save(mealDraft({date:'2027-04-05',assignments:[{memberId:vegan,proteinId:plant,portions:1}]}));const proteinOnly=(await store.read('2027-04-05'))[0];
     await assert.rejects(async()=>store.leftovers({sourceId:proteinOnly.id,date:'2027-04-06',slot:'midi',dishes:[{memberId:vegan,portions:1}]}),{code:'MANGER_MEAL_INPUT'});
+  });
+  await t.test('derniers jours de l’année 9999 : lecture source et occupation exactes',async()=>{
+    await store.save(mealDraft({date:'9999-12-29',recipeId:base}));const source=(await store.read('9999-12-24')).find(row=>row.date==='9999-12-29');
+    const input={action:'copy',sourceDate:source.date,sourceSlot:source.slot,date:'9999-12-30',slot:'midi'};
+    assert.equal(await store.place(source.id,input),true);await assert.rejects(async()=>store.place(source.id,input),{code:'MANGER_MEAL_INPUT',status:400});
+    assert.equal(await store.leftovers({sourceId:source.id,date:'9999-12-31',slot:'midi',people:1}),true);
+    await assert.rejects(async()=>store.leftovers({sourceId:source.id,date:'9999-12-31',slot:'midi',people:1}),{code:'MANGER_MEAL_INPUT',status:400});
   });
 }
 module.exports={weekStoreContract,placementStoreContract};
