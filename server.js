@@ -17,6 +17,8 @@ const { openAccounts, protectAccounts } = require('./accounts');
 const { createInvitationMailer } = require('./invitation-mail');
 const { storageEngine } = require('./db/storage');
 const { isCompatible, validateMember, validateProtein } = require('./household');
+const { sqliteHousehold } = require('./db/household-sqlite');
+const { householdRoutes } = require('./household-http');
 
 const INDEX_HTML = Buffer.from(readFileSync(join(__dirname, 'public', 'index.html'), 'utf8')
   .replace('<!-- MANGER_INFORMATION -->', readFileSync(join(__dirname, 'public', 'information.html'), 'utf8')));
@@ -492,11 +494,7 @@ function shoppingState(db, start) {
 }
 
 function household(db) {
-  return {
-    avoidedIngredients: db.prepare('SELECT name FROM avoided_ingredients ORDER BY name').all().map(item => item.name),
-    members: db.prepare('SELECT id, name, diet, avoided_ingredients FROM members ORDER BY name').all().map(({ avoided_ingredients, ...member }) => ({ ...member, avoidedIngredients: JSON.parse(avoided_ingredients) })),
-    proteins: db.prepare('SELECT id, name, category, amount, unit FROM proteins ORDER BY name').all()
-  };
+  return sqliteHousehold(db).read();
 }
 
 function isDietCompatible(memberDiet, recipeDiet) {
@@ -746,6 +744,7 @@ async function readJson(request, maxSize = 32_768) {
 }
 
 function createHandler(db) {
+  const handleHousehold = householdRoutes(sqliteHousehold(db), sendJson);
   let importingUrl = false;
   let backingUp = false;
   const restoration = createRestore(db);
@@ -979,62 +978,7 @@ function createHandler(db) {
         return sendJson(response, 200, { added: meals.length });
       }
 
-      if (request.method === 'GET' && url.pathname === '/api/household') {
-        return sendJson(response, 200, household(db));
-      }
-      if (request.method === 'PUT' && url.pathname === '/api/household/preferences') {
-        const input = await readJson(request);
-        if (!input || !Array.isArray(input.avoidedIngredients) || input.avoidedIngredients.length > 50 || input.avoidedIngredients.some(name => typeof name !== 'string' || !name.trim() || name.length > 80)) throw new Error('Préférences invalides : 50 mots ou expressions maximum');
-        const names = [...new Set(input.avoidedIngredients.map(name => name.trim().toLocaleLowerCase('fr')))];
-        db.exec('BEGIN');
-        try {
-          db.exec('DELETE FROM avoided_ingredients');
-          const insert = db.prepare('INSERT INTO avoided_ingredients (name) VALUES (?)');
-          names.forEach(name => insert.run(name));
-          db.exec('COMMIT');
-        } catch (error) { db.exec('ROLLBACK'); throw error; }
-        return sendJson(response, 200, { avoidedIngredients: names });
-      }
-
-      if (request.method === 'POST' && url.pathname === '/api/members') {
-        const member = validateMember(await readJson(request));
-        const id = Number(db.prepare('INSERT INTO members (name, diet, avoided_ingredients) VALUES (?, ?, ?)').run(member.name, member.diet, JSON.stringify(member.avoidedIngredients || [])).lastInsertRowid);
-        return sendJson(response, 201, { id, ...member });
-      }
-
-      const memberMatch = url.pathname.match(/^\/api\/members\/(\d+)$/);
-      if (request.method === 'PUT' && memberMatch) {
-        const id = Number(memberMatch[1]);
-        const member = validateMember(await readJson(request));
-        if (db.prepare('UPDATE members SET name = ?, diet = ?, avoided_ingredients = COALESCE(?, avoided_ingredients) WHERE id = ?').run(member.name, member.diet, member.avoidedIngredients === undefined ? null : JSON.stringify(member.avoidedIngredients), id).changes === 0) throw new Error('Membre inconnu');
-        return sendJson(response, 200, { id, ...member });
-      }
-      if (request.method === 'DELETE' && memberMatch) {
-        if (db.prepare('DELETE FROM members WHERE id = ?').run(Number(memberMatch[1])).changes === 0) throw new Error('Membre inconnu');
-        return sendJson(response, 200, {});
-      }
-
-      if (request.method === 'POST' && url.pathname === '/api/proteins') {
-        const protein = validateProtein(await readJson(request));
-        const id = Number(db.prepare('INSERT INTO proteins (name, category, amount, unit) VALUES (?, ?, ?, ?)').run(protein.name, protein.category, protein.amount, protein.unit).lastInsertRowid);
-        return sendJson(response, 201, { id, ...protein });
-      }
-
-      const proteinMatch = url.pathname.match(/^\/api\/proteins\/(\d+)$/);
-      if (request.method === 'PUT' && proteinMatch) {
-        const id = Number(proteinMatch[1]);
-        const protein = validateProtein(await readJson(request));
-        const diets = db.prepare('SELECT members.diet FROM meal_assignments JOIN members ON members.id = meal_assignments.member_id WHERE protein_id = ? UNION ALL SELECT members.diet FROM meal_dishes JOIN members ON members.id = meal_dishes.member_id WHERE protein_id = ?').all(id, id);
-        if (diets.some(member => !isCompatible(member.diet, protein.category))) throw new Error('Cette catégorie est incompatible avec un repas déjà planifié');
-        if (db.prepare('UPDATE proteins SET name = ?, category = ?, amount = ?, unit = ? WHERE id = ?').run(protein.name, protein.category, protein.amount, protein.unit, id).changes === 0) throw new Error('Protéine inconnue');
-        return sendJson(response, 200, { id, ...protein });
-      }
-      if (request.method === 'DELETE' && proteinMatch) {
-        const id = Number(proteinMatch[1]);
-        if (db.prepare('SELECT 1 FROM meal_assignments WHERE protein_id = ? UNION ALL SELECT 1 FROM meal_dishes WHERE protein_id = ?').get(id, id)) throw new Error('Cette protéine est utilisée dans le planning');
-        if (db.prepare('DELETE FROM proteins WHERE id = ?').run(id).changes === 0) throw new Error('Protéine inconnue');
-        return sendJson(response, 200, {});
-      }
+      if (await handleHousehold(request, response)) return;
 
       if (request.method === 'POST' && url.pathname === '/api/shopping-checks/sync') {
         const input = await readJson(request);
@@ -1230,6 +1174,14 @@ function createHandler(db) {
   };
 }
 
+// Internal candidate harness only; callers must wrap this with protectAccounts.
+function createHouseholdHandler(home) {
+  const handle = householdRoutes(home, sendJson);
+  return async (request, response) => {
+    if (!await handle(request, response)) sendJson(response, 503, { error: 'Parcours PostgreSQL non porté.' });
+  };
+}
+
 // Supplying a database is the isolated core-test harness; production always opens accounts.
 function createApp(database, accounts, tls = tlsOptions(), mailer = null) {
   const production = database === undefined;
@@ -1254,4 +1206,4 @@ if (require.main === module) {
   server.listen(port, '0.0.0.0', () => console.log(`Manger! écoute sur ${server.setSecureContext ? 'https' : 'http'}://localhost:${server.address().port}`));
 }
 
-module.exports = { addDays, calendar, createApp, createDatabase, dateKey, household, isCompatible, isDietCompatible, isDateKey, recipes, saveRecipe, shoppingList, suggestions, validateMeal, validateMember, validateProtein, validateRecipe };
+module.exports = { addDays, calendar, createApp, createHouseholdHandler, createDatabase, dateKey, household, isCompatible, isDietCompatible, isDateKey, recipes, saveRecipe, shoppingList, suggestions, validateMeal, validateMember, validateProtein, validateRecipe };

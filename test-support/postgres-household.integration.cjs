@@ -1,7 +1,7 @@
 const test=require('node:test');
 const assert=require('node:assert/strict');
 const {databaseFixture}=require('./database');
-const {postgresHousehold}=require('../db/household');
+const {postgresHousehold,lockHousehold}=require('../db/household');
 
 test('personnes, préférences et protéines sur PostgreSQL réel', {timeout:60000},async t=>{
   const f=await databaseFixture(t),db=f.database,home=postgresHousehold(db);
@@ -58,5 +58,43 @@ test('personnes, préférences et protéines sur PostgreSQL réel', {timeout:600
       tx.query(sql==='INSERT INTO household.avoided_ingredients(name) VALUES($1)'?'SELECT 1/0':sql,sql==='INSERT INTO household.avoided_ingredients(name) VALUES($1)'?[]:values)}))});
     await assert.rejects(broken.setPreferences(['must-not-apply']),{code:'22012'});
     assert.deepEqual(await home.read(),before);
+    await home.setPreferences(['reprise']);assert.deepEqual((await home.read()).avoidedIngredients,['reprise']);
+  });
+  await t.test('deux remplacements concurrents ne fusionnent pas les goûts, lecture pendant transaction cohérente',async()=>{
+    await Promise.all([home.setPreferences(['a','b']),home.setPreferences(['c','d'])]);
+    const before=(await home.read()).avoidedIngredients;assert.ok(JSON.stringify(before)==='["a","b"]'||JSON.stringify(before)==='["c","d"]');
+    let release,ready;const gate=new Promise(resolve=>{release=resolve;}),entered=new Promise(resolve=>{ready=resolve;});
+    const write=db.transaction(async tx=>{await lockHousehold(tx);await tx.query('DELETE FROM household.avoided_ingredients');
+      await tx.query("INSERT INTO household.avoided_ingredients VALUES('atomic')");ready();await gate;});
+    try {await entered;assert.deepEqual((await home.read()).avoidedIngredients,before);}
+    finally {release();await write;}
+    assert.deepEqual((await home.read()).avoidedIngredients,['atomic']);
+  });
+  await t.test('catégorie revalidée après attente du verrou et nouveau régime, deux tables de repas',async()=>{
+    const who=await home.addMember({name:'Race',diet:'omnivore'});
+    const meal=(await db.query('SELECT id FROM household.meals LIMIT 1')).rows[0].id;
+    for(const table of ['meal_assignments','meal_dishes']) {
+      const p=await home.addProtein({name:table,category:'plant',amount:1,unit:'g'});
+      await home.editMember(who,{name:'Race',diet:'omnivore'});
+      if(table==='meal_assignments')await db.query('INSERT INTO household.meal_assignments VALUES($1,$2,$3,1)',[meal,who,p]);
+      else await db.query('INSERT INTO household.meal_dishes(meal_id,member_id,recipe_id,portions,protein_id) VALUES($1,$2,1,1,$3)',[meal,who,p]);
+      const client=await f.pool.connect();let pending;
+      try {
+        await client.query('BEGIN');await lockHousehold(client);
+        pending=home.editProtein(p,{name:table,category:'egg',amount:1,unit:'g'});
+        // Observe actual lock waiting; no guessed timer decides the race ordering.
+        const until=Date.now()+2000;let waiting=false;
+        while(Date.now()<until&&!waiting) {
+          waiting=(await f.pool.query("SELECT count(*)::int AS n FROM pg_stat_activity WHERE datname=current_database() AND wait_event='advisory'")).rows[0].n>0;
+          if(!waiting)await new Promise(resolve=>setTimeout(resolve,10));
+        }
+        assert.ok(waiting,'La mutation doit réellement attendre le verrou du foyer.');
+        await client.query("UPDATE household.members SET diet='vegan' WHERE id=$1",[who]);await client.query('COMMIT');
+        assert.equal(await pending,'incompatible-protein');
+      } finally {await client.query('ROLLBACK');client.release();await pending;}
+      assert.equal((await home.read()).proteins.find(row=>row.id===p).category,'plant');
+      await db.query(`DELETE FROM household.${table} WHERE member_id=$1`,[who]);await home.removeProtein(p);
+    }
+    await home.removeMember(who);
   });
 });
