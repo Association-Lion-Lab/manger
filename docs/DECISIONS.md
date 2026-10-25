@@ -2,6 +2,10 @@
 
 ## PostgreSQL : préparer les enrichissements et imports — 25 octobre 2026
 
+Blocage du passage PostgreSQL global : le groupe HTTP enrichissements échoue après ses huit scénarios verts puis le fichier ne termine pas, sans diagnostic détaillé dans le reporter spec. Passage interrompu volontairement pour diagnostic, pas déclaré réussi. Le serveur HTTP du seul nouveau harnais est maintenant fermé en finally avant les hooks de la base, afin qu'une erreur de nettoyage PostgreSQL ne puisse pas conserver un listener et masquer sa cause. Assertion métier et fixture SQL inchangées ; relance ciblée TAP pour obtenir la cause exacte, sans attribuer cet échec à l'application ou au disque sans preuve.
+
+Relance ciblée TAP : **neuf tests HTTP PostgreSQL réussis**, nettoyage terminé. Le premier échec de fin de groupe n'est pas reproduit ; cause non établie, seule fermeture systématique du serveur de harnais ajoutée. Relance globale avec rapport détaillé conservé nécessaire avant clôture ; aucun timeout, assertion ou scénario retiré.
+
 Suite générale relancée avec TAP : **329 tests réussis, aucun ignoré, HTTPS inclus**, sans changement de code de saison entre les passages. Le premier arrêt isolé reste de cause inconnue et n'est pas présenté comme réparé. Contrôle modules/pages/notices/icônes réussi sans base persistante ni connexion PostgreSQL ; audit npm de production sans vulnérabilité signalée, versions et verrou inchangés dans 09. Passage global PostgreSQL en cours.
 
 Blocage de vérification : le premier passage général signale seulement l'arrêt de `seasons.test.js` (« test failed »), sans assertion ni pile explicative, sur une source saisonnière non modifiée. Les douze tests isolés repassent verts sans changement. Nouvelle exécution complète avec reporter TAP pour garder les détails ; cause du premier arrêt non établie, aucun correctif saisonnier ou assouplissement de test inventé.

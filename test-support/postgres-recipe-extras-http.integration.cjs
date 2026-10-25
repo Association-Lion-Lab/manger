@@ -28,6 +28,7 @@ test('enrichissements/imports : HTTP PostgreSQL réel protégé',{timeout:60000}
     return {sourceUrl:url.href,html:'<script type="application/ld+json">'+JSON.stringify({'@type':'Recipe',name:'Riz',totalTime:'PT10M',recipeYield:'2',recipeIngredient:['200 g de riz'],recipeInstructions:'Cuire le riz.'})+'</script>'};
   }});
   const server=createServer(protectAccounts(null,createRecipeHandler(store,{preview}),{auth:postgresAuth(db)})),http=await householdHttp(t,server);
+  try {
   await extrasHttpContract(t,{...http,read:store.read,failDatabase(){failing=true;return()=>{failing=false;};},
     seedLegacyIds:()=>db.query("INSERT INTO household.recipes(id,title,minutes,servings,diet) VALUES(0,'Zero',1,1,'vegan'),(5000000001,'Large',1,1,'vegan')")});
   await t.test('aperçu URL HTTP : garde simultanée, pas de verrou SQL, erreurs privées et reprise',async()=>{
@@ -43,4 +44,5 @@ test('enrichissements/imports : HTTP PostgreSQL réel protégé',{timeout:60000}
     const broken=await send({kind:'url',url:'https://example.org/error'});assert.equal(broken.status,503);assert.doesNotMatch(await broken.text(),/native-private-detail/);
     assert.equal((await send({kind:'url',url:'https://example.org/ok'})).status,200);assert.equal(calls,3);assert.deepEqual(await store.read(),before);
   });
+  } finally {server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
 });
