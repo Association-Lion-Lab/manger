@@ -1,6 +1,6 @@
 # Migration PostgreSQL — tâches et points de contrôle
 
-26 octobre 2026 — **plan validé ; tâches 01–15 réalisées, prochaine tâche 16 : sauvegarde du foyer**. [Cadrage et risques](../docs/MIGRATION-POSTGRESQL.md), [ordre de réalisation](plan.md). Les noms des fichiers non encore créés restent des propositions. Chaque tâche comprend la mise à jour de la documentation concernée et de `docs/DECISIONS.md` ; les fichiers listés sont le périmètre technique principal. Si une tranche dépasse environ cinq fichiers techniques ou une session ciblée, la découper avant de coder, sans réduire ses critères.
+26 octobre 2026 — **plan validé ; tâches 01–16 réalisées, prochaine tâche 17 : restauration du foyer**. [Cadrage et risques](../docs/MIGRATION-POSTGRESQL.md), [ordre de réalisation](plan.md). Les noms des fichiers non encore créés restent des propositions. Chaque tâche comprend la mise à jour de la documentation concernée et de `docs/DECISIONS.md` ; les fichiers listés sont le périmètre technique principal. Si une tranche dépasse environ cinq fichiers techniques ou une session ciblée, la découper avant de coder, sans réduire ses critères.
 
 ## Phase 1 — Socle isolé
 
@@ -202,13 +202,15 @@ Preuve : [installation et validations](../docs/POSTGRESQL-TEST.md), **7 tests Po
 
 ### 16 — Télécharger une sauvegarde du foyer
 
-- [ ] Réalisé.
+- [x] Réalisé le 26 octobre 2026.
 - **Livrable :** format JSON de sauvegarde versionné, photographie cohérente des 18 tables du foyer, parcours de téléchargement conservé.
 - **Acceptation :** photos incluses, accès exclus ; distinction avec export de recettes ; limites et erreurs explicites sans copie incohérente entre requêtes.
 - **Vérification :** `backup.test.js`, `backup-ui.test.js` adaptés et téléchargement navigateur isolé ; vérifier ultérieurement sur Safari réel.
 - **Dépendances :** 15 ; format détaillé approuvé.
 - **Fichiers probables :** nouveau `household-backup.js`, `server.js`, `public/index.html`, `backup.test.js`, `backup-ui.test.js`.
 - **Taille :** M.
+
+Preuve : [sauvegarde du foyer](../docs/POSTGRESQL-SAUVEGARDE.md). 26 octobre 2026 : étapes 01–16 closes, sept restantes ; prochaine 17, restauration du foyer. 401 tests généraux et 215 PostgreSQL réels réussis, aucun ignoré, HTTPS inclus. Contrôle image/modules réussi sans Docker. Sauvegarde JSON cohérente des 18 tables, accès exclus, téléchargement navigateur synthétique vérifié. Aucune donnée privée, bascule, publication ou validation Ubuntu/Safari/iPhone.
 
 ### 17 — Restaurer le foyer avec récupération
 

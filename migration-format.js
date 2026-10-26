@@ -20,13 +20,18 @@ function validScalar(table,column,value){
   if(value===null)return nullable.has(`${table.name}.${column}`);
   const type=kind(table,column);
   if(type==='binary')return Buffer.isBuffer(value);
-  if(type==='text')return typeof value==='string'&&!value.includes('\0');
+  if(type==='text')return typeof value==='string'&&value.isWellFormed()&&!value.includes('\0');
   if(type==='number')return typeof value==='number'&&Number.isFinite(value);
   const wide=column==='id'||column.endsWith('_id')||['creator','expires','sort_order','leftover_of'].includes(column);
   return Number.isSafeInteger(value)&&(wide||value>=-2147483648&&value<=2147483647);
 }
 const keyValue=value=>Buffer.isBuffer(value)?{$hex:value.toString('hex')}:value;
 const keyFor=(row,columns)=>JSON.stringify(columns.map(column=>keyValue(row[column])));
+function wellFormedJson(value){
+  const pending=[value];
+  while(pending.length){const item=pending.pop();if(typeof item==='string'&&!item.isWellFormed())return false;if(item&&typeof item==='object'){for(const key of Object.keys(item)){if(!key.isWellFormed())return false;pending.push(item[key]);}}}
+  return true;
+}
 function uniqueness(table,rows){
   const keys={ingredients:[['name','unit']],recipe_ingredients:[['recipe_id','ingredient_id']],recipe_steps:[['recipe_id','position']],members:[['name']],proteins:[['name']],meals:[['date','slot']],meal_assignments:[['meal_id','member_id']],meal_dishes:[['meal_id','member_id']],shopping_checks:[['week_start','name','unit']],shopping_aisles:[['name','unit'],['sort_order']],pantry:[['food_key']],accounts:[['username']],invitations:[['token']],week_templates:[['name']]};
   const primary=table.columns.includes('id')?['id']:['recipe_photos','recipe_notes','recipe_favorites'].includes(table.name)?['recipe_id']:table.name==='avoided_ingredients'?['name']:table.name==='sessions'?['token']:table.name==='attempts'?['key']:null;
@@ -49,7 +54,7 @@ function rowRules(table,row){
   for(const column of ['date','week_start','recorded_on','use_by','source_start'])if(table.columns.includes(column)&&row[column]!==null&&!isDateKey(row[column]))throw sourceError();
   if(table.name==='members'||table.name==='week_templates'){
     let value;try{value=JSON.parse(row[table.name==='members'?'avoided_ingredients':'meals_json']);}catch{throw sourceError();}
-    if(!Array.isArray(value)||(table.name==='members'&&value.some(i=>typeof i!=='string'||i.includes('\0'))))throw sourceError();
+    if(!Array.isArray(value)||!wellFormedJson(value)||(table.name==='members'&&value.some(i=>typeof i!=='string'||i.includes('\0'))))throw sourceError();
     if(table.name==='week_templates'){
       if(!require('./planning').monday(row.source_start)||!Number.isFinite(Date.parse(row.created_at))||new Date(row.created_at).toISOString()!==row.created_at)throw sourceError();
       try{require('./planning').checkedSource(value,row.source_start);}catch{throw sourceError();}

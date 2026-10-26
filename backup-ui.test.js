@@ -66,3 +66,9 @@ test('sauvegarde : clic de téléchargement refusé nettoie le lien et programme
   assert.match(form.status.textContent, /refusé/); assert.equal(form.removed(), 1); assert.equal(form.timers.length, 1);
   form.timers[0].callback(); assert.deepEqual(form.revoked, ['blob:backup']); assert.equal(form.button.disabled, false);
 });
+test('sauvegarde : nom JSON du serveur adopté, aucun chemin arbitraire accepté',async()=>{
+  for(const [disposition,expected] of [['attachment; filename="manger-2026-11-02.json"','manger-2026-11-02.json'],['attachment; filename="../../private.json"',null]]){
+    const form=download(),pending=form.start();form.reply({ok:true,headers:{get:name=>name==='content-disposition'?disposition:'application/json'},blob:async()=>new Blob(['{}'],{type:'application/json'})});await pending;
+    if(expected)assert.equal(form.link.download,expected);else assert.match(form.link.download,/^manger-\d{4}-\d{2}-\d{2}\.json$/);
+  }
+});

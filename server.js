@@ -29,6 +29,7 @@ const {sqlitePantry}=require('./db/pantry-sqlite');
 const {calculationRoutes}=require('./calculation-http');
 const {sqliteShopping}=require('./db/shopping-sqlite');
 const {shoppingRoutes}=require('./shopping-http');
+const {backupRoutes}=require('./backup-http');
 
 const INDEX_HTML = Buffer.from(readFileSync(join(__dirname, 'public', 'index.html'), 'utf8')
   .replace('<!-- MANGER_INFORMATION -->', readFileSync(join(__dirname, 'public', 'information.html'), 'utf8')));
@@ -421,6 +422,7 @@ function createCalculationHandler(calc,pantry){
 // Internal candidate harness only; callers must wrap this with protectAccounts.
 function createBusinessHandler(stores){
   const routes=[householdRoutes(stores.home,sendJson),recipeRoutes(stores.recipes,sendJson),recipeExtraRoutes(stores.recipes,sendJson),mealRoutes(stores.meals,sendJson),planningRoutes(stores.meals,sendJson),calculationRoutes(stores.calc,stores.pantry,sendJson),shoppingRoutes(stores.shopping,sendJson)];
+  if(stores.backup)routes.push(backupRoutes(stores.backup,sendJson));
   return async(request,response)=>{for(const route of routes)if(await route(request,response))return;sendJson(response,503,{error:'Parcours PostgreSQL non porté.'});};
 }
 

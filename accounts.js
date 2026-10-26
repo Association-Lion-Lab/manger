@@ -82,7 +82,7 @@ async function body(req) {
   } catch { throw inputError('Requête invalide.'); }
 }
 
-function protectAccounts(db, handler, { secure = false, mailer = null, certificate = null, auth: repository = null } = {}) {
+function protectAccounts(db, handler, { secure = false, mailer = null, certificate = null, auth: repository = null, backupReady = false } = {}) {
   if (repository && db) throw new Error('Fournir un seul stockage de comptes, jamais deux moteurs.');
   const auth = repository || sqliteAuth(db);
   let busy = 0, mailBusy = false;
@@ -179,7 +179,7 @@ function protectAccounts(db, handler, { secure = false, mailer = null, certifica
       }
       const adminRoute = path.startsWith('/api/accounts') || path === '/api/backup' || path.startsWith('/api/restore/');
       if (adminRoute && !user.admin) return json(res, 403, { error: 'Cette action est réservée à l’administrateur.' });
-      if (auth.engine === 'postgres' && (path === '/api/backup' || path.startsWith('/api/restore/'))) return json(res, 503, { error: 'Ce parcours PostgreSQL n’est pas encore disponible.' });
+      if (auth.engine === 'postgres' && ((path === '/api/backup'&&!backupReady)||path.startsWith('/api/restore/'))) return json(res, 503, { error: 'Ce parcours PostgreSQL n’est pas encore disponible.' });
       if (path === '/api/accounts/certificate' && req.method === 'GET') {
         if (!certificateReady) return json(res, 404, { error: 'Certificat local indisponible. Vérifie la configuration HTTPS et MANGER_TLS_CA sur le serveur.' });
         res.writeHead(200, { 'Content-Type': 'application/pkix-cert', 'Content-Disposition': 'attachment; filename="manger-ca.cer"', 'Content-Length': certificate.raw.length });

@@ -337,3 +337,7 @@ Analyse de copies privées et normalisation vers un schéma de confiance sans ex
 ## Migration PostgreSQL — étape 15 (26 octobre 2026)
 
 Reprise administrative complète et CLI contrôlés sur données synthétiques. 397 tests généraux et 211 PostgreSQL réels réussis, aucun ignoré, HTTPS inclus ; contrôle image/modules réussi sans Docker. Trois cycles de relecture séparée réconciliés. Aucune donnée réelle, bascule, publication ou validation Ubuntu/appareil. [Contrat et limites](POSTGRESQL-TRANSFERT.md).
+
+## PostgreSQL — étape 16, sauvegarde du foyer
+
+26 octobre 2026 : étapes 01–16 closes, sept restantes ; prochaine 17, restauration du foyer. 401 tests généraux et 215 PostgreSQL réels réussis, aucun ignoré, HTTPS inclus. Contrôle image/modules réussi sans Docker. Sauvegarde JSON cohérente des 18 tables, accès exclus, téléchargement navigateur synthétique vérifié. Aucune donnée privée, bascule, publication ou validation Ubuntu/Safari/iPhone.

@@ -788,7 +788,7 @@
       </section>
       <details class="quiet-details">
         <summary id="backup-summary">Sauvegarde du foyer</summary>
-        <p class="muted">Télécharge toutes tes données, photos comprises, dans un fichier SQLite. Garde une copie sur un autre appareil : elle contient les données personnelles du foyer et n’est pas chiffrée.</p>
+        <p class="muted">Télécharge toutes tes données, photos comprises, dans un fichier de sauvegarde. Garde une copie sur un autre appareil : elle contient les données personnelles du foyer et n’est pas chiffrée.</p>
         <button id="download-backup" class="secondary" type="button">Télécharger la sauvegarde complète</button>
         <p id="backup-status" class="muted" role="status"></p>
         <details class="quiet-details"><summary>Restaurer une sauvegarde</summary>
@@ -936,7 +936,9 @@
         const file = await response.blob();
         if (!file.size) throw new Error('La sauvegarde reçue est vide. Aucun fichier téléchargé : réessaie.');
         url = URL.createObjectURL(file);
-        const link = document.createElement('a'); link.href = url; link.download = `manger-${new Date().toISOString().slice(0, 10)}.db`;
+        const serverName = response.headers?.get('content-disposition')?.match(/^attachment;\s*filename="(manger-\d{4}-\d{2}-\d{2}\.(?:db|json))"$/)?.[1];
+        const extension = (response.headers?.get('content-type') || file.type || '').split(';')[0].trim() === 'application/json' ? 'json' : 'db';
+        const link = document.createElement('a'); link.href = url; link.download = serverName || `manger-${new Date().toISOString().slice(0, 10)}.${extension}`;
         try { document.body.append(link); link.click(); } finally { link.remove(); }
         status.textContent = 'Téléchargement lancé. Vérifie que le fichier est bien enregistré.';
       } catch (error) {

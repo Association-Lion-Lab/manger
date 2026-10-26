@@ -141,3 +141,7 @@ migration-format.js fixe types/colonnes/uniques/références des 22 tables, y co
 ## Transfert administratif et schéma 002 (26 octobre 2026)
 
 Migration002 ajoute état et empreinte de structure. db/structure.js vérifie les définitions/objets hors compteurs ; db/postgres.reservePostgresClient surveille les connexions administratives dès le callback. migration-verify.js compare toutes valeurs/octet, postgres-transfer.js porte les insertions/recalages fixes et migrate-postgres.js orchestre réservation/transfert/contrôle sans réessai. Les rôles et fichiers de secrets restent séparés. [Contrat](POSTGRESQL-TRANSFERT.md).
+
+## Sauvegarde du foyer PostgreSQL (étape 16)
+
+`household-backup.js` capture les 18 tables dans une transaction de lecture cohérente et encode le format JSON versionné. `backup-http.js` garde accès explicite, taille et envoi unique. `protectAccounts` ouvre uniquement la capacité de sauvegarde implémentée ; restauration encore fermée. [Contrat et preuves](POSTGRESQL-SAUVEGARDE.md).
