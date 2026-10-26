@@ -81,3 +81,9 @@ Scénario `b9a3ba4` sur image `31ed51d` réellement terminé par l’administrat
 ## Préparation CI 20a — 26 octobre 2026
 
 Matrice et scénarios d’image déclarés avec dépendance bloquante, pas de déploiement ou artefact privé. 407 tests généraux réussis, aucun ignoré, HTTPS inclus ; refus des doubles de commande, outils absents et moteur inconnu vérifiés, relecture indépendante sans constat. [Contrat et activation](../docs/POSTGRESQL-CI.md). L’utilisateur n’a pas configuré de runner : conserver 20b/20 ouverte avant l’acceptation 21–23. Pas d’installation permanente sur son serveur via l’autorisation d’un test ponctuel.
+
+## Préparation native 21a — 26 octobre 2026
+
+À la demande de poursuivre, [répétition sur copies synthétiques](../docs/POSTGRESQL-REPETITION.md) : pannes, copies SQLite inchangées et réellement utilisables, archive complète, refus d’ancienne référence après nouvelle écriture, archive récente restaurée sur secours. Mesures locales distinctes d’une maintenance privée. Préparation uniquement : CI 20b, répétition par volume et guide Linux final non déclarés réussis ; pas de bascule ou accès au serveur personnel. Résultats finaux consignés dans les décisions après la suite native.
+
+Point d’arrêt du soir : 21a native vérifiée, 407 tests généraux et 243 PostgreSQL réussis, aucun ignoré ; premier incident initdb consigné puis relance complète verte sans changer les seuils. CI 20b et acceptation 21 non closes ; reprendre ensuite le guide 22 et la bascule volontaire 23 selon les preuves disponibles. Aucune tâche de fond ou reprise automatique.

@@ -362,3 +362,6 @@ Le 26 octobre, l’utilisateur précise que son Linux sert de machine de test et
 ## PostgreSQL — état du 26 octobre 2026 après essai Linux
 
 Étapes 01–19 closes : [Docker candidat validé par l’administrateur](POSTGRESQL-DOCKER.md#résultat-final-linux--étape-19-close), aucune donnée réelle transférée. [CI 20a préparée](POSTGRESQL-CI.md), 407 tests généraux réussis sans ignoré ; activation 20b en attente d’un exécuteur dédié que l’utilisateur n’a pas configuré. Aucun runner permanent installé, aucune première exécution Forgejo ou protection de branche revendiquée. Répétition 21, guide 22 et bascule volontaire 23 restent distincts.
+## PostgreSQL — préparation de répétition 21a, 26 octobre 2026
+
+[Répétition native synthétique](POSTGRESQL-REPETITION.md) vérifiée : pannes, copies SQLite utilisables, divergence après écriture, archive récente et secours ; mesures sans estimation de maintenance réelle. 407 tests généraux et 243 PostgreSQL réussis sans ignoré, HTTPS inclus ; incident de synchronisation initdb puis relance complète verte documentés. Pas de code métier ou donnée réelle modifié. CI 20b, acceptation complète 21, guide 22 et bascule 23 restent distincts. Arrêt pour la soirée après sauvegarde/publication, aucune tâche de fond.

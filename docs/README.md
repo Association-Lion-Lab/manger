@@ -104,3 +104,5 @@ Lors d'une modification, actualise le guide ou les fonctionnalités concernés ;
 **État actuel du 26 octobre 2026 :** [scénario Docker Linux terminé avec succès par l’administrateur](POSTGRESQL-DOCKER.md#résultat-final-linux--étape-19-close), étapes 01–19 closes. Les notes précédentes décrivent la préparation historique. CI 20, répétition 21, guide final 22 et bascule volontaire 23 restent distincts ; aucune donnée réelle transférée.
 
 [CI PostgreSQL](POSTGRESQL-CI.md) : matrice et scénarios Docker préparés, activation et première exécution Forgejo à confirmer sur un exécuteur dédié ; l’utilisateur n’en a pas configuré. Le test Linux manuel réussi ne remplace pas cette preuve.
+
+[Répétition de migration](POSTGRESQL-REPETITION.md) : préparation 21a sur copies synthétiques natives, pannes, ancien serveur SQLite et secours récent, mesures locales et procédure privée ; activation CI, commutation de volumes et guide Linux restent à valider séparément.

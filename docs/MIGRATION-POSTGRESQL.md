@@ -1,5 +1,7 @@
 # Plan de migration vers PostgreSQL
 
+**Point actuel du 26 octobre 2026 :** étapes 01–19 closes, dont le scénario Docker Linux exécuté par l’administrateur. [CI 20a préparée](POSTGRESQL-CI.md), activation 20b en attente d’un runner ; [répétition 21a native](POSTGRESQL-REPETITION.md) préparée à la demande de poursuivre, sans clore ces validations. Aucune donnée réelle convertie, serveur normal toujours SQLite. Les états datés ci-dessous conservent l’historique du plan.
+
 Plan validé le 22 octobre, état au **25 octobre 2026 : tâches 01–11 réalisées, aucun transfert de données existantes implémenté ou lancé**. Schéma, frontière asynchrone, [connexion/sessions](POSTGRESQL-AUTH.md), [invitations/administration](POSTGRESQL-ACCES.md), [personnes/préférences/protéines](POSTGRESQL-FOYER.md), [recettes](POSTGRESQL-RECETTES.md), [photos/favoris/avis/imports](POSTGRESQL-ENRICHISSEMENTS.md), [repas/assiettes/calendrier](POSTGRESQL-REPAS.md) et [semaines/déplacements/restes](POSTGRESQL-SEMAINES.md) testés séparément ; prochaine tâche 12, stock/suggestions/calculs. Le lancement normal reste SQLite et refuse le candidat PostgreSQL incomplet, commandes standard comprises. [État des tâches](../tasks/todo.md).
 
 Ce plan décrit le remplacement du stockage de Manger!, pas une refonte visuelle. Node.js 24+, les quatre onglets, l'API et le modèle « une instance = un foyer partagé » restent la base. Rust, FDL, le scan de recettes, le SaaS multi-foyers et un nouveau framework client sont hors périmètre.
