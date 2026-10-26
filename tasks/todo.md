@@ -260,6 +260,7 @@ Preuve : [instance complète et secours](../docs/POSTGRESQL-INSTANCE.md). 26 oct
 ### 20 — Bloquer les livraisons non testées dans la CI
 
 - [ ] Réalisé.
+- **20a préparée / 20b à activer :** [workflow, prérequis et preuve](../docs/POSTGRESQL-CI.md). Matrice SQLite/PostgreSQL et job Docker dépendant, deux scénarios d’image, erreurs bloquantes, pas de déploiement. L’utilisateur confirme ne pas avoir configuré de runner ; aucune activation ou première exécution CI revendiquée. Ne pas installer un runner sur l’hôte Manger! via son socket Docker pour contourner ce prérequis.
 - **Livrable :** matrice réelle SQLite/PostgreSQL, reprise/restauration et test d'image sur runner dédié.
 - **Acceptation :** pas de succès avec PostgreSQL manquant ; contextes/secrets exclus toujours testés ; nettoyage seulement des ressources temporaires propres au job, sans accès production ni déploiement automatique.
 - **Vérification :** config Compose, suite entière et échec volontaire d'une connexion pour prouver que le job est bloquant ; première exécution CI attestée séparément de sa préparation.

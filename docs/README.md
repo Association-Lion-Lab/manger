@@ -102,3 +102,5 @@ Lors d'une modification, actualise le guide ou les fonctionnalités concernés ;
 [Vérification Docker du candidat](POSTGRESQL-DOCKER.md) : scénario 19b préparé pour le Linux de test désigné par l’utilisateur, avec données synthétiques, TLS et ressources séparées ; commandes et diagnostic, exécution Linux encore requise avant de clore l’étape.
 
 **État actuel du 26 octobre 2026 :** [scénario Docker Linux terminé avec succès par l’administrateur](POSTGRESQL-DOCKER.md#résultat-final-linux--étape-19-close), étapes 01–19 closes. Les notes précédentes décrivent la préparation historique. CI 20, répétition 21, guide final 22 et bascule volontaire 23 restent distincts ; aucune donnée réelle transférée.
+
+[CI PostgreSQL](POSTGRESQL-CI.md) : matrice et scénarios Docker préparés, activation et première exécution Forgejo à confirmer sur un exécuteur dédié ; l’utilisateur n’en a pas configuré. Le test Linux manuel réussi ne remplace pas cette preuve.

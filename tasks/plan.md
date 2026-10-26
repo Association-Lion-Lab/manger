@@ -77,3 +77,7 @@ Le scénario Docker candidat est préparé et documenté dans [POSTGRESQL-DOCKER
 ## Clôture 19 — résultat Linux du 26 octobre 2026
 
 Scénario `b9a3ba4` sur image `31ed51d` réellement terminé par l’administrateur : transfert, TLS, accès, recréation/persistance, reprise sans redémarrage web et défaut de migration passés, ressources synthétiques nettoyées. [Détails](../docs/POSTGRESQL-DOCKER.md#résultat-final-linux--étape-19-close). Étapes 01–19 closes, quatre restantes ; prochaine 20 (préparation puis activation CI), aucune bascule réelle ou validation appareil.
+
+## Préparation CI 20a — 26 octobre 2026
+
+Matrice et scénarios d’image déclarés avec dépendance bloquante, pas de déploiement ou artefact privé. 407 tests généraux réussis, aucun ignoré, HTTPS inclus ; refus des doubles de commande, outils absents et moteur inconnu vérifiés, relecture indépendante sans constat. [Contrat et activation](../docs/POSTGRESQL-CI.md). L’utilisateur n’a pas configuré de runner : conserver 20b/20 ouverte avant l’acceptation 21–23. Pas d’installation permanente sur son serveur via l’autorisation d’un test ponctuel.
