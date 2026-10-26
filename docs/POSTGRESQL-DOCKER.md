@@ -1,6 +1,6 @@
 # Vérification du candidat sur le Linux de test — 19b
 
-Scénario préparé, pas encore exécuté sous Docker. L’utilisateur a désigné son Linux comme machine de test le 26 octobre 2026. Aucun service ou volume existant ne doit être remplacé. L’accès SSH automatique n’a pas abouti ; ces commandes sont exécutées par l’administrateur.
+Scénario **réussi sous Docker Linux le 26 octobre 2026**, exécuté par l’administrateur avec `b9a3ba4` et l’image `manger:pg-test-31ed51d`. Voir le résultat final ci-dessous ; les comptes rendus de préparation et du premier essai restent historiques. Aucun service ou volume existant ne doit être remplacé. L’accès SSH automatique n’a pas abouti ; ces commandes sont exécutées par l’administrateur.
 
 19b1 : Compose autonome, TLS et bootstrap de rôles neufs. 19b2 : scénario sur image construite, recréation/persistance, coupure/reprise et refus de migration manquante. Le Compose utilise la syntaxe JSON, sous-ensemble de YAML, pour permettre une validation structurelle Node sans nouvelle dépendance ; l’acceptation réelle par Compose reste obligatoire sur Linux.
 
@@ -49,7 +49,7 @@ En réussite, le dossier temporaire et les ressources de ce seul projet sont sup
 
 Les scripts de bootstrap sont montés individuellement depuis le dépôt, jamais incorporés dans l’image applicative. Les programmes de sonde passent sur l’entrée standard ; `.dockerignore` exclut `docker/`, `scripts/`, les tests, les données et les secrets. Le contrôle de contexte Docker utilise seulement de faux fichiers pour vérifier ces exclusions ; il reste lui aussi à exécuter avec un moteur Docker.
 
-L’étape 19 reste ouverte jusqu’au résultat Linux. La CI de l’étape 20, la répétition 21, le guide vérifié 22 et la bascule volontaire 23 en dépendent.
+L’étape 19 est close après le résultat Linux final ci-dessous. La CI de l’étape 20, la répétition 21, le guide vérifié 22 et la bascule volontaire 23 restent distinctes.
 
 ## Contrôles locaux disponibles
 
@@ -66,3 +66,11 @@ L’image applicative `manger:pg-test-31ed51d` peut être réutilisée pour le p
 ```sh
 sh scripts/test-postgres-image.sh manger:pg-test-31ed51d
 ```
+
+## Résultat final Linux — étape 19 close
+
+Deuxième sortie transmise par l’administrateur, scénario `b9a3ba4` sur l’image déjà construite `31ed51d` : commande de transfert terminée avec le code 0, web sain, écritures et sauvegarde réalisées ; les deux conteneurs ont réellement été retirés et recréés en conservant leurs volumes. Comparaison des 18 tables du foyer, octets des photos, session et prochaine identité réussie. Arrêt applicatif propre, coupure PostgreSQL avec santé en échec puis reprise du même processus applicatif ; retrait expérimental de la migration 003 correctement refusé. Message final « Candidat vérifié » présent et nettoyage des seuls deux volumes, deux réseaux et deux conteneurs de test terminé.
+
+Le TLS positif/négatif, le bootstrap et le contrôle des journaux passent également dans ce deuxième scénario. L’absence de message « Arrêt du scénario » et la fin complète attestent la réussite de ce parcours synthétique. La cause du premier arrêt n’a pas été reproduite et reste inconnue ; l’ajout de diagnostic n’est pas présenté comme une correction causale.
+
+Étapes 01–19 closes. Aucune donnée réelle transférée, aucune bascule de l’installation habituelle, aucune recette Safari/iPhone ou Android, aucun runner Codeberg ni CI activé par ce test. La prochaine étape 20 doit distinguer préparation du workflow et première exécution attestée.

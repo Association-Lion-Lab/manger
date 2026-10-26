@@ -119,3 +119,7 @@ Sources techniques : [contexte et `.dockerignore`](https://docs.docker.com/build
 26 octobre 2026 : étapes 01–18 closes ; 19a (raccordement natif du candidat) réalisée, 19b Docker/Linux encore ouverte. 404 tests généraux et 238 PostgreSQL réels réussis, aucun ignoré, HTTPS inclus ; 28 fichiers et 30 parents PostgreSQL. Commande sans binaires : 30 échecs explicites, zéro succès/ignoré, code 1 attendu. Modules/image et 36 documents/321 liens locaux vérifiés. Trois cycles de relecture réconciliés et parcours navigateur sur vrai PostgreSQL synthétique passé. Aucune donnée réelle déplacée ni publication.
 
 Le lancement Docker standard reste SQLite. Ne pas transformer cette preuve native en validation d’une image ou d’un volume PostgreSQL ; 19b prépare des ressources propres sur le Linux de test désigné par l’utilisateur. Le flag candidat ne doit pas être ajouté à l’ancien Compose SQLite. [Détails et prérequis](POSTGRESQL-CANDIDAT.md).
+
+## Résultat Linux 19b — 26 octobre 2026
+
+Le scénario candidat a depuis été exécuté avec succès par l’administrateur : image `31ed51d`, script `b9a3ba4`, TLS et transfert, recréation des deux conteneurs avec persistance des tables/photos/session/identités, panne/reprise sans relance web, migration absente refusée et nettoyage propre. [Preuve synthétique et limites](POSTGRESQL-DOCKER.md#résultat-final-linux--étape-19-close). Étape 19 close ; cette réussite ne constitue ni une bascule de l’instance courante ni une exécution de la CI Codeberg.

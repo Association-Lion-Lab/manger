@@ -755,3 +755,9 @@ L’administrateur a exécuté `31ed51d` sur son Linux de test : build réel ré
 Choix : ajouter uniquement un diagnostic d’étape/code et signal, sans supposer un défaut de transfert, de Compose ou de l’application. Le retour 0 de l’import et l’entrée dans le démarrage web sont explicitement annoncés. Pas de trace contenant les commandes ou secrets, pas de retry de l’import sur la même cible, pas d’assouplissement des contrôles. Test du cleanup réel avec faux Compose : code initial 47 et étape annoncés ; code conservé si nettoyage réussi, refus explicite si propriété ou collecte des journaux échoue. Syntaxe shell et tests de packaging contrôlés ; nouvelle exécution Linux nécessaire. L’image déjà construite reste utilisable, les changements étant hors contexte applicatif.
 
 Résultat ciblé : 14 tests de packaging/configuration réussis, aucun échec ou ignoré ; 53 liens locaux des documents concernés sans cible manquante. Aucun processus de ces contrôles restant après exécution. La cause de l’arrêt Linux reste à établir, pas de correction métier annoncée ni étape 19 clôturée.
+
+## 26 octobre 2026 — validation Linux 19b rapportée par l’administrateur
+
+Le deuxième scénario `b9a3ba4` sur l’image `31ed51d` est terminé avec « Candidat vérifié » : TLS positif/négatif, transfert 22 tables, accès/écritures, vraie recréation des deux conteneurs et comparaison des 18 tables/photos/session/identités, arrêt propre, panne/reprise du même processus et migration absente refusée. Les seuls volumes, réseaux et conteneurs de test ont été nettoyés. [Preuve et périmètre](POSTGRESQL-DOCKER.md#résultat-final-linux--étape-19-close).
+
+Décision : clore 19 et poursuivre 20 dans l’ordre. Ne pas attribuer la première interruption à une cause non démontrée, ni confondre réussite synthétique Linux avec bascule de données réelles ou activation CI. Les quatre étapes 20–23 restent à traiter ; ancienne installation SQLite conservée, pas de recette sur appareil déduite.

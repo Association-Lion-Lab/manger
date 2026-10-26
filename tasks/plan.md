@@ -73,3 +73,7 @@ Avancement du26octobre2026 : étapes01–15 closes, huit restantes, prochaine16 
 ## Point de reprise 19b — 26 octobre 2026
 
 Le scénario Docker candidat est préparé et documenté dans [POSTGRESQL-DOCKER.md](../docs/POSTGRESQL-DOCKER.md). 405 tests généraux réussis sans ignoré ; syntaxe shell/JavaScript et sondes HTTP sur PostgreSQL natif temporaire vérifiées. Aucune exécution Docker acquise. L’utilisateur a désigné son Linux comme hôte de test ; commandes à exécuter par lui, SSH automatique non authentifié. Conserver 19 ouverte puis poursuivre 20–23 dans l’ordre après le résultat Linux ; aucun ancien volume/service ou donnée réelle modifié, aucune publication automatique.
+
+## Clôture 19 — résultat Linux du 26 octobre 2026
+
+Scénario `b9a3ba4` sur image `31ed51d` réellement terminé par l’administrateur : transfert, TLS, accès, recréation/persistance, reprise sans redémarrage web et défaut de migration passés, ressources synthétiques nettoyées. [Détails](../docs/POSTGRESQL-DOCKER.md#résultat-final-linux--étape-19-close). Étapes 01–19 closes, quatre restantes ; prochaine 20 (préparation puis activation CI), aucune bascule réelle ou validation appareil.

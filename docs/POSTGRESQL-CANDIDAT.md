@@ -1,6 +1,6 @@
 # Candidat PostgreSQL — étape 19 en cours
 
-26 octobre 2026 : 19a raccordement natif, 19b image et Compose à vérifier séparément. Ce document ne constitue pas une validation Docker/Linux. Le serveur normal reste SQLite. Activer PostgreSQL exige deux choix explicites : `MANGER_STORAGE=postgres` et `MANGER_POSTGRES_CANDIDATE=1`. Aucune bascule silencieuse ou création d’une base SQLite de repli.
+26 octobre 2026 : 19a raccordement natif et 19b image/Compose Linux réussis ; [preuve et limites](POSTGRESQL-DOCKER.md#résultat-final-linux--étape-19-close). Les notes de préparation ci-dessous restent historiques. Le serveur normal reste SQLite. Activer PostgreSQL exige deux choix explicites : `MANGER_STORAGE=postgres` et `MANGER_POSTGRES_CANDIDATE=1`. Aucune bascule silencieuse ou création d’une base SQLite de repli.
 
 `postgres-app.js` ouvre les seuls dépôts PostgreSQL avec les secrets applicatifs. `db/readiness.js` contrôle rôle sans privilège/membre/propriété, version/état prêt, empreinte de structure et lecture effective des 22 tables des deux schémas. Même contrôle pour la santé publique ; erreur privée en cas de coupure et possibilité de reprise après retour de la base. Un import pending ou une structure inconnue refuse le démarrage avant écoute. Aucune migration propriétaire au lancement web.
 
