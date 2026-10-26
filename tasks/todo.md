@@ -1,6 +1,6 @@
 # Migration PostgreSQL — tâches et points de contrôle
 
-26 octobre 2026 — **plan validé ; tâches 01–12 réalisées, prochaine tâche 13 : courses éditables et synchronisation**. [Cadrage et risques](../docs/MIGRATION-POSTGRESQL.md), [ordre de réalisation](plan.md). Les noms des fichiers non encore créés restent des propositions. Chaque tâche comprend la mise à jour de la documentation concernée et de `docs/DECISIONS.md` ; les fichiers listés sont le périmètre technique principal. Si une tranche dépasse environ cinq fichiers techniques ou une session ciblée, la découper avant de coder, sans réduire ses critères.
+26 octobre 2026 — **plan validé ; tâches 01–13 réalisées, prochaine tâche 14 : analyse des sources SQLite**. [Cadrage et risques](../docs/MIGRATION-POSTGRESQL.md), [ordre de réalisation](plan.md). Les noms des fichiers non encore créés restent des propositions. Chaque tâche comprend la mise à jour de la documentation concernée et de `docs/DECISIONS.md` ; les fichiers listés sont le périmètre technique principal. Si une tranche dépasse environ cinq fichiers techniques ou une session ciblée, la découper avant de coder, sans réduire ses critères.
 
 ## Phase 1 — Socle isolé
 
@@ -164,12 +164,13 @@ Preuve : [installation et validations](../docs/POSTGRESQL-TEST.md), **7 tests Po
 
 ### 13 — Courses éditables et synchronisation
 
-- [ ] Réalisé.
+- [x] Réalisé le 26 octobre 2026.
 - **Livrable :** courses calculées/manuelles, coches, rayons et synchronisation différée.
 - **Acceptation :** conflit 409 préservé avec écriture conditionnelle ; modifications concurrentes sans écrasement silencieux ; pas de rejeu automatique d'une mutation incertaine.
 - **Vérification :** `shopping-sync.test.js` et cas manuels de `server.test.js`, deux éditions concurrentes et échec réseau après engagement.
 - **Dépendances :** 12.
-- **Fichiers probables :** `server.js`, nouveau `db/shopping.js`, `shopping-sync.test.js`, nouveau `postgres-shopping.test.js`.
+- **Livré :** règles, dépôts, contrôleur partagé, semaine agrégée et composition des parcours métier ; [contrat](../docs/POSTGRESQL-COURSES.md).
+- **Clôture :** 386 tests généraux et 199 PostgreSQL réels réussis, aucun ignoré, HTTPS inclus ; modules/image vérifiés sans Docker. Deux cycles de relecture séparée réconciliés. Aucun déploiement, donnée réelle, publication ou validation appareil. Treize tâches closes et dix restantes.
 - **Taille :** M.
 
 **Point de contrôle D :** parité métier complète, y compris bornes et refus ; ancienne suite entière conservée/adaptée et aucune route métier non portée.

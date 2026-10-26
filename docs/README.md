@@ -84,3 +84,5 @@ Dernier ajustement du **12 octobre 2026** : filtre « De saison » plus sélecti
 Lors d'une modification, actualise le guide ou les fonctionnalités concernés ; pour un choix ou un blocage, actualise aussi `DECISIONS.md`. Ajoute le résultat réel et les limites de validation au suivi, sans transformer un ancien test en nouvelle preuve. Mets à jour cet index si une nouvelle page apparaît. Les petits fichiers laissés à la racine ne sont que des points d'entrée vers les documents de référence.
 
 [Placard, suggestions et calculs PostgreSQL](POSTGRESQL-CALCULS.md) : étape 12, photographie cohérente, lots sérialisés, mêmes arrondis et DTO. SQLite reste actif ; tests locaux distincts d'un déploiement.
+
+[Courses éditables PostgreSQL](POSTGRESQL-COURSES.md) : étape 13, édition conditionnelle, synchronisation additive, contrôles d’unité et lecture agrégée cohérente. Limites historiques des coches/rayons/retraits explicites.

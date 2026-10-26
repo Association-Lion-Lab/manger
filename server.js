@@ -8,7 +8,6 @@ const { pipeline } = require('node:stream/promises');
 const { dirname, join } = require('node:path');
 const { DatabaseSync, backup } = require('node:sqlite');
 const catalog = require('./catalog');
-const { foodKey } = require('./ingredients');
 const { createRestore } = require('./restore');
 const { openAccounts, protectAccounts } = require('./accounts');
 const { createInvitationMailer } = require('./invitation-mail');
@@ -28,6 +27,8 @@ const { planningRoutes } = require('./planning-http');
 const {sqliteCalculations}=require('./db/calculations-sqlite');
 const {sqlitePantry}=require('./db/pantry-sqlite');
 const {calculationRoutes}=require('./calculation-http');
+const {sqliteShopping}=require('./db/shopping-sqlite');
+const {shoppingRoutes}=require('./shopping-http');
 
 const INDEX_HTML = Buffer.from(readFileSync(join(__dirname, 'public', 'index.html'), 'utf8')
   .replace('<!-- MANGER_INFORMATION -->', readFileSync(join(__dirname, 'public', 'information.html'), 'utf8')));
@@ -258,15 +259,6 @@ function saveRecipe(db, recipe, id = null) { return checkedRecipe(sqliteRecipes(
 function meals(db,start) { return sqliteMeals(db).read(start); }
 
 function shoppingList(db,...args){return sqliteCalculations(db).shoppingList(...args);}
-function pantryShopping(db,...args){return sqliteCalculations(db).pantryShopping(...args);}
-
-function shoppingState(db, start) {
-  const checks = new Set(db.prepare('SELECT name, unit FROM shopping_checks WHERE week_start = ?').all(start).map(foodKey));
-  const aisles = new Map(db.prepare('SELECT name, unit, aisle FROM shopping_aisles ORDER BY rowid').all().map(item => [foodKey(item), item.aisle]));
-  return [...pantryShopping(db, start).map(item => ({ ...item, aisle: aisles.get(foodKey(item)) || null, checked: checks.has(foodKey(item)) })),
-    ...db.prepare('SELECT id AS manualId, name, amount, unit, aisle, checked FROM shopping_manual WHERE week_start = ? ORDER BY id').all(start).map(item => ({ ...item, checked: Boolean(item.checked) }))];
-}
-
 function household(db) {
   return sqliteHousehold(db).read();
 }
@@ -311,6 +303,7 @@ function createHandler(db) {
   const handleMeals = mealRoutes(sqliteMeals(db), sendJson);
   const handlePlanning = planningRoutes(sqliteMeals(db), sendJson);
   const handleCalculations=calculationRoutes(sqliteCalculations(db),sqlitePantry(db),sendJson);
+  const handleShopping=shoppingRoutes(sqliteShopping(db),sendJson);
   let backingUp = false;
   const restoration = createRestore(db);
   let restoring = false, activeRequests = 0;
@@ -375,96 +368,13 @@ function createHandler(db) {
         return;
       }
 
-      if (request.method === 'GET' && url.pathname === '/api/shopping') {
-        const start = url.searchParams.get('start');
-        if (!isDateKey(start)) return sendJson(response, 400, { error: 'Début de semaine invalide' });
-        return sendJson(response, 200, shoppingState(db, start));
-      }
-      if (request.method === 'GET' && url.pathname === '/api/week') {
-        const start = url.searchParams.get('start');
-        if (!isDateKey(start)) return sendJson(response, 400, { error: 'Début de semaine invalide' });
-        return sendJson(response, 200, { recipes: recipes(db), meals: meals(db, start), shopping: shoppingState(db, start) });
-      }
+      if (await handleShopping(request,response)) return;
       if (await handleCalculations(request,response)) return;
       if (await handleRecipeExtras(request, response)) return;
       if (await handleMeals(request, response)) return;
       if (await handlePlanning(request, response)) return;
 
       if (await handleHousehold(request, response)) return;
-
-      if (request.method === 'POST' && url.pathname === '/api/shopping-checks/sync') {
-        const input = await readJson(request);
-        if (!input || !isDateKey(input.weekStart) || !Array.isArray(input.items) || !input.items.length || input.items.length > 200
-          || input.items.some(item => !item || typeof item.name !== 'string' || !item.name.trim() || item.name.length > 80
-            || typeof item.unit !== 'string' || !item.unit.trim() || item.unit.length > 24 || !Number.isFinite(item.amount) || item.amount <= 0
-            || (item.manualId != null && (!Number.isSafeInteger(item.manualId) || item.manualId < 1)))) throw new Error('Achats hors connexion invalides.');
-        const identity = item => item.manualId == null ? foodKey(item) : `manual:${item.manualId}`;
-        if (new Set(input.items.map(identity)).size !== input.items.length) throw new Error('Article envoyé plusieurs fois.');
-        const accepted = [], rejected = [];
-        db.exec('BEGIN');
-        try {
-          const current = shoppingState(db, input.weekStart);
-          for (const [index, item] of input.items.entries()) {
-            const match = current.find(row => identity(row) === identity(item));
-            if (!match || foodKey(match) !== foodKey(item) || match.amount !== item.amount) { rejected.push(index); continue; }
-            // Only mark existing, unchanged items bought. A retry is harmless while the item stays checked.
-            if (!match.checked) {
-              if (match.manualId != null) db.prepare('UPDATE shopping_manual SET checked = 1 WHERE id = ? AND week_start = ?').run(match.manualId, input.weekStart);
-              else db.prepare('INSERT OR IGNORE INTO shopping_checks (week_start, name, unit) VALUES (?, ?, ?)').run(input.weekStart, match.name, match.unit);
-            }
-            accepted.push(index);
-          }
-          db.exec('COMMIT');
-        } catch (error) { db.exec('ROLLBACK'); throw error; }
-        return sendJson(response, 200, { accepted, rejected });
-      }
-
-      if (request.method === 'POST' && url.pathname === '/api/shopping-checks') {
-        const input = await readJson(request);
-        if (!input || !isDateKey(input.weekStart) || typeof input.name !== 'string' || !input.name || input.name.length > 80 || typeof input.unit !== 'string' || !input.unit || input.unit.length > 24 || typeof input.checked !== 'boolean') throw new Error('Article invalide');
-        if (input.manualId != null) {
-          if (!Number.isSafeInteger(input.manualId) || db.prepare('UPDATE shopping_manual SET checked = ? WHERE id = ? AND week_start = ?').run(Number(input.checked), input.manualId, input.weekStart).changes === 0) throw new Error('Article inconnu');
-          return sendJson(response, 200, {});
-        }
-        for (const item of db.prepare('SELECT name, unit FROM shopping_checks WHERE week_start = ?').all(input.weekStart)) {
-          if (foodKey(item) === foodKey(input)) db.prepare('DELETE FROM shopping_checks WHERE week_start = ? AND name = ? AND unit = ?').run(input.weekStart, item.name, item.unit);
-        }
-        if (input.checked) db.prepare('INSERT INTO shopping_checks (week_start, name, unit) VALUES (?, ?, ?)').run(input.weekStart, input.name, input.unit);
-        return sendJson(response, 200, {});
-      }
-
-      if (request.method === 'POST' && url.pathname === '/api/shopping-aisles') {
-        const input = await readJson(request);
-        if (!input || typeof input.name !== 'string' || !input.name.trim() || input.name.length > 80 || typeof input.unit !== 'string' || !input.unit.trim() || input.unit.length > 24 || !['', 'Fruits et légumes', 'Frais', 'Épicerie', 'Surgelés', 'Maison', 'Autres'].includes(input.aisle)) throw new Error('Rayon invalide');
-        if (input.manualId != null) {
-          if (!Number.isSafeInteger(input.manualId) || !isDateKey(input.weekStart) || db.prepare('UPDATE shopping_manual SET aisle = ? WHERE id = ? AND week_start = ?').run(input.aisle, input.manualId, input.weekStart).changes === 0) throw new Error('Article inconnu');
-        } else {
-          for (const item of db.prepare('SELECT name, unit FROM shopping_aisles').all()) {
-            if (foodKey(item) === foodKey(input)) db.prepare('DELETE FROM shopping_aisles WHERE name = ? AND unit = ?').run(item.name, item.unit);
-          }
-          if (input.aisle) db.prepare('INSERT INTO shopping_aisles (name, unit, aisle) VALUES (?, ?, ?)').run(input.name, input.unit, input.aisle);
-        }
-        return sendJson(response, 200, {});
-      }
-      const shoppingManualMatch = url.pathname.match(/^\/api\/shopping-manual\/(\d+)$/);
-      if ((request.method === 'POST' && url.pathname === '/api/shopping-manual') || (request.method === 'PUT' && shoppingManualMatch)) {
-        const input = await readJson(request);
-        if (!input || !isDateKey(input.weekStart) || typeof input.name !== 'string' || !input.name.trim() || input.name.length > 80 || typeof input.unit !== 'string' || !input.unit.trim() || input.unit.length > 24 || !Number.isFinite(input.amount) || input.amount <= 0 || input.amount > 10000 || !['', 'Fruits et légumes', 'Frais', 'Épicerie', 'Surgelés', 'Maison', 'Autres'].includes(input.aisle)) throw new Error('Article invalide');
-        if (request.method === 'PUT') {
-          const id = Number(shoppingManualMatch[1]), previous = input.previous;
-          if (!Number.isSafeInteger(id) || id <= 0 || !previous || typeof previous.name !== 'string' || typeof previous.unit !== 'string' || typeof previous.aisle !== 'string' || !Number.isFinite(previous.amount)) throw new Error('Article invalide');
-          // Ne pas écraser la modification d'un autre appareil ; l'état coché reste indépendant.
-          const result = db.prepare('UPDATE shopping_manual SET name = ?, amount = ?, unit = ?, aisle = ? WHERE id = ? AND week_start = ? AND name = ? AND amount = ? AND unit = ? AND aisle = ?').run(input.name.trim(), input.amount, input.unit.trim(), input.aisle, id, input.weekStart, previous.name, previous.amount, previous.unit, previous.aisle);
-          if (!result.changes) return sendJson(response, 409, { error: 'Cet article a été modifié ou supprimé ailleurs. Ferme cette fenêtre et recharge la page avant de réessayer.' });
-          return sendJson(response, 200, { id });
-        }
-        const result = db.prepare('INSERT INTO shopping_manual (week_start, name, amount, unit, aisle) VALUES (?, ?, ?, ?, ?)').run(input.weekStart, input.name.trim(), input.amount, input.unit.trim(), input.aisle);
-        return sendJson(response, 201, { id: Number(result.lastInsertRowid) });
-      }
-      if (request.method === 'DELETE' && shoppingManualMatch) {
-        if (db.prepare('DELETE FROM shopping_manual WHERE id = ?').run(Number(shoppingManualMatch[1])).changes === 0) throw new Error('Article inconnu');
-        return sendJson(response, 200, {});
-      }
 
       if (await handleRecipes(request, response)) return;
 
@@ -506,6 +416,12 @@ function createCalculationHandler(calc,pantry){
   return async(request,response)=>{if(!await handle(request,response))sendJson(response,503,{error:'Parcours PostgreSQL non porté.'});};
 }
 
+// Internal candidate harness only; callers must wrap this with protectAccounts.
+function createBusinessHandler(stores){
+  const routes=[householdRoutes(stores.home,sendJson),recipeRoutes(stores.recipes,sendJson),recipeExtraRoutes(stores.recipes,sendJson),mealRoutes(stores.meals,sendJson),planningRoutes(stores.meals,sendJson),calculationRoutes(stores.calc,stores.pantry,sendJson),shoppingRoutes(stores.shopping,sendJson)];
+  return async(request,response)=>{for(const route of routes)if(await route(request,response))return;sendJson(response,503,{error:'Parcours PostgreSQL non porté.'});};
+}
+
 // Supplying a database is the isolated core-test harness; production always opens accounts.
 function createApp(database, accounts, tls = tlsOptions(), mailer = null) {
   const production = database === undefined;
@@ -530,4 +446,4 @@ if (require.main === module) {
   server.listen(port, '0.0.0.0', () => console.log(`Manger! écoute sur ${server.setSecureContext ? 'https' : 'http'}://localhost:${server.address().port}`));
 }
 
-module.exports = { addDays, calendar, createApp, createHouseholdHandler, createRecipeHandler, createMealHandler, createCalculationHandler, createDatabase, dateKey, household, isCompatible, isDietCompatible, isDateKey, recipes, saveRecipe, shoppingList, suggestions, validateMeal, validateMember, validateProtein, validateRecipe };
+module.exports = { addDays, calendar, createApp, createHouseholdHandler, createRecipeHandler, createMealHandler, createCalculationHandler, createBusinessHandler, createDatabase, dateKey, household, isCompatible, isDietCompatible, isDateKey, recipes, saveRecipe, shoppingList, suggestions, validateMeal, validateMember, validateProtein, validateRecipe };

@@ -129,3 +129,7 @@ Ne démarre pas plusieurs serveurs sur des ports successifs : contrôle d'abord 
 ## Portage du stock et des calculs (26 octobre 2026)
 
 calculations.js contient les règles pures et les deux chemins d'arrondi. db/calculation-items.js fournit une requête métier fixe sur SQLite ou le namespace household ; db/calculations-sqlite.js et db/calculations.js chargent la photographie cohérente. pantry.js contrôle les modifications ; db/pantry-sqlite.js et db/pantry.js les engagent sous transaction/verrou. calculation-http.js est commun aux deux moteurs, branché au serveur SQLite normal et au harnais PostgreSQL isolé. Les exports synchrones historiques shoppingList/suggestions restent utilisables. [Contrat](POSTGRESQL-CALCULS.md).
+
+## Portage des courses (26 octobre 2026)
+
+shopping.js conserve DTO et préconditions, db/shopping-sqlite.js et db/shopping.js exécutent transactions et écritures conditionnelles. shopping-http.js porte GET semaine/courses et les mutations. db/repositories.js construit les dépôts PostgreSQL d'une même base ; createBusinessHandler les compose dans le harnais protégé. Pas de mélange SQLite/PostgreSQL ni activation normale. [Contrat](POSTGRESQL-COURSES.md).

@@ -1,0 +1,13 @@
+# Courses éditables — étape 13
+
+Étape terminée et testée localement le 26 octobre 2026. Découpage : 13a dépôt et contrat commun ; 13b routes et semaine agrégée ; 13c concurrence/rollback ; 13d suites et clôture. SQLite reste actif.
+
+Les écritures utilisent le même verrou de foyer que les repas/recettes/placard sur PostgreSQL, une transaction immédiate sur SQLite. L'édition manuelle reste une comparaison SQL conditionnelle des anciennes valeurs nom/quantité/unité/rayon, avec conflit 409 ; l'état coché n'est pas écrasé par cette édition. La comparaison est une précondition de valeurs, pas un numéro de révision ; le scénario ABA reste une limite historique explicite.
+
+Les coches calculées et rayons conservent les correspondances foodKey. Les alias canoniques de rayons sont départagés par leur ordre historique (rowid SQLite, sort_order PostgreSQL). Les articles manuels restent distincts. La synchronisation hors connexion n'accepte que les articles existants dont identité canonique, unité exacte et quantité sont inchangées ; seuls les indices acceptés sont cochés. Le contrôle d'unité est une correction volontaire : foodKey fusionne g/kg, donc comparer seulement la quantité numérique pouvait accepter 1 kg devenu 1 g. Répéter un envoi ne réécrit pas un article déjà coché ; la ligne courante détermine son libellé. Aucun rejeu automatique n'est ajouté après une réponse incertaine.
+
+La protection de concurrence par anciennes valeurs s'applique au PUT manuel. Les actions explicites de coche/rayon/retrait gardent leur contrat historique sans précondition de révision. Un ancien DELETE peut retirer une ligne modifiée ; un rayon explicite suit la dernière action reçue. SQLite peut réutiliser un ID supprimé, PostgreSQL identity progresse ; une vieille copie identique à une nouvelle ligne SQLite peut donc passer les préconditions de valeurs. Aucun verrou n'est présenté comme une solution à l'ABA ou aux intentions anciennes du client. Une future révision d'article nécessiterait un contrat client distinct.
+
+Lecture de la semaine et des courses depuis une photographie cohérente de toutes les tables nécessaires, sans octets de photo, avec REPEATABLE READ READ ONLY PostgreSQL. Même forme des réponses. Erreurs de saisie 400, conflits 409, stockage 503 privé. NUL refusé dans les champs texte transmis au SQL, sans changement des libellés normaux.
+
+Les tests locaux ne constituent pas une recette Safari, Ubuntu, Docker ou CI. 386 tests généraux et 199 PostgreSQL réels réussis, aucun ignoré, HTTPS inclus ; modules/image vérifiés sans Docker. Deux cycles de relecture séparée réconciliés. Aucun déploiement, donnée réelle, publication ou validation appareil.

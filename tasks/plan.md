@@ -55,3 +55,5 @@ Plan approuvé, tâches 01–11 réalisées au 25 octobre. [Inventaire détaill�
 ## Avancement du 26 octobre 2026
 
 Étapes 01–12 réalisées, onze restantes. 378 tests généraux et 187 PostgreSQL réels réussis, aucun ignoré, HTTPS inclus. 140 comparaisons synthétiques identiques, trois cycles de relecture réconciliés ; modules/image et audit npm sans alerte. Absence des binaires : 21 parents en échec explicite, aucun ignoré. Aucun déploiement ou donnée réelle. Prochaine tâche 13 : courses éditables/synchronisation. Le moteur normal reste SQLite, aucun candidat incomplet déployable.
+
+Clôture étape 13 (26 octobre 2026) : 386 tests généraux et 199 PostgreSQL réels réussis, aucun ignoré, HTTPS inclus ; modules/image vérifiés sans Docker. Deux cycles de relecture séparée réconciliés. Aucun déploiement, donnée réelle, publication ou validation appareil. Treize tâches closes, dix restantes, prochaine 14. La commande PostgreSQL contient 21 fichiers et 23 parents. SQLite reste actif ; reprise/sauvegarde/exploitation des étapes 14–23 encore à faire.

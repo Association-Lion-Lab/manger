@@ -325,3 +325,7 @@ L'export JSON de recettes ne remplace pas la sauvegarde du foyer et n'inclut pas
 ## Migration PostgreSQL — étape 12 (26 octobre 2026)
 
 Extraction des calculs et du placard vers règles communes et dépôts isolés : dates/lots, sommes compensées et réservations, suggestions/menu, contrôle d'accès et refus privés. Aucune nouvelle fonction mobile, aucune bascule ou publication. [Contrat et preuves](POSTGRESQL-CALCULS.md).
+
+## Migration PostgreSQL — étape 13 (26 octobre 2026)
+
+Courses éditables et lectures agrégées portées, garde de synchronisation d’unité renforcée sans nouveau parcours client. [Contrat et preuves](POSTGRESQL-COURSES.md). Pas de donnée réelle, déploiement ou publication.
