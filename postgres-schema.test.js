@@ -11,5 +11,5 @@ test('le rôle de migration est explicite et les identifiants dangereux sont ref
 
 test('un rôle valide ne masque pas une connexion indisponible et ne crée aucun stockage de repli', async () => {
   const error = new Error('Synthetic connection failure');
-  await assert.rejects(migrateSchema({ async connect() { throw error; } }, 'manger_test_app'), candidate => candidate === error);
+  await assert.rejects(migrateSchema({ connect(callback) { callback(error); } }, 'manger_test_app'), candidate => candidate.cause === error);
 });

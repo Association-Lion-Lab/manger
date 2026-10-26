@@ -88,3 +88,5 @@ Lors d'une modification, actualise le guide ou les fonctionnalités concernés ;
 [Courses éditables PostgreSQL](POSTGRESQL-COURSES.md) : étape 13, édition conditionnelle, synchronisation additive, contrôles d’unité et lecture agrégée cohérente. Limites historiques des coches/rayons/retraits explicites.
 
 [Analyse des sources SQLite](POSTGRESQL-SOURCES.md) : étape 14, commande administrative sans mutation de l’origine, sans PostgreSQL ni amorçage ; version/relations/octet/ordre contrôlés. 393 tests généraux réussis, aucun ignoré, HTTPS inclus ; sept tests source et CLI administratif sur copies synthétiques réussis, modules/image vérifiés. Aucune base réelle, publication, migration PostgreSQL ou validation Ubuntu/appareil.
+
+[Transfert des 22 tables](POSTGRESQL-TRANSFERT.md) : étape 15, cible neuve seulement, comparaison exhaustive, état pending/ready, contrôle après COMMIT incertain. 397 tests généraux et 211 PostgreSQL réels réussis, aucun ignoré, HTTPS inclus ; contrôle image/modules réussi sans Docker. Trois cycles de relecture séparée réconciliés. Aucune donnée réelle, bascule, publication ou validation Ubuntu/appareil.

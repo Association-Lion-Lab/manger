@@ -159,4 +159,13 @@ async function openPostgres(config) {
   }
 }
 
-module.exports = { openPostgres };
+function reservePostgresClient(pool){
+  return new Promise((resolve,reject)=>{
+    try{pool.connect((error,client)=>{
+      if(error){reject(databaseError(error));return;}
+      const lease=clientLease(client,()=>{});lease.cancelled.catch(()=>{});
+      resolve(Object.freeze({query:(sql,values)=>Promise.race([lease.query(sql,values),lease.cancelled]),release:()=>lease.release(true)}));
+    });}catch(error){reject(databaseError(error));}
+  });
+}
+module.exports = { openPostgres, poolOptions, reservePostgresClient };

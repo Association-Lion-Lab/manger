@@ -1,5 +1,7 @@
 const { createHash } = require('node:crypto');
-const migrations = [require('./migrations/001-initial')];
+const {structureFingerprint,verifyStructure}=require('./structure');
+const {reservePostgresClient}=require('./postgres');
+const migrations = [require('./migrations/001-initial'),require('./migrations/002-transfer-state')];
 
 // shortcut: require freshly provisioned roles; global parameter/function ACL audits belong to deployment bootstrap.
 async function checkRoles(client, role) {
@@ -57,7 +59,8 @@ async function permissions(client, applicationRole) {
     REVOKE ALL ON ALL TABLES IN SCHEMA household, auth, manger_meta FROM PUBLIC, ${role};
     GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA household, auth TO ${role};
     REVOKE ALL ON ALL SEQUENCES IN SCHEMA household, auth, manger_meta FROM PUBLIC, ${role};
-    GRANT USAGE ON ALL SEQUENCES IN SCHEMA household, auth TO ${role}`);
+    GRANT USAGE ON ALL SEQUENCES IN SCHEMA household, auth TO ${role};
+    GRANT EXECUTE ON FUNCTION household.storage_status() TO ${role}`);
 }
 
 // Explicit administrative operation only; importing this module opens no connection.
@@ -65,7 +68,7 @@ async function permissions(client, applicationRole) {
 async function migrateSchema(pool, applicationRole) {
   if (typeof applicationRole !== 'string' || !/^[a-z_][a-z0-9_]{0,62}$/.test(applicationRole) ||
       applicationRole === 'public' || applicationRole.startsWith('pg_')) throw new Error('Rôle applicatif invalide.');
-  const client = await pool.connect();
+  const client = await reservePostgresClient(pool);
   let failure;
   try {
     // A waiting migrator must read the history AFTER acquiring the transaction lock.
@@ -73,6 +76,10 @@ async function migrateSchema(pool, applicationRole) {
     await client.query('SELECT pg_advisory_xact_lock(1296125511, 1)');
     await checkRoles(client, applicationRole);
     const count = await history(client), applied = [];
+    if(count>0){
+      if(count<2)throw new Error('Ancien socle PostgreSQL sans empreinte de structure : crée une cible neuve. Aucune donnée modifiée.');
+      await verifyStructure(client);
+    }
     for (const migration of migrations.slice(count)) {
       await client.query(migration.sql);
       await client.query('INSERT INTO manger_meta.schema_migrations(version,name,checksum) VALUES($1,$2,$3)',
@@ -80,6 +87,7 @@ async function migrateSchema(pool, applicationRole) {
       applied.push(migration.version);
     }
     await permissions(client, applicationRole);
+    await client.query('UPDATE manger_meta.schema_migrations SET structure_checksum=$1 WHERE version=$2',[await structureFingerprint(client),migrations.at(-1).version]);
     await client.query('COMMIT');
     return { version: migrations.at(-1).version, applied };
   } catch (error) {

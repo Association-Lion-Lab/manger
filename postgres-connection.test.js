@@ -161,3 +161,12 @@ test('coupure immédiatement à la remise du client : surveillance installée av
   assert.equal(protectedAtHandoff,true); assert.deepEqual(h.clients[0].sql,[]);
   assert.deepEqual(h.clients[0].releases,[true]); assert.equal(h.pool.ended,true);
 });
+test('client administratif : surveillance dès la remise et coupure pendant une requête',async()=>{
+  const h=harness(),db=await h.openPostgres(config);let resume,entered;
+  const ready=new Promise(r=>entered=r);h.pool.handle=async()=>{entered();await new Promise(r=>resume=r);return {rows:[]};};
+  const client=await h.reservePostgresClient(h.pool),pending=client.query('SELECT delayed');await ready;
+  const rejected=assert.rejects(pending,error=>error.code==='57P01');h.clients.at(-1).emit('error',Object.assign(new Error('private disconnect'),{code:'57P01'}));await rejected;resume();client.release();assert.deepEqual(h.clients.at(-1).releases,[true]);await db.close();
+  const next=harness(),other=await next.openPostgres(config);let observed;
+  next.pool.afterAcquire=raw=>{observed=raw.listenerCount('error')>0;raw.emit('error',Object.assign(new Error('private handoff'),{code:'57P01'}));};
+  const acquired=await next.reservePostgresClient(next.pool);await assert.rejects(acquired.query('SELECT never'),error=>error.code==='POSTGRES_SCOPE_CLOSED'||error.code==='57P01');assert.equal(observed,true);acquired.release();await other.close();
+});

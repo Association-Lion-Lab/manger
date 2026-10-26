@@ -49,3 +49,7 @@ Dernière sous-tranche de 03 réalisée : `npm run test:postgres` agrège mainte
 Commande commune aussi vérifiée avec `MANGER_TEST_PG_BIN` pointant vers un chemin inexistant : les deux suites échouent explicitement, code 1 et zéro test ignoré, avant création de cluster. Aucun passage vert artificiel en l'absence de PostgreSQL.
 
 Sources officielles : [identités](https://www.postgresql.org/docs/18/ddl-identity-columns.html), [verrous transactionnels](https://www.postgresql.org/docs/18/explicit-locking.html#ADVISORY-LOCKS), [transaction sur client réservé](https://node-postgres.com/features/transactions), [namespace et droits](https://www.postgresql.org/docs/18/ddl-schemas.html#DDL-SCHEMAS-PRIV), [dépendances d'objets](https://www.postgresql.org/docs/18/catalog-pg-depend.html), [codes SQLSTATE](https://www.postgresql.org/docs/18/errcodes-appendix.html), [séquences](https://www.postgresql.org/docs/18/functions-sequence.html), [droits ALTER SYSTEM](https://www.postgresql.org/docs/18/sql-altersystem.html).
+
+## Évolution du 26 octobre 2026 — version 002
+
+État de transfert et empreinte de structure ajoutés, sans modifier les22tables métier. Métadonnées toujours interdites en accès direct à l’application ; fonction minimale storage_status explicitement accordée. Prototypes001 sans empreinte refusés sans mutation, nouvelle cible exigée. [Détails et preuves](POSTGRESQL-TRANSFERT.md).

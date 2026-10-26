@@ -333,3 +333,7 @@ Courses éditables et lectures agrégées portées, garde de synchronisation d�
 ## Migration PostgreSQL — étape 14 (26 octobre 2026)
 
 Analyse de copies privées et normalisation vers un schéma de confiance sans exécuter leur DDL. 393 tests généraux réussis, aucun ignoré, HTTPS inclus ; sept tests source et CLI administratif sur copies synthétiques réussis, modules/image vérifiés. Aucune base réelle, publication, migration PostgreSQL ou validation Ubuntu/appareil. [Contrat](POSTGRESQL-SOURCES.md).
+
+## Migration PostgreSQL — étape 15 (26 octobre 2026)
+
+Reprise administrative complète et CLI contrôlés sur données synthétiques. 397 tests généraux et 211 PostgreSQL réels réussis, aucun ignoré, HTTPS inclus ; contrôle image/modules réussi sans Docker. Trois cycles de relecture séparée réconciliés. Aucune donnée réelle, bascule, publication ou validation Ubuntu/appareil. [Contrat et limites](POSTGRESQL-TRANSFERT.md).

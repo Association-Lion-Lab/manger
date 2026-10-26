@@ -10,12 +10,12 @@ function loadDirectory(directory) {
 }
 
 function checkImage() {
+  assert.equal(typeof require('./db/postgres').openPostgres, 'function');
   // CLI modules must keep their side effects behind require.main === module.
   for (const file of readdirSync(__dirname)) {
     if (file.endsWith('.js') && !file.endsWith('.test.js') && file !== 'image-check.js') require(join(__dirname, file));
   }
   loadDirectory(join(__dirname, 'db'));
-  assert.equal(typeof require('./db/postgres').openPostgres, 'function');
   readFileSync(join(__dirname, 'public', 'third-party-notices.txt'), 'utf8');
   const { createDatabase } = require('./server');
   const { openAccounts } = require('./accounts');

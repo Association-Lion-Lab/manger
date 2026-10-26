@@ -1,6 +1,6 @@
 # Migration PostgreSQL — tâches et points de contrôle
 
-26 octobre 2026 — **plan validé ; tâches 01–14 réalisées, prochaine tâche 15 : import et comparaison**. [Cadrage et risques](../docs/MIGRATION-POSTGRESQL.md), [ordre de réalisation](plan.md). Les noms des fichiers non encore créés restent des propositions. Chaque tâche comprend la mise à jour de la documentation concernée et de `docs/DECISIONS.md` ; les fichiers listés sont le périmètre technique principal. Si une tranche dépasse environ cinq fichiers techniques ou une session ciblée, la découper avant de coder, sans réduire ses critères.
+26 octobre 2026 — **plan validé ; tâches 01–15 réalisées, prochaine tâche 16 : sauvegarde du foyer**. [Cadrage et risques](../docs/MIGRATION-POSTGRESQL.md), [ordre de réalisation](plan.md). Les noms des fichiers non encore créés restent des propositions. Chaque tâche comprend la mise à jour de la documentation concernée et de `docs/DECISIONS.md` ; les fichiers listés sont le périmètre technique principal. Si une tranche dépasse environ cinq fichiers techniques ou une session ciblée, la découper avant de coder, sans réduire ses critères.
 
 ## Phase 1 — Socle isolé
 
@@ -190,13 +190,14 @@ Preuve : [installation et validations](../docs/POSTGRESQL-TEST.md), **7 tests Po
 
 ### 15 — Importer et comparer intégralement
 
-- [ ] Réalisé.
+- [x] Réalisé le 26 octobre 2026.
 - **Livrable :** reprise administrative vers cible vide, analyse préalable et rapport de vérification privé minimal.
 - **Acceptation :** import des 22 tables, IDs/relations/photos/hachages/expirations conservés ; refus de fusion/répétition ; séquences et marqueur de reprise validés sans cible partielle utilisable.
-- **Autorité de séquence :** recalage par l'opérateur sur cible neuve ; `setval` n'est pas annulé par rollback. Panne après recalage = nouvelle cible vierge, pas réutilisation/fusion silencieuse.
+- **Autorité de séquence :** recalage propriétaire uniquement, ALTER SEQUENCE RESTART transactionnel retenu plutôt que setval. Échec certain = pending bloquant, cible neuve exigée ; résultat de COMMIT incertain = contrôle en lecture sans répétition. Aucun droit général de recalage au rôle applicatif.
 - **Vérification :** comparaison de toutes les valeurs normalisées et photos, interruption injectée, seconde tentative sur cible déjà migrée refusée et création d'un élément après migration.
 - **Dépendances :** 14.
-- **Fichiers probables :** nouveaux `migrate-postgres.js`, `migration-verify.js`, `migration.test.js`, `migration-source.js`.
+- **Livré :** transfert, vérification, configuration, empreinte de structure et métadonnées002 ; contrats/pannes/CLI réels. [Contrat](../docs/POSTGRESQL-TRANSFERT.md).
+- **Clôture :** 397 tests généraux et 211 PostgreSQL réels réussis, aucun ignoré, HTTPS inclus ; contrôle image/modules réussi sans Docker. Trois cycles de relecture séparée réconciliés. Aucune donnée réelle, bascule, publication ou validation Ubuntu/appareil. Quinze tâches closes, huit restantes.
 - **Taille :** M.
 
 ### 16 — Télécharger une sauvegarde du foyer

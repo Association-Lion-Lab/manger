@@ -137,3 +137,7 @@ shopping.js conserve DTO et préconditions, db/shopping-sqlite.js et db/shopping
 ## Analyse administrative des données (26 octobre 2026)
 
 migration-format.js fixe types/colonnes/uniques/références des 22 tables, y compris sort_order issu du rowid. migration-source.js lit des sources SQLite arrêtées, reconstruit un schéma de confiance en temporaire et ne rend public que le rapport. Les données internes sont privées. [Contrat](POSTGRESQL-SOURCES.md).
+
+## Transfert administratif et schéma 002 (26 octobre 2026)
+
+Migration002 ajoute état et empreinte de structure. db/structure.js vérifie les définitions/objets hors compteurs ; db/postgres.reservePostgresClient surveille les connexions administratives dès le callback. migration-verify.js compare toutes valeurs/octet, postgres-transfer.js porte les insertions/recalages fixes et migrate-postgres.js orchestre réservation/transfert/contrôle sans réessai. Les rôles et fichiers de secrets restent séparés. [Contrat](POSTGRESQL-TRANSFERT.md).
