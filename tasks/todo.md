@@ -1,6 +1,6 @@
 # Migration PostgreSQL — tâches et points de contrôle
 
-26 octobre 2026 — **plan validé ; tâches 01–13 réalisées, prochaine tâche 14 : analyse des sources SQLite**. [Cadrage et risques](../docs/MIGRATION-POSTGRESQL.md), [ordre de réalisation](plan.md). Les noms des fichiers non encore créés restent des propositions. Chaque tâche comprend la mise à jour de la documentation concernée et de `docs/DECISIONS.md` ; les fichiers listés sont le périmètre technique principal. Si une tranche dépasse environ cinq fichiers techniques ou une session ciblée, la découper avant de coder, sans réduire ses critères.
+26 octobre 2026 — **plan validé ; tâches 01–14 réalisées, prochaine tâche 15 : import et comparaison**. [Cadrage et risques](../docs/MIGRATION-POSTGRESQL.md), [ordre de réalisation](plan.md). Les noms des fichiers non encore créés restent des propositions. Chaque tâche comprend la mise à jour de la documentation concernée et de `docs/DECISIONS.md` ; les fichiers listés sont le périmètre technique principal. Si une tranche dépasse environ cinq fichiers techniques ou une session ciblée, la découper avant de coder, sans réduire ses critères.
 
 ## Phase 1 — Socle isolé
 
@@ -179,12 +179,13 @@ Preuve : [installation et validations](../docs/POSTGRESQL-TEST.md), **7 tests Po
 
 ### 14 — Analyser les sources SQLite sans les modifier
 
-- [ ] Réalisé.
+- [x] Réalisé le 26 octobre 2026.
 - **Livrable :** lecteur administratif et analyse des deux bases sur copie figée.
 - **Acceptation :** schéma/version/intégrité/relation contrôlés ; source en lecture seule et normalisation ancienne version sur autre copie ; rapport sans nom de personne, mot de passe ou jeton.
 - **Vérification :** fixtures version 4/anciennes prises en charge/inconnues/corrompues, fichiers manquants et empreintes de source identiques après refus.
 - **Dépendances :** 13.
-- **Fichiers probables :** nouveau `migration-source.js`, nouveau `migration-source.test.js`, `backup-tools.js` si réutilisation bornée pertinente.
+- **Livré :** migration-format.js, migration-source.js, tests source et fermeture/amorçage des fabriques ; [contrat](../docs/POSTGRESQL-SOURCES.md).
+- **Clôture :** 393 tests généraux réussis, aucun ignoré, HTTPS inclus ; sept tests source et CLI administratif sur copies synthétiques réussis, modules/image vérifiés. Aucune base réelle, publication, migration PostgreSQL ou validation Ubuntu/appareil. Quatorze tâches closes et neuf restantes.
 - **Taille :** M.
 
 ### 15 — Importer et comparer intégralement

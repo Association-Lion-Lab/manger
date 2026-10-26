@@ -133,3 +133,7 @@ calculations.js contient les règles pures et les deux chemins d'arrondi. db/cal
 ## Portage des courses (26 octobre 2026)
 
 shopping.js conserve DTO et préconditions, db/shopping-sqlite.js et db/shopping.js exécutent transactions et écritures conditionnelles. shopping-http.js porte GET semaine/courses et les mutations. db/repositories.js construit les dépôts PostgreSQL d'une même base ; createBusinessHandler les compose dans le harnais protégé. Pas de mélange SQLite/PostgreSQL ni activation normale. [Contrat](POSTGRESQL-COURSES.md).
+
+## Analyse administrative des données (26 octobre 2026)
+
+migration-format.js fixe types/colonnes/uniques/références des 22 tables, y compris sort_order issu du rowid. migration-source.js lit des sources SQLite arrêtées, reconstruit un schéma de confiance en temporaire et ne rend public que le rapport. Les données internes sont privées. [Contrat](POSTGRESQL-SOURCES.md).

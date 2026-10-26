@@ -329,3 +329,7 @@ Extraction des calculs et du placard vers règles communes et dépôts isolés :
 ## Migration PostgreSQL — étape 13 (26 octobre 2026)
 
 Courses éditables et lectures agrégées portées, garde de synchronisation d’unité renforcée sans nouveau parcours client. [Contrat et preuves](POSTGRESQL-COURSES.md). Pas de donnée réelle, déploiement ou publication.
+
+## Migration PostgreSQL — étape 14 (26 octobre 2026)
+
+Analyse de copies privées et normalisation vers un schéma de confiance sans exécuter leur DDL. 393 tests généraux réussis, aucun ignoré, HTTPS inclus ; sept tests source et CLI administratif sur copies synthétiques réussis, modules/image vérifiés. Aucune base réelle, publication, migration PostgreSQL ou validation Ubuntu/appareil. [Contrat](POSTGRESQL-SOURCES.md).

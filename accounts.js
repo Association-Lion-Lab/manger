@@ -49,12 +49,14 @@ async function matches(value, stored) {
 function openAccounts(filename = accountPath()) {
   if (filename !== ':memory:') mkdirSync(dirname(filename), { recursive: true });
   const db = new DatabaseSync(filename);
+  try {
   db.exec(`PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;
     CREATE TABLE IF NOT EXISTS accounts(id INTEGER PRIMARY KEY, username TEXT NOT NULL UNIQUE, password TEXT NOT NULL, admin INTEGER NOT NULL DEFAULT 0, active INTEGER NOT NULL DEFAULT 1);
     CREATE TABLE IF NOT EXISTS sessions(token TEXT PRIMARY KEY, account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE, expires INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS attempts(key TEXT PRIMARY KEY, count INTEGER NOT NULL, expires INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS invitations(id INTEGER PRIMARY KEY CHECK(id=1), token TEXT NOT NULL UNIQUE, creator INTEGER NOT NULL REFERENCES accounts(id), expires INTEGER NOT NULL);`);
   return db;
+  }catch(error){db.close();throw error;}
 }
 async function createAccount(db, name, password, admin = false) {
   name = username(name);

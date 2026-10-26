@@ -34,9 +34,10 @@ const INDEX_HTML = Buffer.from(readFileSync(join(__dirname, 'public', 'index.htm
   .replace('<!-- MANGER_INFORMATION -->', readFileSync(join(__dirname, 'public', 'information.html'), 'utf8')));
 
 
-function createDatabase(filename) {
+function createDatabase(filename,{seedData=true}={}) {
   if (filename !== ':memory:') mkdirSync(dirname(filename), { recursive: true });
   const db = new DatabaseSync(filename);
+  try {
   db.exec(`
     PRAGMA foreign_keys = ON;
     CREATE TABLE IF NOT EXISTS recipes (
@@ -159,7 +160,7 @@ function createDatabase(filename) {
   if (!db.prepare('PRAGMA table_info(recipes)').all().some(column => column.name === 'diet')) {
     db.exec("ALTER TABLE recipes ADD COLUMN diet TEXT NOT NULL DEFAULT 'omnivore' CHECK (diet IN ('vegan', 'vegetarian', 'pescetarian', 'omnivore'))");
   }
-  seed(db);
+  if(seedData)seed(db);
   if (db.prepare('PRAGMA user_version').get().user_version < 1) {
     db.exec(`
       UPDATE recipes SET diet = 'vegetarian'
@@ -168,7 +169,7 @@ function createDatabase(filename) {
       PRAGMA user_version = 1;
     `);
   }
-  seedProteins(db);
+  if(seedData)seedProteins(db);
   db.exec(`
     INSERT INTO recipe_steps (recipe_id, position, kind, instruction, minutes)
     SELECT recipes.id, 1, 'prep', recipes.instructions, NULL
@@ -205,6 +206,7 @@ function createDatabase(filename) {
   }
   if (db.prepare('PRAGMA user_version').get().user_version < 4) db.exec('PRAGMA user_version = 4');
   return db;
+  }catch(error){db.close();throw error;}
 }
 
 function seedProteins(db) {

@@ -86,3 +86,5 @@ Lors d'une modification, actualise le guide ou les fonctionnalités concernés ;
 [Placard, suggestions et calculs PostgreSQL](POSTGRESQL-CALCULS.md) : étape 12, photographie cohérente, lots sérialisés, mêmes arrondis et DTO. SQLite reste actif ; tests locaux distincts d'un déploiement.
 
 [Courses éditables PostgreSQL](POSTGRESQL-COURSES.md) : étape 13, édition conditionnelle, synchronisation additive, contrôles d’unité et lecture agrégée cohérente. Limites historiques des coches/rayons/retraits explicites.
+
+[Analyse des sources SQLite](POSTGRESQL-SOURCES.md) : étape 14, commande administrative sans mutation de l’origine, sans PostgreSQL ni amorçage ; version/relations/octet/ordre contrôlés. 393 tests généraux réussis, aucun ignoré, HTTPS inclus ; sept tests source et CLI administratif sur copies synthétiques réussis, modules/image vérifiés. Aucune base réelle, publication, migration PostgreSQL ou validation Ubuntu/appareil.
