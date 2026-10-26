@@ -67,7 +67,7 @@ async function postgresFixture(t) {
     closing = (async () => {
       let timer, poolError;
       try {
-        await Promise.race([Promise.all([pool, migrationPool].filter(Boolean).map(item => item.end())), new Promise((_, reject) => {
+        await Promise.race([Promise.all([pool, migrationPool].filter(item=>item&&!item.ended).map(item => item.end())), new Promise((_, reject) => {
           timer = setTimeout(() => reject(new Error('Fermeture du pool de test trop longue.')), 3000);
         })]);
       } catch (error) { poolError = error; }

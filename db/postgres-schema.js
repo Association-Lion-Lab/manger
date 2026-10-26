@@ -48,12 +48,12 @@ async function history(client) {
 
 function checksum(sql) { return createHash('sha256').update(sql).digest('hex'); }
 
-async function permissions(client, applicationRole) {
+async function permissions(client, applicationRole, {connect=true}={}) {
   const role = `"${applicationRole}"`;
   // DDL identifiers cannot be parameters; the role is allowlisted and the database is quoted by PostgreSQL.
   const { rows: [{ database }] } = await client.query('SELECT quote_ident(current_database()) AS database');
   await client.query(`REVOKE ALL ON DATABASE ${database} FROM PUBLIC, ${role};
-    GRANT CONNECT ON DATABASE ${database} TO ${role};
+    ${connect?`GRANT CONNECT ON DATABASE ${database} TO ${role};`:''}
     REVOKE ALL ON SCHEMA public, household, auth, manger_meta FROM PUBLIC, ${role};
     GRANT USAGE ON SCHEMA household, auth TO ${role};
     REVOKE ALL ON ALL TABLES IN SCHEMA household, auth, manger_meta FROM PUBLIC, ${role};
@@ -98,4 +98,4 @@ async function migrateSchema(pool, applicationRole) {
   } finally { client.release(failure); }
 }
 
-module.exports = { migrateSchema };
+module.exports = { migrateSchema, checkRoles, permissions, history, schemaVersion:migrations.at(-1).version };

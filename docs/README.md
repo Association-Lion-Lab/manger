@@ -94,3 +94,5 @@ Lors d'une modification, actualise le guide ou les fonctionnalités concernés ;
 [Sauvegarde du foyer PostgreSQL](POSTGRESQL-SAUVEGARDE.md) : format JSON versionné, photographie cohérente et téléchargement protégé ; étape 16 testée, lancement normal toujours SQLite.
 
 [Restauration du foyer PostgreSQL](POSTGRESQL-RESTAURATION.md) : aperçu JSON/ancien SQLite, récupération préalable, transaction et droits conservés ; étape 17 vérifiée séparément, sans activation du moteur normal.
+
+[Sauvegarde de l’instance PostgreSQL](POSTGRESQL-INSTANCE.md) : archive administrative incluant les accès et métadonnées, restauration de confiance vers secours vide, contrôle puis ouverture séparés ; outils natifs distincts du bouton du foyer.

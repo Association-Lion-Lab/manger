@@ -149,3 +149,7 @@ Migration002 ajoute état et empreinte de structure. db/structure.js vérifie le
 ## Restauration du foyer PostgreSQL (étape 17)
 
 `postgres-restore.js` prépare et valide le fichier puis remplace les seules tables du foyer dans une transaction, avec copie préalable et contrôle de structure. La migration 003 accorde une fonction fixe de recalage des seules séquences du foyer ; les droits généraux des séquences restent refusés. Le candidat interne ouvre la capacité uniquement avec son contrôleur de restauration et revalide les accès dans sa transaction. La frontière PostgreSQL distingue l’engagement incertain ; aucun réessai automatique. [Contrat, refus et preuves](POSTGRESQL-RESTAURATION.md). Lancement normal encore SQLite en attendant l’étape 19.
+
+## Sauvegarde de l’instance PostgreSQL (étape 18)
+
+`postgres-instance.js` orchestre les archives administratives pg_dump/pg_restore, contrôle et ouverture de la cible séparés. `db/instance-tools.js` isole fichiers de secrets et processus. Les empreintes des 22 tables sont calculées sur PostgreSQL et lues en petits lots ; deux tables de métadonnées et les prochaines identités sont contrôlées séparément. Aucun outil PostgreSQL natif ajouté à l’image applicative, aucun raccordement web à ces commandes. [Contrat et limites](POSTGRESQL-INSTANCE.md).

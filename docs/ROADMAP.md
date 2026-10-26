@@ -347,3 +347,9 @@ Reprise administrative complète et CLI contrôlés sur données synthétiques. 
 26 octobre 2026 : étapes 01–17 closes, six restantes ; prochaine 18, sauvegarde de l’instance complète. 403 tests généraux et 226 PostgreSQL réels réussis, aucun ignoré, HTTPS inclus ; 26 fichiers et 28 parents dans la commande PostgreSQL. Trois cycles de relecture réconciliés. Contrôle image/modules réussi sans Docker. SQLite normal conservé, aucun candidat partiel activé, aucune donnée privée, publication, bascule ou validation Ubuntu/appareil.
 
 Aperçu JSON/ancien SQLite, copie préalable et remplacement des seules données du foyer ; accès revalidés sous verrou, comptes préservés, recalage transactionnel strict du foyer. Les tests refusent dérive, copie impossible et double application ; COMMIT incertain distingué, sans réessai.
+
+## PostgreSQL — étape 18, sauvegarde administrative
+
+26 octobre 2026 : étapes 01–18 closes, cinq restantes ; prochaine 19, candidat et vérification Docker. 404 tests généraux et 231 PostgreSQL réels réussis, aucun ignoré, HTTPS inclus ; 27 fichiers et 29 parents PostgreSQL. Vrais pg_dump/pg_restore sur deux clusters privés, reconnexion HTTP avec compte restauré et commande verify exécutée. Trois cycles de relecture réconciliés, dernier défaut de manifeste corrigé et testé avant connexion. Modules/image contrôlés sans Docker. Aucun serveur personnel, donnée réelle, bascule ou publication.
+
+Archive de confiance, données et métadonnées complètes, ouverture séparée et refus des cibles occupées ou déjà ouvertes. Les rôles/secrets/configurations globaux restent sauvegardés séparément. Les preuves Windows natives ne valent pas validation du candidat Docker/Linux.

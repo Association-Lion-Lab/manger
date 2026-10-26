@@ -1,6 +1,6 @@
 # Migration PostgreSQL — tâches et points de contrôle
 
-26 octobre 2026 — **plan validé ; tâches 01–17 réalisées, prochaine tâche 18 : sauvegarde de l’instance complète**. [Cadrage et risques](../docs/MIGRATION-POSTGRESQL.md), [ordre de réalisation](plan.md). Les noms des fichiers non encore créés restent des propositions. Chaque tâche comprend la mise à jour de la documentation concernée et de `docs/DECISIONS.md` ; les fichiers listés sont le périmètre technique principal. Si une tranche dépasse environ cinq fichiers techniques ou une session ciblée, la découper avant de coder, sans réduire ses critères.
+26 octobre 2026 — **plan validé ; tâches 01–18 réalisées, prochaine tâche 19 : candidat et vérification Docker**. [Cadrage et risques](../docs/MIGRATION-POSTGRESQL.md), [ordre de réalisation](plan.md). Les noms des fichiers non encore créés restent des propositions. Chaque tâche comprend la mise à jour de la documentation concernée et de `docs/DECISIONS.md` ; les fichiers listés sont le périmètre technique principal. Si une tranche dépasse environ cinq fichiers techniques ou une session ciblée, la découper avant de coder, sans réduire ses critères.
 
 ## Phase 1 — Socle isolé
 
@@ -227,13 +227,15 @@ Preuve : [restauration avec récupération](../docs/POSTGRESQL-RESTAURATION.md).
 
 ### 18 — Sauvegarder et récupérer l'instance complète
 
-- [ ] Réalisé.
+- [x] Réalisé le 26 octobre 2026.
 - **Livrable :** procédure administrateur PostgreSQL avec accès inclus, distincte du bouton du foyer.
 - **Acceptation :** restauration vers une cible de secours et vérification de connexion avec compte existant ; rôles/secrets/TLS traités hors export client ; aucun dump privé versionné.
 - **Vérification :** scénario `pg_dump`/restauration de confiance sur environnement isolé, comptes/foyer/photos vérifiés, erreur de version ou permissions traitée.
 - **Dépendances :** 17.
 - **Fichiers probables :** `backup-tools.js`, nouveau `postgres-backup.test.js`, `docs/GUIDE.md`, `docs/DOCKER.md`.
 - **Taille :** M.
+
+Preuve : [instance complète et secours](../docs/POSTGRESQL-INSTANCE.md). 26 octobre 2026 : étapes 01–18 closes, cinq restantes ; prochaine 19, candidat et vérification Docker. 404 tests généraux et 231 PostgreSQL réels réussis, aucun ignoré, HTTPS inclus ; 27 fichiers et 29 parents PostgreSQL. Vrais pg_dump/pg_restore sur deux clusters privés, reconnexion HTTP avec compte restauré et commande verify exécutée. Trois cycles de relecture réconciliés, dernier défaut de manifeste corrigé et testé avant connexion. Modules/image contrôlés sans Docker. Aucun serveur personnel, donnée réelle, bascule ou publication.
 
 **Point de contrôle E :** transfert aller comparé, sauvegardes du foyer et instance restaurées ; impossibilité de revenir sans perte après nouvelles écritures explicitée et testée comme refus de procédure.
 
