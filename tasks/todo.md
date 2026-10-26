@@ -1,6 +1,6 @@
 # Migration PostgreSQL — tâches et points de contrôle
 
-25 octobre 2026 — **plan validé ; tâches 01–11 réalisées, prochaine tâche 12 : stock, suggestions et calculs**. [Cadrage et risques](../docs/MIGRATION-POSTGRESQL.md), [ordre de réalisation](plan.md). Les noms des fichiers non encore créés restent des propositions. Chaque tâche comprend la mise à jour de la documentation concernée et de `docs/DECISIONS.md` ; les fichiers listés sont le périmètre technique principal. Si une tranche dépasse environ cinq fichiers techniques ou une session ciblée, la découper avant de coder, sans réduire ses critères.
+26 octobre 2026 — **plan validé ; tâches 01–12 réalisées, prochaine tâche 13 : courses éditables et synchronisation**. [Cadrage et risques](../docs/MIGRATION-POSTGRESQL.md), [ordre de réalisation](plan.md). Les noms des fichiers non encore créés restent des propositions. Chaque tâche comprend la mise à jour de la documentation concernée et de `docs/DECISIONS.md` ; les fichiers listés sont le périmètre technique principal. Si une tranche dépasse environ cinq fichiers techniques ou une session ciblée, la découper avant de coder, sans réduire ses critères.
 
 ## Phase 1 — Socle isolé
 
@@ -153,12 +153,13 @@ Preuve : [installation et validations](../docs/POSTGRESQL-TEST.md), **7 tests Po
 
 ### 12 — Placard, suggestions et calcul des courses
 
-- [ ] Réalisé.
+- [x] Réalisé le 26 octobre 2026.
 - **Livrable :** lectures et écritures du stock, calculs et classement avec les données PostgreSQL.
 - **Acceptation :** lots/dates/unités et précision inchangés ; classement goûts/anti-gaspi déterministe ; mois courant et filtres saisonniers non réécrits.
 - **Vérification :** suites placard/menu/anti-gaspi et comparaison des sorties triées et quantités sur mêmes fixtures, tolérance numérique explicitée sans la relâcher pour masquer un écart.
 - **Dépendances :** 11.
-- **Fichiers probables :** `server.js`, nouveau `db/pantry.js`, `pantry.test.js`, nouveau `postgres-calculations.test.js`.
+- **Livré :** règles pures, photographie SQL cohérente, dépôts placard et routes communes ; [contrat et preuves](../docs/POSTGRESQL-CALCULS.md). Découpage 12a extraction, 12b placard atomique, 12c HTTP, 12d vérification.
+- **Clôture :** 378 tests généraux et 187 PostgreSQL réels réussis, aucun ignoré, HTTPS inclus. 140 comparaisons synthétiques identiques, trois cycles de relecture réconciliés ; modules/image et audit npm sans alerte. Absence des binaires : 21 parents en échec explicite, aucun ignoré. Aucun déploiement ou donnée réelle. Douze tâches closes et onze restantes.
 - **Taille :** M ; scinder stock et calculs si la tranche dépasse la limite.
 
 ### 13 — Courses éditables et synchronisation

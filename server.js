@@ -7,10 +7,8 @@ const { tmpdir } = require('node:os');
 const { pipeline } = require('node:stream/promises');
 const { dirname, join } = require('node:path');
 const { DatabaseSync, backup } = require('node:sqlite');
-const { randomUUID } = require('node:crypto');
 const catalog = require('./catalog');
-const { foodName, foodKey, inUnit, groupIngredients, isAntiWasteIngredient } = require('./ingredients');
-const { recipeTaste, tasteRank } = require('./public/tastes');
+const { foodKey } = require('./ingredients');
 const { createRestore } = require('./restore');
 const { openAccounts, protectAccounts } = require('./accounts');
 const { createInvitationMailer } = require('./invitation-mail');
@@ -27,6 +25,9 @@ const { validateMealInput,checkMealReferences,calendarMeals } = require('./meal'
 const { sqliteMeals } = require('./db/meals-sqlite');
 const { mealRoutes } = require('./meal-http');
 const { planningRoutes } = require('./planning-http');
+const {sqliteCalculations}=require('./db/calculations-sqlite');
+const {sqlitePantry}=require('./db/pantry-sqlite');
+const {calculationRoutes}=require('./calculation-http');
 
 const INDEX_HTML = Buffer.from(readFileSync(join(__dirname, 'public', 'index.html'), 'utf8')
   .replace('<!-- MANGER_INFORMATION -->', readFileSync(join(__dirname, 'public', 'information.html'), 'utf8')));
@@ -256,105 +257,8 @@ function saveRecipe(db, recipe, id = null) { return checkedRecipe(sqliteRecipes(
 
 function meals(db,start) { return sqliteMeals(db).read(start); }
 
-function shoppingList(db, start, end = addDays(start, 6)) {
-  return groupIngredients(db.prepare(`
-    WITH items AS (
-      SELECT ingredients.name, ingredients.unit,
-             recipe_ingredients.amount * (meals.people + COALESCE((SELECT SUM(rest.people) FROM meals rest WHERE rest.leftover_of = meals.id), 0)) / recipes.servings AS amount
-      FROM meals
-      JOIN recipes ON recipes.id = meals.recipe_id
-      JOIN recipe_ingredients ON recipe_ingredients.recipe_id = recipes.id
-      JOIN ingredients ON ingredients.id = recipe_ingredients.ingredient_id
-      WHERE meals.location = 'home' AND meals.date BETWEEN ? AND ?
-        AND meals.leftover_of IS NULL
-        AND NOT EXISTS (SELECT 1 FROM meal_dishes WHERE meal_dishes.meal_id = meals.id)
-      UNION ALL
-      SELECT ingredients.name, ingredients.unit,
-             recipe_ingredients.amount * (meal_dishes.portions + COALESCE((
-               SELECT SUM(rest_dishes.portions) FROM meals rest
-               JOIN meal_dishes rest_dishes ON rest_dishes.meal_id = rest.id
-               WHERE rest.leftover_of = meals.id AND rest_dishes.member_id = meal_dishes.member_id
-             ), 0)) / recipes.servings AS amount
-      FROM meal_dishes
-      JOIN meals ON meals.id = meal_dishes.meal_id
-      JOIN recipes ON recipes.id = meal_dishes.recipe_id
-      JOIN recipe_ingredients ON recipe_ingredients.recipe_id = recipes.id
-      JOIN ingredients ON ingredients.id = recipe_ingredients.ingredient_id
-      WHERE meals.date BETWEEN ? AND ? AND meals.leftover_of IS NULL
-      UNION ALL
-      SELECT proteins.name, proteins.unit, proteins.amount * (meal_assignments.portions + COALESCE((
-        SELECT SUM(rest_dishes.portions) FROM meals rest
-        JOIN meal_dishes rest_dishes ON rest_dishes.meal_id = rest.id
-        WHERE rest.leftover_of = meals.id AND rest_dishes.member_id = meal_assignments.member_id
-      ), 0))
-      FROM meal_assignments
-      JOIN meals ON meals.id = meal_assignments.meal_id
-      JOIN proteins ON proteins.id = meal_assignments.protein_id
-      WHERE meals.date BETWEEN ? AND ? AND meals.leftover_of IS NULL
-      UNION ALL
-      SELECT proteins.name, proteins.unit, proteins.amount * (meal_dishes.portions + COALESCE((
-        SELECT SUM(rest_dishes.portions) FROM meals rest
-        JOIN meal_dishes rest_dishes ON rest_dishes.meal_id = rest.id
-        WHERE rest.leftover_of = meals.id AND rest_dishes.member_id = meal_dishes.member_id
-      ), 0))
-      FROM meal_dishes JOIN meals ON meals.id = meal_dishes.meal_id
-      JOIN proteins ON proteins.id = meal_dishes.protein_id
-      WHERE meals.date BETWEEN ? AND ? AND meals.leftover_of IS NULL
-    )
-    SELECT name, unit, SUM(amount) AS amount FROM items GROUP BY name, unit ORDER BY name
-  `).all(start, end, start, end, start, end, start, end));
-}
-
-function pantryStocks(db) {
-  const rows = db.prepare('SELECT id, name, unit, amount, explicit_lot AS explicitLot, recorded_on AS recordedOn, use_by AS useBy FROM pantry ORDER BY use_by IS NULL, use_by, recorded_on, id').all();
-  const counts = new Map();
-  for (const row of rows.filter(row => !row.explicitLot)) counts.set(foodKey(row), (counts.get(foodKey(row)) || 0) + 1);
-  return rows.map(row => ({ ...row, ambiguous: !row.explicitLot && counts.get(foodKey(row)) > 1 }));
-}
-
-function matchingStocks(stocks, item, date) {
-  return stocks.filter(stock => !stock.ambiguous && foodKey(stock) === foodKey(item) && stock.recordedOn <= date && (!stock.useBy || stock.useBy >= date));
-}
-
-function consumeStocks(stocks, item, date) {
-  let remaining = item.amount;
-  for (const stock of matchingStocks(stocks, item, date)) {
-    const taken = Math.min(remaining, inUnit(stock, item.unit));
-    stock.amount = Math.max(0, stock.amount - inUnit({ ...item, amount: taken }, stock.unit));
-    remaining = Math.max(0, remaining - taken);
-  }
-  return item.amount - remaining;
-}
-
-function reservePantry(db, end, countFrom = null) {
-  const stocks = pantryStocks(db), covered = [];
-  const first = stocks.filter(stock => !stock.ambiguous && stock.recordedOn <= end).map(stock => stock.recordedOn).sort()[0];
-  if (!first) return { stocks, covered };
-  // Only visit planned days, rather than every day since the oldest stock.
-  const dates = db.prepare('SELECT DISTINCT date FROM meals WHERE date BETWEEN ? AND ? ORDER BY date').all(first, end);
-  for (const { date } of dates) for (const item of shoppingList(db, date, date)) {
-    const amount = consumeStocks(stocks, item, date);
-    if (countFrom && date >= countFrom && amount > 0) covered.push({ ...item, amount });
-  }
-  return { stocks, covered: groupIngredients(covered) };
-}
-
-function pantry(db) {
-  const today = dateKey(new Date());
-  const remaining = new Map(reservePantry(db, addDays(today, -1)).stocks.map(item => [item.id, item.amount]));
-  return pantryStocks(db).map(item => {
-    return { ...item, dateStatus: !item.useBy ? null : item.useBy < today ? 'past' : item.useBy <= addDays(today, 3) ? 'soon' : 'later', remaining: item.ambiguous ? 0 : Math.round(remaining.get(item.id) * 100) / 100 };
-  });
-}
-
-function pantryShopping(db, start) {
-  const { covered } = reservePantry(db, addDays(start, 6), start);
-  return shoppingList(db, start).map(item => {
-    const stock = covered.find(row => foodKey(row) === foodKey(item));
-    const used = stock ? Math.min(item.amount, inUnit(stock, item.unit)) : 0;
-    return { ...item, amount: Math.max(0, Math.round((item.amount - used) * 100) / 100), fromPantry: Math.round(used * 100) / 100 };
-  }).filter(item => item.amount > 0);
-}
+function shoppingList(db,...args){return sqliteCalculations(db).shoppingList(...args);}
+function pantryShopping(db,...args){return sqliteCalculations(db).pantryShopping(...args);}
 
 function shoppingState(db, start) {
   const checks = new Set(db.prepare('SELECT name, unit FROM shopping_checks WHERE week_start = ?').all(start).map(foodKey));
@@ -369,101 +273,7 @@ function household(db) {
 
 
 
-function availablePantry(db, end) {
-  return reservePantry(db, end).stocks.filter(item => !item.ambiguous && item.recordedOn <= end);
-}
-
-function previewMenu(db, input) {
-  if (!input || !isDateKey(input.start) || new Date(`${input.start}T12:00:00Z`).getUTCDay() !== 1 || !Number.isInteger(input.maxMinutes) || input.maxMinutes < 1 || input.maxMinutes > 1440 || !Array.isArray(input.memberIds) || !Array.isArray(input.slots) || !input.slots.length || input.slots.length > 14) throw new Error('Critères du menu invalides.');
-  const home = household(db);
-  if (new Set(input.memberIds).size !== input.memberIds.length || input.memberIds.some(id => !Number.isInteger(id) || !home.members.some(member => member.id === id))) throw new Error('Participants inconnus.');
-  const members = home.members.filter(member => input.memberIds.includes(member.id));
-  const people = members.length || input.people;
-  if ((home.members.length && !members.length) || !Number.isInteger(people) || people < 1 || people > 100) throw new Error('Choisis au moins une personne.');
-  const existing = meals(db, input.start), seen = new Set();
-  const slots = input.slots.map(item => {
-    if (!item || !Number.isInteger(item.day) || item.day < 0 || item.day > 6 || !['midi', 'soir'].includes(item.slot)) throw new Error('Créneau invalide.');
-    const key = `${item.day}/${item.slot}`;
-    if (seen.has(key) || existing.some(meal => meal.date === addDays(input.start, item.day) && meal.slot === item.slot)) throw new Error('Créneau déjà occupé ou répété. Recharge le planning.');
-    seen.add(key); return item;
-  }).sort((a, b) => a.day - b.day || a.slot.localeCompare(b.slot));
-  const candidates = recipes(db).filter(recipe => recipe.minutes <= input.maxMinutes && members.every(member => isDietCompatible(member.diet, recipe.diet))).map(recipe => ({ ...recipe, ...recipeTaste(recipe.ingredients, members, home.avoidedIngredients), needs: groupIngredients(recipe.ingredients.map(item => ({ ...item, amount: item.amount * people / recipe.servings }))) }));
-  if (!candidates.length) throw new Error('Aucune recette adaptée aux régimes et au temps choisi.');
-  for (const slot of slots) if (slot.recipeId !== undefined && (!Number.isInteger(slot.recipeId) || !candidates.some(recipe => recipe.id === slot.recipeId))) throw new Error('Le plat choisi ne respecte plus les critères du menu.');
-  const stocks = availablePantry(db, addDays(input.start, 6));
-  const ingredients = new Set(shoppingList(db, input.start).map(item => foodName(item.name))), used = new Map();
-  existing.forEach(meal => [meal.recipeId, ...(meal.dishes || []).map(dish => dish.recipeId)].filter(Boolean).forEach(id => used.set(id, (used.get(id) || 0) + 1)));
-  // ponytail: greedy chronological choice, not a global menu optimization.
-  // Reserve manual choices first, including later meals, before proposing the rest.
-  return [...slots].sort((a, b) => Number(b.recipeId !== undefined) - Number(a.recipeId !== undefined)).map(slot => {
-    const date = addDays(input.start, slot.day);
-    const stockFor = item => matchingStocks(stocks, item, date);
-    const ranked = candidates.map(recipe => {
-      const relevant = recipe.needs.filter(item => isAntiWasteIngredient(item.name));
-      const covered = relevant.filter(item => stockFor(item).reduce((sum, stock) => sum + inUnit(stock, item.unit), 0) + 1e-8 >= item.amount);
-      return { recipe, covered, soon: covered.filter(item => stockFor(item).some(stock => stock.amount > 0 && stock.useBy && stock.useBy <= addDays(date, 3))).length, reused: relevant.filter(item => ingredients.has(foodName(item.name))).length };
-    }).sort((a, b) => ((used.get(a.recipe.id) || 0) * 2 + tasteRank(a.recipe)) - ((used.get(b.recipe.id) || 0) * 2 + tasteRank(b.recipe)) || tasteRank(a.recipe) - tasteRank(b.recipe) || b.soon - a.soon || b.covered.length - a.covered.length || b.reused - a.reused || a.recipe.title.localeCompare(b.recipe.title, 'fr'));
-    const { recipe, covered } = slot.recipeId === undefined ? ranked[0] : ranked.find(item => item.recipe.id === slot.recipeId);
-    used.set(recipe.id, (used.get(recipe.id) || 0) + 1);
-    recipe.needs.forEach(item => {
-      ingredients.add(foodName(item.name));
-      consumeStocks(stocks, item, date);
-    });
-    return { day: slot.day, slot: slot.slot, recipeId: recipe.id, pantryIngredients: covered.map(item => item.name) };
-  }).sort((a, b) => a.day - b.day || a.slot.localeCompare(b.slot));
-}
-
-function suggestions(db, start = null, maxMinutes = null, memberIds = null, targetDate = start || dateKey(new Date())) {
-  // Stock is an estimate: reserve existing meals through the suggested week before ranking.
-  const home = household(db);
-  const members = memberIds === null ? home.members : home.members.filter(member => memberIds.includes(member.id));
-  if (memberIds !== null && (!Array.isArray(memberIds) || memberIds.some(id => !home.members.some(member => member.id === id)))) throw new Error('Participants inconnus');
-  const memberDiets = members.map(member => member.diet);
-  const candidates = db.prepare(`
-    WITH eaten AS (
-      SELECT recipe_id, date FROM meals WHERE recipe_id IS NOT NULL
-      UNION ALL
-      SELECT meal_dishes.recipe_id, meals.date FROM meal_dishes JOIN meals ON meals.id = meal_dishes.meal_id
-    )
-    SELECT recipes.id, recipes.title, recipes.minutes, recipes.servings, recipes.tags, recipes.diet,
-           MAX(eaten.date) AS lastEaten
-    FROM recipes LEFT JOIN eaten ON eaten.recipe_id = recipes.id
-    GROUP BY recipes.id
-  `).all().filter(recipe =>
-    (maxMinutes == null || recipe.minutes <= maxMinutes) &&
-    memberDiets.every(diet => isDietCompatible(diet, recipe.diet))
-  );
-  const ingredientQuery = db.prepare(`
-    SELECT ingredients.name, ingredients.unit, recipe_ingredients.amount, recipe_ingredients.preparation FROM recipe_ingredients
-    JOIN ingredients ON ingredients.id = recipe_ingredients.ingredient_id
-    WHERE recipe_ingredients.recipe_id = ? ORDER BY ingredients.name
-  `);
-  const plannedIngredients = new Set(start ? shoppingList(db, start).map(item => item.name) : []);
-  const stocks = availablePantry(db, start ? addDays(start, 6) : targetDate).filter(item => item.recordedOn <= targetDate && (!item.useBy || item.useBy >= targetDate));
-  const plannedRecipeIds = new Set(start ? db.prepare(`
-    SELECT recipe_id AS id FROM meals WHERE date BETWEEN ? AND ? AND recipe_id IS NOT NULL
-    UNION SELECT meal_dishes.recipe_id AS id FROM meal_dishes JOIN meals ON meals.id = meal_dishes.meal_id WHERE meals.date BETWEEN ? AND ?
-  `).all(start, addDays(start, 6), start, addDays(start, 6)).map(item => item.id) : []);
-  const ranked = candidates.map(recipe => ({ ...recipe, ...recipeTaste(ingredientQuery.all(recipe.id), members, home.avoidedIngredients) })).map(recipe => ({
-    ...recipe,
-    tags: recipe.tags.split(',').filter(Boolean),
-    reusedIngredients: [...new Set(ingredientQuery.all(recipe.id).map(item => foodName(item.name)).filter(name => isAntiWasteIngredient(name) && plannedIngredients.has(name)))],
-    pantryIngredients: [...new Set(groupIngredients(ingredientQuery.all(recipe.id)).filter(item => {
-      return isAntiWasteIngredient(item.name) && matchingStocks(stocks, item, targetDate).reduce((sum, stock) => sum + inUnit(stock, item.unit), 0) + 1e-8 >= item.amount * (members.length || recipe.servings) / recipe.servings;
-    }).map(item => item.name))],
-    alreadyPlanned: plannedRecipeIds.has(recipe.id)
-  })).map(recipe => ({ ...recipe, useSoonIngredients: [...new Set(groupIngredients(ingredientQuery.all(recipe.id)).filter(item => recipe.pantryIngredients.includes(item.name) && matchingStocks(stocks, item, targetDate).some(stock => stock.amount > 0 && stock.useBy && stock.useBy <= addDays(targetDate, 3))).map(item => item.name))] })).sort((left, right) =>
-    tasteRank(left) - tasteRank(right) ||
-    Number(left.alreadyPlanned) - Number(right.alreadyPlanned) ||
-    right.useSoonIngredients.length - left.useSoonIngredients.length ||
-    right.pantryIngredients.length - left.pantryIngredients.length ||
-    right.reusedIngredients.length - left.reusedIngredients.length ||
-    Number(Boolean(left.lastEaten)) - Number(Boolean(right.lastEaten)) ||
-    String(left.lastEaten || '').localeCompare(String(right.lastEaten || '')) ||
-    left.title.localeCompare(right.title, 'fr')
-  );
-  return ranked.slice(0, 3);
-}
+function suggestions(db,...args){return sqliteCalculations(db).suggestions(...args);}
 
 function validateMeal(input,db) { return checkMealReferences(validateMealInput(input),sqliteMeals(db).references()); }
 
@@ -500,6 +310,7 @@ function createHandler(db) {
   const handleRecipeExtras = recipeExtraRoutes(sqliteRecipes(db), sendJson);
   const handleMeals = mealRoutes(sqliteMeals(db), sendJson);
   const handlePlanning = planningRoutes(sqliteMeals(db), sendJson);
+  const handleCalculations=calculationRoutes(sqliteCalculations(db),sqlitePantry(db),sendJson);
   let backingUp = false;
   const restoration = createRestore(db);
   let restoring = false, activeRequests = 0;
@@ -574,50 +385,10 @@ function createHandler(db) {
         if (!isDateKey(start)) return sendJson(response, 400, { error: 'Début de semaine invalide' });
         return sendJson(response, 200, { recipes: recipes(db), meals: meals(db, start), shopping: shoppingState(db, start) });
       }
-      if (request.method === 'GET' && url.pathname === '/api/pantry') return sendJson(response, 200, pantry(db));
-      if (request.method === 'POST' && url.pathname === '/api/pantry') {
-        const input = await readJson(request);
-        if (!input || typeof input.name !== 'string' || !input.name.trim() || input.name.length > 80 || typeof input.unit !== 'string' || !input.unit.trim() || input.unit.length > 24 || typeof input.amount !== 'number' || !Number.isFinite(input.amount) || input.amount <= 0 || input.amount > 1000000) throw new Error('Indique un aliment, une unité et une quantité positive.');
-        if (input.useBy != null && (typeof input.useBy !== 'string' || !isDateKey(input.useBy))) throw new Error('Date du placard invalide.');
-        if (input.newLot !== undefined && typeof input.newLot !== 'boolean') throw new Error('Lot invalide.');
-        if (input.id !== undefined && (!Number.isInteger(input.id) || input.id < 1 || input.newLot)) throw new Error('Lot invalide.');
-        const item = { name: foodName(input.name), unit: input.unit.trim(), amount: input.amount };
-        const key = foodKey(item);
-        const existing = db.prepare('SELECT id, name, unit, food_key AS storageKey, explicit_lot AS explicitLot, use_by AS useBy FROM pantry').all().filter(row => input.id !== undefined ? row.id === input.id : !input.newLot && foodKey(row) === key);
-        if (input.id !== undefined && (!existing.length || foodKey(existing[0]) !== key)) throw new Error('Lot inconnu ou aliment modifié.');
-        if (existing.length > 1) throw new Error('Plusieurs stocks correspondent à cet aliment. Retire les doublons du placard puis saisis la quantité totale actuelle.');
-        if (existing.length === 1) {
-          db.prepare('UPDATE pantry SET food_key=?, name=?, unit=?, amount=?, recorded_on=?, use_by=? WHERE id=?').run(existing[0].explicitLot || input.id !== undefined ? existing[0].storageKey : key, item.name, item.unit, item.amount, dateKey(new Date()), input.useBy === undefined ? existing[0].useBy : input.useBy, existing[0].id);
-          return sendJson(response, 200, pantry(db));
-        }
-        if (db.prepare('SELECT COUNT(*) AS n FROM pantry').get().n >= 500) throw new Error('Le placard peut contenir 500 lots maximum.');
-        db.prepare('INSERT INTO pantry (food_key, name, unit, amount, recorded_on, use_by, explicit_lot) VALUES (?, ?, ?, ?, ?, ?, ?)').run(input.newLot ? `lot:${randomUUID()}` : key, item.name, item.unit, item.amount, dateKey(new Date()), input.useBy ?? null, input.newLot ? 1 : 0);
-        return sendJson(response, 200, pantry(db));
-      }
-      const pantryMatch = url.pathname.match(/^\/api\/pantry\/(\d+)$/);
-      if (request.method === 'DELETE' && pantryMatch) {
-        if (!db.prepare('DELETE FROM pantry WHERE id = ?').run(Number(pantryMatch[1])).changes) throw new Error('Aliment inconnu');
-        return sendJson(response, 200, pantry(db));
-      }
+      if (await handleCalculations(request,response)) return;
       if (await handleRecipeExtras(request, response)) return;
       if (await handleMeals(request, response)) return;
       if (await handlePlanning(request, response)) return;
-
-      if (request.method === 'GET' && url.pathname === '/api/suggestions') {
-        const start = url.searchParams.get('start');
-        const maxMinutesValue = url.searchParams.get('maxMinutes');
-        const maxMinutes = maxMinutesValue == null ? null : Number(maxMinutesValue);
-        if (start != null && !isDateKey(start)) throw new Error('Début de semaine invalide');
-        const targetDate = url.searchParams.get('date') || start || dateKey(new Date());
-        if (!isDateKey(targetDate) || (start && (targetDate < start || targetDate > addDays(start, 6)))) throw new Error('Date de suggestion invalide');
-        if (maxMinutes != null && (!Number.isInteger(maxMinutes) || maxMinutes < 1 || maxMinutes > 1440)) throw new Error('Temps disponible invalide');
-        const memberIds = url.searchParams.has('members') ? url.searchParams.get('members').split(',').filter(Boolean).map(Number) : null;
-        return sendJson(response, 200, suggestions(db, start, maxMinutes, memberIds, targetDate));
-      }
-
-      if (request.method === 'POST' && url.pathname === '/api/week/preview') {
-        return sendJson(response, 200, previewMenu(db, await readJson(request)));
-      }
 
       if (await handleHousehold(request, response)) return;
 
@@ -729,6 +500,12 @@ function createMealHandler(store) {
   return async(request,response)=>{if(await handle(request,response))return;if(!await planning(request,response))sendJson(response,503,{error:'Parcours PostgreSQL non porté.'});};
 }
 
+// Internal candidate harness only; callers must wrap this with protectAccounts.
+function createCalculationHandler(calc,pantry){
+  const handle=calculationRoutes(calc,pantry,sendJson);
+  return async(request,response)=>{if(!await handle(request,response))sendJson(response,503,{error:'Parcours PostgreSQL non porté.'});};
+}
+
 // Supplying a database is the isolated core-test harness; production always opens accounts.
 function createApp(database, accounts, tls = tlsOptions(), mailer = null) {
   const production = database === undefined;
@@ -753,4 +530,4 @@ if (require.main === module) {
   server.listen(port, '0.0.0.0', () => console.log(`Manger! écoute sur ${server.setSecureContext ? 'https' : 'http'}://localhost:${server.address().port}`));
 }
 
-module.exports = { addDays, calendar, createApp, createHouseholdHandler, createRecipeHandler, createMealHandler, createDatabase, dateKey, household, isCompatible, isDietCompatible, isDateKey, recipes, saveRecipe, shoppingList, suggestions, validateMeal, validateMember, validateProtein, validateRecipe };
+module.exports = { addDays, calendar, createApp, createHouseholdHandler, createRecipeHandler, createMealHandler, createCalculationHandler, createDatabase, dateKey, household, isCompatible, isDietCompatible, isDateKey, recipes, saveRecipe, shoppingList, suggestions, validateMeal, validateMember, validateProtein, validateRecipe };

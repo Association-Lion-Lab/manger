@@ -321,3 +321,7 @@ L'utilisateur indique avoir testé les P1 le 1er octobre 2026, sans préciser la
 Ordre de travail : P1, puis P2, puis P3. Les interfaces tablette/PC restent différées à la demande de l'utilisateur ; la révision de « Plus d’options » dans le planning a été demandée puis implémentée le 7 octobre. Les défauts visuels qui gênent l'utilisation restent P1.
 
 L'export JSON de recettes ne remplace pas la sauvegarde du foyer et n'inclut pas les photos ni les avis. L'application ne doit pas être exposée directement à Internet avant la mise en place d'un accès protégé.
+
+## Migration PostgreSQL — étape 12 (26 octobre 2026)
+
+Extraction des calculs et du placard vers règles communes et dépôts isolés : dates/lots, sommes compensées et réservations, suggestions/menu, contrôle d'accès et refus privés. Aucune nouvelle fonction mobile, aucune bascule ou publication. [Contrat et preuves](POSTGRESQL-CALCULS.md).

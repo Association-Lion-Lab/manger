@@ -87,3 +87,5 @@ node --test --test-reporter=tap --test-concurrency=1 @postgresTestFiles
 ```
 
 C'est cette variante avec les treize mêmes fichiers, seul reporter changé, qui a produit le passage complet final de 09. Ajouter l'option après les chemins via npm n'avait pas modifié le reporter sur cette version de Node.
+
+Clôture étape 12 (26 octobre 2026) : 378 tests généraux et 187 PostgreSQL réels réussis, aucun ignoré, HTTPS inclus. 140 comparaisons synthétiques identiques, trois cycles de relecture réconciliés ; modules/image et audit npm sans alerte. Absence des binaires : 21 parents en échec explicite, aucun ignoré. Aucun déploiement ou donnée réelle. Commande PostgreSQL standard : 19 fichiers, 21 tests parents. Prochaine étape 13.
