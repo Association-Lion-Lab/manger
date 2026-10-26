@@ -98,3 +98,5 @@ Lors d'une modification, actualise le guide ou les fonctionnalités concernés ;
 [Sauvegarde de l’instance PostgreSQL](POSTGRESQL-INSTANCE.md) : archive administrative incluant les accès et métadonnées, restauration de confiance vers secours vide, contrôle puis ouverture séparés ; outils natifs distincts du bouton du foyer.
 
 [Serveur candidat PostgreSQL](POSTGRESQL-CANDIDAT.md) : raccordement natif 19a derrière activation explicite, santé et commandes de comptes ; validation de l’image et des volumes Docker Linux 19b encore requise. Le démarrage Docker standard conserve SQLite.
+
+[Vérification Docker du candidat](POSTGRESQL-DOCKER.md) : scénario 19b préparé pour le Linux de test désigné par l’utilisateur, avec données synthétiques, TLS et ressources séparées ; commandes et diagnostic, exécution Linux encore requise avant de clore l’étape.

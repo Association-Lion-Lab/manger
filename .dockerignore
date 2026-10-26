@@ -37,6 +37,8 @@
 **/test-support/**
 **/scripts
 **/scripts/**
+**/docker
+**/docker/**
 **/coverage
 **/coverage/**
 **/graphify-out

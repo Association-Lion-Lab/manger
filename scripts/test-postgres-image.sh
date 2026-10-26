@@ -1,0 +1,159 @@
+#!/bin/sh
+# Only fresh, labelled test resources. Never replace an existing Compose service.
+set -eu
+umask 077
+image=${1:?Usage: sh scripts/test-postgres-image.sh image-candidate}
+[ "$#" -eq 1 ] || exit 1
+[ "$(uname -s)" = Linux ] || { echo 'Ce scénario exige Docker Linux.' >&2; exit 1; }
+command -v openssl >/dev/null
+[ "$(docker info --format '{{.OSType}}')" = linux ] || exit 1
+docker compose version
+docker image inspect "$image" >/dev/null
+repo=$(CDPATH= cd "$(dirname "$0")/.." && pwd -P)
+parent=$(CDPATH= cd "${TMPDIR:-/tmp}" && pwd -P)
+work=$(mktemp -d "$parent/manger-pg-test.XXXXXX")
+project="manger-pg-test-$(date +%s)-$$"
+token=$(openssl rand -hex 16)
+printf '%s' "$token" > "$work/.owner"
+export MANGER_CANDIDATE_IMAGE="$image" MANGER_TEST_TOKEN="$token"
+export MANGER_PG_SECRETS_DIR="$work/secrets" MANGER_PG_SOURCE_DIR="$work/source"
+compose() { docker compose --project-name "$project" --file "$repo/compose.postgres.yaml" "$@"; }
+started=0
+owned() {
+  volumes=$(docker volume ls --format '{{.Name}}') || return 1
+  networks=$(docker network ls --format '{{.Name}}') || return 1
+  for volume in "${project}_postgres-data" "${project}_runtime-data"; do
+    if printf '%s\n' "$volumes" | grep -Fxq "$volume"; then
+      saved=$(docker volume inspect --format '{{index .Labels "org.manger.test-token"}}' "$volume") || return 1
+      [ "$saved" = "$token" ] || return 1
+    fi
+  done
+  for network in "${project}_backend" "${project}_outbound"; do
+    if printf '%s\n' "$networks" | grep -Fxq "$network"; then
+      saved=$(docker network inspect --format '{{index .Labels "org.manger.test-token"}}' "$network") || return 1
+      [ "$saved" = "$token" ] || return 1
+    fi
+  done
+  containers=$(compose ps --all --quiet) || return 1
+  for container in $containers; do
+    saved=$(docker inspect --format '{{index .Config.Labels "org.manger.test-token"}}' "$container") || return 1
+    [ "$saved" = "$token" ] || return 1
+  done
+}
+cleanup() {
+  code=$?
+  trap - 0 HUP INT TERM
+  if [ "$started" -eq 1 ]; then
+    if owned; then
+      if [ "$code" -ne 0 ] && ! compose logs --no-color > "$work/compose.log" 2>&1; then
+        echo 'Journaux non récupérés : ressources de test conservées pour diagnostic.' >&2
+        code=1
+      else compose down --volumes --timeout 20 >/dev/null || code=1; fi
+    else echo 'Nettoyage refusé : ressources non reconnues, aucune suppression.' >&2; code=1; fi
+  fi
+  if [ "$code" -eq 0 ] && [ ! -L "$work" ] && [ "$(dirname "$work")" = "$parent" ] && [ "$(cat "$work/.owner")" = "$token" ]; then
+    case "$(basename "$work")" in manger-pg-test.*) rm -rf -- "$work" ;; *) code=1 ;; esac
+  fi
+  if [ "$code" -ne 0 ]; then echo "Échec : diagnostic conservé dans le dossier privé $work ; ne pas publier ses secrets." >&2; fi
+  exit "$code"
+}
+trap cleanup 0
+trap 'exit 1' HUP INT TERM
+echo "Projet de test : $project"
+mkdir "$work/pki" "$work/secrets" "$work/source"
+echo 'Préparation du TLS et des secrets de test.'
+for role in app migration bootstrap; do openssl rand -hex 32 > "$work/secrets/$role-password"; done
+openssl req -x509 -newkey rsa:3072 -nodes -sha256 -days 1 -subj /CN=MangerPostgresTestCA \
+  -addext basicConstraints=critical,CA:TRUE,pathlen:0 -addext keyUsage=critical,keyCertSign,cRLSign \
+  -keyout "$work/pki/ca.key" -out "$work/secrets/ca.crt" > "$work/tls.log" 2>&1
+openssl req -new -newkey rsa:2048 -nodes -sha256 -subj /CN=postgres \
+  -keyout "$work/secrets/server.key" -out "$work/pki/server.csr" >> "$work/tls.log" 2>&1
+printf '%s\n' 'basicConstraints=critical,CA:FALSE' 'keyUsage=critical,digitalSignature,keyEncipherment' \
+  'extendedKeyUsage=serverAuth' 'subjectAltName=DNS:postgres,DNS:localhost,IP:127.0.0.1' > "$work/pki/server.ext"
+openssl x509 -req -in "$work/pki/server.csr" -CA "$work/secrets/ca.crt" -CAkey "$work/pki/ca.key" \
+  -set_serial "0x$(openssl rand -hex 16)" -days 1 -sha256 -extfile "$work/pki/server.ext" \
+  -out "$work/secrets/server.crt" >> "$work/tls.log" 2>&1
+# Secret files are bind-mounted individually; their host parents remain 0700.
+chmod 0444 "$work/secrets/"*
+echo 'Création des seules copies SQLite synthétiques.'
+docker run --rm -i --network none --read-only --tmpfs /tmp --user "$(id -u):$(id -g)" \
+  --cap-drop ALL --security-opt no-new-privileges --mount "type=bind,src=$work/source,dst=/source" \
+  --entrypoint node "$image" < "$repo/scripts/postgres-test-source.js"
+chmod 0444 "$work/source/manger.db" "$work/source/accounts.db"
+compose config --quiet
+volumes=$(docker volume ls --format '{{.Name}}')
+networks=$(docker network ls --format '{{.Name}}')
+for resource in "${project}_postgres-data" "${project}_runtime-data"; do
+  if printf '%s\n' "$volumes" | grep -Fxq "$resource"; then echo 'Volume déjà présent : refus.' >&2; exit 1; fi
+done
+for resource in "${project}_backend" "${project}_outbound"; do
+  if printf '%s\n' "$networks" | grep -Fxq "$resource"; then echo 'Réseau déjà présent : refus.' >&2; exit 1; fi
+done
+containers=$(compose ps --all --quiet)
+[ -z "$containers" ] || { echo 'Projet déjà présent : refus.' >&2; exit 1; }
+started=1
+compose up -d postgres
+wait_healthy() {
+  service=$1
+  attempts=0
+  while [ "$attempts" -lt 90 ]; do
+    container=$(compose ps --all --quiet "$service")
+    [ -n "$container" ] || return 1
+    state=$(docker inspect --format '{{.State.Status}} {{if .State.Health}}{{.State.Health.Status}}{{end}}' "$container")
+    case "$state" in 'running healthy') return 0 ;; 'exited '*|'dead '*) break ;; esac
+    attempts=$((attempts + 1)); sleep 1
+  done
+  echo "Service de test non sain : $service. Déploiement refusé." >&2
+  return 1
+}
+wait_healthy postgres
+pg=$(compose ps --quiet postgres)
+echo 'Refus du bootstrap répété et contrôle des journaux.'
+if docker exec "$pg" /bin/sh /docker-entrypoint-initdb.d/10-manger.sh > "$work/init-failure.log" 2>&1; then
+  echo 'Le bootstrap a réutilisé des rôles existants : refus.' >&2; exit 1
+fi
+docker logs "$pg" > "$work/postgres.log" 2>&1
+cat "$work/secrets/app-password" "$work/secrets/migration-password" "$work/secrets/bootstrap-password" > "$work/password-patterns"
+result=0
+grep -F -f "$work/password-patterns" "$work/postgres.log" "$work/init-failure.log" >/dev/null 2>&1 || result=$?
+case "$result" in 1) : ;; 0) echo 'Secret détecté dans un journal, test refusé (valeur masquée).' >&2; exit 1 ;; *) echo 'Contrôle des journaux impossible.' >&2; exit 1 ;; esac
+echo 'TLS : réussite normale et refus des CA ou nom incorrects.'
+compose run --rm --no-deps --entrypoint node migrate -e '
+const assert=require("node:assert/strict"),{openPostgres}=require("./db/postgres");
+(async()=>{const config=require("./db/config").postgresConfig(process.env,{administrative:true});
+const db=await openPostgres(config);try{assert.equal((await db.query("SELECT ssl FROM pg_stat_ssl WHERE pid=pg_backend_pid()")).rows[0].ssl,true);}finally{await db.close();}
+await assert.rejects(openPostgres({...config,ssl:{ca:require("node:tls").rootCertificates[0]}}),e=>["SELF_SIGNED_CERT_IN_CHAIN","UNABLE_TO_VERIFY_LEAF_SIGNATURE","UNABLE_TO_GET_ISSUER_CERT_LOCALLY"].includes(e.cause?.code));
+await assert.rejects(openPostgres({...config,host:"postgres-wrong-name"}),e=>e.cause?.code==="ERR_TLS_CERT_ALTNAME_INVALID");
+console.log("TLS vérifié et erreurs d’identité refusées.");})().catch(error=>{console.error("Contrôle TLS refusé :",error.code||"verification",error.cause?.code||"");process.exitCode=1;});'
+compose run --rm --no-deps migrate import /source/manger.db /source/accounts.db --source-stopped --target-empty
+compose up -d app
+wait_healthy app
+app=$(compose ps --quiet app)
+docker exec -i -e MANGER_PROBE_MODE=write "$app" node < "$repo/scripts/postgres-image-probe.js"
+echo 'Recréation réelle des deux conteneurs, volumes conservés.'
+compose stop app postgres
+app_exit=$(docker inspect --format '{{.State.ExitCode}}' "$app")
+[ "$app_exit" = 0 ] || { echo 'Arrêt applicatif non propre.' >&2; exit 1; }
+compose rm -f app postgres
+compose up -d postgres
+wait_healthy postgres
+compose up -d app
+wait_healthy app
+app=$(compose ps --quiet app)
+docker exec -i -e MANGER_PROBE_MODE=verify "$app" node < "$repo/scripts/postgres-image-probe.js"
+echo 'Coupure PostgreSQL et reprise du même processus applicatif.'
+started_at=$(docker inspect --format '{{.State.StartedAt}}' "$app")
+compose stop postgres
+if docker exec "$app" node healthcheck.js >/dev/null 2>&1; then echo 'Santé incorrectement positive pendant la panne.' >&2; exit 1; fi
+compose start postgres
+wait_healthy postgres
+wait_healthy app
+docker exec "$app" node healthcheck.js
+[ "$(compose ps --quiet app)" = "$app" ] && [ "$(docker inspect --format '{{.State.StartedAt}}' "$app")" = "$started_at" ] || { echo 'Application relancée au lieu de reprendre sa connexion.' >&2; exit 1; }
+echo 'Refus d’une image amputée de sa migration.'
+result=0
+docker run --rm --network none --user 0 --entrypoint node "$image" -e '
+const fs=require("node:fs");fs.renameSync("/app/db/migrations/003-household-restore.js","/tmp/withheld-migration.js");
+try{require("./image-check").checkImage();}catch(error){if(error.code!=="MODULE_NOT_FOUND"||!error.message.includes("003-household-restore"))throw error;console.log("missing-migration-detected");process.exitCode=42;}' > "$work/missing.log" 2>&1 || result=$?
+[ "$result" = 42 ] && grep -q 'missing-migration-detected' "$work/missing.log" || { echo 'Échec différent du module manquant attendu.' >&2; exit 1; }
+echo 'Candidat vérifié : TLS, transfert, accès, photos, persistance, panne/reprise et image.'

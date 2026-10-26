@@ -1,0 +1,76 @@
+{
+  "name": "manger-postgres-candidate",
+  "services": {
+    "postgres": {
+      "image": "postgres:18.6-bookworm@sha256:bbf83594798e144bff365a9c191c5d779f181fb3135902064ab8ff11918020fc",
+      "environment": {
+        "POSTGRES_USER": "manger_bootstrap", "POSTGRES_DB": "postgres",
+        "POSTGRES_PASSWORD_FILE": "/run/secrets/pg_bootstrap_password",
+        "PGDATA": "/var/lib/postgresql/18/docker"
+      },
+      "entrypoint": ["/bin/sh", "/opt/manger/postgres-entrypoint.sh"],
+      "command": ["postgres", "-c", "ssl=on", "-c", "ssl_cert_file=/var/lib/postgresql/manger-tls/server.crt", "-c", "ssl_key_file=/var/lib/postgresql/manger-tls/server.key", "-c", "log_statement=none", "-c", "log_min_error_statement=panic", "-c", "log_error_verbosity=terse"],
+      "volumes": [
+        {"type":"volume","source":"postgres-data","target":"/var/lib/postgresql"},
+        {"type":"bind","source":"./docker/postgres-entrypoint.sh","target":"/opt/manger/postgres-entrypoint.sh","read_only":true,"bind":{"create_host_path":false}},
+        {"type":"bind","source":"./docker/postgres-init.sh","target":"/docker-entrypoint-initdb.d/10-manger.sh","read_only":true,"bind":{"create_host_path":false}}
+      ],
+      "secrets": ["pg_bootstrap_password", "pg_app_password", "pg_migration_password", "pg_server_cert", "pg_server_key"],
+      "networks": {"backend":{"aliases":["postgres-wrong-name"]}},
+      "read_only": true,
+      "tmpfs": ["/tmp", "/var/run/postgresql"],
+      "security_opt": ["no-new-privileges:true"],
+      "healthcheck": {"test":["CMD","pg_isready","-h","127.0.0.1","-U","manger_bootstrap","-d","postgres"],"interval":"2s","timeout":"5s","start_period":"5s","retries":20},
+      "labels": {"org.manger.test-token":"${MANGER_TEST_TOKEN:-manual}"}
+    },
+    "app": {
+      "image": "${MANGER_CANDIDATE_IMAGE:?Construire et choisir une image candidate}",
+      "environment": {
+        "MANGER_STORAGE":"postgres", "MANGER_POSTGRES_CANDIDATE":"1", "MANGER_PORT":"3000", "MANGER_DATA_DIR":"/data",
+        "MANGER_PG_HOST":"postgres", "MANGER_PG_PORT":"5432", "MANGER_PG_DATABASE":"manger", "MANGER_PG_USER":"manger_app",
+        "MANGER_PG_PASSWORD_FILE":"/run/secrets/pg_app_password", "MANGER_PG_TLS":"verify-full", "MANGER_PG_CA_FILE":"/run/secrets/pg_ca"
+      },
+      "secrets": ["pg_app_password", "pg_ca"],
+      "volumes": [{"type":"volume","source":"runtime-data","target":"/data"}],
+      "networks": ["backend", "outbound"],
+      "depends_on": {"postgres":{"condition":"service_healthy"}},
+      "read_only": true, "tmpfs": ["/tmp"], "cap_drop": ["ALL"], "security_opt": ["no-new-privileges:true"], "init": true,
+      "healthcheck": {"test":["CMD","node","healthcheck.js"],"interval":"2s","timeout":"5s","start_period":"5s","retries":15},
+      "stop_grace_period":"20s",
+      "labels": {"org.manger.test-token":"${MANGER_TEST_TOKEN:-manual}"}
+    },
+    "migrate": {
+      "image": "${MANGER_CANDIDATE_IMAGE:?Construire et choisir une image candidate}",
+      "profiles": ["maintenance"], "entrypoint": ["node","migrate-postgres.js"],
+      "environment": {
+        "MANGER_PG_HOST":"postgres", "MANGER_PG_PORT":"5432", "MANGER_PG_DATABASE":"manger", "MANGER_PG_USER":"manger_app",
+        "MANGER_PG_MIGRATION_USER":"manger_migrator", "MANGER_PG_MIGRATION_PASSWORD_FILE":"/run/secrets/pg_migration_password",
+        "MANGER_PG_TLS":"verify-full", "MANGER_PG_CA_FILE":"/run/secrets/pg_ca"
+      },
+      "secrets": ["pg_migration_password","pg_ca"],
+      "volumes": [
+        {"type":"bind","source":"${MANGER_PG_SOURCE_DIR:?Copies arretées requises}/manger.db","target":"/source/manger.db","read_only":true,"bind":{"create_host_path":false}},
+        {"type":"bind","source":"${MANGER_PG_SOURCE_DIR:?Copies arretées requises}/accounts.db","target":"/source/accounts.db","read_only":true,"bind":{"create_host_path":false}}
+      ],
+      "networks": ["backend"], "depends_on":{"postgres":{"condition":"service_healthy"}},
+      "read_only":true,"tmpfs":["/tmp"],"cap_drop":["ALL"],"security_opt":["no-new-privileges:true"],"init":true,
+      "labels":{"org.manger.test-token":"${MANGER_TEST_TOKEN:-manual}"}
+    }
+  },
+  "secrets": {
+    "pg_app_password":{"file":"${MANGER_PG_SECRETS_DIR:?Dossier privé requis}/app-password"},
+    "pg_migration_password":{"file":"${MANGER_PG_SECRETS_DIR:?Dossier privé requis}/migration-password"},
+    "pg_bootstrap_password":{"file":"${MANGER_PG_SECRETS_DIR:?Dossier privé requis}/bootstrap-password"},
+    "pg_ca":{"file":"${MANGER_PG_SECRETS_DIR:?Dossier privé requis}/ca.crt"},
+    "pg_server_cert":{"file":"${MANGER_PG_SECRETS_DIR:?Dossier privé requis}/server.crt"},
+    "pg_server_key":{"file":"${MANGER_PG_SECRETS_DIR:?Dossier privé requis}/server.key"}
+  },
+  "volumes": {
+    "postgres-data":{"labels":{"org.manger.test-token":"${MANGER_TEST_TOKEN:-manual}"}},
+    "runtime-data":{"labels":{"org.manger.test-token":"${MANGER_TEST_TOKEN:-manual}"}}
+  },
+  "networks": {
+    "backend":{"internal":true,"labels":{"org.manger.test-token":"${MANGER_TEST_TOKEN:-manual}"}},
+    "outbound":{"labels":{"org.manger.test-token":"${MANGER_TEST_TOKEN:-manual}"}}
+  }
+}
