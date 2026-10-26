@@ -1,7 +1,7 @@
 const { createHash } = require('node:crypto');
 const {structureFingerprint,verifyStructure}=require('./structure');
 const {reservePostgresClient}=require('./postgres');
-const migrations = [require('./migrations/001-initial'),require('./migrations/002-transfer-state')];
+const migrations = [require('./migrations/001-initial'),require('./migrations/002-transfer-state'),require('./migrations/003-household-restore')];
 
 // shortcut: require freshly provisioned roles; global parameter/function ACL audits belong to deployment bootstrap.
 async function checkRoles(client, role) {
@@ -60,7 +60,7 @@ async function permissions(client, applicationRole) {
     GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA household, auth TO ${role};
     REVOKE ALL ON ALL SEQUENCES IN SCHEMA household, auth, manger_meta FROM PUBLIC, ${role};
     GRANT USAGE ON ALL SEQUENCES IN SCHEMA household, auth TO ${role};
-    GRANT EXECUTE ON FUNCTION household.storage_status() TO ${role}`);
+    GRANT EXECUTE ON FUNCTION household.storage_status(), household.restart_sequences() TO ${role}`);
 }
 
 // Explicit administrative operation only; importing this module opens no connection.

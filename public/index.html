@@ -793,7 +793,7 @@
         <p id="backup-status" class="muted" role="status"></p>
         <details class="quiet-details"><summary>Restaurer une sauvegarde</summary>
           <form id="restore-form" class="recipe-form">
-            <label class="field"><span>Sauvegarde du foyer · 32 Mo maximum</span><input id="restore-file" type="file" accept=".db,.sqlite,.sqlite3" required></label>
+            <label class="field"><span>Sauvegarde du foyer · 32 Mo maximum</span><input id="restore-file" type="file" accept=".json,.db,.sqlite,.sqlite3" required></label>
             <button id="preview-restore" class="secondary" type="submit">Vérifier le fichier</button>
           </form>
           <div id="restore-preview" role="status"></div>
@@ -894,7 +894,7 @@
       const finish = beginRestore(button);
       restoreToken = null; restoreOutput.textContent = 'Vérification du fichier…'; button.textContent = 'Vérification…';
       try {
-        if (!file || !file.size || file.size > 32 * 1024 * 1024) throw new Error('Choisis une sauvegarde SQLite non vide de 32 Mo maximum.');
+        if (!file || !file.size || file.size > 32 * 1024 * 1024) throw new Error('Choisis une sauvegarde du foyer non vide de 32 Mo maximum.');
         const response = await restoreRequest('/api/restore/preview', file, 'application/octet-stream');
         const result = await response.json();
         if (typeof result?.token !== 'string' || !result.token || !['recipes', 'members', 'meals'].every(key => Number.isSafeInteger(result[key]) && result[key] >= 0)) throw new Error('Aperçu illisible. Vérifie à nouveau le fichier ; le foyer n’a pas été remplacé.');

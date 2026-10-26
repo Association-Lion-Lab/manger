@@ -92,3 +92,5 @@ Lors d'une modification, actualise le guide ou les fonctionnalités concernés ;
 [Transfert des 22 tables](POSTGRESQL-TRANSFERT.md) : étape 15, cible neuve seulement, comparaison exhaustive, état pending/ready, contrôle après COMMIT incertain. 397 tests généraux et 211 PostgreSQL réels réussis, aucun ignoré, HTTPS inclus ; contrôle image/modules réussi sans Docker. Trois cycles de relecture séparée réconciliés. Aucune donnée réelle, bascule, publication ou validation Ubuntu/appareil.
 
 [Sauvegarde du foyer PostgreSQL](POSTGRESQL-SAUVEGARDE.md) : format JSON versionné, photographie cohérente et téléchargement protégé ; étape 16 testée, lancement normal toujours SQLite.
+
+[Restauration du foyer PostgreSQL](POSTGRESQL-RESTAURATION.md) : aperçu JSON/ancien SQLite, récupération préalable, transaction et droits conservés ; étape 17 vérifiée séparément, sans activation du moteur normal.

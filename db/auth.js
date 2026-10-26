@@ -139,6 +139,7 @@ function postgresAuth(db) {
       return row.rowCount ? row.rows[0].id : 'duplicate';
     });
   }
+  async function authorizeRestore(tx,user){await accessLock(tx);return Boolean(user&&await administrator(tx,user));}
   function resetLocalPassword(name, encoded) {
     return db.transaction(async tx => {
       await accessLock(tx);
@@ -150,7 +151,7 @@ function postgresAuth(db) {
     });
   }
   return Object.freeze({ engine:'postgres', findUser, session, throttle, startSession, logout, changePassword,
-    invitation, issueInvitation, revokeInvitation, join, listAccounts, addAccount, setActive, prepareMail, createLocalAccount, resetLocalPassword });
+    invitation, issueInvitation, revokeInvitation, join, listAccounts, addAccount, setActive, prepareMail, createLocalAccount, resetLocalPassword, authorizeRestore });
 }
 
 module.exports = { postgresAuth };

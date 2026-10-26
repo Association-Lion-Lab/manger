@@ -423,7 +423,29 @@ function createCalculationHandler(calc,pantry){
 function createBusinessHandler(stores){
   const routes=[householdRoutes(stores.home,sendJson),recipeRoutes(stores.recipes,sendJson),recipeExtraRoutes(stores.recipes,sendJson),mealRoutes(stores.meals,sendJson),planningRoutes(stores.meals,sendJson),calculationRoutes(stores.calc,stores.pantry,sendJson),shoppingRoutes(stores.shopping,sendJson)];
   if(stores.backup)routes.push(backupRoutes(stores.backup,sendJson));
-  return async(request,response)=>{for(const route of routes)if(await route(request,response))return;sendJson(response,503,{error:'Parcours PostgreSQL non porté.'});};
+  let restoring=false,activeRequests=0;
+  return async(request,response,context)=>{
+    if(restoring)return sendJson(response,503,{error:'Restauration en cours. Réessaie dans un instant.'});
+    activeRequests++;
+    try{
+      const path=new URL(request.url,'http://localhost').pathname;
+      if(stores.restoration&&request.method==='POST'&&['/api/restore/preview','/api/restore/apply'].includes(path)){
+        if(request.headers['x-manger-restore']!=='1')return sendJson(response,403,{error:'Utilise la restauration dans Mon foyer.'});
+        if(activeRequests!==1)return sendJson(response,409,{error:'Une opération est en cours. Réessaie dans un instant.'});
+        restoring=true;
+        try{
+          const value=path.endsWith('/preview')?await stores.restoration.preview(request):await stores.restoration.apply((await readJson(request))?.token,{authorize:tx=>stores.auth.authorizeRestore(tx,context?.user)});
+          return sendJson(response,200,value);
+        }catch(error){
+          if(error.code==='POSTGRES_COMMIT_UNCERTAIN')return sendJson(response,503,{error:'Impossible de confirmer la restauration. Recharge la page et vérifie le foyer avant toute nouvelle restauration.',recovery:error.recovery});
+          const input=['MANGER_RESTORE_INPUT','MANGER_RESTORE_EXPIRED','MANGER_BACKUP_INPUT','MANGER_SOURCE_INVALID','MANGER_TRANSFER_INVALID'].includes(error.code);
+          return sendJson(response,error.code==='MANGER_RESTORE_FORBIDDEN'?403:error.code==='MANGER_RESTORE_SIZE'?413:input?400:503,{error:input?'Sauvegarde invalide, incompatible ou aperçu expiré. Vérifie à nouveau le fichier.':'Restauration indisponible. Aucune réussite confirmée ; vérifie le foyer avant de recommencer.'});
+        }finally{restoring=false;}
+      }
+      for(const route of routes)if(await route(request,response))return;
+      sendJson(response,503,{error:'Parcours PostgreSQL non porté.'});
+    }finally{activeRequests--;}
+  };
 }
 
 // Supplying a database is the isolated core-test harness; production always opens accounts.

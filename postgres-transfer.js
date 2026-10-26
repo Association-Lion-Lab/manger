@@ -26,4 +26,4 @@ async function restartSequences(tx,data,options){
   // All identifiers come from the fixed schema contract; RESTART rolls back with the import.
   for(const {sequence,next} of sequenceStarts(data,options))await tx.query(`ALTER SEQUENCE ${sequence} RESTART WITH ${next}`);
 }
-module.exports={lockTables,insertTables,restartSequences,sequenceStarts};
+module.exports={lockTables,insertTables,restartSequences,sequenceStarts,householdOrder:Object.freeze(order.filter(k=>k.startsWith('household.')))};

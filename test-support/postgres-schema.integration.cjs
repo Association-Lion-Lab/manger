@@ -59,9 +59,9 @@ test('schéma PostgreSQL : initialisation atomique, concurrence et parité struc
     } finally { await blocker.query('ROLLBACK'); blocker.release(); }
     const completed = await results;
     for (const item of completed) assert.equal(item.status, 'fulfilled', item.reason?.message);
-    assert.deepEqual(completed.map(item => item.value.applied).sort((a,b) => a.length-b.length), [[],[1,2]]);
+    assert.deepEqual(completed.map(item => item.value.applied).sort((a,b) => a.length-b.length), [[],[1,2,3]]);
     assert.deepEqual(isolation, ['read committed','read committed']);
-    assert.equal((await owner.query('SELECT count(*)::integer AS n FROM manger_meta.schema_migrations')).rows[0].n, 2);
+    assert.equal((await owner.query('SELECT count(*)::integer AS n FROM manger_meta.schema_migrations')).rows[0].n, 3);
   });
   await t.test('les 22 tables/colonnes de SQLite existent sans aucune donnée amorcée', async () => {
   const tables = await fixture.pool.query(`SELECT table_schema, table_name FROM information_schema.tables
@@ -79,7 +79,7 @@ test('schéma PostgreSQL : initialisation atomique, concurrence et parité struc
       }
     } finally { sqlite.close(); }
   }
-  assert.deepEqual(await migrateSchema(owner, 'manger_test_app'), { version: 2, applied: [] });
+  assert.deepEqual(await migrateSchema(owner, 'manger_test_app'), { version: 3, applied: [] });
   });
   await t.test('grands identifiants, Unicode, précision, JSON texte, dates et binaires sont conservés', async () => {
     const id = '4294967297', title = 'Œufs 🥣 été', bytes = Buffer.from([255,216,0,127,255,217]);
@@ -187,7 +187,7 @@ test('schéma PostgreSQL : initialisation atomique, concurrence et parité struc
       }
     }
     await fixture.stop(); await fixture.start();
-    assert.deepEqual(await migrateSchema(owner,'manger_test_app'), { version:2,applied:[] });
+    assert.deepEqual(await migrateSchema(owner,'manger_test_app'), { version:3,applied:[] });
     assert.equal((await app.query('SELECT count(*)::integer AS n FROM household.recipes')).rows[0].n, 4);
     for (const code of fixture.connectionErrors) assert.ok(['57P01','ECONNRESET','EPIPE'].includes(code), code);
     assert.equal(owner.totalCount, owner.idleCount);

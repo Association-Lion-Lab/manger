@@ -703,3 +703,13 @@ Choix : JSON versionné plutôt que dump SQL côté client, 18 tables et octets 
 26 octobre 2026 : étapes 01–16 closes, sept restantes ; prochaine 17, restauration du foyer. 401 tests généraux et 215 PostgreSQL réels réussis, aucun ignoré, HTTPS inclus. Contrôle image/modules réussi sans Docker. Sauvegarde JSON cohérente des 18 tables, accès exclus, téléchargement navigateur synthétique vérifié. Aucune donnée privée, bascule, publication ou validation Ubuntu/Safari/iPhone.
 
 Le téléchargement navigateur a réellement créé un fichier synthétique dont le codec a vérifié le contenu. La réponse était simulée, les tests PostgreSQL natifs couvrent séparément le vrai contenu. Attente anormale de l’outil navigateur sans cause produit attribuée ; onglet, serveur et seul fichier généré dans Téléchargements nettoyés, copie ignorée conservée. [Détails](POSTGRESQL-SAUVEGARDE.md).
+
+## 26 octobre 2026 — restauration PostgreSQL, étape 17
+
+Choix : conserver le parcours guidé avec JSON versionné et ancienne sauvegarde SQLite analysée par le lecteur strict de 14. La transaction du foyer revalide les accès, verrouille les tables, vérifie la structure, crée/synchronise une copie avant suppressions et compare toutes les valeurs après insertion. Fonction propriétaire fixe et sans paramètre pour le seul recalage du foyer, aucun droit général de séquence et aucun secret propriétaire web.
+
+Relecture en trois cycles : dérive de cible, durabilité du premier dossier et attente disque corrigées ; puis fenêtre de classification après COMMIT reproduite en test rouge, phase conservée jusqu’au retour du résultat. Dernier cycle sans défaut nouveau. Tests natifs : 18 tables/octet, comptes inchangés, rollback des séquences, ancien fichier intact, révocation et requêtes concurrentes, vrai engagement avec réponse perdue. Une erreur du verrou de simulation HTTP était dans le test et a été corrigée sans changer le produit. [Détails et limites](POSTGRESQL-RESTAURATION.md).
+
+26 octobre 2026 : étapes 01–17 closes, six restantes ; prochaine 18, sauvegarde de l’instance complète. 403 tests généraux et 226 PostgreSQL réels réussis, aucun ignoré, HTTPS inclus ; 26 fichiers et 28 parents dans la commande PostgreSQL. Trois cycles de relecture réconciliés. Contrôle image/modules réussi sans Docker. SQLite normal conservé, aucun candidat partiel activé, aucune donnée privée, publication, bascule ou validation Ubuntu/appareil.
+
+Docker absent localement, inventaire WSL refusé par l’environnement (Wsl/E_ACCESSDENIED), sans demande d’installation système ni conclusion sur le serveur personnel. Les étapes 19–20 devront distinguer préparation et preuve Linux réelle.

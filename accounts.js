@@ -82,7 +82,7 @@ async function body(req) {
   } catch { throw inputError('Requête invalide.'); }
 }
 
-function protectAccounts(db, handler, { secure = false, mailer = null, certificate = null, auth: repository = null, backupReady = false } = {}) {
+function protectAccounts(db, handler, { secure = false, mailer = null, certificate = null, auth: repository = null, backupReady = false, restoreReady = false } = {}) {
   if (repository && db) throw new Error('Fournir un seul stockage de comptes, jamais deux moteurs.');
   const auth = repository || sqliteAuth(db);
   let busy = 0, mailBusy = false;
@@ -179,7 +179,7 @@ function protectAccounts(db, handler, { secure = false, mailer = null, certifica
       }
       const adminRoute = path.startsWith('/api/accounts') || path === '/api/backup' || path.startsWith('/api/restore/');
       if (adminRoute && !user.admin) return json(res, 403, { error: 'Cette action est réservée à l’administrateur.' });
-      if (auth.engine === 'postgres' && ((path === '/api/backup'&&!backupReady)||path.startsWith('/api/restore/'))) return json(res, 503, { error: 'Ce parcours PostgreSQL n’est pas encore disponible.' });
+      if (auth.engine === 'postgres' && ((path === '/api/backup'&&!backupReady)||(path.startsWith('/api/restore/')&&!restoreReady))) return json(res, 503, { error: 'Ce parcours PostgreSQL n’est pas encore disponible.' });
       if (path === '/api/accounts/certificate' && req.method === 'GET') {
         if (!certificateReady) return json(res, 404, { error: 'Certificat local indisponible. Vérifie la configuration HTTPS et MANGER_TLS_CA sur le serveur.' });
         res.writeHead(200, { 'Content-Type': 'application/pkix-cert', 'Content-Disposition': 'attachment; filename="manger-ca.cer"', 'Content-Length': certificate.raw.length });
@@ -230,7 +230,7 @@ function protectAccounts(db, handler, { secure = false, mailer = null, certifica
         checked(await auth.setActive(user, id, data.active));
         return json(res, 200, { ok: true });
       }
-      return await handler(req, res);
+      return await handler(req, res, {user});
     } catch (error) {
       if (error?.code !== 'MANGER_ACCOUNT_INPUT') return json(res, 503, { error: 'Le service est temporairement indisponible. Aucune réussite n’a pu être confirmée.' });
       return json(res, error.status || 400, { error: error.message });

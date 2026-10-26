@@ -145,3 +145,7 @@ Migration002 ajoute état et empreinte de structure. db/structure.js vérifie le
 ## Sauvegarde du foyer PostgreSQL (étape 16)
 
 `household-backup.js` capture les 18 tables dans une transaction de lecture cohérente et encode le format JSON versionné. `backup-http.js` garde accès explicite, taille et envoi unique. `protectAccounts` ouvre uniquement la capacité de sauvegarde implémentée ; restauration encore fermée. [Contrat et preuves](POSTGRESQL-SAUVEGARDE.md).
+
+## Restauration du foyer PostgreSQL (étape 17)
+
+`postgres-restore.js` prépare et valide le fichier puis remplace les seules tables du foyer dans une transaction, avec copie préalable et contrôle de structure. La migration 003 accorde une fonction fixe de recalage des seules séquences du foyer ; les droits généraux des séquences restent refusés. Le candidat interne ouvre la capacité uniquement avec son contrôleur de restauration et revalide les accès dans sa transaction. La frontière PostgreSQL distingue l’engagement incertain ; aucun réessai automatique. [Contrat, refus et preuves](POSTGRESQL-RESTAURATION.md). Lancement normal encore SQLite en attendant l’étape 19.

@@ -38,7 +38,7 @@ function poolOptions(config) {
 }
 
 function clientLease(client, onError) {
-  let alive = true, scopeOpen = true, failed = false, queryError, rejectCancellation;
+  let alive = true, scopeOpen = true, failed = false, committing = false, queryError, rejectCancellation;
   const pending = new Set();
   const cancelled = new Promise((_, reject) => { rejectCancellation = reject; });
   function cancel(error) {
@@ -71,7 +71,13 @@ function clientLease(client, onError) {
     client.off('error', clientError);
     client.release(Boolean(destroy || failed));
   }
-  return { query, execute, settle, cancel, cancelled, release, get queryError() { return queryError; } };
+  async function commit(){
+    committing=true;
+    // Keep the phase latched until release: a socket error can win during result handoff.
+    try{return await execute('COMMIT');}
+    catch(error){throw failure('POSTGRES_COMMIT_UNCERTAIN',error);}
+  }
+  return { query, execute, settle, cancel, cancelled, release, commit, get committing(){return committing;}, get queryError() { return queryError; } };
 }
 
 async function runTransaction(lease, work) {
@@ -87,7 +93,7 @@ async function runTransaction(lease, work) {
     catch (cause) { throw failure('POSTGRES_ROLLBACK_FAILED', new AggregateError([error, cause])); }
     throw error;
   }
-  return lease.execute('COMMIT').then(() => result);
+  return lease.commit().then(() => result);
 }
 
 function connectionPool(pool) {
@@ -111,7 +117,7 @@ function connectionPool(pool) {
     const lease = await acquire();
     let failed = false;
     try { return await Promise.race([Promise.resolve().then(() => work(lease)), lease.cancelled]); }
-    catch (error) { failed = true; throw error; }
+    catch (error) { failed = true; throw lease.committing ? failure('POSTGRES_COMMIT_UNCERTAIN',error) : error; }
     finally { leases.delete(lease); lease.release(failed); }
   }
   function submit(work) {

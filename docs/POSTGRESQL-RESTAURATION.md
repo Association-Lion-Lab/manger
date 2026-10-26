@@ -1,0 +1,23 @@
+# Restauration du foyer PostgreSQL — étape 17
+
+Réalisation locale en cours, 26 octobre 2026. Le serveur normal reste SQLite.
+
+Le candidat garde le parcours aperçu, confirmation et copie de récupération. Le fichier JSON versionné ou l’ancienne sauvegarde SQLite ne remplace que les 18 tables du foyer. Les comptes, sessions et invitations sont exclus. Les fichiers SQLite sont analysés et reconstruits par le lecteur borné de l’étape 14, sans exécuter leur DDL. Plafond 32 Mio et jeton unique de dix minutes, consommé avant toute attente d’application.
+
+Sous verrou foyer et verrous de toutes les tables, une copie JSON privée est créée exclusivement et synchronisée avant les suppressions. Échec de copie : aucun remplacement. Suppression, insertion, comparaison exhaustive et recalage des identifiants sont une transaction. Le fichier préalable est conservé même en cas de rollback. Les opérations métier concurrentes du même processus sont refusées pendant le parcours ; les autres écritures respectant le verrou foyer attendent en base.
+
+Migration 003 : fonction sans paramètre `household.restart_sequences()`, SECURITY DEFINER, search_path pg_catalog, liste fixe des seules séquences du foyer. PUBLIC exclu, rôle applicatif autorisé uniquement à cette opération ; aucun droit général UPDATE/ALTER sur les séquences ni mot de passe propriétaire au serveur web. ALTER SEQUENCE RESTART est transactionnel. Les accès ne sont jamais recalés. Les définitions et droits restent couverts par l’empreinte de structure.
+
+Une rupture pendant COMMIT donne une erreur explicitement incertaine et aucun réessai automatique ; le jeton est déjà consommé. L’administrateur vérifie le foyer après rechargement. Le chemin relatif de la copie préalable peut être fourni, jamais un contenu privé. Les anciens clients conservent la confirmation existante.
+
+Sources : [verrous PostgreSQL](https://www.postgresql.org/docs/18/sql-lock.html), [fonctions et SECURITY DEFINER](https://www.postgresql.org/docs/18/sql-createfunction.html), [RESTART transactionnel](https://www.postgresql.org/docs/18/sql-altersequence.html). Validation native et relecture encore à terminer ; pas de preuve Docker/Linux, appareil ou serveur personnel.
+
+Première relecture : contrôle de l’empreinte avant lecture et après recalage ajouté pour refuser un trigger/RLS inconnu ; copie synchronisée avec son dossier et le parent sur Linux, parent préexistant requis. La phase disque est bornée à 20 secondes, avec délai d’inactivité transactionnelle local de 60 secondes ; un refus conserve les données et consomme le jeton. Une écriture disque très lente peut finir son seul fichier privé après l’abandon ; aucun SQL de remplacement ne peut continuer. La taille JSON normalisée est vérifiée dès l’aperçu, y compris pour une ancienne sauvegarde SQLite.
+
+La confirmation revalide dans la transaction l’administrateur et sa session sous verrou des accès, avant de prendre le verrou foyer. Une révocation pendant l’attente refuse le remplacement. Les autres parcours conservent leurs contrats existants.
+
+Deuxième relecture : une erreur de socket dans la remise du résultat après COMMIT pouvait perdre sa classification. Test rouge reproduit à la profondeur de microtâche 2, puis correction en gardant la phase d’engagement jusqu’à libération du client. Dix positions d’erreur sont couvertes. Troisième et dernier cycle : aucun défaut nouveau trouvé. Aucun outil externe lancé, report utilisateur conservé.
+
+Onze tests PostgreSQL ciblés réussis : JSON des 18 tables et octets, ancien SQLite inchangé, aperçu invalide/expiré, copie préalable lisible, comptes inchangés, identités après restauration, erreur SQL après recalage avec rollback des séquences, copie impossible, trigger hostile refusé avant action, attente disque simulée de 10,5 secondes, vrai COMMIT puis réponse du pilote perdue, droits révoqués et HTTP protégé/concurrent. Le premier test HTTP avait laissé son propre verrou de simulation actif après la première application : correction du harnais, sans affaiblir le refus du second appui. Les contrôles guidés côté interface restent vérifiés par sept tests existants ; changement visuel limité au format accepté et au libellé générique, pas de nouveau test Safari réel. Résultats complets à consigner après les suites.
+
+26 octobre 2026 : étapes 01–17 closes, six restantes ; prochaine 18, sauvegarde de l’instance complète. 403 tests généraux et 226 PostgreSQL réels réussis, aucun ignoré, HTTPS inclus ; 26 fichiers et 28 parents dans la commande PostgreSQL. Trois cycles de relecture réconciliés. Contrôle image/modules réussi sans Docker. SQLite normal conservé, aucun candidat partiel activé, aucune donnée privée, publication, bascule ou validation Ubuntu/appareil.

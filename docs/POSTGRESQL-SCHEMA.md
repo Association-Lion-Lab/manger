@@ -53,3 +53,7 @@ Sources officielles : [identités](https://www.postgresql.org/docs/18/ddl-identi
 ## Évolution du 26 octobre 2026 — version 002
 
 État de transfert et empreinte de structure ajoutés, sans modifier les22tables métier. Métadonnées toujours interdites en accès direct à l’application ; fonction minimale storage_status explicitement accordée. Prototypes001 sans empreinte refusés sans mutation, nouvelle cible exigée. [Détails et preuves](POSTGRESQL-TRANSFERT.md).
+
+## Évolution du 26 octobre 2026 — version 003
+
+La restauration guidée utilise `household.restart_sequences()`, fonction propriétaire sans paramètre, liste fixe du foyer, PUBLIC révoqué. Aucune élévation générale du rôle applicatif, aucun recalage des accès. Les objets/droits sont couverts par la nouvelle empreinte ; l’ancienne empreinte est vérifiée avant l’évolution. Les tests existants de refus, dérive et rollback sont conservés et attendent maintenant la version 3 et les migrations [1, 2, 3]. [Contrat de restauration](POSTGRESQL-RESTAURATION.md).

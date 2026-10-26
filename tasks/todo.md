@@ -1,6 +1,6 @@
 # Migration PostgreSQL — tâches et points de contrôle
 
-26 octobre 2026 — **plan validé ; tâches 01–16 réalisées, prochaine tâche 17 : restauration du foyer**. [Cadrage et risques](../docs/MIGRATION-POSTGRESQL.md), [ordre de réalisation](plan.md). Les noms des fichiers non encore créés restent des propositions. Chaque tâche comprend la mise à jour de la documentation concernée et de `docs/DECISIONS.md` ; les fichiers listés sont le périmètre technique principal. Si une tranche dépasse environ cinq fichiers techniques ou une session ciblée, la découper avant de coder, sans réduire ses critères.
+26 octobre 2026 — **plan validé ; tâches 01–17 réalisées, prochaine tâche 18 : sauvegarde de l’instance complète**. [Cadrage et risques](../docs/MIGRATION-POSTGRESQL.md), [ordre de réalisation](plan.md). Les noms des fichiers non encore créés restent des propositions. Chaque tâche comprend la mise à jour de la documentation concernée et de `docs/DECISIONS.md` ; les fichiers listés sont le périmètre technique principal. Si une tranche dépasse environ cinq fichiers techniques ou une session ciblée, la découper avant de coder, sans réduire ses critères.
 
 ## Phase 1 — Socle isolé
 
@@ -214,7 +214,7 @@ Preuve : [sauvegarde du foyer](../docs/POSTGRESQL-SAUVEGARDE.md). 26 octobre 202
 
 ### 17 — Restaurer le foyer avec récupération
 
-- [ ] Réalisé.
+- [x] Réalisé le 26 octobre 2026.
 - **Livrable :** aperçu puis remplacement transactionnel des données du foyer, compatibilité des anciennes sauvegardes SQLite.
 - **Acceptation :** validation stricte/délai/taille et copie de récupération ; pas de SQL de fichier exécuté ; comptes inchangés et blocages des opérations concurrents, erreur après engagement distinguée d'un refus.
 - **Décision à clore avant livraison :** voie administrative contrôlée pour le recalage des seules séquences du foyer, sans distribuer le mot de passe propriétaire au client ni accorder UPDATE général des séquences au rôle applicatif. Conserver et tester le parcours guidé existant ; pas de suppression du bouton comme contournement.
@@ -222,6 +222,8 @@ Preuve : [sauvegarde du foyer](../docs/POSTGRESQL-SAUVEGARDE.md). 26 octobre 202
 - **Dépendances :** 16 et 14.
 - **Fichiers probables :** `restore.js`, `household-backup.js`, `public/index.html`, `restore.test.js`, `restore-ui.test.js`.
 - **Taille :** M.
+
+Preuve : [restauration avec récupération](../docs/POSTGRESQL-RESTAURATION.md). 26 octobre 2026 : étapes 01–17 closes, six restantes ; prochaine 18, sauvegarde de l’instance complète. 403 tests généraux et 226 PostgreSQL réels réussis, aucun ignoré, HTTPS inclus ; 26 fichiers et 28 parents dans la commande PostgreSQL. Trois cycles de relecture réconciliés. Contrôle image/modules réussi sans Docker. SQLite normal conservé, aucun candidat partiel activé, aucune donnée privée, publication, bascule ou validation Ubuntu/appareil.
 
 ### 18 — Sauvegarder et récupérer l'instance complète
 

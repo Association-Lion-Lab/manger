@@ -64,6 +64,40 @@ test('transaction sur un client réservé, résultat conservé et scope échapp�
   assert.deepEqual(h.clients.at(-1).releases,[false]); await db.close();
 });
 
+test('COMMIT sans réponse certaine ne prétend jamais à un rollback ni ne rejoue le travail',async()=>{
+  for(const mode of ['reply','socket']){
+    const h=harness(),db=await h.openPostgres(config);let writes=0;
+    h.pool.handle=async(sql,args,client)=>{
+      if(sql==='UPDATE synthetic')writes++;
+      if(sql==='COMMIT'){
+        const error=Object.assign(new Error('private'),{code:'ECONNRESET'});
+        if(mode==='socket')client.emit('error',error);
+        throw error;
+      }
+      return {rows:[]};
+    };
+    await assert.rejects(db.transaction(tx=>tx.query('UPDATE synthetic')),e=>e.code==='POSTGRES_COMMIT_UNCERTAIN'&&!e.message.includes('private'));
+    assert.equal(writes,1);assert.equal(h.clients.at(-1).sql.filter(s=>s==='COMMIT').length,1);assert.equal(h.clients.at(-1).sql.includes('ROLLBACK'),false);
+    assert.deepEqual(h.clients.at(-1).releases,[true]);await db.close();
+  }
+});
+
+test('erreur tardive entre acquittement COMMIT et remise du résultat reste explicitement incertaine',async()=>{
+  for(let depth=0;depth<10;depth++){
+    const h=harness(),db=await h.openPostgres(config);
+    h.pool.handle=(sql,args,client)=>{
+      if(sql==='COMMIT'){
+        let pending=Promise.resolve();for(let i=0;i<depth;i++)pending=pending.then(()=>{});
+        pending.then(()=>{if(client.listenerCount('error'))client.emit('error',Object.assign(new Error('private late socket'),{code:'57P01'}));});
+      }
+      return {rows:[]};
+    };
+    try{assert.equal(await db.transaction(async()=>42),42);}
+    catch(error){assert.equal(error.code,'POSTGRES_COMMIT_UNCERTAIN',`microtask ${depth}`);}
+    await db.close();
+  }
+});
+
 test('arrêt draine une opération acceptée, refuse les nouvelles et ferme une seule fois', async () => {
   const h=harness(),db=await h.openPostgres(config); let resume,started;
   const ready=new Promise(resolve=>{started=resolve;});
