@@ -54,3 +54,15 @@ L’étape 19 reste ouverte jusqu’au résultat Linux. La CI de l’étape 20, 
 ## Contrôles locaux disponibles
 
 405 tests généraux réussis, aucun ignoré ou échec, HTTPS inclus. Syntaxe des trois scripts shell et des deux programmes JavaScript, contrat structurel du Compose et chargement des modules vérifiés. Les programmes source/sonde ont aussi exercé les requêtes et comparaisons contre PostgreSQL natif temporaire, avec redirection de leurs seuls chemins synthétiques. Ce contrôle n’a pas recréé de conteneurs et ne prouve pas les montages, droits Linux ou TLS interconteneurs ; ces assertions restent à exécuter dans le scénario complet. Trois cycles de relecture réconciliés ; pas de contrôle externe ou publication automatique.
+
+## Premier essai Linux — 26 octobre 2026
+
+Sortie transmise par l’administrateur pour `31ed51d` : construction réelle de l’image réussie sous Docker Linux, Compose 5.6.0, PostgreSQL démarré, contrôle des journaux et TLS positif/négatif passés. L’import affiche `ready` avec les 22 tables et leurs empreintes. Le scénario s’arrête ensuite sans annonce de démarrage applicatif ; ses seuls conteneur, réseau et volume PostgreSQL de test sont retirés. Ce rapport ne donne pas le code de sortie de la commande d’import et ne démontre pas la cause de l’arrêt. Ni persistance après recréation, ni reprise applicative, ni étape 19 complète ne sont validées.
+
+Le script affiche désormais l’étape active et le code de sortie en cas d’échec, distingue HUP/INT/TERM et annonce le retour 0 de l’import avant de lancer le web. Aucun argument contenant un secret, trace `sh -x` ou journal privé brut n’est demandé. Le nettoyage et les contrôles existants restent en place ; aucune réussite n’est forcée et aucun code d’erreur n’est ignoré. Diagnostic testé avec faux Compose et code d’échec 47, sans accès Docker ; le retrait est toujours refusé si la propriété ou la collecte de journaux échoue. Syntaxe shell recontrôlée. La suite générale de 405 tests ci-dessus précède ce seul ajout de diagnostic.
+
+L’image applicative `manger:pg-test-31ed51d` peut être réutilisée pour le prochain essai, car seuls ce script exclu de l’image et la documentation ont changé. Depuis la racine du dépôt Linux après récupération de la nouvelle révision :
+
+```sh
+sh scripts/test-postgres-image.sh manger:pg-test-31ed51d
+```

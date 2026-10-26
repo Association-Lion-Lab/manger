@@ -19,6 +19,7 @@ export MANGER_CANDIDATE_IMAGE="$image" MANGER_TEST_TOKEN="$token"
 export MANGER_PG_SECRETS_DIR="$work/secrets" MANGER_PG_SOURCE_DIR="$work/source"
 compose() { docker compose --project-name "$project" --file "$repo/compose.postgres.yaml" "$@"; }
 started=0
+stage='préparation du scénario'
 owned() {
   volumes=$(docker volume ls --format '{{.Name}}') || return 1
   networks=$(docker network ls --format '{{.Name}}') || return 1
@@ -43,6 +44,7 @@ owned() {
 cleanup() {
   code=$?
   trap - 0 HUP INT TERM
+  if [ "$code" -ne 0 ]; then echo "Arrêt du scénario : $stage (code $code)." >&2; fi
   if [ "$started" -eq 1 ]; then
     if owned; then
       if [ "$code" -ne 0 ] && ! compose logs --no-color > "$work/compose.log" 2>&1; then
@@ -58,9 +60,12 @@ cleanup() {
   exit "$code"
 }
 trap cleanup 0
-trap 'exit 1' HUP INT TERM
+trap 'echo "Signal HUP reçu." >&2; exit 129' HUP
+trap 'echo "Signal INT reçu." >&2; exit 130' INT
+trap 'echo "Signal TERM reçu." >&2; exit 143' TERM
 echo "Projet de test : $project"
 mkdir "$work/pki" "$work/secrets" "$work/source"
+stage='préparation TLS et secrets de test'
 echo 'Préparation du TLS et des secrets de test.'
 for role in app migration bootstrap; do openssl rand -hex 32 > "$work/secrets/$role-password"; done
 openssl req -x509 -newkey rsa:3072 -nodes -sha256 -days 1 -subj /CN=MangerPostgresTestCA \
@@ -75,11 +80,13 @@ openssl x509 -req -in "$work/pki/server.csr" -CA "$work/secrets/ca.crt" -CAkey "
   -out "$work/secrets/server.crt" >> "$work/tls.log" 2>&1
 # Secret files are bind-mounted individually; their host parents remain 0700.
 chmod 0444 "$work/secrets/"*
+stage='création des copies SQLite synthétiques'
 echo 'Création des seules copies SQLite synthétiques.'
 docker run --rm -i --network none --read-only --tmpfs /tmp --user "$(id -u):$(id -g)" \
   --cap-drop ALL --security-opt no-new-privileges --mount "type=bind,src=$work/source,dst=/source" \
   --entrypoint node "$image" < "$repo/scripts/postgres-test-source.js"
 chmod 0444 "$work/source/manger.db" "$work/source/accounts.db"
+stage='validation Compose et absence de ressources préexistantes'
 compose config --quiet
 volumes=$(docker volume ls --format '{{.Name}}')
 networks=$(docker network ls --format '{{.Name}}')
@@ -91,6 +98,7 @@ for resource in "${project}_backend" "${project}_outbound"; do
 done
 containers=$(compose ps --all --quiet)
 [ -z "$containers" ] || { echo 'Projet déjà présent : refus.' >&2; exit 1; }
+stage='démarrage et santé PostgreSQL'
 started=1
 compose up -d postgres
 wait_healthy() {
@@ -108,6 +116,7 @@ wait_healthy() {
 }
 wait_healthy postgres
 pg=$(compose ps --quiet postgres)
+stage='contrôle du bootstrap et des journaux'
 echo 'Refus du bootstrap répété et contrôle des journaux.'
 if docker exec "$pg" /bin/sh /docker-entrypoint-initdb.d/10-manger.sh > "$work/init-failure.log" 2>&1; then
   echo 'Le bootstrap a réutilisé des rôles existants : refus.' >&2; exit 1
@@ -117,6 +126,7 @@ cat "$work/secrets/app-password" "$work/secrets/migration-password" "$work/secre
 result=0
 grep -F -f "$work/password-patterns" "$work/postgres.log" "$work/init-failure.log" >/dev/null 2>&1 || result=$?
 case "$result" in 1) : ;; 0) echo 'Secret détecté dans un journal, test refusé (valeur masquée).' >&2; exit 1 ;; *) echo 'Contrôle des journaux impossible.' >&2; exit 1 ;; esac
+stage='vérification TLS positive et négative'
 echo 'TLS : réussite normale et refus des CA ou nom incorrects.'
 compose run --rm --no-deps --entrypoint node migrate -e '
 const assert=require("node:assert/strict"),{openPostgres}=require("./db/postgres");
@@ -125,11 +135,18 @@ const db=await openPostgres(config);try{assert.equal((await db.query("SELECT ssl
 await assert.rejects(openPostgres({...config,ssl:{ca:require("node:tls").rootCertificates[0]}}),e=>["SELF_SIGNED_CERT_IN_CHAIN","UNABLE_TO_VERIFY_LEAF_SIGNATURE","UNABLE_TO_GET_ISSUER_CERT_LOCALLY"].includes(e.cause?.code));
 await assert.rejects(openPostgres({...config,host:"postgres-wrong-name"}),e=>e.cause?.code==="ERR_TLS_CERT_ALTNAME_INVALID");
 console.log("TLS vérifié et erreurs d’identité refusées.");})().catch(error=>{console.error("Contrôle TLS refusé :",error.code||"verification",error.cause?.code||"");process.exitCode=1;});'
+stage='commande de transfert des 22 tables'
+echo 'Transfert synthétique des 22 tables.'
 compose run --rm --no-deps migrate import /source/manger.db /source/accounts.db --source-stopped --target-empty
+echo 'Commande de transfert terminée avec le code 0.'
+stage='démarrage et santé de l’application'
+echo 'Démarrage du candidat applicatif.'
 compose up -d app
 wait_healthy app
 app=$(compose ps --quiet app)
+stage='écritures HTTP et sauvegarde synthétiques'
 docker exec -i -e MANGER_PROBE_MODE=write "$app" node < "$repo/scripts/postgres-image-probe.js"
+stage='recréation des deux conteneurs'
 echo 'Recréation réelle des deux conteneurs, volumes conservés.'
 compose stop app postgres
 app_exit=$(docker inspect --format '{{.State.ExitCode}}' "$app")
@@ -140,7 +157,9 @@ wait_healthy postgres
 compose up -d app
 wait_healthy app
 app=$(compose ps --quiet app)
+stage='contrôle de persistance après recréation'
 docker exec -i -e MANGER_PROBE_MODE=verify "$app" node < "$repo/scripts/postgres-image-probe.js"
+stage='coupure et reprise PostgreSQL'
 echo 'Coupure PostgreSQL et reprise du même processus applicatif.'
 started_at=$(docker inspect --format '{{.State.StartedAt}}' "$app")
 compose stop postgres
@@ -150,6 +169,7 @@ wait_healthy postgres
 wait_healthy app
 docker exec "$app" node healthcheck.js
 [ "$(compose ps --quiet app)" = "$app" ] && [ "$(docker inspect --format '{{.State.StartedAt}}' "$app")" = "$started_at" ] || { echo 'Application relancée au lieu de reprendre sa connexion.' >&2; exit 1; }
+stage='refus de migration absente'
 echo 'Refus d’une image amputée de sa migration.'
 result=0
 docker run --rm --network none --user 0 --entrypoint node "$image" -e '
