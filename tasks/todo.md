@@ -243,7 +243,8 @@ Preuve : [instance complète et secours](../docs/POSTGRESQL-INSTANCE.md). 26 oct
 
 ### 19 — Construire et tester l'image PostgreSQL
 
-- [ ] Réalisé.
+- [ ] Réalisé. 19a native terminée, 19b image/Compose Linux encore ouverte.
+- **19a livrée :** [candidat et limites](../docs/POSTGRESQL-CANDIDAT.md). 26 octobre 2026 : étapes 01–18 closes ; 19a (raccordement natif du candidat) réalisée, 19b Docker/Linux encore ouverte. 404 tests généraux et 238 PostgreSQL réels réussis, aucun ignoré, HTTPS inclus ; 28 fichiers et 30 parents PostgreSQL. Commande sans binaires : 30 échecs explicites, zéro succès/ignoré, code 1 attendu. Modules/image et 36 documents/321 liens locaux vérifiés. Trois cycles de relecture réconciliés et parcours navigateur sur vrai PostgreSQL synthétique passé. Aucune donnée réelle déplacée ni publication.
 - **Livrable :** contrôle de build sans base et test réel après construction, Compose candidat volontaire avec volume distinct.
 - **Raccordement des commandes :** utiliser le service `accountCommand` déjà testé en 06 avec un dépôt PostgreSQL ouvert explicitement par la configuration de déploiement, sans repli SQLite ; vérifier les vrais sous-processus CLI sur instance jetable. La garde actuelle refuse volontairement le moteur incomplet avant fichier.
 - **Acceptation :** pas de 5432 hôte/secret embarqué ; santé requêtant réellement les bons schémas et reprise de connexion ; données conservées après recréation des deux conteneurs.

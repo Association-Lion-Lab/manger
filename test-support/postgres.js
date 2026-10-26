@@ -120,7 +120,12 @@ async function postgresFixture(t) {
     for (const item of [pool, migrationPool]) item.on('error', error => connectionErrors.push(error.code || 'CONNECTION_ERROR'));
     await migrationPool.query('REVOKE ALL ON SCHEMA public FROM PUBLIC; GRANT USAGE ON SCHEMA public TO manger_test_app');
     await pool.query('SELECT 1');
-    return { pool, migrationPool, directory, port, start, stop, close, connectionErrors };
+    async function testAsBootstrap(sql,values){
+      await owned();
+      const bootstrap=new Client({...config,user:'manger_test_owner',password:ownerPassword,database:'manger_test'});
+      try{await bootstrap.connect();return await bootstrap.query(sql,values);}finally{await bootstrap.end();}
+    }
+    return { pool, migrationPool, directory, port, start, stop, close, connectionErrors, testAsBootstrap };
   } catch (error) {
     try { await close(); }
     catch (cleanup) { throw new AggregateError([error, cleanup], 'Échec de préparation et de nettoyage PostgreSQL local.'); }

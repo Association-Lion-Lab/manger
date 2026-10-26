@@ -1,5 +1,7 @@
 # Manger!
 
+**Migration PostgreSQL en préparation :** les étapes de sauvegarde et restauration sont testées localement. Le [serveur candidat](docs/POSTGRESQL-CANDIDAT.md) reste soumis à une activation explicite et à la validation Docker/Linux ; les commandes standard ci-dessous conservent SQLite et ses volumes.
+
 > On mange quoi cette semaine ?
 
 Planificateur de repas libre et auto-hébergeable : recettes avec étapes, planning du foyer, assiettes adaptées à chacun, sorties et dates, placard anti-gaspi et courses partagées. Interface pensée d'abord pour le téléphone, avec les onglets Semaine, Recettes, Courses et Compte.

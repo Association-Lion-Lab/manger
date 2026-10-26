@@ -252,7 +252,16 @@ if (require.main === module) {
   (async () => {
     const [command, name] = process.argv.slice(2);
     if (!['create-admin', 'reset-password'].includes(command) || !name) throw new Error('Usage : node accounts.js create-admin|reset-password identifiant');
-    if (storageEngine() === 'postgres') throw new Error('Les commandes PostgreSQL ne sont pas activées au lancement normal tant que la migration est incomplète. Aucune base SQLite ouverte.');
+    if (storageEngine() === 'postgres') {
+      require('./db/readiness').requirePostgresCandidate();
+      const db=await require('./db/postgres').openPostgres(require('./db/config').postgresConfig());
+      try{
+        await require('./db/readiness').checkApplicationStorage(db);
+        const {password}=await accountCommand(require('./db/auth').postgresAuth(db),command,name);
+        console.log(`Identifiant : ${username(name)}\nMot de passe généré : ${password}\nConserve-le dans ton gestionnaire de mots de passe. Ne le partage pas dans les journaux ou captures.`);
+      }finally{await db.close();}
+      return;
+    }
     const normalized = username(name); const db = openAccounts();
     try {
       const { password } = await accountCommand(sqliteAuth(db), command, normalized);

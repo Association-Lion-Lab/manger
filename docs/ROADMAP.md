@@ -353,3 +353,9 @@ Aperçu JSON/ancien SQLite, copie préalable et remplacement des seules données
 26 octobre 2026 : étapes 01–18 closes, cinq restantes ; prochaine 19, candidat et vérification Docker. 404 tests généraux et 231 PostgreSQL réels réussis, aucun ignoré, HTTPS inclus ; 27 fichiers et 29 parents PostgreSQL. Vrais pg_dump/pg_restore sur deux clusters privés, reconnexion HTTP avec compte restauré et commande verify exécutée. Trois cycles de relecture réconciliés, dernier défaut de manifeste corrigé et testé avant connexion. Modules/image contrôlés sans Docker. Aucun serveur personnel, donnée réelle, bascule ou publication.
 
 Archive de confiance, données et métadonnées complètes, ouverture séparée et refus des cibles occupées ou déjà ouvertes. Les rôles/secrets/configurations globaux restent sauvegardés séparément. Les preuves Windows natives ne valent pas validation du candidat Docker/Linux.
+
+## PostgreSQL — 19a native, 19b à vérifier sur Linux
+
+26 octobre 2026 : étapes 01–18 closes ; 19a (raccordement natif du candidat) réalisée, 19b Docker/Linux encore ouverte. 404 tests généraux et 238 PostgreSQL réels réussis, aucun ignoré, HTTPS inclus ; 28 fichiers et 30 parents PostgreSQL. Commande sans binaires : 30 échecs explicites, zéro succès/ignoré, code 1 attendu. Modules/image et 36 documents/321 liens locaux vérifiés. Trois cycles de relecture réconciliés et parcours navigateur sur vrai PostgreSQL synthétique passé. Aucune donnée réelle déplacée ni publication.
+
+Le 26 octobre, l’utilisateur précise que son Linux sert de machine de test et n’héberge pas l’application en exploitation. Ce Linux peut servir aux validations ; aucune deuxième machine imposée. SSH automatique refusé (publickey,password), aucune commande distante exécutée. La préparation Docker sera transmise sous forme de commandes, avec ressources de test propres et anciennes données conservées.

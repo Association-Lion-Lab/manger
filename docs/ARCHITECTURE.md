@@ -153,3 +153,9 @@ Migration002 ajoute état et empreinte de structure. db/structure.js vérifie le
 ## Sauvegarde de l’instance PostgreSQL (étape 18)
 
 `postgres-instance.js` orchestre les archives administratives pg_dump/pg_restore, contrôle et ouverture de la cible séparés. `db/instance-tools.js` isole fichiers de secrets et processus. Les empreintes des 22 tables sont calculées sur PostgreSQL et lues en petits lots ; deux tables de métadonnées et les prochaines identités sont contrôlées séparément. Aucun outil PostgreSQL natif ajouté à l’image applicative, aucun raccordement web à ces commandes. [Contrat et limites](POSTGRESQL-INSTANCE.md).
+
+## Candidat PostgreSQL — 19a
+
+postgres-app.js assemble dépôts, pages partagées/public-http.js, contrôles de préparation/db/readiness.js et protections d’accès. Activation double et explicite, serveur SQLite normal conservé ; l’API synchrone createApp ne devient pas asynchrone. Le point d’entrée choisit le runtime candidat, les commandes locales de comptes partagent les contrôles. Connexions TCP/TLS suivies pour l’arrêt, puis PostgreSQL fermé ; le processus termine enfin les transports sortants. [Preuves et limites](POSTGRESQL-CANDIDAT.md).
+
+26 octobre 2026 : étapes 01–18 closes ; 19a (raccordement natif du candidat) réalisée, 19b Docker/Linux encore ouverte. 404 tests généraux et 238 PostgreSQL réels réussis, aucun ignoré, HTTPS inclus ; 28 fichiers et 30 parents PostgreSQL. Commande sans binaires : 30 échecs explicites, zéro succès/ignoré, code 1 attendu. Modules/image et 36 documents/321 liens locaux vérifiés. Trois cycles de relecture réconciliés et parcours navigateur sur vrai PostgreSQL synthétique passé. Aucune donnée réelle déplacée ni publication.

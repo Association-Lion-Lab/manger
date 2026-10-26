@@ -1,7 +1,7 @@
 const { createServer } = require('node:http');
 const { createServer: createHttpsServer } = require('node:https');
 const { tlsOptions, localCertificate } = require('./tls');
-const { readFileSync, mkdirSync, createReadStream } = require('node:fs');
+const { mkdirSync, createReadStream } = require('node:fs');
 const { mkdtemp, rm, stat } = require('node:fs/promises');
 const { tmpdir } = require('node:os');
 const { pipeline } = require('node:stream/promises');
@@ -30,9 +30,7 @@ const {calculationRoutes}=require('./calculation-http');
 const {sqliteShopping}=require('./db/shopping-sqlite');
 const {shoppingRoutes}=require('./shopping-http');
 const {backupRoutes}=require('./backup-http');
-
-const INDEX_HTML = Buffer.from(readFileSync(join(__dirname, 'public', 'index.html'), 'utf8')
-  .replace('<!-- MANGER_INFORMATION -->', readFileSync(join(__dirname, 'public', 'information.html'), 'utf8')));
+const {publicRoutes}=require('./public-http');
 
 
 function createDatabase(filename,{seedData=true}={}) {
@@ -350,26 +348,7 @@ function createHandler(db) {
         }
         return;
       }
-      const offlineAssets = { '/sw.js': 'text/javascript', '/offline.html': 'text/html', '/manifest.webmanifest': 'application/manifest+json', '/icon.svg': 'image/svg+xml', '/apple-touch-icon.png': 'image/png', '/icon-180.png': 'image/png', '/icon-192.png': 'image/png', '/icon-512.png': 'image/png' };
-      if (request.method === 'GET' && Object.hasOwn(offlineAssets, url.pathname)) {
-        response.writeHead(200, { 'Content-Type': offlineAssets[url.pathname] + '; charset=utf-8', 'Cache-Control': 'no-cache', 'X-Content-Type-Options': 'nosniff' });
-        return response.end(readFileSync(join(__dirname, 'public', url.pathname === '/apple-touch-icon.png' ? 'icon-180.png' : url.pathname.slice(1))));
-      }
-      if (request.method === 'GET' && ['/ui-icons.js', '/tastes.js', '/food-names.js', '/seasons.js', '/offline-recipes.js', '/offline-shopping.js'].includes(url.pathname)) {
-        response.writeHead(200, { 'Content-Type': 'text/javascript; charset=utf-8', 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-cache' });
-        return response.end(readFileSync(join(__dirname, 'public', url.pathname.slice(1))));
-      }
-      if (request.method === 'GET' && url.pathname === '/') {
-        response.writeHead(200, {
-          'Content-Type': 'text/html; charset=utf-8',
-          'Content-Length': INDEX_HTML.length,
-          'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
-          'Referrer-Policy': 'no-referrer',
-          'X-Content-Type-Options': 'nosniff'
-        });
-        response.end(INDEX_HTML);
-        return;
-      }
+      if(publicRoutes(request,response))return;
 
       if (await handleShopping(request,response)) return;
       if (await handleCalculations(request,response)) return;
@@ -443,7 +422,7 @@ function createBusinessHandler(stores){
         }finally{restoring=false;}
       }
       for(const route of routes)if(await route(request,response))return;
-      sendJson(response,503,{error:'Parcours PostgreSQL non porté.'});
+      sendJson(response,404,{error:'Introuvable'});
     }finally{activeRequests--;}
   };
 }
@@ -467,9 +446,19 @@ function createApp(database, accounts, tls = tlsOptions(), mailer = null) {
 }
 
 if (require.main === module) {
-  const port = Number(process.env.MANGER_PORT || 3000);
-  const server = createApp();
-  server.listen(port, '0.0.0.0', () => console.log(`Manger! écoute sur ${server.setSecureContext ? 'https' : 'http'}://localhost:${server.address().port}`));
+  (async()=>{
+    const port=Number(process.env.MANGER_PORT||3000);
+    if(!Number.isInteger(port)||port<0||port>65535)throw new Error('Port invalide.');
+    const runtime=storageEngine()==='postgres'?await require('./postgres-app').createPostgresRuntime():{server:createApp()};
+    const {server}=runtime;
+    if(runtime.close)for(const signal of ['SIGINT','SIGTERM'])process.once(signal,()=>{
+      // HTTP and database work drain first; terminate remaining outbound transports afterwards.
+      runtime.close().then(()=>process.exit(0),()=>{console.error('Arrêt du candidat non confirmé.');process.exit(1);});
+    });
+    server.once('error',()=>{runtime.close?.().catch(()=>{});console.error('Écoute du serveur impossible.');process.exitCode=1;});
+    try{server.listen(port,'0.0.0.0',()=>console.log(`Manger! écoute sur ${server.setSecureContext?'https':'http'}://localhost:${server.address().port}`));}
+    catch(error){await runtime.close?.();throw error;}
+  })().catch(()=>{console.error('Démarrage refusé. Vérifie le moteur, les secrets et la préparation de la base. Aucune base SQLite de repli ouverte.');process.exitCode=1;});
 }
 
 module.exports = { addDays, calendar, createApp, createHouseholdHandler, createRecipeHandler, createMealHandler, createCalculationHandler, createBusinessHandler, createDatabase, dateKey, household, isCompatible, isDietCompatible, isDateKey, recipes, saveRecipe, shoppingList, suggestions, validateMeal, validateMember, validateProtein, validateRecipe };

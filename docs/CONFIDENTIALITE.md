@@ -1,6 +1,6 @@
 # Données et confidentialité d'une instance Manger!
 
-Version technique du **19 octobre 2026**, d'après le code `034311b`.
+Notice initiale du **19 octobre 2026**, d’après le code `034311b` ; précisions techniques du candidat PostgreSQL ajoutées le **26 octobre 2026**.
 
 **Cette notice décrit le logiciel auto-hébergé. Un résumé est accessible dans « Confidentialité et licences », sur Connexion, la page Mon compte et l'onglet Compte. Il ne remplace pas les informations propres à l'administrateur lorsqu'elles sont légalement requises.** Pour le dossier et les actions ouvertes, lire [Conformité France/UE](CONFORMITE.md).
 
@@ -9,6 +9,8 @@ La rubrique est fermée par défaut et se déplie sur place, sans quitter une sa
 ## 1. Où sont les données ?
 
 Chaque administrateur installe et gère son serveur Manger!. Les données du foyer et les accès sont conservés sur ce serveur, pas dans un compte central de l'éditeur. Aucun suivi publicitaire ou envoi de télémétrie à l'éditeur n'a été trouvé dans la version examinée.
+
+**Candidat technique du 26 octobre 2026 :** SQLite reste le choix par défaut. Le candidat PostgreSQL exige une activation explicite ; il conserve les accès dans le schéma `auth` et les données du foyer dans `household`, sur le serveur choisi par l’administrateur. Le tableau ci-dessous décrit les fichiers SQLite par défaut ; ce changement de moteur n’ajoute ni compte central ni destinataire. La validation Docker/Linux de cette migration reste ouverte.
 
 Une instance correspond à un foyer partagé. Les comptes de connexion ne créent pas des espaces privés séparés : les membres invités accèdent aux recettes, personnes, planning, placard et courses du même foyer. La gestion des accès, la sauvegarde complète et la restauration sont réservées aux administrateurs.
 
@@ -56,7 +58,7 @@ Une expiration empêche l'usage d'un accès ; elle ne prouve pas la suppression 
 
 Le code ne fixe pas de durée générale d'effacement pour les comptes, profils, recettes, repas ou sauvegardes. L'administrateur doit organiser la conservation et l'effacement selon son usage et les règles qui lui sont applicables. Ne pas confondre le compte de connexion, un profil de personne et les données partagées qui peuvent mentionner cette personne.
 
-La sauvegarde téléchargée contient les données et photos du foyer dans un fichier SQLite non chiffré par l'application. Elle n'inclut pas `accounts.db`, ne constitue pas une réponse individuelle automatique à une demande d'accès et doit être protégée sur son support. Une restauration et ses copies de récupération peuvent maintenir des versions antérieures ; les intégrer à la politique de conservation.
+La sauvegarde téléchargée contient les données et photos du foyer, non chiffrées par l’application : fichier SQLite avec le moteur par défaut, ou JSON versionné avec le candidat PostgreSQL. Elle exclut les comptes, sessions et invitations, ne constitue pas une réponse individuelle automatique à une demande d’accès et doit être protégée sur son support. L’archive administrative PostgreSQL est distincte : elle comprend aussi les accès et métadonnées, et reste réservée à l’exploitant. Une restauration et ses copies de récupération peuvent maintenir des versions antérieures ; les intégrer à la politique de conservation.
 
 ## 6. Information à compléter pour une instance soumise au RGPD
 
