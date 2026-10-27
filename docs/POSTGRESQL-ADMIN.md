@@ -359,6 +359,8 @@ L’administrateur transmet l’exécution de `7298c0e` avec `--test-data-only`,
 
 Prochaine preuve : connexion et parcours sur Safari/iPhone à l’URL LAN habituelle, notamment ajout d’un repas et courses ; icône/export peuvent être vérifiés ensuite. Ce retour ne prouve pas à lui seul la recette appareil, un redémarrage de l’hôte, une restauration privée dispensée, la CI20b ou la résolution des deux tests d’image groupés locaux. Aucun accès distant, donnée privée ou nouveau test exécuté par l’agent pour enregistrer ce résultat. Étape23 : bascule serveur acquise, recette appareil encore ouverte.
 
+**Confirmation iPhone reçue ensuite le27octobre :** en réponse aux trois vérifications demandées, l’utilisateur confirme la connexion avec son compte, l’ajout d’un repas et les courses correspondantes. La bascule et ces parcours essentiels sur appareil sont désormais validés. Pas de nouvel essai à demander pour ces trois points ; photos, export/restauration, icône et redémarrage hôte après bascule ne sont pas déduits de ce retour limité. La CI et les deux contrôles d’image groupés restent distincts, sans nouvelle suite ou intervention distante de l’agent.
+
 ### Cas général : données SQLite à conserver
 
 1. Choisir un nouveau projet final `manger-postgres-instance` et son nouveau dossier privé ; refaire la préparation, jamais recycler une cible de répétition déjà importée. Arrêter l’ancienne application et tous les écrivains, puis refaire la copie complète des deux bases dans le nouveau dossier. **Ne pas relancer SQLite à la fin de cette copie finale.**

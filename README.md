@@ -1,6 +1,6 @@
 # Manger!
 
-**Migration PostgreSQL explicite :** candidat, restauration complète et HTTPS validés sous Docker Linux ; import sur copie privée puis [mise en service LAN confirmée par l’administrateur](docs/POSTGRESQL-ADMIN.md#bascule-linux-confirmée--27-octobre-2026), recette iPhone encore attendue. Le guide distingue les données à conserver du cas autorisé après anciennes données de test. Les commandes standard ci-dessous conservent SQLite et ses volumes. Une instance passée à PostgreSQL utilise les fichiers, le projet et la procédure de maintenance du guide PostgreSQL ; aucune conversion implicite.
+**Migration PostgreSQL explicite :** candidat, restauration complète et HTTPS validés sous Docker Linux ; import sur copie privée puis [mise en service LAN confirmée par l’administrateur](docs/POSTGRESQL-ADMIN.md#bascule-linux-confirmée--27-octobre-2026). Connexion, ajout d’un repas et courses confirmés sur iPhone. Le guide distingue les données à conserver du cas autorisé après anciennes données de test. Les commandes standard ci-dessous conservent SQLite et ses volumes. Une instance passée à PostgreSQL utilise les fichiers, le projet et la procédure de maintenance du guide PostgreSQL ; aucune conversion implicite.
 
 > On mange quoi cette semaine ?
 

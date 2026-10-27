@@ -1,6 +1,6 @@
 # Construction et déploiement Docker
 
-**Instance déjà passée à PostgreSQL :** utiliser les deux fichiers Compose PostgreSQL, son fichier privé et son nom de projet explicite selon le [guide administrateur et sa maintenance](POSTGRESQL-ADMIN.md#9-mise-à-jour-et-entretien). Les commandes standard de ce document ciblent SQLite. La [bascule Linux après anciennes données de test est confirmée](POSTGRESQL-ADMIN.md#bascule-linux-confirmée--27-octobre-2026) : mêmes volumes du projet validé, ancien SQLite arrêté/conservé. La recette iPhone reste distincte et attendue.
+**Instance déjà passée à PostgreSQL :** utiliser les deux fichiers Compose PostgreSQL, son fichier privé et son nom de projet explicite selon le [guide administrateur et sa maintenance](POSTGRESQL-ADMIN.md#9-mise-à-jour-et-entretien). Les commandes standard de ce document ciblent SQLite. La [bascule Linux après anciennes données de test est confirmée](POSTGRESQL-ADMIN.md#bascule-linux-confirmée--27-octobre-2026) : mêmes volumes du projet validé, ancien SQLite arrêté/conservé. Connexion, ajout d’un repas et courses ont ensuite été confirmés sur iPhone ; les autres parcours ne sont pas déduits de ce retour.
 
 ## Socle PostgreSQL de développement — 22 octobre 2026
 
