@@ -163,3 +163,9 @@ postgres-app.js assemble dépôts, pages partagées/public-http.js, contrôles d
 ## Scénario Docker candidat (26 octobre 2026)
 
 `compose.postgres.yaml` définit un projet autonome : PostgreSQL privé avec TLS, application sans secret propriétaire et service de migration réservé au profil maintenance. `docker/` contient les deux scripts de bootstrap montés depuis le dépôt ; ce dossier et `scripts/` sont exclus du contexte applicatif. `scripts/test-postgres-image.sh` crée ses seuls volumes, réseaux, secrets et sources synthétiques, sonde par HTTP interne puis vérifie leur propriété avant nettoyage. Le Compose SQLite et ses volumes restent inchangés. [Commande et preuve Docker encore attendue](POSTGRESQL-DOCKER.md).
+
+## Profil d’exploitation PostgreSQL préparatoire — 27 octobre 2026
+
+Le [guide administrateur](POSTGRESQL-ADMIN.md) s’appuie sur `compose.postgres.yaml` et l’overlay explicite `compose.postgres.instance.yaml`. Backend PostgreSQL privé, runtime/volumes distincts de SQLite, secrets de rôle séparés, HTTPS web avec ses trois fichiers montés et image d’outils séparée pour les commandes d’instance. Le Compose standard reste SQLite ; ni `docker compose up` habituel ni une mise à jour Git ne bascule le moteur.
+
+Le test optionnel `--admin-https` charge cet overlay dans un projet synthétique étiqueté, sur127.0.0.1/port temporaire ; il vérifie le web source en HTTPS et son cookieSecure. Le secours de restauration conserve le profil HTTP interne déjà testé, sans port hôte. La preuve native TLS/CA et le rendu Compose n’attestent pas encore l’exécution Linux de cet overlay ou la recette d’une installation réelle.

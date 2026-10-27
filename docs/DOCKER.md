@@ -123,3 +123,7 @@ Le lancement Docker standard reste SQLite. Ne pas transformer cette preuve nativ
 ## Résultat Linux 19b — 26 octobre 2026
 
 Le scénario candidat a depuis été exécuté avec succès par l’administrateur : image `31ed51d`, script `b9a3ba4`, TLS et transfert, recréation des deux conteneurs avec persistance des tables/photos/session/identités, panne/reprise sans relance web, migration absente refusée et nettoyage propre. [Preuve synthétique et limites](POSTGRESQL-DOCKER.md#résultat-final-linux--étape-19-close). Étape 19 close ; cette réussite ne constitue ni une bascule de l’instance courante ni une exécution de la CI Codeberg.
+
+## Profil administrateur HTTPS — préparation du 27 octobre
+
+`compose.postgres.instance.yaml` se combine explicitement avec `compose.postgres.yaml`, dans un projet et dossier privés distincts de SQLite. Il ajoute HTTPS natif par secrets web, redémarrage persistant et bind local par défaut ; le service `instance` de sauvegarde/restauration reste réservé au profil `maintenance`. Les volumes et le moteur standards ne changent pas. Le [guide administrateur](POSTGRESQL-ADMIN.md) contient la procédure complète et ses prérequis, dont certificats permanents, copies figées et politique de sauvegarde privée. Le scénario synthétique `--admin-https` essaie ce profil avec un port local temporaire ; il ne vaut pas bascule réelle ou validation Safari.

@@ -1,0 +1,39 @@
+{
+  "name":"manger-postgres-instance",
+  "services": {
+    "postgres":{"restart":"unless-stopped"},
+    "app": {
+      "restart":"unless-stopped",
+      "environment": {
+        "MANGER_TLS_CERT":"/run/secrets/web_tls_cert",
+        "MANGER_TLS_KEY":"/run/secrets/web_tls_key",
+        "MANGER_TLS_CA":"/run/secrets/web_tls_ca",
+        "MANGER_SMTP_HOST":"${MANGER_SMTP_HOST:-}", "MANGER_SMTP_PORT":"${MANGER_SMTP_PORT:-587}",
+        "MANGER_SMTP_FROM":"${MANGER_SMTP_FROM:-}", "MANGER_SMTP_USER":"${MANGER_SMTP_USER:-}",
+        "MANGER_SMTP_PASSWORD":"${MANGER_SMTP_PASSWORD:-}", "MANGER_APP_URL":"${MANGER_APP_URL:-}"
+      },
+      "secrets":["web_tls_cert","web_tls_key","web_tls_ca"],
+      "ports":["${MANGER_INSTANCE_BIND_ADDRESS:-127.0.0.1}:${MANGER_INSTANCE_PORT:-3000}:3000"]
+    },
+    "instance": {
+      "image":"${MANGER_POSTGRES_TOOLS_IMAGE:?Image outils requise}",
+      "profiles":["maintenance"],
+      "user":"${MANGER_MAINTENANCE_UID:-1000}:${MANGER_MAINTENANCE_GID:-1000}",
+      "entrypoint":["node","postgres-instance.js"],
+      "environment": {
+        "MANGER_PG_HOST":"postgres", "MANGER_PG_PORT":"5432", "MANGER_PG_DATABASE":"manger", "MANGER_PG_USER":"manger_app",
+        "MANGER_PG_MIGRATION_USER":"manger_migrator", "MANGER_PG_MIGRATION_PASSWORD_FILE":"/run/secrets/pg_migration_password",
+        "MANGER_PG_TLS":"verify-full", "MANGER_PG_CA_FILE":"/run/secrets/pg_ca"
+      },
+      "secrets":["pg_migration_password","pg_ca"],
+      "volumes":[{"type":"bind","source":"${MANGER_PG_ARCHIVE_DIR:?Dossier archives privé requis}","target":"/archives","bind":{"create_host_path":false}}],
+      "networks":["backend"],"read_only":true,"tmpfs":["/tmp"],"cap_drop":["ALL"],"security_opt":["no-new-privileges:true"],"init":true,
+      "labels":{"org.manger.role":"maintenance"}
+    }
+  },
+  "secrets": {
+    "web_tls_cert":{"file":"${MANGER_WEB_TLS_DIR:?Certificats web existants requis}/server.crt"},
+    "web_tls_key":{"file":"${MANGER_WEB_TLS_DIR:?Certificats web existants requis}/server.key"},
+    "web_tls_ca":{"file":"${MANGER_WEB_TLS_DIR:?Certificats web existants requis}/ca.crt"}
+  }
+}

@@ -1,6 +1,6 @@
 # Manger!
 
-**Migration PostgreSQL en préparation :** les étapes de sauvegarde et restauration sont testées localement. Le [serveur candidat](docs/POSTGRESQL-CANDIDAT.md) reste soumis à une activation explicite et à la validation Docker/Linux ; les commandes standard ci-dessous conservent SQLite et ses volumes.
+**Migration PostgreSQL en préparation :** le candidat et sa restauration complète ont été testés sur des données synthétiques sous Docker Linux. Le [guide administrateur préparatoire](docs/POSTGRESQL-ADMIN.md) décrit le profil HTTPS distinct, les sauvegardes et la bascule volontaire ; son nouveau profil permanent attend sa propre validation Linux. Les commandes standard ci-dessous conservent SQLite et ses volumes. Aucune conversion de données privées n’est implicite.
 
 > On mange quoi cette semaine ?
 

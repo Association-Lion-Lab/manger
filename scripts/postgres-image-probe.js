@@ -3,6 +3,8 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
 const {decodeHousehold}=require('./household-backup');
 const {verifyMigration}=require('./migration-verify');
 let base='http://127.0.0.1:3000';
+const https=process.env.MANGER_PROBE_HTTPS==='1';
+if(https)base=base.replace(/^http:/,'https:');
 const mode=process.env.MANGER_PROBE_MODE;
 let cookie;
 async function request(path,method='GET',value,headers={}){
@@ -47,7 +49,7 @@ async function sqliteReturn(){
 (async()=>{
   if(mode==='sqlite-return'){await sqliteReturn();return;}
   assert.ok(['write','verify','recovered'].includes(mode));assert.notEqual(process.getuid(),0);
-  assert.deepEqual(fs.readdirSync('/run/secrets').sort(),['pg_app_password','pg_ca']);
+  assert.deepEqual(fs.readdirSync('/run/secrets').sort(),['pg_app_password','pg_ca',...(https?['web_tls_ca','web_tls_cert','web_tls_key']:[])]);
   for(const name of ['scripts','docker','test-support','.test-tools','.forgejo'])assert.equal(fs.existsSync('/app/'+name),false,name);
   for(const file of ['/data/manger.db','/data/accounts.db'])assert.equal(fs.existsSync(file),false);
   assert.equal((await request('/api/household')).status,401);assert.equal((await request('/api/health')).status,200);
@@ -63,6 +65,7 @@ async function sqliteReturn(){
   }
   if(mode==='write'){
     const login=await request('/api/account/login','POST',{username:'admin',password:'manger-synthetic-image-password'});assert.equal(login.status,200);cookie=login.headers.get('set-cookie').split(';')[0];await login.arrayBuffer();
+    if(https)assert.match(login.headers.get('set-cookie'),/; Secure(?:;|$)/);
     const page=await request('/');assert.equal(page.status,200);assert.match(await page.text(),/Manger/);
     const recipe=await data('/api/recipes','POST',{title:'Témoin de persistance Docker',minutes:12,servings:1,diet:'vegan',tags:['japon'],photo:'data:image/jpeg;base64,/9j/2Q==',ingredients:[{name:'carotte',unit:'g',amount:123.125,preparation:'cooked'}],steps:[{kind:'prep',instruction:'Donnée synthétique Docker.',minutes:1}]},201);
     await data(`/api/recipes/${recipe.id}/favorite`,'PUT',{favorite:true});

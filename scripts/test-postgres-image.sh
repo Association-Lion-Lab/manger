@@ -2,10 +2,12 @@
 # Only fresh, labelled test resources. Never replace an existing Compose service.
 set -eu
 umask 077
-image=${1:?Usage: sh scripts/test-postgres-image.sh image-candidate [image-outils]}
-[ "$#" -le 2 ] || exit 1
+image=${1:?Usage: sh scripts/test-postgres-image.sh image-candidate [image-outils [--admin-https]]}
+[ "$#" -le 3 ] || exit 1
 tools_image=${2:-}
-if [ "$#" -eq 2 ]; then [ -n "$tools_image" ] || exit 1; fi
+admin_https=${3:-}
+if [ "$#" -ge 2 ]; then [ -n "$tools_image" ] || exit 1; fi
+if [ "$#" -eq 3 ]; then [ "$admin_https" = --admin-https ] || exit 1; fi
 [ "$(uname -s)" = Linux ] || { echo 'Ce scénario exige Docker Linux.' >&2; exit 1; }
 command -v openssl >/dev/null
 [ "$(docker info --format '{{.OSType}}')" = linux ] || exit 1
@@ -22,10 +24,22 @@ export MANGER_CANDIDATE_IMAGE="$image" MANGER_TEST_TOKEN="$token"
 export MANGER_PG_SECRETS_DIR="$work/secrets" MANGER_PG_SOURCE_DIR="$work/source"
 export MANGER_POSTGRES_TOOLS_IMAGE="$tools_image" MANGER_PG_ARCHIVE_DIR="$work/archives"
 export MANGER_TEST_UID="$(id -u)" MANGER_TEST_GID="$(id -g)"
+export MANGER_MAINTENANCE_UID="$MANGER_TEST_UID" MANGER_MAINTENANCE_GID="$MANGER_TEST_GID"
+export MANGER_WEB_TLS_DIR="$work/secrets" MANGER_INSTANCE_BIND_ADDRESS=127.0.0.1 MANGER_INSTANCE_PORT=0
+# Explicit empty values override any private SMTP settings in the repository's .env.
+export MANGER_SMTP_HOST='' MANGER_SMTP_FROM='' MANGER_SMTP_USER='' MANGER_SMTP_PASSWORD='' MANGER_APP_URL=''
+export MANGER_SMTP_PORT=587
 compose() {
-  if [ -n "$tools_image" ]; then
+  if [ -n "$admin_https" ]; then
+    docker compose --project-name "$project" --file "$repo/compose.postgres.yaml" --file "$repo/compose.postgres.instance.yaml" --file "$repo/compose.postgres-rehearsal.yaml" --profile instance-rehearsal "$@"
+  elif [ -n "$tools_image" ]; then
     docker compose --project-name "$project" --file "$repo/compose.postgres.yaml" --file "$repo/compose.postgres-rehearsal.yaml" --profile instance-rehearsal "$@"
   else docker compose --project-name "$project" --file "$repo/compose.postgres.yaml" "$@"; fi
+}
+probe_source() {
+  if [ -n "$admin_https" ]; then
+    docker exec -i -e MANGER_PROBE_MODE="$1" -e MANGER_PROBE_HTTPS=1 -e NODE_EXTRA_CA_CERTS=/run/secrets/web_tls_ca "$app" node < "$repo/scripts/postgres-image-probe.js"
+  else docker exec -i -e MANGER_PROBE_MODE="$1" "$app" node < "$repo/scripts/postgres-image-probe.js"; fi
 }
 instance() { host=$1; shift; compose run --rm --no-deps -T -e MANGER_PG_HOST="$host" instance "$@"; }
 instance_status() {
@@ -183,7 +197,7 @@ if [ -n "$tools_image" ]; then
   wait_healthy app
 fi
 stage='écritures HTTP et sauvegarde synthétiques'
-docker exec -i -e MANGER_PROBE_MODE=write "$app" node < "$repo/scripts/postgres-image-probe.js"
+probe_source write
 stage='recréation des deux conteneurs'
 echo 'Recréation réelle des deux conteneurs, volumes conservés.'
 compose stop app postgres
@@ -196,7 +210,7 @@ compose up -d app
 wait_healthy app
 app=$(compose ps --quiet app)
 stage='contrôle de persistance après recréation'
-docker exec -i -e MANGER_PROBE_MODE=verify "$app" node < "$repo/scripts/postgres-image-probe.js"
+probe_source verify
 stage='coupure et reprise PostgreSQL'
 echo 'Coupure PostgreSQL et reprise du même processus applicatif.'
 started_at=$(docker inspect --format '{{.State.StartedAt}}' "$app")
@@ -244,3 +258,4 @@ const fs=require("node:fs");fs.renameSync("/app/db/migrations/003-household-rest
 try{require("./image-check").checkImage();}catch(error){if(error.code!=="MODULE_NOT_FOUND"||!error.message.includes("003-household-restore"))throw error;console.log("missing-migration-detected");process.exitCode=42;}' > "$work/missing.log" 2>&1 || result=$?
 [ "$result" = 42 ] && grep -q 'missing-migration-detected' "$work/missing.log" || { echo 'Échec différent du module manquant attendu.' >&2; exit 1; }
 echo 'Candidat vérifié : TLS, transfert, accès, photos, persistance, panne/reprise et image.'
+if [ -n "$admin_https" ]; then echo 'Profil administrateur HTTPS vérifié sur port local temporaire ; aucune bascule.'; fi

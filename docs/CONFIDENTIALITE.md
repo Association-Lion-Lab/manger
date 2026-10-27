@@ -73,3 +73,7 @@ Avant une collecte concernée, l'administrateur doit compléter et rendre access
 L'identité de cet administrateur et ses prestataires ne sont pas connus de l'éditeur à partir du code distribué. Ce document ne publie donc pas de coordonnées fictives et ne désigne pas arbitrairement une association ou une personne comme responsable de toutes les instances.
 
 Source : [CNIL — information et transparence](https://www.cnil.fr/fr/conformite-rgpd-information-des-personnes-et-transparence). Le fonctionnement constaté doit être réexaminé après toute modification du code, de l'hébergement ou des services connectés.
+
+## Profil PostgreSQL privé préparatoire — 27 octobre 2026
+
+Le [guide administrateur](POSTGRESQL-ADMIN.md) prévoit un dossier privé hors dépôt contenant copies SQLite figées, secrets/configuration, clé d’autorité interne et archives d’instance ; les fichiers de récupération du volume runtime sont copiés séparément. Ces données ne sont pas chiffrées par Manger! et ne sont pas supprimées automatiquement à la fin d’une migration ou mise à jour. Les clés web existantes restent séparées des clés PostgreSQL ; seuls les fichiers nécessaires sont montés par service. Leur protection, sauvegarde externe et durée de conservation doivent suivre les choix de l’exploitant. Le profil ne collecte pas de nouveau renseignement dans l’interface et sa préparation n’atteste aucune migration ou installation réelle.

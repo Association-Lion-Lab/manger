@@ -38,6 +38,8 @@ npm test
 
 ## Docker
 
+Le [guide administrateur PostgreSQL préparatoire](POSTGRESQL-ADMIN.md) concerne une instance distincte et une future bascule volontaire. Les commandes de cette section restent celles de SQLite ; ne pas ajouter son flag PostgreSQL au service existant ou utiliser les ressources jetables de test comme installation permanente.
+
 Voir [la procédure de construction et déploiement](DOCKER.md) pour le contrôle des modules, les tests d'image, les sauvegardes incluant les comptes et le retour arrière. La commande rapide ci-dessous convient à une installation neuve ; pour une installation existante, construire et tester avant de remplacer le service.
 
 ```shell
