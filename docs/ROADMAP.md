@@ -369,3 +369,5 @@ Le 26 octobre, l’utilisateur précise que son Linux sert de machine de test et
 ## PostgreSQL — reprise du 27 octobre 2026
 
 Sonde de retour aux copies SQLite ajoutée au scénario Docker avant ses écritures PostgreSQL : compte/session, sauvegarde HTTP, 18 tables, intégrité et empreintes contrôlées nativement. Sources montées read-only, copies privées inscriptibles, aucun port ou volume habituel utilisé. [Exécution Linux de l’extension à confirmer](POSTGRESQL-REPETITION.md#reprise-du-27-octobre--contrôle-docker-du-retour-aux-copies-sqlite) ; réussite antérieure de19 conservée sans fermer20b/21/22/23 ni annoncer une bascule réelle.
+
+Résultat reçu le même jour : [extension Linux réussie jusqu’au nettoyage](POSTGRESQL-REPETITION.md#résultat-linux-du-27-octobre--retour-aux-copies-confirmé), scénario `de077a7` sur image `31ed51d`. Retour aux copies SQLite et reprise PostgreSQL attestés ; les autres critères de21 et les étapes20b/22/23 restent ouverts. Aucune donnée réelle transférée ou nouvelle suite locale exécutée pour ce compte rendu.

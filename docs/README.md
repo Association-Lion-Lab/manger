@@ -108,3 +108,5 @@ Lors d'une modification, actualise le guide ou les fonctionnalités concernés ;
 [Répétition de migration](POSTGRESQL-REPETITION.md) : préparation 21a sur copies synthétiques natives, pannes, ancien serveur SQLite et secours récent, mesures locales et procédure privée ; activation CI, commutation de volumes et guide Linux restent à valider séparément.
 
 **Reprise du 27 octobre :** [sonde Docker de retour aux copies SQLite](POSTGRESQL-REPETITION.md#reprise-du-27-octobre--contrôle-docker-du-retour-aux-copies-sqlite) ajoutée avant nouvelles écritures PostgreSQL. Compte/session, sauvegarde HTTP, 18 tables et sources inchangées vérifiés nativement ; nouvelle exécution Linux à rapporter, sans bascule réelle ni activation CI.
+
+**Résultat Linux reçu le 27 octobre :** [scénario étendu terminé avec succès](POSTGRESQL-REPETITION.md#résultat-linux-du-27-octobre--retour-aux-copies-confirmé) sur `de077a7` et l’image `manger:pg-test-31ed51d`, retour SQLite puis reprise PostgreSQL et nettoyage inclus. Ce point ne nécessite plus de nouvel essai ; restauration administrative Linux, CI20b, guide22 et bascule réelle restent distincts.
