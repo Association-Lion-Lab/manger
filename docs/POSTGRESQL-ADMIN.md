@@ -322,6 +322,37 @@ En cas de perte de réponse ou erreur de restauration, ne pas rejouer `restore`.
 
 Cette section est un plan opérateur à valider après la répétition privée, les mesures et les prérequis de livraison ; **ne pas l’exécuter simplement parce que le code a été récupéré**. La CI n’est pas déclarée active. Conserver l’ancien volume, l’image réellement utilisée et les configurations/TLS ; ne jamais confondre un tag nouvellement reconstruit avec l’image actuellement fonctionnelle.
 
+### Cas autorisé : anciennes données uniquement de test
+
+Le27octobre, l’administrateur précise que les anciennes données sont des essais sans contenu à récupérer et autorise la mise en service du PostgreSQL déjà validé. Cette dérogation évite une nouvelle copie/import et la restauration privée historique ; elle ne déclare pas ces contrôles réalisés et ne s’applique pas à une migration de données importantes. **Les comptes et données actuels de PostgreSQL sont conservés**, sans suppression, création ou réinitialisation de compte.
+
+Sur le Linux déjà préparé, pour l’adresse LAN indiquée et après vérification qu’elle est toujours celle du serveur :
+
+```sh
+(
+  set -eu
+  cd ~/services/manger
+  git diff --quiet
+  git diff --cached --quiet
+  git pull --ff-only origin development
+  bash scripts/promote-postgres-test-instance.sh 192.168.1.31 --test-data-only
+)
+```
+
+Le script exige que le conteneur SQLite soit celui enregistré par la répétition, avec les bonnes étiquettes/moteur, que l’adresse privée soit réellement locale et que le certificat existant la couvre. Configuration ambiante neutralisée pour les paramètres enregistrés dans le fichier privé, puis chemins des sources/secrets/archives/TLS fixés. Le projet garde le nom `manger-postgres-validation` et ses volumes actuels : changer ce nom créerait une autre cible vide. L’adresse bind est cette seule IP LAN, port3000, avec URL applicative HTTPS correspondante ; SMTP reste désactivé selon la copie. Aucun port PostgreSQL publié.
+
+Avant d’arrêter SQLite, le web PostgreSQL local est arrêté et une **nouvelle archive complète** est créée dans `archives/before-lan`, puis vérifiée contre22tables. Elle inclut une éventuelle réinitialisation du mot de passe de la copie, contrairement à l’archive initiale. L’ancien `instance.env` et les journaux sont conservés dans `promotion/`, créé exclusivement. Ensuite : arrêt explicite de SQLite et confirmation de cet arrêt, remplacement du fichier env préparé, recréation du seul web PostgreSQL avec attente de santé. Le cluster, les volumes, les mots de passe et les certificats ne sont pas recréés.
+
+Le succès affiche l’URL HTTPS habituelle à vérifier sur Safari/iPhone : compte existant, recettes, ajout d’un repas et courses. L’ancien tunnel vers le port privé aléatoire n’est plus l’accès courant. Il faut confirmer la recette sur appareil avant de déclarer23 close ; la CI reste sans runner. La commande n’a pas encore été exécutée sur Linux pour cette bascule, même si l’import et les profils précédents ont réussi.
+
+En cas d’erreur, les fichiers et volumes restent en place. **Ne pas relancer le script et ne pas redémarrer SQLite aveuglément** : l’ouverture LAN, même suivie d’une erreur de santé, peut déjà avoir reçu des écritures PostgreSQL. Aucun retour automatique n’est lancé ; déterminer d’abord quels services tournent et si PostgreSQL a reçu des écritures. Un refus pendant la première archive laisse le web privé arrêté mais ne stoppe pas SQLite. HUP/INT/TERM affichent le stade d’arrêt ; une coupure/SIGKILL ne peut exécuter ce diagnostic.
+
+Après succès, administrer cette instance avec les fichiers `compose.postgres.yaml` et `compose.postgres.instance.yaml`, le fichier privé et le nom de projet explicite ; le Compose SQLite standard n’est pas devenu un Compose PostgreSQL. Lire la section9 pour les futures mises à jour. L’ancien conteneur/volume reste conservé et arrêté, sans nettoyage automatique.
+
+Vérifications locales de cette commande :14 scénarios fictifs réussis, relecture indépendante sans constat, vrai rendu Compose5.6.0 confirmant port/URL/secrets/volumes. **La suite générale reste partiellement en échec** sur ce PC :413/415 au dernier passage groupé, deux contrôles d’image ; fichier image isolé13/13 et comptes16/16 réussis sans modification des tests. [Détails et limite](DECISIONS.md#27-octobre2026--mise-en-service-autorisée-après-données-de-test). La commande ne construit pas d’image et réutilise celles déjà validées sur Linux ; pas de succès de CI ou de bascule distante déduit de ces contrôles locaux.
+
+### Cas général : données SQLite à conserver
+
 1. Choisir un nouveau projet final `manger-postgres-instance` et son nouveau dossier privé ; refaire la préparation, jamais recycler une cible de répétition déjà importée. Arrêter l’ancienne application et tous les écrivains, puis refaire la copie complète des deux bases dans le nouveau dossier. **Ne pas relancer SQLite à la fin de cette copie finale.**
 2. Analyser puis importer ces copies figées, vérifier les 22 tables et conserver une archive administrative de référence avant ouverture. Un `ready` manquant interdit de lancer le web.
 3. Dans `instance.env`, mettre l’adresse LAN/VPN et le port correspondant exactement à l’ancienne URL, généralement 3000 ; conserver le même schéma HTTPS et les certificats web approuvés. Renseigner les paramètres SMTP privés retenus et la bonne URL applicative. Aucune ouverture de 5432 ou port public supplémentaire.

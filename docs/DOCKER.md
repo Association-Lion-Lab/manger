@@ -1,5 +1,7 @@
 # Construction et déploiement Docker
 
+**Instance déjà passée à PostgreSQL :** utiliser les deux fichiers Compose PostgreSQL, son fichier privé et son nom de projet explicite selon le [guide administrateur et sa maintenance](POSTGRESQL-ADMIN.md#9-mise-à-jour-et-entretien). Les commandes standard de ce document ciblent SQLite. La [promotion après anciennes données de test](POSTGRESQL-ADMIN.md#cas-autorisé--anciennes-données-uniquement-de-test) conserve les volumes du projet validé ; sa préparation ne prouve pas encore la bascule Linux ou la recette iPhone.
+
 ## Socle PostgreSQL de développement — 22 octobre 2026
 
 Le moteur de l'application reste SQLite et Compose/volumes sont inchangés. `pg@8.23.1` est maintenant une dépendance de production verrouillée : ne pas le retirer avec les outils de test. Les notices de dépendances dans `public/third-party-notices.txt` sont incluses par la règle publique existante, sans assouplir `.dockerignore`. `image-check.js` charge aussi récursivement `db/` et exige le module PostgreSQL et les notices, sans ouvrir de connexion PostgreSQL. Les tests retirent les modules/notices d'une copie temporaire et injectent un nouveau module `db/` pour vérifier le refus. Réinstallation npm de production et contrôle local réussis ; pas de construction Docker disponible localement, ces preuves ne remplacent pas le test Linux ci-dessous. Ne pas configurer `MANGER_STORAGE=postgres` : candidat incomplet refusé avant toute base/écoute jusqu'au portage métier et au lot de déploiement.
