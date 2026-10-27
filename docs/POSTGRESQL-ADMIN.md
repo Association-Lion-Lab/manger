@@ -28,6 +28,14 @@ Le projet séparé `manger-postgres-validation` a ses propres volumes/secrets et
 
 **Ne pas relancer la commande en supprimant le dossier ou les volumes après une erreur** : tous les fichiers sont conservés pour diagnostic/reprise ; une importation au résultat incertain ne doit pas être répétée aveuglément. Ne transmettre que les lignes finales non sensibles ou le message d’arrêt du script, jamais le contenu du dossier privé. Ce premier passage ne restaure pas encore cette archive privée sur un second cluster, n’active pas la CI et ne valide pas Safari. L’exécution sur données privées par l’administrateur reste à rapporter ; les tests locaux avec faux Docker ne la démontrent pas.
 
+### Résultat privé reçu le 27 octobre 2026
+
+L’administrateur a exécuté `c150934` avec les deux images indiquées. Le message final confirme l’analyse/import avec comparaison des **22 tables**, l’archive vérifiée, la copie SQLite figée conservée et la santé du web privé ; le script n’affiche ce résultat qu’après ces contrôles. La source SQLite a retrouvé son état initial avant import. Mesures affichées : **2 secondes pour copie/reprise**, **1 seconde pour import**. Ni durée totale (certificats, provisionnement, archive et web inclus), ni espace disque privé ne sont fournis par cette sortie.
+
+Le port retourné est lié à127.0.0.1 et au projet distinct `manger-postgres-validation` ; ce n’est pas une nouvelle URL LAN/iPhone. Pour une vérification visuelle depuis un PC, utiliser une redirection SSH locale vers le port retourné, sans changer les ports Compose. Se connecter à cette copie avec le compte existant ; les modifications de cette copie restent dans PostgreSQL, pas dans SQLite. Fermer le tunnel ne supprime ni la copie ni ses volumes. Toute archive antérieure aux nouvelles écritures doit ensuite être remplacée par une référence récente pour les contrôles de restauration.
+
+L’import privé et la première archive disposent désormais de leur preuve Linux. Aucune base ou clé n’a été transmise à l’agent. Restauration de l’archive privée sur secours, espace mesuré, recette utilisateur/appareil, activation CI20b et bascule23 restent distincts ; l’instance habituelle reste SQLite. Ne pas relancer l’import réussi.
+
 ## 1. Configuration et images
 
 Trois usages restent distincts :

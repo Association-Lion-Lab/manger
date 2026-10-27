@@ -150,3 +150,9 @@ Le résultat final « Reprise complète vérifiée » est présent, suivi du ref
 Mesures affichées : **17 secondes** pour le parcours de secours chronométré (provisionnement du second cluster, restauration, contrôles, ouverture et HTTP), et **260 Kio alloués** au dossier contenant les deux archives selon `du -sk`. Ce n’est ni la durée totale du scénario, ni l’espace logique exact des dumps, ni le pic disque des clusters/images, ni une mesure de maintenance sur les données privées.
 
 Le build client Alpine, les montages, le TLS interconteneurs et la restauration administrative Linux disposent désormais de leur preuve. Les notes précédentes d’attente décrivent la préparation historique. Aucun besoin de rejouer ce point acquis ; la CI20b reste sans runner, la répétition/procédure privée et l’acceptation finale21 restent distinctes, puis le guide22 et la bascule volontaire23. Aucune installation habituelle ou donnée réelle basculée et aucune validation appareil revendiquée.
+
+## Import privé Linux confirmé le 27 octobre 2026
+
+Le résultat transmis par l’administrateur pour `c150934` confirme la [commande assistée](POSTGRESQL-ADMIN.md#résultat-privé-reçu-le-27-octobre-2026) : copie complète arrêtée et reprise de la source SQLite, import comparant22tables, archive vérifiée et santé web du projet séparé. Copies, secrets et rapports restent uniquement sur son Linux ; aucune base ou clé transmise au dépôt/runner/agent. Mesures2s pour copie/reprise et1s pour import, sans durée totale ou espace privé dans cette sortie. Le port HTTPS retourné est local au serveur.
+
+Ce sous-parcours privé est acquis ; ne pas rejouer l’import. L’instance officielle reste SQLite. Restauration de cette archive privée sur secours et mesures disque complètes encore à rapporter ; aucune recette navigateur/iPhone, bascule23 ou activation20b déduite du succès. Les prochaines écritures dans la copie imposent une archive récente pour les comparaisons ultérieures.
