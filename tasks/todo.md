@@ -290,7 +290,7 @@ Preuve : [instance complète et secours](../docs/POSTGRESQL-INSTANCE.md). 26 oct
 ### 22 — Finaliser le guide administrateur
 
 - [ ] Réalisé.
-- **22a préparée le27octobre :** [guide administrateur](../docs/POSTGRESQL-ADMIN.md), profil HTTPS permanent séparé, outils maintenance et commandes privées d’import/archive/secours ; contrats et rendu Compose réels, source HTTPS native avec CA/cookie sécurisé. Test Linux dédié `--admin-https` et répétition privée du guide encore requis : ne pas clore22,21 ou20b sur ces préparations. Aucun service existant basculé.
+- **22a préparée, profil Linux confirmé le27octobre :** [guide administrateur](../docs/POSTGRESQL-ADMIN.md), profil HTTPS permanent séparé, outils maintenance et commandes privées d’import/archive/secours. [Scénario `36c5c8f` réussi sur Linux](../docs/POSTGRESQL-ADMIN.md#résultat-linux-du-profil-https--27-octobre-2026), source HTTPS/CA/cookie, restauration et nettoyage inclus ; pas de relance de ce point. Répétition privée et acceptation du guide encore distinctes, ne pas clore22/21/20b avant leurs critères. Aucun service existant basculé.
 - **Livrable :** commandes exactes testées pour nouvelle installation, mise à jour, sauvegarde, reprise et diagnostic ; notes de version expliquant le changement.
 - **Acceptation :** ancien volume/configuration conservés, choix moteur non implicite ; règle avant/après réouverture lisible ; stockage/confidentialité actualisés sans affirmer une conformité générale.
 - **Vérification :** exécution du guide sur environnement Linux jetable depuis la révision livrable ; liens vérifiés et secrets absents des exemples.

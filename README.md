@@ -1,6 +1,6 @@
 # Manger!
 
-**Migration PostgreSQL en préparation :** le candidat et sa restauration complète ont été testés sur des données synthétiques sous Docker Linux. Le [guide administrateur préparatoire](docs/POSTGRESQL-ADMIN.md) décrit le profil HTTPS distinct, les sauvegardes et la bascule volontaire ; son nouveau profil permanent attend sa propre validation Linux. Les commandes standard ci-dessous conservent SQLite et ses volumes. Aucune conversion de données privées n’est implicite.
+**Migration PostgreSQL en préparation :** le candidat, sa restauration complète et son profil HTTPS ont été testés sur des données synthétiques sous Docker Linux. Le [guide administrateur préparatoire](docs/POSTGRESQL-ADMIN.md) décrit l’installation distincte, les sauvegardes et la bascule volontaire ; sa procédure privée et la recette finale restent à réaliser. Les commandes standard ci-dessous conservent SQLite et ses volumes. Aucune conversion de données privées n’est implicite.
 
 > On mange quoi cette semaine ?
 
