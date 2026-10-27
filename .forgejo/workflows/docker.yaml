@@ -26,6 +26,10 @@
           "run":"set -eu\nif [ \"$CI_STORAGE\" = postgres ]; then\n  node -e 'const p=process.env.MANGER_TEST_PG_BIN; if (!p || !require(\"node:path\").isAbsolute(p) || process.getuid()===0) { console.error(\"PostgreSQL CI exige un compte non root et MANGER_TEST_PG_BIN absolu.\"); process.exit(1); } for (const name of [\"initdb\",\"pg_ctl\",\"postgres\",\"pg_dump\",\"pg_restore\"]) require(\"node:fs\").accessSync(require(\"node:path\").join(p,name),require(\"node:fs\").constants.X_OK);'\nfi"
         },
         {
+          "name":"Check private rehearsal safeguards with fake Docker",
+          "run":"set -eu\nif [ \"$CI_STORAGE\" = sqlite ]; then\n  node --test test-support/private-rehearsal.integration.cjs\nfi"
+        },
+        {
           "name":"Run the selected storage suite without fallback",
           "run":"set -eu\ncase \"$CI_STORAGE\" in\n  sqlite) npm test ;;\n  postgres) npm run test:postgres ;;\n  *) echo 'Moteur CI inconnu : refus.' >&2; exit 1 ;;\nesac"
         }

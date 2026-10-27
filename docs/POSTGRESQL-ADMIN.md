@@ -4,6 +4,30 @@
 
 Les blocs sont destinés à l’administrateur, depuis `~/services/manger`, sur Linux avec Docker/Compose et OpenSSL. Aucun Node ou PostgreSQL hôte n’est nécessaire. Ne pas publier les fichiers privés, archives ou sorties de création de compte. Aucun `down --volumes`, nettoyage global, remplacement de l’ancien volume ou `git reset` n’est nécessaire.
 
+## Commande assistée sur copie privée
+
+Pour le Linux où les deux images ci-dessous ont déjà réussi les scénarios synthétiques, cette commande automatise les préparatifs, la copie, l’import et la première archive des sections2–6. **Elle ne fait pas la bascule23** et ne remplace pas le contrôle du résultat par l’administrateur.
+
+```sh
+(
+  set -eu
+  cd ~/services/manger
+  git diff --quiet
+  git diff --cached --quiet
+  git pull --ff-only origin development
+  bash scripts/rehearse-private-postgres.sh \
+    manger:pg-test-31ed51d manger:pg-tools-31530b0
+)
+```
+
+Le script exige Linux, Docker/Compose et OpenSSL, les images déjà présentes et les trois certificats web existants dans `tls/server`. Il identifie le conteneur `manger-manger-1`, ses étiquettes Compose `manger` et son moteur SQLite ; il refuse les ressources d’une répétition déjà présente. Ne pas l’utiliser avec une source déjà migrée ou un autre nom de projet. Aucun nouveau build ni accès SSH par l’agent.
+
+Le dossier **`~/services/manger-postgres-validation-private`**, créé exclusivement avec permissions privées, conserve la copie complète de `/data`, l’identité/image du conteneur, les configurations existantes et TLS, les nouveaux secrets PostgreSQL, rapports, journaux, archive et mesures. Les bases sont copiées conteneur arrêté ; s’il était actif, il est relancé et sa santé contrôlée **avant l’analyse/import**. S’il était initialement arrêté, il reste arrêté. En cas d’échec ordinaire ou signal HUP/INT/TERM, la reprise d’une source arrêtée par ce script est retentée ; une reprise impossible est signalée explicitement. Cela ne garantit pas le redémarrage après coupure de courant, arrêt du daemon ou SIGKILL : vérifier alors `docker start manger-manger-1`, puis `docker inspect --format '{{.State.Health.Status}}' manger-manger-1` avant toute poursuite.
+
+Le projet séparé `manger-postgres-validation` a ses propres volumes/secrets et un port HTTPS aléatoire **sur127.0.0.1 uniquement**, affiché à la fin. SMTP neutralisé, aucun compte créé ou réinitialisé. Analyse en lecture seule, comparaison de22tables par l’importeur existant, archive puis vérification avant démarrage du web privé ; empreintes des copies SQLite contrôlées à nouveau. Les mesures distinguent copie/reprise et import, sans promesse de durée de bascule. L’ancien volume et l’instance SQLite habituelle restent en place et officiels.
+
+**Ne pas relancer la commande en supprimant le dossier ou les volumes après une erreur** : tous les fichiers sont conservés pour diagnostic/reprise ; une importation au résultat incertain ne doit pas être répétée aveuglément. Ne transmettre que les lignes finales non sensibles ou le message d’arrêt du script, jamais le contenu du dossier privé. Ce premier passage ne restaure pas encore cette archive privée sur un second cluster, n’active pas la CI et ne valide pas Safari. L’exécution sur données privées par l’administrateur reste à rapporter ; les tests locaux avec faux Docker ne la démontrent pas.
+
 ## 1. Configuration et images
 
 Trois usages restent distincts :
