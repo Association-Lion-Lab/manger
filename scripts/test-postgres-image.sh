@@ -2,13 +2,16 @@
 # Only fresh, labelled test resources. Never replace an existing Compose service.
 set -eu
 umask 077
-image=${1:?Usage: sh scripts/test-postgres-image.sh image-candidate}
-[ "$#" -eq 1 ] || exit 1
+image=${1:?Usage: sh scripts/test-postgres-image.sh image-candidate [image-outils]}
+[ "$#" -le 2 ] || exit 1
+tools_image=${2:-}
+if [ "$#" -eq 2 ]; then [ -n "$tools_image" ] || exit 1; fi
 [ "$(uname -s)" = Linux ] || { echo 'Ce scénario exige Docker Linux.' >&2; exit 1; }
 command -v openssl >/dev/null
 [ "$(docker info --format '{{.OSType}}')" = linux ] || exit 1
 docker compose version
 docker image inspect "$image" >/dev/null
+if [ -n "$tools_image" ]; then docker image inspect "$tools_image" >/dev/null; fi
 repo=$(CDPATH= cd "$(dirname "$0")/.." && pwd -P)
 parent=$(CDPATH= cd "${TMPDIR:-/tmp}" && pwd -P)
 work=$(mktemp -d "$parent/manger-pg-test.XXXXXX")
@@ -17,13 +20,26 @@ token=$(openssl rand -hex 16)
 printf '%s' "$token" > "$work/.owner"
 export MANGER_CANDIDATE_IMAGE="$image" MANGER_TEST_TOKEN="$token"
 export MANGER_PG_SECRETS_DIR="$work/secrets" MANGER_PG_SOURCE_DIR="$work/source"
-compose() { docker compose --project-name "$project" --file "$repo/compose.postgres.yaml" "$@"; }
+export MANGER_POSTGRES_TOOLS_IMAGE="$tools_image" MANGER_PG_ARCHIVE_DIR="$work/archives"
+export MANGER_TEST_UID="$(id -u)" MANGER_TEST_GID="$(id -g)"
+compose() {
+  if [ -n "$tools_image" ]; then
+    docker compose --project-name "$project" --file "$repo/compose.postgres.yaml" --file "$repo/compose.postgres-rehearsal.yaml" --profile instance-rehearsal "$@"
+  else docker compose --project-name "$project" --file "$repo/compose.postgres.yaml" "$@"; fi
+}
+instance() { host=$1; shift; compose run --rm --no-deps -T -e MANGER_PG_HOST="$host" instance "$@"; }
+instance_status() {
+  expected=$1; shift
+  instance "$@" > "$work/instance-result.json"
+  grep -Fq "\"status\":\"$expected\"" "$work/instance-result.json" || { echo 'État administrateur inattendu.' >&2; return 1; }
+  cat "$work/instance-result.json"
+}
 started=0
 stage='préparation du scénario'
 owned() {
   volumes=$(docker volume ls --format '{{.Name}}') || return 1
   networks=$(docker network ls --format '{{.Name}}') || return 1
-  for volume in "${project}_postgres-data" "${project}_runtime-data"; do
+  for volume in "${project}_postgres-data" "${project}_runtime-data" "${project}_recovery-data" "${project}_recovery-runtime"; do
     if printf '%s\n' "$volumes" | grep -Fxq "$volume"; then
       saved=$(docker volume inspect --format '{{index .Labels "org.manger.test-token"}}' "$volume") || return 1
       [ "$saved" = "$token" ] || return 1
@@ -64,7 +80,7 @@ trap 'echo "Signal HUP reçu." >&2; exit 129' HUP
 trap 'echo "Signal INT reçu." >&2; exit 130' INT
 trap 'echo "Signal TERM reçu." >&2; exit 143' TERM
 echo "Projet de test : $project"
-mkdir "$work/pki" "$work/secrets" "$work/source"
+mkdir "$work/pki" "$work/secrets" "$work/source" "$work/archives"
 stage='préparation TLS et secrets de test'
 echo 'Préparation du TLS et des secrets de test.'
 for role in app migration bootstrap; do openssl rand -hex 32 > "$work/secrets/$role-password"; done
@@ -74,7 +90,7 @@ openssl req -x509 -newkey rsa:3072 -nodes -sha256 -days 1 -subj /CN=MangerPostgr
 openssl req -new -newkey rsa:2048 -nodes -sha256 -subj /CN=postgres \
   -keyout "$work/secrets/server.key" -out "$work/pki/server.csr" >> "$work/tls.log" 2>&1
 printf '%s\n' 'basicConstraints=critical,CA:FALSE' 'keyUsage=critical,digitalSignature,keyEncipherment' \
-  'extendedKeyUsage=serverAuth' 'subjectAltName=DNS:postgres,DNS:localhost,IP:127.0.0.1' > "$work/pki/server.ext"
+  'extendedKeyUsage=serverAuth' 'subjectAltName=DNS:postgres,DNS:postgres-recovery,DNS:localhost,IP:127.0.0.1' > "$work/pki/server.ext"
 openssl x509 -req -in "$work/pki/server.csr" -CA "$work/secrets/ca.crt" -CAkey "$work/pki/ca.key" \
   -set_serial "0x$(openssl rand -hex 16)" -days 1 -sha256 -extfile "$work/pki/server.ext" \
   -out "$work/secrets/server.crt" >> "$work/tls.log" 2>&1
@@ -90,7 +106,7 @@ stage='validation Compose et absence de ressources préexistantes'
 compose config --quiet
 volumes=$(docker volume ls --format '{{.Name}}')
 networks=$(docker network ls --format '{{.Name}}')
-for resource in "${project}_postgres-data" "${project}_runtime-data"; do
+for resource in "${project}_postgres-data" "${project}_runtime-data" "${project}_recovery-data" "${project}_recovery-runtime"; do
   if printf '%s\n' "$volumes" | grep -Fxq "$resource"; then echo 'Volume déjà présent : refus.' >&2; exit 1; fi
 done
 for resource in "${project}_backend" "${project}_outbound"; do
@@ -157,6 +173,15 @@ compose start postgres
 wait_healthy postgres
 compose start app
 wait_healthy app
+if [ -n "$tools_image" ]; then
+  stage='archive administrative avant les nouvelles écritures'
+  compose stop app
+  [ "$(docker inspect --format '{{.State.ExitCode}}' "$app")" = 0 ] || exit 1
+  instance_status backed-up postgres backup /archives/before-writes
+  instance_status verified-open postgres verify /archives/before-writes
+  compose start app
+  wait_healthy app
+fi
 stage='écritures HTTP et sauvegarde synthétiques'
 docker exec -i -e MANGER_PROBE_MODE=write "$app" node < "$repo/scripts/postgres-image-probe.js"
 stage='recréation des deux conteneurs'
@@ -182,6 +207,35 @@ wait_healthy postgres
 wait_healthy app
 docker exec "$app" node healthcheck.js
 [ "$(compose ps --quiet app)" = "$app" ] && [ "$(docker inspect --format '{{.State.StartedAt}}' "$app")" = "$started_at" ] || { echo 'Application relancée au lieu de reprendre sa connexion.' >&2; exit 1; }
+if [ -n "$tools_image" ]; then
+  stage='refus de l’ancienne référence et archive récente'
+  echo 'Archive complète : refus de la référence ancienne après nouvelles écritures.'
+  compose stop app
+  [ "$(docker inspect --format '{{.State.ExitCode}}' "$app")" = 0 ] || exit 1
+  result=0
+  instance postgres verify /archives/before-writes > "$work/old-archive-refusal.log" 2>&1 || result=$?
+  [ "$result" = 1 ] && grep -Fq MANGER_INSTANCE_MISMATCH "$work/old-archive-refusal.log" || { echo 'Refus différent de la divergence attendue.' >&2; exit 1; }
+  instance_status backed-up postgres backup /archives/after-writes
+  instance_status verified-open postgres verify /archives/after-writes
+  stage='restauration complète vers le secours neuf'
+  recovery_started=$(date +%s)
+  compose up -d postgres-recovery
+  wait_healthy postgres-recovery
+  instance_status verified-closed postgres-recovery restore /archives/after-writes --trusted-backup --target-empty --writers-stopped
+  instance_status verified-closed postgres-recovery verify /archives/after-writes
+  compose run --rm --no-deps -T --entrypoint node app-recovery -e '
+const assert=require("node:assert/strict");
+(async()=>{await assert.rejects(require("./db/postgres").openPostgres(require("./db/config").postgresConfig(process.env)),{code:"42501"});console.log("Accès applicatif fermé avant ouverture explicite.");})().catch(()=>{console.error("Fermeture du secours non confirmée.");process.exitCode=1;});'
+  stage='ouverture du secours et vérification HTTP'
+  instance_status ready postgres-recovery open /archives/after-writes --writers-stopped
+  compose up -d app-recovery
+  wait_healthy app-recovery
+  recovery_app=$(compose ps --quiet app-recovery)
+  docker exec -i -e MANGER_PROBE_MODE=recovered "$recovery_app" node < "$repo/scripts/postgres-image-probe.js"
+  instance_status verified-open postgres verify /archives/after-writes
+  echo "Reprise complète vérifiée : 22 tables, session, photos et nouvelle identité ; source conservée. Durée secours synthétique : $(($(date +%s) - recovery_started)) s."
+  du -sk "$work/archives"
+fi
 stage='refus de migration absente'
 echo 'Refus d’une image amputée de sa migration.'
 result=0

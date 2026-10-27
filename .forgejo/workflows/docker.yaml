@@ -52,8 +52,8 @@
           "run":"set -eu\ndocker compose -f compose.yaml config --quiet\ndocker compose -f compose.yaml -f compose.https.yaml config --quiet\nnode scripts/check-docker-context.js"
         },
         {
-          "name":"Build once and require both storage scenarios",
-          "run":"set -eu\ndocker build --pull -t \"$CI_IMAGE\" .\nsh scripts/test-docker.sh \"$CI_IMAGE\"\nsh scripts/test-postgres-image.sh \"$CI_IMAGE\""
+          "name":"Build candidate and tools, require both storage scenarios and recovery",
+          "run":"set -eu\ndocker build --pull -t \"$CI_IMAGE\" .\ndocker build --build-arg MANGER_CANDIDATE_IMAGE=\"$CI_IMAGE\" -f docker/postgres-tools.Dockerfile -t \"$CI_IMAGE-tools\" .\nsh scripts/test-docker.sh \"$CI_IMAGE\"\nsh scripts/test-postgres-image.sh \"$CI_IMAGE\" \"$CI_IMAGE-tools\""
         }
       ]
     }

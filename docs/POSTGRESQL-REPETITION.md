@@ -91,3 +91,50 @@ Sortie complète transmise par l’administrateur : dépôt mis à jour sur `de0
 La suite du scénario réussit également : suppression/recréation des deux conteneurs en conservant leurs volumes, contrôle des 18 tables du foyer, photos, session et prochaine identité, coupure/reprise PostgreSQL sur le même processus applicatif et refus de migration manquante. TLS positif/négatif et bootstrap répété refusé passent. Le message final « Candidat vérifié » et le nettoyage des deux conteneurs, deux volumes et deux réseaux synthétiques sont présents, sans message d’arrêt en erreur.
 
 Cette sortie confirme donc l’extension sur Docker Linux, y compris l’ouverture des copies privées issues de sources en lecture seule. La source Docker contient une session mais aucune photo au moment du retour SQLite ; les photos sont exercées ensuite dans PostgreSQL. Ce n’est pas une preuve de retour d’un volume privé, d’archive administrative complète restaurée sous Linux, de dimensionnement sur les données réelles ou de bascule. La restauration native de l’archive récente reste la preuve distincte de 21a. CI 20b, acceptation finale 21, guide Linux 22 et bascule 23 demeurent ouverts.
+
+## Restauration Docker complète — préparation du 27 octobre
+
+Le second argument facultatif de `scripts/test-postgres-image.sh` choisit une **image d’outils séparée**, construite avec `docker/postgres-tools.Dockerfile` à partir du même candidat. Sans cet argument, le scénario déjà réussi conserve son périmètre. Avec lui, le script ajoute `compose.postgres-rehearsal.yaml` et son profil `instance-rehearsal`. Aucun Node.js ou PostgreSQL n’est à installer sur l’hôte Ubuntu ; les outils sont dans les conteneurs.
+
+### Contrat du scénario étendu
+
+1. Arrêter l’application avant ses nouvelles écritures, sauvegarder les 22 tables et métadonnées avec `postgres-instance.js`, puis vérifier l’archive initiale. Reprendre les écritures synthétiques et les contrôles de persistance existants.
+2. Arrêter à nouveau l’application. Exiger le refus précis `MANGER_INSTANCE_MISMATCH` de l’ancienne référence ; créer et vérifier une archive récente. Aucun écrivain applicatif de la source ne reprend ensuite pendant la comparaison.
+3. Initialiser un second PostgreSQL neuf sur le volume distinct `recovery-data`, puis restaurer l’archive récente avec les trois confirmations administratives. Vérifier l’état `verified-closed` et un vrai refus applicatif `42501` avant ouverture explicite.
+4. Ouvrir le secours, démarrer `app-recovery` avec son propre volume `recovery-runtime`, retrouver la session importée et créer une recette avec une identité supérieure aux précédentes. Vérifier que la source correspond toujours à l’archive récente après cette écriture sur le secours.
+5. Exiger tous les contrôles historiques et nettoyer seulement les ressources étiquetées de ce projet. Rapporter les secondes du parcours de secours synthétique et l’espace des archives ; ce ne sont ni le pic d’espace global, ni une estimation de maintenance réelle.
+
+La source et le secours sont deux clusters indépendants avec de nouveaux rôles portant les mêmes noms. Dans **ce seul test**, ils réutilisent les mêmes secrets synthétiques de rôles et le certificat de test, dont les SAN couvrent les deux noms de services. L’image applicative ne monte toujours que son mot de passe et la CA ; le conteneur d’outils reçoit le mot de passe migrateur et la CA. Aucun mot de passe de rôle, certificat, clé privée ou configuration d’exploitant n’est contenu dans l’archive d’instance. Le dossier d’archives est privé, non chiffré et supprimé à la fin d’un test réussi ; ce n’est pas la procédure de conservation d’une vraie sauvegarde.
+
+### Construire les outils et exécuter sur le Linux de test
+
+Après publication autorisée sur `development`, depuis le même Linux et avec l’image candidate déjà vérifiée :
+
+```sh
+(
+  set -eu
+  cd ~/services/manger
+  git diff --quiet
+  git diff --cached --quiet
+  git pull --ff-only origin development
+  candidate_image=manger:pg-test-31ed51d
+  tools_image="manger:pg-tools-$(git rev-parse --short HEAD)"
+  docker build --build-arg MANGER_CANDIDATE_IMAGE="$candidate_image" \
+    -f docker/postgres-tools.Dockerfile -t "$tools_image" .
+  sh scripts/test-postgres-image.sh "$candidate_image" "$tools_image"
+)
+```
+
+Le paquet `postgresql18-client` doit être disponible dans les dépôts Alpine déjà déclarés dans l’image candidate ; le build vérifie la version majeure18 de `pg_dump` et `pg_restore`. Il n’ajoute pas de dépôt edge ou de paquet serveur. Si le paquet est absent ou si le build échoue, le bloc s’arrête avant le scénario : conserver l’erreur pour diagnostic, ne pas contourner les contrôles. Pour une image candidate absente, suivre d’abord sa construction isolée dans [POSTGRESQL-DOCKER.md](POSTGRESQL-DOCKER.md#exécuter-le-scénario). Le tag et le Compose de l’installation habituelle restent inchangés.
+
+### Validation disponible et limites
+
+`test-support/postgres-image-recovery.integration.cjs` réutilise les programmes source/sondes de l’image sur deux vrais PostgreSQL natifs temporaires : archive ancienne refusée, récente restaurée, connexion fermée puis ouverte, session et nouvelle identité par HTTP, source conservée. Seuls les chemins de fichiers, le port HTTP et les assertions propres au conteneur sont adaptés au harnais ; ce test ne prouve pas le montage Docker, le client Alpine ou l’exécution Linux. Il est intégré à la commande PostgreSQL complète. Les tests de configuration vérifient l’isolation prévue et le fait que le Dockerfile web reste sans outils.
+
+Le véritable exécutable Compose5.6.0 Windows, téléchargé de la publication officielle avec son SHA256 vérifié, a rendu la configuration fusionnée sans moteur Docker. Les volumes source/secours et runtime sont effectivement différents, les secrets web et outils séparés, le réseau backend privé et aucun port hôte déclaré. Cela vérifie la sémantique `extends`, sans construire d’image ou créer de conteneur. L’exécutable et les sorties restent dans les outils locaux ignorés, sans installation système.
+
+La CI préparée construit désormais les deux images et exige ce parcours complet après les deux suites de moteurs ; elle reste inactive tant qu’aucun runner n’est configuré. Le résultat de la nouvelle exécution Linux reste à transmettre. Les étapes20b,21 finale,22 et23 restent ouvertes ; aucun test sur données personnelles ou appareil et aucune bascule réelle.
+
+Sources vérifiées le 27 octobre : [paquet client18 Alpine3.23](https://pkgs.alpinelinux.org/package/v3.23/main/x86_64/postgresql18-client), [chemins des exécutables](https://pkgs.alpinelinux.org/contents?arch=x86_64&branch=v3.23&name=postgresql18-client&repo=main), [fusion `extends` et volumes par cible](https://docs.docker.com/reference/compose-file/services/#extends), [Compose5.6.0 officiel](https://github.com/docker/compose/releases/tag/v5.6.0), [pg_dump18 et limites de l’archive](https://www.postgresql.org/docs/18/app-pgdump.html).
+
+Validation finale de cette préparation : **413 tests généraux et244 PostgreSQL réussis sans échec ou ignoré, HTTPS inclus**. Trente fichiers et32 parents PostgreSQL ; outils absents :32 échecs explicites, aucun succès/ignoré, code1 attendu. Faux Docker sur le bloc réel : erreur de restauration47, divergence non spécifique et mauvais état fermé bloquent la réouverture. Ancien parcours sans second argument et règles de nettoyage conservés. Ces preuves locales n’exécutent pas le client Alpine ou les conteneurs.

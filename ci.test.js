@@ -10,6 +10,8 @@ test('CI : deux moteurs requis avant la construction et les deux scénarios Dock
   assert.match(commands,/MANGER_TEST_PG_BIN/);
   const docker=image.steps.map(s=>s.run||'').join('\n');
   for(const required of ['npm audit --omit=dev --audit-level=high','node scripts/check-docker-context.js','docker build --pull','sh scripts/test-docker.sh','sh scripts/test-postgres-image.sh'])assert.ok(docker.includes(required),required);
+  assert.ok(docker.includes('docker/postgres-tools.Dockerfile'));
+  assert.ok(docker.includes('sh scripts/test-postgres-image.sh "$CI_IMAGE" "$CI_IMAGE-tools"'));
 });
 
 test('CI : erreurs bloquantes, checkout figé et aucun déploiement ou artefact privé',()=>{

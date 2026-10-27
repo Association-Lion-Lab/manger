@@ -1,0 +1,36 @@
+{
+  "services": {
+    "postgres-recovery": {
+      "extends":{"file":"compose.postgres.yaml","service":"postgres"},
+      "profiles":["instance-rehearsal"],
+      "volumes":[{"type":"volume","source":"recovery-data","target":"/var/lib/postgresql"}]
+    },
+    "app-recovery": {
+      "extends":{"file":"compose.postgres.yaml","service":"app"},
+      "profiles":["instance-rehearsal"],
+      "environment":{"MANGER_PG_HOST":"postgres-recovery"},
+      "volumes":[{"type":"volume","source":"recovery-runtime","target":"/data"}],
+      "depends_on":{"postgres-recovery":{"condition":"service_healthy"}}
+    },
+    "instance": {
+      "image":"${MANGER_POSTGRES_TOOLS_IMAGE:?Image outils de test requise}",
+      "profiles":["instance-rehearsal"],
+      "user":"${MANGER_TEST_UID:-1000}:${MANGER_TEST_GID:-1000}",
+      "entrypoint":["node","postgres-instance.js"],
+      "environment": {
+        "MANGER_PG_HOST":"postgres", "MANGER_PG_PORT":"5432", "MANGER_PG_DATABASE":"manger", "MANGER_PG_USER":"manger_app",
+        "MANGER_PG_MIGRATION_USER":"manger_migrator", "MANGER_PG_MIGRATION_PASSWORD_FILE":"/run/secrets/pg_migration_password",
+        "MANGER_PG_TLS":"verify-full", "MANGER_PG_CA_FILE":"/run/secrets/pg_ca"
+      },
+      "secrets":["pg_migration_password","pg_ca"],
+      "volumes":[{"type":"bind","source":"${MANGER_PG_ARCHIVE_DIR:?Dossier archives privé requis}","target":"/archives","bind":{"create_host_path":false}}],
+      "networks":["backend"],
+      "read_only":true,"tmpfs":["/tmp"],"cap_drop":["ALL"],"security_opt":["no-new-privileges:true"],"init":true,
+      "labels":{"org.manger.test-token":"${MANGER_TEST_TOKEN:-manual}"}
+    }
+  },
+  "volumes": {
+    "recovery-data":{"labels":{"org.manger.test-token":"${MANGER_TEST_TOKEN:-manual}"}},
+    "recovery-runtime":{"labels":{"org.manger.test-token":"${MANGER_TEST_TOKEN:-manual}"}}
+  }
+}

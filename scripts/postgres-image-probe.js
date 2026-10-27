@@ -46,11 +46,21 @@ async function sqliteReturn(){
 }
 (async()=>{
   if(mode==='sqlite-return'){await sqliteReturn();return;}
-  assert.ok(['write','verify'].includes(mode));assert.notEqual(process.getuid(),0);
+  assert.ok(['write','verify','recovered'].includes(mode));assert.notEqual(process.getuid(),0);
   assert.deepEqual(fs.readdirSync('/run/secrets').sort(),['pg_app_password','pg_ca']);
   for(const name of ['scripts','docker','test-support','.test-tools','.forgejo'])assert.equal(fs.existsSync('/app/'+name),false,name);
   for(const file of ['/data/manger.db','/data/accounts.db'])assert.equal(fs.existsSync(file),false);
   assert.equal((await request('/api/household')).status,401);assert.equal((await request('/api/health')).status,200);
+  if(mode==='recovered'){
+    cookie='manger_session='+'c'.repeat(64);
+    assert.equal((await data('/api/account')).username,'admin');
+    const week=await data('/api/week?start=2026-10-19');
+    assert.ok(week.recipes.some(recipe=>recipe.title==='Témoin de persistance Docker'));
+    assert.ok(week.recipes.some(recipe=>recipe.title==='Après recréation Docker'));
+    const next=await data('/api/recipes','POST',{title:'Après restauration complète Docker',minutes:1,servings:1,diet:'vegan',tags:[],ingredients:[{name:'riz',unit:'g',amount:1}],steps:[{kind:'prep',instruction:'Identité après restauration complète.',minutes:1}]},201);
+    assert.ok(next.id>Math.max(...week.recipes.map(recipe=>recipe.id)));
+    console.log('Secours restauré vérifié par HTTP : session et nouvelle identité.');return;
+  }
   if(mode==='write'){
     const login=await request('/api/account/login','POST',{username:'admin',password:'manger-synthetic-image-password'});assert.equal(login.status,200);cookie=login.headers.get('set-cookie').split(';')[0];await login.arrayBuffer();
     const page=await request('/');assert.equal(page.status,200);assert.match(await page.text(),/Manger/);
