@@ -106,3 +106,5 @@ Lors d'une modification, actualise le guide ou les fonctionnalités concernés ;
 [CI PostgreSQL](POSTGRESQL-CI.md) : matrice et scénarios Docker préparés, activation et première exécution Forgejo à confirmer sur un exécuteur dédié ; l’utilisateur n’en a pas configuré. Le test Linux manuel réussi ne remplace pas cette preuve.
 
 [Répétition de migration](POSTGRESQL-REPETITION.md) : préparation 21a sur copies synthétiques natives, pannes, ancien serveur SQLite et secours récent, mesures locales et procédure privée ; activation CI, commutation de volumes et guide Linux restent à valider séparément.
+
+**Reprise du 27 octobre :** [sonde Docker de retour aux copies SQLite](POSTGRESQL-REPETITION.md#reprise-du-27-octobre--contrôle-docker-du-retour-aux-copies-sqlite) ajoutée avant nouvelles écritures PostgreSQL. Compte/session, sauvegarde HTTP, 18 tables et sources inchangées vérifiés nativement ; nouvelle exécution Linux à rapporter, sans bascule réelle ni activation CI.

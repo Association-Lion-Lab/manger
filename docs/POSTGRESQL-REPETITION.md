@@ -50,3 +50,36 @@ Le premier essai de mesure disque a dépassé le délai d’une seconde de la co
 Résultat final : **407 tests généraux et 243 tests PostgreSQL réussis, aucun échec ou ignoré**, HTTPS inclus. La commande PostgreSQL contient 29 fichiers et 31 parents ; sans binaires, 31 échecs explicites, zéro succès/ignoré et code 1 attendu. Le premier passage complet avait échoué à la synchronisation disque d’un initdb temporaire ; après réussite du fichier isolé, la suite complète relancée seule passe, sans seuil modifié. Les détails restent dans les décisions.
 
 La préparation native 21a est réalisée ; les mesures ci-dessus restent un exemple de fixture, pas une mesure du serveur de l’utilisateur. Les étapes 20b, 21 finale, 22 et 23 restent ouvertes jusqu’aux preuves correspondantes. Arrêt demandé pour la soirée : aucun lancement en arrière-plan ou reprise automatique ; prochaine reprise depuis ce point.
+
+## Reprise du 27 octobre — contrôle Docker du retour aux copies SQLite
+
+Le scénario `scripts/test-postgres-image.sh` ajoute un contrôle avant ses nouvelles écritures HTTP PostgreSQL. Après le premier démarrage sain du candidat, il arrête l’application et PostgreSQL, exige un arrêt applicatif propre et exécute la sonde `sqlite-return` dans un conteneur temporaire séparé. Les deux sources synthétiques sont montées en lecture seule ; seule une copie privée dans `/tmp` est ouverte en écriture. Le conteneur n’a ni port publié, ni accès aux volumes PostgreSQL ou à l’installation habituelle.
+
+La sonde vérifie la santé HTTP du vrai serveur SQLite, le refus d’un accès anonyme, la session `admin` de test conservée, les 18 tables du foyer via une sauvegarde SQLite téléchargée, l’intégrité des deux copies et les empreintes inchangées des deux sources. Le profil réseau `none` garde seulement la boucle locale, ce qui permet cette sonde HTTP interne ([documentation Docker](https://docs.docker.com/engine/network/drivers/none/)). L’écoute utilise un port temporaire sur `127.0.0.1` à l’intérieur du conteneur.
+
+Les copies héritent des permissions des fichiers sources : elles seules sont rendues inscriptibles en mode `0600` avant ouverture. Les originaux restent en lecture seule. Après réussite, le conteneur temporaire disparaît puis le scénario reprend le même candidat PostgreSQL avant ses tests historiques d’écritures, recréation et panne/reprise. Toute erreur interrompt le scénario ; les règles de nettoyage et de diagnostic existantes demeurent applicables.
+
+Ce contrôle prouve le redémarrage sur des **copies**, pas une commutation d’un ancien volume réel, une bascule du serveur personnel ou une réplication inverse. La session constante n’existe que dans les fixtures synthétiques ; ce programme n’est pas un outil pour des bases privées.
+
+### Commande Linux après publication
+
+Les fichiers modifiés sont des sondes exclues de l’image, exécutées par entrée standard. L’image déjà vérifiée `manger:pg-test-31ed51d` peut donc être réutilisée :
+
+```sh
+(
+  set -eu
+  cd ~/services/manger
+  git diff --quiet
+  git diff --cached --quiet
+  git pull --ff-only origin development
+  sh scripts/test-postgres-image.sh manger:pg-test-31ed51d
+)
+```
+
+Si cette image n’est plus disponible, utiliser les commandes de construction du [scénario Docker](POSTGRESQL-DOCKER.md#exécuter-le-scénario). Le tag habituel `manger:0.1.0` et l’installation existante ne sont pas remplacés.
+
+### Preuve et limite de cette tranche
+
+Quatre tests natifs exécutent les programmes de sonde par leur véritable entrée standard : source complète avec photos, source spécifique Docker, source invalide et session absente. Les deux cas valides incluent des sources en mode `0444`. L’intégrité et les empreintes sont contrôlées ; un refus renvoie le code 1 sans message de réussite. Ils ne prouvent pas le montage read-only ou les permissions POSIX effectives sous Linux. Syntaxe shell et JavaScript contrôlées ; la nouvelle exécution Docker Linux reste à rapporter par l’administrateur. Les étapes 20b, 21 finale, 22 et 23 ne sont pas closes par cette préparation.
+
+Résultat local du 27 octobre : **411 tests généraux réussis sans échec ou ignoré, HTTPS inclus**. Les sondes PostgreSQL historiques source/écriture/vérification passent sur un cluster natif temporaire. Le bloc shell testé avec un faux Docker arrête app/PG avant la sonde, reprend seulement après succès et propage un refus 47 sans lancer de nouvelles écritures. Deux cycles de relecture, correction des permissions puis aucun nouveau constat. La suite PostgreSQL complète du 26 octobre n’a pas été relancée pour cette extension exclue de l’image.

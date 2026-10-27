@@ -74,3 +74,7 @@ Deuxième sortie transmise par l’administrateur, scénario `b9a3ba4` sur l’i
 Le TLS positif/négatif, le bootstrap et le contrôle des journaux passent également dans ce deuxième scénario. L’absence de message « Arrêt du scénario » et la fin complète attestent la réussite de ce parcours synthétique. La cause du premier arrêt n’a pas été reproduite et reste inconnue ; l’ajout de diagnostic n’est pas présenté comme une correction causale.
 
 Étapes 01–19 closes. Aucune donnée réelle transférée, aucune bascule de l’installation habituelle, aucune recette Safari/iPhone ou Android, aucun runner Codeberg ni CI activé par ce test. La prochaine étape 20 doit distinguer préparation du workflow et première exécution attestée.
+
+## Extension du 27 octobre — retour aux copies SQLite avant les écritures
+
+Le scénario ajoute un arrêt du candidat et de PostgreSQL, puis un vrai serveur SQLite sur des copies privées temporaires des deux sources synthétiques montées en lecture seule. Compte/session, sauvegarde HTTP, 18 tables, intégrité et empreintes sont contrôlés avant reprise du candidat. [Détails, commande et limites de preuve](POSTGRESQL-REPETITION.md#reprise-du-27-octobre--contrôle-docker-du-retour-aux-copies-sqlite). L’image `manger:pg-test-31ed51d` reste réutilisable : seuls les programmes transmis par entrée standard et le script hôte ont changé. La réussite Linux du 26 octobre ci-dessus concerne le scénario antérieur ; cette extension attend son propre résultat Linux.

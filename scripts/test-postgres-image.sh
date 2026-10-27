@@ -144,6 +144,19 @@ echo 'Démarrage du candidat applicatif.'
 compose up -d app
 wait_healthy app
 app=$(compose ps --quiet app)
+stage='retour SQLite avant les nouvelles écritures'
+echo 'Arrêt du candidat : vérification du retour aux copies SQLite synthétiques.'
+compose stop app postgres
+app_exit=$(docker inspect --format '{{.State.ExitCode}}' "$app")
+[ "$app_exit" = 0 ] || { echo 'Arrêt applicatif non propre avant retour SQLite.' >&2; exit 1; }
+docker run --rm -i --network none --read-only --tmpfs /tmp --user "$(id -u):$(id -g)" \
+  --cap-drop ALL --security-opt no-new-privileges --mount "type=bind,src=$work/source,dst=/source,readonly" \
+  -e MANGER_PROBE_MODE=sqlite-return --entrypoint node "$image" < "$repo/scripts/postgres-image-probe.js"
+stage='reprise du candidat après contrôle SQLite'
+compose start postgres
+wait_healthy postgres
+compose start app
+wait_healthy app
 stage='écritures HTTP et sauvegarde synthétiques'
 docker exec -i -e MANGER_PROBE_MODE=write "$app" node < "$repo/scripts/postgres-image-probe.js"
 stage='recréation des deux conteneurs'

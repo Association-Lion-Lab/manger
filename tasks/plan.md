@@ -87,3 +87,9 @@ Matrice et scénarios d’image déclarés avec dépendance bloquante, pas de d�
 À la demande de poursuivre, [répétition sur copies synthétiques](../docs/POSTGRESQL-REPETITION.md) : pannes, copies SQLite inchangées et réellement utilisables, archive complète, refus d’ancienne référence après nouvelle écriture, archive récente restaurée sur secours. Mesures locales distinctes d’une maintenance privée. Préparation uniquement : CI 20b, répétition par volume et guide Linux final non déclarés réussis ; pas de bascule ou accès au serveur personnel. Résultats finaux consignés dans les décisions après la suite native.
 
 Point d’arrêt du soir : 21a native vérifiée, 407 tests généraux et 243 PostgreSQL réussis, aucun ignoré ; premier incident initdb consigné puis relance complète verte sans changer les seuils. CI 20b et acceptation 21 non closes ; reprendre ensuite le guide 22 et la bascule volontaire 23 selon les preuves disponibles. Aucune tâche de fond ou reprise automatique.
+
+## Reprise du 27 octobre 2026
+
+Extension du scénario Docker : arrêt du candidat et de PostgreSQL avant toute nouvelle écriture, serveur SQLite sur copies privées de la source synthétique, session et sauvegarde complète du foyer vérifiées, empreintes des deux sources inchangées. [Commande et contrat](../docs/POSTGRESQL-REPETITION.md#reprise-du-27-octobre--contrôle-docker-du-retour-aux-copies-sqlite). Ne ferme pas la CI20b ou l’acceptation finale21 ; exécution Linux de l’extension encore requise, puis guide22 et bascule23 suivant les preuves. Aucun accès distant ou changement de l’installation habituelle.
+
+Validation de cette reprise : 411 tests généraux réussis sans ignoré, HTTPS inclus ; sondes historiques sur PostgreSQL natif, refus bloquant du shell simulé, modules/image et syntaxe contrôlés. Deux cycles de relecture réconciliés. Prochaine preuve attendue : exécution par l’administrateur du scénario Docker étendu ; ne pas transformer le test natif en résultat Linux ou CI.

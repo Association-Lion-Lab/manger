@@ -276,6 +276,7 @@ Preuve : [instance complète et secours](../docs/POSTGRESQL-INSTANCE.md). 26 oct
 
 - [ ] Réalisé.
 - **Préparation 21a réalisée :** [répétition native et procédure privée](../docs/POSTGRESQL-REPETITION.md), sur la demande de poursuivre malgré l’activation CI en attente. 407 tests généraux et 243 PostgreSQL réussis, aucun ignoré, HTTPS inclus ; 29 fichiers et 31 parents PostgreSQL. Pannes, copies SQLite inchangées/utilisables, refus d’ancienne référence, archive récente et secours vérifiés. Ne clôt ni 20b ni 21 : aucune donnée réelle ou commutation de volume Linux. Arrêt pour la soirée après sauvegarde/publication ; aucune tâche de fond.
+- **Reprise 27 octobre :** scénario Docker étendu avec arrêt PG/app et serveur SQLite sur copies privées, sources read-only, compte/session et comparaison des 18 tables par sauvegarde HTTP. Préparation et tests natifs distincts du nouveau résultat Linux attendu ; commande dans la répétition. 20b et 21 restent ouvertes.
 - **Livrable :** répétition complète synthétique, puis procédure de répétition privée pour l'administrateur.
 - **Acceptation :** durée et espace mesurés ; retour ancien volume avant réouverture prouvé ; après nouvelles écritures PostgreSQL, refus d'un faux retour sans perte et sauvegarde de l'état récent.
 - **Vérification :** panne en analyse/import/démarrage, anciennes données utilisables et nouvelle cible intacte ; aucune base réelle transmise au dépôt, au runner ou à l'agent.

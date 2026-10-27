@@ -365,3 +365,7 @@ Le 26 octobre, l’utilisateur précise que son Linux sert de machine de test et
 ## PostgreSQL — préparation de répétition 21a, 26 octobre 2026
 
 [Répétition native synthétique](POSTGRESQL-REPETITION.md) vérifiée : pannes, copies SQLite utilisables, divergence après écriture, archive récente et secours ; mesures sans estimation de maintenance réelle. 407 tests généraux et 243 PostgreSQL réussis sans ignoré, HTTPS inclus ; incident de synchronisation initdb puis relance complète verte documentés. Pas de code métier ou donnée réelle modifié. CI 20b, acceptation complète 21, guide 22 et bascule 23 restent distincts. Arrêt pour la soirée après sauvegarde/publication, aucune tâche de fond.
+
+## PostgreSQL — reprise du 27 octobre 2026
+
+Sonde de retour aux copies SQLite ajoutée au scénario Docker avant ses écritures PostgreSQL : compte/session, sauvegarde HTTP, 18 tables, intégrité et empreintes contrôlées nativement. Sources montées read-only, copies privées inscriptibles, aucun port ou volume habituel utilisé. [Exécution Linux de l’extension à confirmer](POSTGRESQL-REPETITION.md#reprise-du-27-octobre--contrôle-docker-du-retour-aux-copies-sqlite) ; réussite antérieure de19 conservée sans fermer20b/21/22/23 ni annoncer une bascule réelle.
