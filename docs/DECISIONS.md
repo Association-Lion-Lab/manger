@@ -1,5 +1,11 @@
 # Choix techniques, limites et blocages
 
+## 2 novembre 2026 — prix manuels écartés
+
+Après une demande générale de reprendre les fonctionnalités, un brouillon local d’estimation par portion avait été commencé à partir de la priorité P3. L’utilisateur relève que ces prix ne seraient pas fidèles à la réalité. Choix : retirer ce brouillon, dont les prix devaient être renseignés manuellement et conservés seulement sur l’appareil. La charge de saisie et d’entretien n’apporte pas la fiabilité attendue. Le coût réel reste une piste conditionnée à des données fiables et à un besoin explicite ; aucun connecteur d’enseigne ou nouveau service ajouté.
+
+Les trois fichiers existants ne contenaient que les modifications de ce brouillon : ils sont rétablis à leur état publié. Les cinq nouveaux fichiers de règles, interface, tests et cadrage non publiés sont retirés ; le serveur de test synthétique en mémoire est arrêté et son lanceur ignoré retiré. Aucun ancien test ou garde-fou supprimé, aucune fonctionnalité déployée, base ou volume du foyer touché. Vérification : diff applicatif vide, seules les présentes précisions documentaires restent à publier. Aucune nouvelle suite d’application exécutée pour ce retrait sans différence applicative nette ; les anciens essais du brouillon ne constituent pas une fonctionnalité livrée.
+
 ## 2 novembre 2026 — état temporaire systemd après une sauvegarde réussie
 
 **Constat.** Sur Linux, le journal confirme la sauvegarde de 11:11:29, deux archives conservées, zéro retirée. Le premier relevé retourne néanmoins « aucune réussite confirmée ». Le diagnostic ciblé montre une date de fin vide, les codes `0/0`, l’état inactif et le résultat par défaut `success`. L’hypothèse implicite selon laquelle une unité chargée conserverait le dernier résultat était trop forte : systemd documente la perte de ces résultats lors du déchargement, hors journal. Les valeurs observées sont compatibles avec ce mécanisme ; l’événement précis de déchargement/redémarrage n’est pas établi par les sorties reçues. Les anciennes sauvegardes et l’activation du minuteur restent validées séparément.
