@@ -1,5 +1,9 @@
 # Construction et déploiement Docker
 
+## Entretien de l’instance PostgreSQL principale
+
+Depuis la bascule confirmée du 27 octobre 2026, suivre le [guide PostgreSQL](POSTGRESQL-ADMIN.md) pour cette instance ; les commandes SQLite historiques ci-dessous ne constituent pas sa mise à jour. Les [sauvegardes automatiques](POSTGRESQL-AUTO-BACKUPS.md) réutilisent l’image d’outils compatible existante avec un contrôleur monté en lecture seule. Leur installation ne reconstruit aucune image et ne recrée aucun service ou volume de l’application. `deploy/` et ses unités utilisateur sont exclus du contexte d’image ; les contrôles Docker continuent d’examiner les modules JavaScript livrés.
+
 **Instance déjà passée à PostgreSQL :** utiliser les deux fichiers Compose PostgreSQL, son fichier privé et son nom de projet explicite selon le [guide administrateur et sa maintenance](POSTGRESQL-ADMIN.md#9-mise-à-jour-et-entretien). Les commandes standard de ce document ciblent SQLite. La [bascule Linux après anciennes données de test est confirmée](POSTGRESQL-ADMIN.md#bascule-linux-confirmée--27-octobre-2026) : mêmes volumes du projet validé, ancien SQLite arrêté/conservé. Connexion, ajout d’un repas et courses ont ensuite été confirmés sur iPhone ; les autres parcours ne sont pas déduits de ce retour.
 
 ## Socle PostgreSQL de développement — 22 octobre 2026

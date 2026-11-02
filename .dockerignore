@@ -39,6 +39,8 @@
 **/scripts/**
 **/docker
 **/docker/**
+**/deploy
+**/deploy/**
 **/coverage
 **/coverage/**
 **/graphify-out

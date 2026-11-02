@@ -1,5 +1,13 @@
 # Migration PostgreSQL — tâches et points de contrôle
 
+## Entretien du 2 novembre 2026
+
+- [x] Préparer la sauvegarde PostgreSQL en ligne et la rotation limitée aux copies automatiques reconnues.
+- [x] Vérifier corruption, concurrence, refus d’installation et restauration sur deux clusters synthétiques ; documenter les preuves et limites.
+- [x] Préparer le minuteur utilisateur, son installation conditionnée au succès du vrai service et la commande Linux sans reconstruction.
+- [ ] Recevoir le résultat d’activation sur Linux puis d’une échéance planifiée ; aucune activation distante annoncée.
+- [ ] Organiser une copie protégée indépendante et une restauration privée périodique avec l’administrateur, hors validation synthétique.
+
 26 octobre 2026 — **plan validé ; tâches 01–18 réalisées, prochaine tâche 19 : candidat et vérification Docker**. [Cadrage et risques](../docs/MIGRATION-POSTGRESQL.md), [ordre de réalisation](plan.md). Les noms des fichiers non encore créés restent des propositions. Chaque tâche comprend la mise à jour de la documentation concernée et de `docs/DECISIONS.md` ; les fichiers listés sont le périmètre technique principal. Si une tranche dépasse environ cinq fichiers techniques ou une session ciblée, la découper avant de coder, sans réduire ses critères.
 
 ## Phase 1 — Socle isolé

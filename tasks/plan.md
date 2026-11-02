@@ -1,5 +1,9 @@
 # Migration PostgreSQL — plan d'implémentation
 
+## Entretien après bascule — 2 novembre 2026
+
+Implémentation de sauvegardes automatiques avec les outils administratifs existants : snapshot en ligne, contrôle d’intégrité/inventaire, marqueur durable, rotation de sept copies et minuteur utilisateur quotidien. [Procédure et limites](../docs/POSTGRESQL-AUTO-BACKUPS.md). La bascule PostgreSQL déjà confirmée n’est pas rejouée. Préparation locale testée ; activation et échéance Linux à confirmer, sans accès serveur de l’agent.
+
 22 octobre 2026 — **plan validé par l'utilisateur, préparation commencée**. Ce fichier est le point d'entrée de travail ; le [plan technique et opérationnel](../docs/MIGRATION-POSTGRESQL.md) précise les hypothèses, risques et critères. Les cases de réalisation sont uniquement dans [todo.md](todo.md).
 
 ## Objectif et périmètre

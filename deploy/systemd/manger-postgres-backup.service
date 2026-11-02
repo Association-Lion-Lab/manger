@@ -1,0 +1,10 @@
+[Unit]
+Description=Manger! daily PostgreSQL backup and safe rotation
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/services/manger
+ExecStart=/bin/bash %h/services/manger/scripts/backup-postgres.sh
+UMask=0077
+TimeoutStartSec=20min
+NoNewPrivileges=yes

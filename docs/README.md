@@ -4,6 +4,8 @@ Documentation versionnée dans le dépôt, regroupée le **10 octobre 2026**. El
 
 ## Utiliser et héberger
 
+[Sauvegardes PostgreSQL automatiques](POSTGRESQL-AUTO-BACKUPS.md) : installation sur l’instance principale existante, tous les jours à 03 h Europe/Paris, sept copies automatiques réussies, diagnostic et reprise d’un verrou. Préparation et restauration synthétique testées localement ; activation systemd Linux encore à confirmer.
+
 1. [Fonctionnalités réalisées](FONCTIONNALITES.md) : vue d'ensemble par usage, dont les régimes mixtes et l'anti-gaspi.
 2. [Guide complet](GUIDE.md) : installation, utilisation, comptes, invitations, courses, import/export et sauvegarde/restauration.
 3. [HTTPS local](HTTPS.md) : certificats, confiance iPhone/Android, configuration et renouvellement.
@@ -15,7 +17,7 @@ Toutes les commandes du guide s'exécutent depuis la racine du dépôt, **pas de
 
 ## Comprendre et contribuer
 
-**Migration en préparation :** [plan PostgreSQL validé le 22 octobre](MIGRATION-POSTGRESQL.md), [inventaire et contrats de référence](POSTGRESQL-CONTRATS.md), [tâches et points de contrôle](../tasks/todo.md). Node.js et l'interface conservés ; moteur actuel toujours SQLite, aucune base convertie, aucun nouveau service ou configuration déployés. Les instructions SQLite existantes restent valables.
+**État actuel de l’instance retenue :** PostgreSQL principal sur HTTPS/3000 depuis la [bascule confirmée du 27 octobre](POSTGRESQL-ADMIN.md#bascule-linux-confirmée--27-octobre-2026), ancien SQLite arrêté avec son volume conservé. Utiliser le projet PostgreSQL et son fichier privé explicites, jamais le Compose SQLite standard pour cet entretien. Les fiches suivantes gardent l’historique de préparation : [plan validé le 22 octobre](MIGRATION-POSTGRESQL.md), [contrats](POSTGRESQL-CONTRATS.md), [points de contrôle](../tasks/todo.md). Leurs mentions d’une étape non encore activée sont datées ; elles ne remplacent pas ce résultat.
 
 [PostgreSQL de test local](POSTGRESQL-TEST.md) : outils portables Windows 18.6 vérifiés, pilote verrouillé et commande `npm run test:postgres` réellement passée sur des clusters temporaires. Sans service système ou donnée utilisateur ; ce n'est pas une migration ni une validation du déploiement Docker/Linux.
 

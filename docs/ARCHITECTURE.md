@@ -1,5 +1,11 @@
 # Architecture et maintenance
 
+## Entretien automatisé PostgreSQL — 2 novembre 2026
+
+L’instance principale retenue est PostgreSQL ; le Compose SQLite reste disponible dans le dépôt mais ne sert pas à son entretien. Deux unités systemd **utilisateur**, hors application et hors image web, déclenchent `scripts/backup-postgres.sh`. Le lanceur fixe projet/fichier privé/profil maintenance et monte seulement `postgres-auto-backup.js` en lecture seule dans l’image d’outils déjà validée. Aucun nouveau paquet, service web ou changement de schéma.
+
+Le contrôleur appelle `postgres-instance.js` et `db/instance-tools.js` de cette image : snapshot cohérent, dump, empreintes et inventaire sans comparer une base vivante qui continue d’évoluer. Racine privée identifiée, verrou exclusif, marqueur synchronisé sur disque puis rotation limitée aux sept copies automatiques complètes ; tous les candidats sont recontrôlés avant retrait de fichiers connus. Archives manuelles, partielles et anciens volumes préservés. [Installation, garanties et limites](POSTGRESQL-AUTO-BACKUPS.md). Activation réelle Linux encore à confirmer ; les sections suivantes conservent la chronologie de construction.
+
 Lecture du dépôt le **10 octobre 2026**. Aucun changement de runtime, dépendance, schéma ou données n'est lié à ce regroupement documentaire.
 
 ## Résumé de l'architecture actuelle

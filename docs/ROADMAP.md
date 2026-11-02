@@ -1,5 +1,9 @@
 # Suite du développement
 
+## Entretien PostgreSQL — 2 novembre 2026
+
+[Sauvegardes quotidiennes avec rotation](POSTGRESQL-AUTO-BACKUPS.md) préparées : 03 h Europe/Paris, sept copies automatiques complètes, application en ligne, contrôles avant suppression et archives manuelles conservées. Tests locaux de rotation, refus, installateur simulé et restauration PostgreSQL synthétique réalisés ; résultats détaillés dans les décisions. **Activation réelle Linux, premier succès systemd et échéance quotidienne encore à confirmer par l’administrateur.** Aucune nouvelle migration, reconstruction ou intervention distante exécutée. Une copie indépendante du serveur et une restauration privée périodique restent une responsabilité d’exploitation, pas une fonctionnalité déclarée acquise.
+
 Historique des lots et priorités, regroupé dans `docs/` le 10 octobre 2026. Les résultats de tests cités sont ceux de chaque lot, pas une validation nouvelle des serveurs ou téléphones. Vue actuelle : [fonctionnalités](FONCTIONNALITES.md) et [choix, limites et blocages](DECISIONS.md).
 
 Contrainte produit : quatre onglets (Semaine, Recettes, Courses, Compte), actions dans leur contexte, fonctions secondaires regroupées sans surcharger ; préserver une interface sobre en clair et en sombre, au clavier et dès 320 px.

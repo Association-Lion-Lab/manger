@@ -11,6 +11,7 @@ const excluded = [
   'notes.txt', 'compose.override.yaml', '.git/config', 'docs/prototype.js',
   'scripts/local.js', 'scripts/check-docker-context.js', 'scripts/nested/local.js',
   'docker/postgres-init.sh', 'docker/private.js', 'docker/nested/private.js',
+  'deploy/private.js', 'deploy/systemd/manger-postgres-backup.service', 'deploy/systemd/manger-postgres-backup.timer',
   'node_modules/local.js', 'new-module.test.js', 'public/.env', 'public/token.key',
   'public/recovery/save.db', 'public/tests/test.js', 'public/data/local.js', 'lib/.secret.js',
   'data/private.js', 'tls/private.js', 'secrets/private.js', 'backups/private.js',
