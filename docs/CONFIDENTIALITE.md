@@ -42,7 +42,7 @@ La recherche de restaurants a été supprimée : nom saisi manuellement, pas d'a
 
 Le cookie `manger_session` sert à l'authentification et expire au plus tard sept jours après sa création, sauf fermeture/révocation anticipée. Il est inaccessible au JavaScript (`HttpOnly`) et envoyé avec la politique `SameSite=Strict`. Son attribut `Secure` dépend de la configuration HTTPS/cookie sécurisé : il n'est pas garanti par une installation HTTP seule.
 
-Le navigateur mémorise les réglages attendus du service : thème/couleur et calendrier de saison. La coordination du compte permet de réagir à une connexion/déconnexion dans un autre onglet.
+Le navigateur mémorise les réglages attendus du service : thème/couleur. Depuis le 2 novembre, le filtre de saison suit un calendrier français unique et ne lit ni n’enregistre de choix régional ; un ancien réglage peut subsister dans le stockage mais est ignoré. La coordination du compte permet de réagir à une connexion/déconnexion dans un autre onglet.
 
 Les copies hors connexion sont activées volontairement. Elles rendent certaines données disponibles sur cet appareil même sans session serveur vérifiable au moment de la lecture. Elles ne sont pas chiffrées par Manger! : utiliser un appareil protégé et ne pas activer cette option sur un appareil partagé non fiable.
 

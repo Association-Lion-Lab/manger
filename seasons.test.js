@@ -13,10 +13,8 @@ test('quatre recettes réelles du catalogue distinguent les mois, sans saison fo
     7: [false, true, false, false], 10: [false, false, true, true] };
   for (const [month, matches] of Object.entries(expected)) {
     assert.deepEqual(dishes.map(item => recipeSeason(item, Number(month)).matches), matches);
-    assert.deepEqual(dishes.map(item => recipeSeason(item, Number(month), 'hauts-de-france').matches), matches);
   }
-  assert.deepEqual(dishes.map(item => recipeSeason(item, 10, 'bretagne').matches), [false, false, true, false]);
-  assert.equal(recipeSeason(dishes[3], 11, 'bretagne').matches, true);
+  assert.equal(recipeSeason(dishes[3], 11).matches, true);
   assert.equal(recipeSeason({ ...dishes[1], title: 'Plat d’hiver', tags: ['hiver'] }, 1).matches, false);
 });
 
@@ -60,55 +58,40 @@ test('mois invalides refusés et 12 mois utilisables', () => {
   for (let month = 1; month <= 12; month++) assert.equal(recipeSeason(recipe('carotte'), month).matches, false);
 });
 
-test('le calendrier national reste le défaut et les régions ont des repères distincts', () => {
-  assert.deepEqual(recipeSeason(recipe('tomate'), 7), recipeSeason(recipe('tomate'), 7, 'france'));
-  assert.equal(recipeSeason(recipe('betterave'), 4, 'hauts-de-france').matches, false);
-  assert.equal(recipeSeason(recipe('betterave'), 4, 'france').matches, true);
-  assert.equal(recipeSeason(recipe('pomme'), 5, 'hauts-de-france').matches, true);
-  assert.equal(recipeSeason(recipe('pomme'), 8, 'hauts-de-france').matches, false);
-  assert.equal(recipeSeason(recipe('pomme'), 8, 'france').matches, true);
-  assert.equal(recipeSeason(recipe('épinards', 'carottes'), 8, 'bretagne').matches, true);
-  assert.equal(recipeSeason(recipe('épinards', 'carottes'), 8, 'france').matches, false);
-  assert.equal(recipeSeason(recipe('endive'), 10, 'bretagne').matches, false);
-  assert.equal(recipeSeason(recipe('asperge'), 3, 'bretagne').matches, true);
+test('un seul calendrier français conserve les repères nationaux mensuels', () => {
+  assert.deepEqual(Object.keys(seasonCalendars),['france']);
+  assert.equal(recipeSeason(recipe('betterave'),4).matches,true);
+  assert.equal(recipeSeason(recipe('pomme'),5).matches,false);
+  assert.equal(recipeSeason(recipe('pomme'),8).matches,true);
+  assert.equal(recipeSeason(recipe('épinards','carottes'),8).matches,false);
+  assert.equal(recipeSeason(recipe('endive'),10).matches,true);
+  assert.equal(recipeSeason(recipe('asperge'),3).matches,false);
 });
 
-test('couverture limitée explicite, complément national et mêmes exclusions', () => {
-  assert.match(seasonCalendars['hauts-de-france'].coverage, /Pommes et betteraves.*calendrier national/);
-  assert.match(seasonCalendars.bretagne.coverage, /complétés.*national/);
-  assert.match(seasonCalendars.bretagne.coverage, /fin mars/);
-  for (const region of Object.keys(seasonCalendars)) {
-    assert.equal(new URL(seasonCalendars[region].url).protocol, 'https:');
-    for (let month = 1; month <= 12; month++) {
-      assert.equal(recipeSeason(recipe('carotte'), month, region).matches, false);
-      assert.deepEqual(recipeSeason(recipe('panais'), month, region), recipeSeason(recipe('panais'), month));
-      assert.equal(recipeSeason(recipe('tomate concassée', 'sel', 'poulet'), month, region).matches, false);
-    }
-    assert.equal(recipeSeason(recipe('carotte', 'tomate'), 1, region).matches, false);
+test('source nationale explicite et exclusions maintenues sur les douze mois', () => {
+  assert.match(seasonCalendars.france.coverage,/Repères nationaux/);
+  assert.equal(new URL(seasonCalendars.france.url).protocol,'https:');
+  for(let month=1;month<=12;month++){
+    assert.equal(recipeSeason(recipe('carotte'),month).matches,false);
+    assert.equal(recipeSeason(recipe('tomate concassée','sel','poulet'),month).matches,false);
   }
-  for (const region of ['', 'inconnue', '__proto__', 'constructor', null]) assert.throws(() => recipeSeason(recipe('carotte'), 10, region), RangeError);
+  assert.equal(recipeSeason(recipe('carotte','tomate'),1).matches,false);
 });
 
-test('les produits disponibles toute l’année ne suffisent pas, selon le calendrier choisi', () => {
-  for (const name of ['betterave', 'chou-fleur']) {
-    assert.equal(recipeSeason(recipe(name), 10, 'france').matches, true);
-    for (let month = 1; month <= 12; month++) {
-      assert.equal(recipeSeason(recipe(name, 'carotte'), month, 'bretagne').matches, false);
-    }
-  }
-  assert.equal(recipeSeason(recipe('betterave', 'poireau'), 10, 'bretagne').matches, true);
-  assert.equal(recipeSeason(recipe('betterave', 'poireau', 'tomate'), 10, 'bretagne').matches, false);
+test('un légume annuel et un légume hors saison ne suffisent pas à qualifier le plat', () => {
+  for(const name of ['betterave','chou-fleur'])assert.equal(recipeSeason(recipe(name),10).matches,true);
+  for(let month=1;month<=12;month++)assert.equal(recipeSeason(recipe('carotte'),month).matches,false);
+  assert.equal(recipeSeason(recipe('betterave','poireau'),10).matches,true);
+  assert.equal(recipeSeason(recipe('betterave','poireau','tomate'),10).matches,false);
 });
 
 test('le catalogue distingue un plat disponible toute l’année d’un plat du mois', () => {
   const catalog = require('./catalog');
-  for (const region of Object.keys(seasonCalendars)) {
-    const beef = catalog.find(item => item.title === 'Bœuf carottes du dimanche');
-    const cod = catalog.find(item => item.title === 'Cabillaud citron et poireaux au four');
-    assert.equal(recipeSeason(beef, 10, region).matches, false);
-    assert.equal(recipeSeason(cod, 10, region).matches, true);
-    assert.equal(recipeSeason(cod, 7, region).matches, false);
-  }
+  const beef = catalog.find(item => item.title === 'Bœuf carottes du dimanche');
+  const cod = catalog.find(item => item.title === 'Cabillaud citron et poireaux au four');
+  assert.equal(recipeSeason(beef, 10).matches, false);
+  assert.equal(recipeSeason(cod, 10).matches, true);
+  assert.equal(recipeSeason(cod, 7).matches, false);
 });
 
 test('le navigateur reçoit le module après les noms alimentaires', async t => {

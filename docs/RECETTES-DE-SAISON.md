@@ -2,14 +2,16 @@
 
 Lot historique du **12 octobre 2026** : quatre ajouts portaient alors le catalogue à **38 recettes**. Le [lot du 15 octobre](CATALOGUE.md) le porte à 100, sans remplacer ces quatre fiches ni modifier les repères ci-dessous. Pas de nouveau réglage ni d'import automatique dans les foyers existants.
 
+**Depuis le 2 novembre 2026 : un seul calendrier national français.** Les recettes de toutes régions sont regroupées ; le choix Bretagne/Hauts-de-France et ses variantes de calcul sont retirés. Un ancien réglage enregistré est ignoré. Le mois suit toujours la date du téléphone ou de l’ordinateur. La simplification ne modifie aucune recette, base ou donnée du planning ; aucune étiquette de saison manuelle n’est requise.
+
 ## Ajouter et comparer
 
 1. Mettre à jour l'application, puis ouvrir **Recettes**.
 2. Utiliser **Ajouter les recettes manquantes du catalogue** : le bouton ajoute tout titre manquant du catalogue actuel. Les quatre ajouts seuls correspondaient au lot historique ; depuis le 15 octobre, 62 autres fiches sont disponibles. Un titre déjà présent reste inchangé, même personnalisé.
-3. Activer **De saison** avec **France métropolitaine**. Le mois suit la date locale du téléphone ou de l'ordinateur ; la semaine affichée dans le planning ne le change pas.
+3. Activer **De saison**. Le calendrier français est automatique ; le mois suit la date locale du téléphone ou de l'ordinateur, sans être changé par la semaine affichée dans le planning.
 4. En octobre, chercher « potimarron », puis « asperges » : le velouté apparaît, le risotto non. Désactiver De saison retrouve le risotto. Les autres filtres actifs peuvent aussi limiter les résultats.
 
-Les saisons ci-dessous servent de repères de lecture, pas d'étiquettes forcées dans les recettes. Le calcul lit les ingrédients frais reconnus, selon le mois et le calendrier sélectionné. Une recette peut couvrir plusieurs saisons ; cela ne garantit ni la provenance locale ni une disponibilité réelle au magasin.
+Les saisons ci-dessous servent de repères de lecture, pas d'étiquettes forcées dans les recettes. Le calcul lit les ingrédients frais reconnus, selon le mois du calendrier national. Une recette peut couvrir plusieurs saisons ; cela ne garantit ni la provenance locale ni une disponibilité réelle au magasin.
 
 | Repère | Recette ajoutée | Janvier | Avril | Juillet | Octobre |
 | --- | --- | --- | --- | --- | --- |
@@ -18,13 +20,13 @@ Les saisons ci-dessous servent de repères de lecture, pas d'étiquettes forcée
 | Automne | Velouté de potimarron et pommes de terre | Non | Non | Non | Oui |
 | Hiver | Endives au jambon gratinées | Oui | Oui | Non | Oui |
 
-Table pour le calendrier national et les repères actuels Hauts-de-France. En **Bretagne**, les endives sont reconnues de novembre à mars : leur gratin n'apparaît donc pas en octobre ni en avril. Le potimarron conserve le complément national octobre–décembre ; le mot « hiver » ne suffit pas à rendre le velouté positif en janvier.
+Table du calendrier national utilisé pour toutes les recettes. Les anciennes différences régionales ne s’appliquent plus. Le potimarron conserve le repère national octobre–décembre ; le mot « hiver » ne suffit pas à rendre le velouté positif en janvier.
 
 ## Filtre plus sélectif — 12 octobre 2026
 
-Le filtre exige désormais au moins un fruit ou légume reconnu du mois dont le calendrier choisi ne couvre pas les douze mois. Un produit disponible toute l'année, comme la carotte dans nos calendriers, ne suffit plus. Tout fruit ou légume reconnu hors saison reste excluant. Les ingrédients inconnus ou transformés ne sont pas évalués : ce n'est pas une certification exhaustive du plat.
+Le filtre exige au moins un fruit ou légume reconnu du mois dont le calendrier national ne couvre pas les douze mois. Un produit disponible toute l'année, comme la carotte dans ce calendrier, ne suffit pas. Tout fruit ou légume reconnu hors saison reste excluant. Les ingrédients inconnus ou transformés ne sont pas évalués : ce n'est pas une certification exhaustive du plat.
 
-En octobre, **Bœuf carottes du dimanche** sort donc du filtre, tandis que **Cabillaud citron et poireaux au four** et le velouté de potimarron restent proposés. Les carottes restent disponibles toute l'année dans les données ; leur disponibilité n'est pas déclarée fausse. En Bretagne, betterave et chou-fleur sont également disponibles toute l'année et ne suffisent pas seuls ; le calendrier national peut les classer différemment.
+En octobre, **Bœuf carottes du dimanche** sort donc du filtre, tandis que **Cabillaud citron et poireaux au four** et le velouté de potimarron restent proposés. Les carottes restent disponibles toute l'année dans les données ; leur disponibilité n'est pas déclarée fausse. Betterave et chou-fleur suivent désormais les mêmes repères nationaux sur tous les appareils, quel que soit leur ancien réglage régional.
 
 Le nombre de résultats figure près du bouton, dans le libellé « En ce moment · octobre · … recettes de saison », y compris dans un univers ou une recherche. Il s'actualise avec les autres filtres et est annoncé comme statut accessible. L'explication détaillée reste repliée : choix Apple Design de retour discret, sans écran ou contrôle supplémentaire. Désactiver le filtre retrouve tous les plats ; aucune recette enregistrée ni repas du planning n'est modifié. **Une mise à jour de l'application suffit, sans réimporter les recettes déjà présentes.**
 
@@ -47,4 +49,6 @@ Le risotto est adapté sans parmesan, avec crème et bouillon végétal ; le tia
 
 ## Vérification locale
 
-Tests du catalogue, des quatre mois représentatifs et de l'ajout d'un légume hors saison ; import depuis un catalogue de 34 recettes, références/quantités/étapes sauvegardées, personnalisations conservées et second import sans doublon. Parcours Chromium isolé : quatre fiches et leurs liens, présence/absence des ajouts sur trois calendriers et douze mois système simulés. L'horloge réelle de l'utilisateur n'est pas changée ; aucun sélecteur manuel de mois réintroduit.
+Résultat du 2 novembre : 19/19 tests ciblés (filtre, module et catalogue) et 429/429 tests généraux réussis, aucun ignoré. Le rendu réel de la fonction de filtrage est exercé dans un DOM simulé avec cinq anciens choix locaux : mêmes résultats nationaux, recettes du Nord et bretonnes ensemble, plat d’été exclu en octobre. Aucun nouvel essai graphique iPhone/Android, Docker Linux ou changement d’horloge réelle revendiqué.
+
+Historique du 12 octobre : tests du catalogue, quatre mois représentatifs et ajout d’un légume hors saison ; import depuis 34 recettes avec personnalisations préservées et réimport sans doublon. Le parcours Chromium isolé de ce lot portait sur les trois anciens calendriers ; il n’établit pas une validation visuelle de la simplification actuelle. Pour une instance Docker, reconstruire et déployer l’image applicative selon [l’entretien du projet PostgreSQL retenu](POSTGRESQL-ADMIN.md#9-mise-à-jour-et-entretien), sans relancer la migration ni le Compose SQLite standard. Les images d’outils et le schéma ne changent pas pour ce lot.

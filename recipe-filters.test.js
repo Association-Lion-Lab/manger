@@ -4,7 +4,7 @@ const { readFileSync } = require('node:fs');
 const { join } = require('node:path');
 const { Script } = require('node:vm');
 
-test('les filtres sont disponibles dès l’ouverture, leur remise à zéro reste locale et conserve l’univers et le calendrier', () => {
+test('les filtres sont disponibles dès l’ouverture et leur remise à zéro conserve l’univers', () => {
   const html = readFileSync(join(__dirname, 'public/index.html'), 'utf8');
   assert.doesNotMatch(html.match(/<label id="recipe-time-filter-field"[^>]*>/)[0], /hidden/);
   assert.match(html, /aria-label="Filtrer les recettes"/);
@@ -12,18 +12,16 @@ test('les filtres sont disponibles dès l’ouverture, leur remise à zéro rest
   const controls = {
     'recipe-search': { value: 'carottes' },
     'recipe-time-filter': { value: '30', focus() { this.focused = true; } },
-    'recipe-season-filter': { 'aria-pressed': 'true', setAttribute(name, value) { this[name] = value; } },
-    'recipe-season-region': { value: 'bretagne' }
+    'recipe-season-filter': { 'aria-pressed': 'true', setAttribute(name, value) { this[name] = value; } }
   };
   let click, renders = 0;
-  const source = html.match(/^    document.getElementById\('reset-recipe-filters'\)[\s\S]*?(?=\n    seasonRegion.addEventListener)/m)[0];
+  const source = html.match(/^    document.getElementById\('reset-recipe-filters'\)[\s\S]*?(?=\n    document.getElementById\('recipe-season-filter'\).addEventListener)/m)[0];
   const context = { activeRecipeCategory: 'japon', renderRecipes: () => renders++, document: { getElementById: id => id === 'reset-recipe-filters' ? { addEventListener: (_, listener) => click = listener } : controls[id] } };
   new Script(source).runInNewContext(context);
   click();
   assert.equal(controls['recipe-search'].value, '');
   assert.equal(controls['recipe-time-filter'].value, '');
   assert.equal(controls['recipe-season-filter']['aria-pressed'], 'false');
-  assert.equal(controls['recipe-season-region'].value, 'bretagne');
   assert.equal(context.activeRecipeCategory, 'japon');
   assert.equal(renders, 1);
   assert.equal(controls['recipe-time-filter'].focused, true);
@@ -41,7 +39,7 @@ test('la saison suit le mois système local et se réactualise uniquement si né
   const html = readFileSync(join(__dirname, 'public/index.html'), 'utf8');
   assert.doesNotMatch(html, /id="recipe-season-month"|new Date\(2026, index/);
   assert.match(html, /const today = new Date\(\);\s+const month = today.getMonth\(\) \+ 1/);
-  assert.match(html, /recipeSeason\(recipe, month, seasonRegion.value\)/);
+  assert.match(html, /recipeSeason\(recipe, month\)/);
   assert.match(html, /document.addEventListener\('visibilitychange', refreshSeasonMonth\)/);
   assert.match(html, /window.addEventListener\('focus', refreshSeasonMonth\)/);
   assert.match(html, /setInterval\(refreshSeasonMonth, 60000\)/);
@@ -74,7 +72,7 @@ test('le compteur saisonnier suit les résultats et reste discret hors filtre', 
   const context = {
     activeRecipeCategory: 'japon', renderedSeasonMonth: null,
     Date: class extends Date { constructor() { super(2026, 9, 12); } }, Intl,
-    document: { getElementById: element }, seasonRegion: { value: 'france' },
+    document: { getElementById: element },
     MangerSeasons: require('./public/seasons'), MangerFoodNames: require('./public/food-names'),
     state: { recipes: [] }, recipeCategories: { japon: '🇯🇵 Japon' }, dietLabels: { vegetarian: 'Végétarien' },
     escapeHtml: value => value, recipeCover: () => '', recipeFavoriteButton: () => '', uiIcon: require('./public/ui-icons').icon,
@@ -93,34 +91,32 @@ test('le compteur saisonnier suit les résultats et reste discret hors filtre', 
   assert.equal(element('recipe-season-month-field').hidden, true);
 });
 
-test('le calendrier mémorisé est validé et un stockage indisponible ne bloque pas les recettes', () => {
+test('le filtre national ne propose plus de région ni ne lit les anciens réglages régionaux', () => {
   const html = readFileSync(join(__dirname, 'public/index.html'), 'utf8');
-  const source = html.match(/^    const seasonRegion = [\s\S]*?(?=\n    let editingRecipeId)/m)[0];
-  for (const saved of ['bretagne', 'hauts-de-france', 'france', '__proto__', 'inconnue', null]) {
-    const select = { value: 'france' };
-    new Script(source).runInNewContext({ document: { getElementById: () => select }, MangerSeasons: require('./public/seasons.js'), localStorage: { getItem: () => saved } });
-    assert.equal(select.value, ['bretagne', 'hauts-de-france'].includes(saved) ? saved : 'france');
-  }
-  const select = { value: 'france' };
-  new Script(source).runInNewContext({ document: { getElementById: () => select }, MangerSeasons: require('./public/seasons.js'), localStorage: { getItem() { throw new Error('Stockage interdit'); } } });
-  assert.equal(select.value, 'france');
-  assert.match(html, /id="recipe-season-region-field" hidden/);
-  assert.match(html, /id="recipe-season-region" aria-label="Calendrier des recettes de saison"/);
+  assert.doesNotMatch(html, /recipe-season-region|seasonRegion|manger-season-region-v1/);
+  assert.match(html, /MangerSeasons.seasonCalendars.france/);
+  assert.match(html, /aria-controls="recipes recipe-season-month-field recipe-season-note"/);
 });
 
-test('changer de calendrier continue de filtrer même si sa mémorisation est refusée', () => {
+test('la même saison française rassemble les recettes de toutes régions malgré un ancien choix local', () => {
   const html = readFileSync(join(__dirname, 'public/index.html'), 'utf8');
-  const source = html.match(/^    seasonRegion.addEventListener\('change',[\s\S]*?(?=\n    document.getElementById\('recipe-season-filter'\))/m)[0];
-  for (const denied of [false, true]) {
-    let change, renders = 0;
-    const writes = [];
-    new Script(source).runInNewContext({
-      seasonRegion: { value: 'bretagne', addEventListener: (_, handler) => change = handler },
-      renderRecipes: () => renders++,
-      localStorage: { setItem(key, value) { if (denied) throw new Error('Stockage interdit'); writes.push([key, value]); } },
-    });
-    change();
-    assert.equal(renders, 1);
-    assert.deepEqual(writes, denied ? [] : [['manger-season-region-v1', 'bretagne']]);
+  const source = html.match(/^    function renderRecipes\(\) \{[\s\S]*?(?=\n    function refreshSeasonMonth)/m)[0];
+  const recipes=[{id:1,title:'Gratin du Nord',ingredients:[{name:'endive'}]},
+    {id:2,title:'Poireaux bretons',ingredients:[{name:'poireau'}]},
+    {id:3,title:'Tian provençal',ingredients:[{name:'tomate'}]}]
+    .map(r=>({...r,tags:['terroir'],minutes:25,diet:'vegetarian'}));
+  for(const saved of ['bretagne','hauts-de-france','france','inconnue',null]){
+    const controls={},element=id=>controls[id]||=( {value:'',getAttribute:()=> 'true'} );
+    const context={activeRecipeCategory:'',renderedSeasonMonth:null,
+      Date:class extends Date{constructor(){super(2026,9,12);}},Intl,document:{getElementById:element},
+      seasonRegion:{value:saved},localStorage:{getItem(){throw Error('Aucune lecture régionale attendue');}},
+      state:{recipes},recipeCategories:{terroir:'🥖 Terroir français'},dietLabels:{vegetarian:'Végétarien'},
+      MangerSeasons:require('./public/seasons'),MangerFoodNames:require('./public/food-names'),
+      escapeHtml:value=>value,recipeCover:()=>'',recipeFavoriteButton:()=>'',uiIcon:require('./public/ui-icons').icon};
+    new Script(source).runInNewContext(context);context.renderRecipes();
+    assert.match(element('recipes').innerHTML,/Gratin du Nord/);
+    assert.match(element('recipes').innerHTML,/Poireaux bretons/);
+    assert.doesNotMatch(element('recipes').innerHTML,/Tian provençal/);
+    assert.equal(element('recipe-results-title').textContent,'En octobre');
   }
 });

@@ -1,5 +1,9 @@
 # Suite du développement
 
+## Saisons françaises — 2 novembre 2026
+
+Calendrier national unique demandé par l’utilisateur : retrait du choix de région, des deux variantes régionales et du réglage local ; recettes de toutes régions conservées ensemble. Mois système de l’appareil, recherche et univers inchangés ; libellé « En novembre » sans suffixe régional. Dix-neuf tests ciblés et 429 tests généraux réussis sans ignoré. Code vérifié localement, nouveau déploiement Docker et essai iPhone encore à rapporter ; pas d’import, changement de schéma ou nouvelle recette automatique. Les lignes régionales d’octobre ci-dessous sont historiques.
+
 ## Entretien PostgreSQL — 2 novembre 2026
 
 Premier retour Linux du relevé reçu : minuteur actif, mais résultats temporaires du service revenus aux valeurs initiales malgré le succès conservé dans le journal. Diagnostic transmis et cas reproduit ; clarification du relevé en « historique indisponible » avec commande du journal, sans nouvelle sauvegarde ni modification de systemd. Les deux archives rapportées par le journal sont confirmées ; première échéance du 3 novembre toujours à observer.
@@ -323,7 +327,7 @@ L'utilisateur indique avoir testé les P1 le 1er octobre 2026, sans préciser la
 - Valider la refonte mobile de Semaine, Recettes, Courses et Compte : première intégration de la maquette validée effectuée sur `development` (navigation, thèmes et assiettes distinctes), fiche et filtres affinés le 9 octobre. Restent la validation iPhone/Android sur serveur et les ajustements issus de ces essais. Direction et limites dans [DESIGN-REFONTE.md](DESIGN-REFONTE.md).
 - Concevoir les interfaces tablette et PC : exploiter la largeur pour le planning et les recettes, adapter la navigation au tactile et au clavier/souris. Les contrôles actuels de largeur ne constituent pas encore ces interfaces.
 - Coût des recettes et de la semaine : prix manuels écartés le 2 novembre à la suite du manque de fidélité signalé par l’utilisateur ; brouillon local retiré avant publication. À réexaminer seulement avec des données fiables et un besoin confirmé.
-- Étendre la saisonnalité régionale : premiers repères Bretagne et Hauts-de-France livrés le 12 octobre, couverture partielle et calendrier national en complément. Autres régions et produits à ajouter après vérification de sources mensuelles fiables.
+- Saisonnalité régionale écartée le 2 novembre : un calendrier national français unique remplace la sélection de région. Les mises à jour futures concernent la couverture nationale, selon des sources fiables.
 - Historique : carte des restaurants intégrée le 14 octobre après validation de la maquette indépendante, puis [retirée le 15 octobre](DECISIONS.md#restaurants-manuels--15-octobre-2026). À l'intégration : 215 tests réussis, aucun ignoré, HTTPS inclus ; Chromium avec vraie bibliothèque et services simulés, cinq largeurs clair/sombre et texte agrandi, erreurs de tuiles et sauvegardes revérifiées. Ce résultat n'établissait pas la disponibilité réelle des fournisseurs et ne décrit plus une fonction présente.
 
 Ordre de travail : P1, puis P2, puis P3. Les interfaces tablette/PC restent différées à la demande de l'utilisateur ; la révision de « Plus d’options » dans le planning a été demandée puis implémentée le 7 octobre. Les défauts visuels qui gênent l'utilisation restent P1.
