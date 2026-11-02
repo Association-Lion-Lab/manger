@@ -27,12 +27,12 @@ async function catalogStoreContract(t,{store,brokenImport,snapshot}) {
     const results=await Promise.all([store.importCatalog(list),store.importCatalog(list)]);assert.deepEqual(results.sort(),[0,2]);
     const titles=(await clean()).map(r=>r.title);for(const item of list)assert.equal(titles.filter(title=>title===item.title).length,1);
   });
-  await t.test('les 128 recettes réelles importées sans écraser une personnalisation',async()=>{
+  await t.test('les 178 recettes réelles importées sans écraser une personnalisation',async()=>{
     const customized=await store.save(validateRecipe({...catalog[0],minutes:7,photo:'data:image/jpeg;base64,/9j/2Q=='}));await store.setFavorite(customized.id,true);
     const before=(await clean()).find(r=>r.id===customized.id),titles=new Set((await clean()).map(r=>r.title));
     const expected=catalog.filter(r=>!titles.has(r.title)).length;assert.equal(await store.importCatalog(catalog.map(validateRecipe)),expected);
     assert.equal(await store.importCatalog(catalog.map(validateRecipe)),0);assert.deepEqual((await clean()).find(r=>r.id===customized.id),before);
-    const after=new Set((await clean()).map(r=>r.title));assert.equal(catalog.length,128);for(const item of catalog)assert.ok(after.has(item.title));
+    const after=new Set((await clean()).map(r=>r.title));assert.equal(catalog.length,178);for(const item of catalog)assert.ok(after.has(item.title));
   });
 }
 module.exports={catalogStoreContract};

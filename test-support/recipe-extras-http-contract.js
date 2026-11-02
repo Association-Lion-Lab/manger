@@ -41,11 +41,11 @@ async function extrasHttpContract(t,{request,login,read,failDatabase,seedLegacyI
   });
   await t.test('catalogue réel préserve personnalisation/photo/avis et imports simultanés sans doublon',async()=>{
     assert.equal((await send(`/api/recipes/${saved.id}`,'PUT',recipeDraft({title:catalog[0].title,minutes:7}))).status,200);
-    const before=(await read()).find(r=>r.id===saved.id),r=await send('/api/catalog/import','POST',{});assert.equal(r.status,200);assert.deepEqual(await r.json(),{added:127});
-    assert.equal((await read()).length,128);assert.deepEqual((await read()).find(r=>r.id===saved.id),before);
+    const before=(await read()).find(r=>r.id===saved.id),r=await send('/api/catalog/import','POST',{});assert.equal(r.status,200);assert.deepEqual(await r.json(),{added:177});
+    assert.equal((await read()).length,178);assert.deepEqual((await read()).find(r=>r.id===saved.id),before);
     const target=(await read()).find(r=>r.id!==saved.id);assert.equal((await send(`/api/recipes/${target.id}`,'DELETE')).status,200);
     const imports=await Promise.all([send('/api/catalog/import','POST',{}),send('/api/catalog/import','POST',{})]);for(const item of imports)assert.equal(item.status,200);
-    const counts=await Promise.all(imports.map(item=>item.json()));assert.deepEqual(counts.map(c=>c.added).sort(),[0,1]);assert.equal((await read()).length,128);
+    const counts=await Promise.all(imports.map(item=>item.json()));assert.deepEqual(counts.map(c=>c.added).sort(),[0,1]);assert.equal((await read()).length,178);
   });
   await t.test('pannes SQL privées, aperçu toujours sans base, reprise',async()=>{
     const before=await read(),undo=failDatabase();

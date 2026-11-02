@@ -51,6 +51,6 @@ Toutes les soupes sont servies chaudes ; aucun temps de refroidissement n'est ca
 
 **Publication initialement reportée, puis autorisée avec le lot de classiques le 2 novembre.** Les [commandes de mise à jour](MISE-A-JOUR-CATALOGUE.md) concernent les deux lots ensemble. Aucun accès ou changement au serveur Ubuntu ni aux données du foyer par l'agent.
 
-Après publication et mise à jour de l'image, utiliser **Recettes → Ajouter les recettes manquantes du catalogue**. Depuis les 100 titres historiques inchangés, les deux lots ajoutent 28 fiches (ces 20, puis 8 classiques). Les titres déjà présents, les personnalisations, les photos et les favoris restent conservés. Un nouvel import identique ajoute zéro fiche. La mise à jour de Docker seule n'importe rien.
+Après publication et mise à jour de l'image, utiliser **Recettes → Ajouter les recettes manquantes du catalogue**. Les deux premiers lots représentaient 28 ajouts depuis 100 titres (ces 20, puis 8 classiques). Depuis le [lot suivant de 50](CATALOGUE-50.md), le catalogue atteint 178 : 78 ajouts depuis 100 titres, 58 depuis 120 ou 50 depuis 128. Les titres déjà présents, les personnalisations, les photos et les favoris restent conservés. Un nouvel import identique ajoute zéro fiche. La mise à jour de Docker seule n'importe rien.
 
 La validation technique couvre les filtres de saison et l'import ; elle ne constitue ni un essai culinaire ni une validation iPhone. Résultats finaux consignés dans [DECISIONS.md](DECISIONS.md).

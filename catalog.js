@@ -169,5 +169,6 @@ module.exports = [
     'https://www.marmiton.org/recettes/recette_endives-au-jambon_25868.aspx'),
   ...require('./catalog-extra')(recipe),
   ...require('./catalog-seasonal')(recipe),
-  ...require('./catalog-classics')(recipe)
+  ...require('./catalog-classics')(recipe),
+  ...require('./catalog-world')(recipe)
 ];

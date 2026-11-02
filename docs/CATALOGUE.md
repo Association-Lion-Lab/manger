@@ -2,9 +2,9 @@
 
 ## Catalogue actuel — 2 novembre 2026
 
-Le catalogue importable contient **128 recettes** : les 38 premières, le lot de 62 du 15 octobre, [20 soupes et mijotés saisonniers](SOUPES-MIJOTES.md) et [8 mijotés classiques](MIJOTES-CLASSIQUES.md) du 2 novembre. Les trois recettes de démarrage et les recettes personnelles du foyer ne font pas partie de ce nombre : le total affiché dans l'application peut donc être supérieur à 128. Publication des deux derniers lots demandée ; leur disponibilité sur le serveur nécessite la [mise à jour puis l'import volontaire](MISE-A-JOUR-CATALOGUE.md).
+Le catalogue importable contient **178 recettes** : les 38 premières, le lot de 62 du 15 octobre, [20 soupes et mijotés saisonniers](SOUPES-MIJOTES.md), [8 mijotés classiques](MIJOTES-CLASSIQUES.md), puis [50 nouvelles propositions](CATALOGUE-50.md). Les trois recettes de démarrage et les recettes personnelles du foyer ne font pas partie de ce nombre : le total affiché dans l'application peut donc être supérieur à 178. Le déploiement du catalogue précédent de 128 est confirmé sur Linux ; ce nouveau lot nécessite une [mise à jour puis un import volontaire](MISE-A-JOUR-CATALOGUE.md).
 
-Dans **Recettes → Ajouter les recettes manquantes du catalogue**, l'application ajoute 28 fiches si les 100 précédentes sont déjà présentes, 8 depuis 120 ou 90 si seules les 38 premières sont présentes. Elle ignore un titre déjà enregistré, même si sa fiche a été modifiée. Elle ne remplace pas les ingrédients, étapes, photos, notes, favoris ou durées des fiches existantes. Un second import sans changement ajoute zéro recette. Après publication et déploiement du code, cet import reste volontaire : mettre à jour Docker seul ne copie pas les nouvelles fiches dans le foyer.
+Dans **Recettes → Ajouter les recettes manquantes du catalogue**, l'application ajoute 50 fiches depuis les 128 précédentes, 58 depuis 120, 78 depuis 100 ou 140 depuis les 38 premières. Elle ignore un titre déjà enregistré, même si sa fiche a été modifiée. Elle ne remplace pas les ingrédients, étapes, photos, notes, favoris ou durées des fiches existantes. Un second import sans changement ajoute zéro recette. Après publication et déploiement du code, cet import reste volontaire : mettre à jour Docker seul ne copie pas les nouvelles fiches dans le foyer.
 
 ## Répartition
 
@@ -12,32 +12,32 @@ Toutes les fiches du catalogue sont prévues pour deux portions de référence ;
 
 | Régime | Recettes |
 | --- | ---: |
-| Végétal | 59 |
-| Végétarien | 31 |
-| Poisson et fruits de mer | 9 |
-| Sans restriction | 29 |
+| Végétal | 76 |
+| Végétarien | 48 |
+| Poisson et fruits de mer | 18 |
+| Sans restriction | 36 |
 
 Les univers sont combinables : une même recette peut être économique, japonaise et express. Les nombres ci-dessous ne s'additionnent donc pas pour obtenir le total.
 
 | Univers existant | Recettes |
 | --- | ---: |
-| Recettes du rat | 63 |
-| Recettes de date | 30 |
-| Plats mijotés | 36 |
-| Japon | 12 |
-| Chine | 11 |
-| Terroir français | 51 |
-| Côté chef | 14 |
-| Express · 30 min max | 40 |
-| Batch cooking | 30 |
-| À emporter | 23 |
-| Doudou food | 60 |
-| Méditerranée | 24 |
-| Italie | 17 |
-| Inde | 9 |
-| Mexique | 8 |
+| Recettes du rat | 84 |
+| Recettes de date | 41 |
+| Plats mijotés | 40 |
+| Japon | 17 |
+| Chine | 17 |
+| Terroir français | 58 |
+| Côté chef | 21 |
+| Express · 30 min max | 58 |
+| Batch cooking | 48 |
+| À emporter | 37 |
+| Doudou food | 80 |
+| Méditerranée | 31 |
+| Italie | 23 |
+| Inde | 14 |
+| Mexique | 13 |
 
-Les ajouts couvrent notamment omelette et galettes de légumes, soupes, croques, donburi, soba, udon, riz et nouilles sautés, currys, dal, lasagnes, quesadillas, burritos, gratins, papillotes, salades, tartes et risottos. Les deux lots du 2 novembre comprennent 12 soupes végétales, 4 mijotés végétaux et 12 mijotés à la viande. Les ingrédients sont quantifiés et chaque fiche contient au moins trois étapes propres au plat. Les 90 fiches ajoutées depuis les 38 premières ont des états cru/cuit explicites ; ils ne sont pas déduits automatiquement d'une étape de cuisson. Un aliment déjà cuit en conserve reste « cuit » même s'il est ensuite servi froid.
+Les ajouts couvrent notamment omelette et galettes de légumes, soupes, croques, donburi, soba, udon, riz et nouilles sautés, currys, dal, lasagnes, quesadillas, burritos, gratins, papillotes, salades, tartes et risottos. Après les 20 soupes/mijotés et les 8 classiques, le lot de 50 apporte 17 plats végétaux, 17 végétariens, 9 au poisson et 7 à la viande dans les quinze univers existants. Les ingrédients sont quantifiés et chaque fiche contient au moins trois étapes propres au plat. Les 140 fiches ajoutées depuis les 38 premières ont des états cru/cuit explicites ; ils ne sont pas déduits automatiquement d'une étape de cuisson. Un aliment déjà cuit en conserve reste « cuit » même s'il est ensuite servi froid.
 
 ## Origine, images et limites
 
@@ -55,6 +55,6 @@ Les repères de température s'appuient sur le [tableau USDA/FSIS](https://www.f
 
 ## Maintenance et vérification
 
-`catalog.js` conserve les 38 premières fiches et leur ordre ; `catalog-extra.js` ajoute les 62 suivantes, `catalog-seasonal.js` les 20 soupes/mijotés et `catalog-classics.js` les 8 classiques avec le même constructeur. Celui-ci accepte un état de préparation explicite par ingrédient et garde le mécanisme antérieur pour les anciennes fiches. Les 120 fiches précédentes ne sont pas modifiées par le dernier lot. Aucune dépendance, migration ou route nouvelle. L'import volontaire existant reste responsable de l'ajout sans remplacement.
+`catalog.js` conserve les 38 premières fiches et leur ordre ; `catalog-extra.js` ajoute les 62 suivantes, `catalog-seasonal.js` les 20 soupes/mijotés, `catalog-classics.js` les 8 classiques et `catalog-world.js` les 50 nouvelles avec le même constructeur. Celui-ci accepte un état de préparation explicite par ingrédient et garde le mécanisme antérieur pour les anciennes fiches. Les 128 fiches précédentes ne sont pas modifiées par le dernier lot. Aucune dépendance, migration ou route nouvelle. L'import volontaire existant reste responsable de l'ajout sans remplacement.
 
-Les régressions vérifient nombre, unicité des titres, validation des fiches, ingrédients, durées, étiquettes express, cru/cuit et imports depuis 38, 100 ou 120 fiches avec personnalisation. Le contrat d'import partagé couvre SQLite et PostgreSQL. Le lot soupes/mijotés vérifie aussi les inclusions et exclusions mensuelles des 20 fiches. La validation technique ne remplace pas un essai culinaire ; résultats et limites sont consignés dans [les décisions](DECISIONS.md).
+Les régressions vérifient nombre, unicité des titres, validation des fiches, ingrédients, durées, étiquettes express, cru/cuit et imports depuis 38, 100, 120 ou 128 fiches avec personnalisation. Le contrat d'import partagé couvre SQLite et PostgreSQL. Le lot soupes/mijotés vérifie les inclusions et exclusions mensuelles des 20 fiches ; celui de 50 contrôle aussi les combinaisons saisonnières et la couverture de chaque univers existant. La validation technique ne remplace pas un essai culinaire ; résultats et limites sont consignés dans [les décisions](DECISIONS.md).

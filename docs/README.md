@@ -13,7 +13,7 @@ Résumé de leur état depuis le Linux habituel : `bash ~/services/manger/script
 1. [Fonctionnalités réalisées](FONCTIONNALITES.md) : vue d'ensemble par usage, dont les régimes mixtes et l'anti-gaspi.
 2. [Guide complet](GUIDE.md) : installation, utilisation, comptes, invitations, courses, import/export et sauvegarde/restauration.
 3. [HTTPS local](HTTPS.md) : certificats, confiance iPhone/Android, configuration et renouvellement.
-4. [Catalogue de 128 recettes](CATALOGUE.md) : [20 soupes et mijotés](SOUPES-MIJOTES.md), puis [8 classiques](MIJOTES-CLASSIQUES.md) du 2 novembre ; [commandes Linux et import](MISE-A-JOUR-CATALOGUE.md), publication autorisée, déploiement à confirmer ; [saisons françaises](RECETTES-DE-SAISON.md).
+4. [Catalogue de 178 recettes](CATALOGUE.md) : [50 nouveautés dans les catégories existantes](CATALOGUE-50.md), après [20 soupes/mijotés](SOUPES-MIJOTES.md) et [8 classiques](MIJOTES-CLASSIQUES.md) ; [commandes Linux et import](MISE-A-JOUR-CATALOGUE.md). Déploiement précédent `e084bc2` confirmé, nouveau lot à déployer puis importer ; [saisons françaises](RECETTES-DE-SAISON.md).
 
 Toutes les commandes du guide s'exécutent depuis la racine du dépôt, **pas depuis `docs/`**. Le dépôt sauvegarde le code et cette documentation, pas les bases du foyer.
 
