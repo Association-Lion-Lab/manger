@@ -425,3 +425,9 @@ Résultat final : **417/417 tests généraux réussis sans échec ou ignoré, HT
 Bœuf-carottes existant conservé ; [bourguignon, carbonade, deux joues de porc, blanquette de dinde, pot-au-feu, Marengo et daube](MIJOTES-CLASSIQUES.md) ajoutés. Catalogue de 128 recettes, 36 mijotés. Les 120 fiches précédentes restent identiques. 440/440 tests généraux et 21/21 PostgreSQL ciblés réussis ; imports depuis 100/120 fiches et répétition sans doublons contrôlés. Validation technique, sans essai culinaire ou appareil.
 
 Codeberg répond de nouveau au contrôle distant ; demande explicite de publier ce lot, les soupes précédentes et la simplification des saisons. [Commandes Linux](MISE-A-JOUR-CATALOGUE.md) préparées et syntaxe/remplacement de configuration testés sur fichiers fictifs ; aucun accès Ubuntu. La publication Git et le résultat Linux restent des preuves distinctes : le déploiement, puis l'import volontaire des 28 nouveautés depuis l'ancien catalogue de 100, devront être confirmés par l'administrateur.
+
+## 2 novembre 2026 — refus Linux EACCES au build corrigé
+
+Pull jusqu'à `edb9531` confirmé ; build arrêté avant toute interruption de l'application parce que les nouveaux fichiers privés (`umask 077`) restent illisibles par `node` après copie. Normalisation des droits dans `/app`, sans toucher à l'hôte ni aux données. Régression Docker réelle avec 600/700, lecture non-root et exécutable préservé, ajoutée à la CI. Contrôle de démarrage corrigé pour accepter explicitement le dossier runtime `db`.
+
+440/440 tests généraux réussis ; contrôle de permissions et construction réelle de l'image complète sur Docker local, puis démarrage/santé/accès/icône/persistance après redémarrage réussis avec le lanceur corrigé. Aucun volume existant ou serveur Ubuntu touché. Publication du correctif et relance du [bloc de mise à jour](MISE-A-JOUR-CATALOGUE.md) demandées ; santé réelle Linux et import des 28 recettes restent à confirmer.

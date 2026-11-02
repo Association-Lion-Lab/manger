@@ -17,7 +17,7 @@ Résumé de leur état depuis le Linux habituel : `bash ~/services/manger/script
 
 Toutes les commandes du guide s'exécutent depuis la racine du dépôt, **pas depuis `docs/`**. Le dépôt sauvegarde le code et cette documentation, pas les bases du foyer.
 
-[Construction et déploiement Docker](DOCKER.md) : correctif du 21 octobre, exclusions du contexte, contrôle de modules au build, tests d'image isolés, CI à activer, sauvegarde des deux bases et retour arrière. Compose et ses volumes restent inchangés ; construction réelle de cette révision non vérifiée localement faute de Docker.
+[Construction et déploiement Docker](DOCKER.md) : exclusions du contexte, contrôle de modules et de permissions au build, tests d'image isolés, CI à activer, sauvegarde et retour arrière. Le 2 novembre, refus Linux EACCES avec `umask 077` corrigé par normalisation dans l'image ; contexte restrictif et image complète construits/testés dans Docker local. Confirmation Ubuntu de ce correctif encore attendue, Compose et volumes inchangés.
 
 ## Comprendre et contribuer
 

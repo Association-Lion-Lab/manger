@@ -9,7 +9,8 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 # .dockerignore is an allowlist: new JavaScript modules are included automatically.
 COPY . .
-RUN mkdir /data && chown node:node /data
+# Normalize checkout modes (including umask 077) before switching to node.
+RUN chmod -R a+rX,u+w,go-w /app && mkdir /data && chown node:node /data
 
 ENV MANGER_DB=/data/manger.db
 ENV MANGER_PORT=3000

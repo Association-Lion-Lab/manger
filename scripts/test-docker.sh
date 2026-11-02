@@ -38,7 +38,7 @@ docker exec "$container" node -e '
   assert.notEqual(process.getuid(), 0);
   assert.equal(fs.statSync("/app/server.js").uid, 0);
   for (const file of fs.readdirSync("/app")) {
-    assert.ok(["public", "node_modules", "package.json", "package-lock.json", "LICENSE"].includes(file) || (file.endsWith(".js") && !file.endsWith(".test.js")), file);
+    assert.ok(["db", "public", "node_modules", "package.json", "package-lock.json", "LICENSE"].includes(file) || (file.endsWith(".js") && !file.endsWith(".test.js")), file);
   }
   const { DatabaseSync } = require("node:sqlite");
   for (const name of ["manger.db", "accounts.db"]) {

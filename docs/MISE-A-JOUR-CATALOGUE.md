@@ -4,6 +4,8 @@
 
 La construction et le test d'image utilisent des ressources synthétiques avant d'arrêter l'application. La sauvegarde utilise ensuite le contrôleur existant et l'image d'outils de l'instance retenue ; elle vérifie l'archive. Le remplacement ne vise que le service `app`, sans redémarrer PostgreSQL. Les données ne sont pas effacées. Les options de [Compose up](https://docs.docker.com/reference/cli/docker/compose/up/) `--no-deps`, `--no-build`, `--pull never` et `--wait` ont été vérifiées dans la documentation Docker. Le résultat réel Docker/Linux reste à confirmer par l'administrateur.
 
+**Premier essai Linux reçu :** le pull jusqu'à `edb9531` réussit, puis le build refuse de lire `catalog-classics.js` sous `node` avec EACCES. Le sous-shell s'arrête avant la sauvegarde et avant `pgc stop app` : l'application précédente n'a pas été arrêtée par cette tentative. Cause : les nouveaux fichiers issus du pull avec `umask 077` gardent des droits 600 dans l'image. Le Dockerfile normalise désormais les droits dans `/app` avant `USER node`. Le contrôle de démarrage accepte aussi le dossier runtime `db`, auparavant oublié dans sa liste. Après publication de ces correctifs, relancer le bloc entier ci-dessous ; aucun `chmod` du dépôt, des secrets ou du dossier privé n'est nécessaire.
+
 ## 1. Mettre à jour l'application
 
 Le sous-shell garde les variables locales à cette opération. Un arbre Git modifié, un échec de build/test ou une configuration inattendue arrête la suite avant l'interruption. Ne pas remplacer cette procédure par `docker compose up` sans les fichiers et le nom de projet explicites.
