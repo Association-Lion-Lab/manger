@@ -10,6 +10,8 @@ Lecture du dépôt le **10 octobre 2026**. Aucun changement de runtime, dépenda
 
 ## Résumé de l'architecture actuelle
 
+**Menu guidé, 2 novembre 2026 :** `public/menu-composer.js` porte le brouillon en mémoire, ses validations de placement et le contrôleur du dialogue dédié ; `public/menu-composer.css` définit une zone défilante avec en-tête et action principale fixes. `public/index.html` injecte les recherches, illustrations, goûts et données existants. Aperçu par `/api/week/preview`, enregistrement atomique par `/api/week/plan`, puis relecture et ouverture de Courses : aucune nouvelle route, table ou dépendance de production. Les fichiers sont explicitement servis par `public-http.js` et contrôlés dans l'image. [Contrats, limites et vérification](MENU-GUIDE.md).
+
 Manger! est un **monolithe web auto-hébergé** : un seul processus Node.js sert l'interface et l'API. Il n'y a ni serveur frontend distinct ni service cloud obligatoire pour gérer les recettes, le planning et les courses.
 
 - **Interface :** HTML, CSS et JavaScript dans `public/`, avec quatre onglets : Semaine, Recettes, Courses et Compte.

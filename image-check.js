@@ -10,6 +10,8 @@ function loadDirectory(directory) {
 }
 
 function checkImage() {
+  assert.equal(typeof require('./public/menu-composer').create, 'function');
+  readFileSync(join(__dirname, 'public', 'menu-composer.css'), 'utf8');
   assert.equal(typeof require('./db/postgres').openPostgres, 'function');
   // CLI modules must keep their side effects behind require.main === module.
   for (const file of readdirSync(__dirname)) {

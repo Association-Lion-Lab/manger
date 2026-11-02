@@ -7,6 +7,7 @@
   <meta name="theme-color" content="#111113" media="(prefers-color-scheme: dark)">
   <meta name="apple-mobile-web-app-title" content="Manger!">
   <title>Manger! — On mange quoi cette semaine ?</title>
+  <link rel="stylesheet" href="/menu-composer.css">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
   <link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192">
@@ -486,7 +487,7 @@
         <div id="schedule" class="schedule" aria-live="polite"></div>
         <div class="week-actions">
           <button id="suggest" class="primary" type="button"><span data-ui-icon="sparkle" aria-hidden="true">✦</span> Proposer le prochain repas</button>
-          <button id="compose-week" class="secondary" type="button"><span data-ui-icon="sparkle" aria-hidden="true">✦</span> Compose ma semaine</button>
+          <button id="compose-week" class="secondary" type="button"><span data-ui-icon="sparkle" aria-hidden="true">✦</span> Créer mon menu</button>
           <div class="week-tools" role="group" aria-label="Réutilisation et export du planning">
             <button id="reuse-week" class="text-action" type="button" aria-haspopup="dialog">Réutiliser un menu</button>
             <button id="export-calendar" class="text-action" type="button" aria-label="Exporter la semaine dans un calendrier" title="Exporter la semaine dans un calendrier"><span data-ui-icon="download" aria-hidden="true">⇩</span> Exporter</button>
@@ -598,6 +599,7 @@
       <p id="dialog-error" class="error" role="alert" hidden></p>
     </dialog>
 
+    <dialog id="menu-dialog" aria-labelledby="menu-title" aria-describedby="menu-subtitle"></dialog>
     <dialog id="recipe-import-dialog">
       <div class="section-heading"><h2>Importer des recettes</h2><button id="close-recipe-import" class="icon-button" type="button" aria-label="Fermer l’import"><span data-ui-icon="close" aria-hidden="true">×</span></button></div>
       <form id="recipe-url-form">
@@ -836,6 +838,7 @@
   <script src="/tastes.js"></script>
   <script src="/food-names.js"></script>
   <script src="/seasons.js"></script>
+  <script src="/menu-composer.js"></script>
   <script src="/offline-recipes.js"></script>
   <script src="/offline-shopping.js"></script>
   <script>
@@ -1621,89 +1624,26 @@
       try { await refresh(); } catch (error) { showError(error); list.textContent = ''; }
     }
 
+    let guidedMenu;
     function openWeekComposer() {
-      document.getElementById('dialog-title').textContent = 'Compose ma semaine';
-      document.getElementById('dialog-subtitle').textContent = 'Un aperçu avant de remplir les créneaux libres.';
-      document.getElementById('dialog-error').hidden = true;
-      const slots = fullDayNames.map((day, index) => `<div class="assignment"><strong>${day} ${dateAt(index).getDate()}</strong><div class="category-options">${['midi', 'soir'].map(slot => mealFor(index, slot) ? `<small class="muted">${slot === 'midi' ? 'Midi' : 'Soir'} déjà prévu</small>` : `<label><input type="checkbox" data-compose-day="${index}" value="${slot}"${slot === 'soir' ? ' checked' : ''}><span>${slot === 'midi' ? 'Midi' : 'Soir'}</span></label>`).join('')}</div></div>`).join('');
-      const members = state.members.map(member => `<label><input type="checkbox" data-compose-member="${member.id}" checked><span>${escapeHtml(member.name)}</span></label>`).join('');
-      document.getElementById('choices').innerHTML = `<div class="recipe-form"><label class="field"><span>Temps par repas</span><select id="compose-minutes"><option value="15">15 min</option><option value="30" selected>30 min</option><option value="45">45 min</option><option value="60">1 heure</option><option value="1440">Peu importe</option></select></label>${members ? `<div><span class="muted">Qui mange ? Une portion par personne</span><div class="category-options">${members}</div></div>` : '<label class="field"><span>Nombre de personnes</span><input id="compose-people" type="number" min="1" max="100" value="2"></label>'}<div>${slots}</div><button id="preview-week" class="primary" type="button">Proposer mon menu</button><div id="compose-preview" aria-live="polite"></div></div>`;
-      document.getElementById('preview-week').addEventListener('click', previewWeek);
-      if (!dialog.open) dialog.showModal();
-    }
-
-    let menuPreviewVersion = 0;
-    async function previewWeek() {
-      if (document.getElementById('meal-fields').disabled || document.getElementById('preview-week').disabled) return;
-      const rank = { vegan: 0, vegetarian: 1, pescetarian: 2, omnivore: 3 };
-      const members = [...document.querySelectorAll('[data-compose-member]:checked')].map(input => state.members.find(member => member.id === Number(input.dataset.composeMember)));
-      const people = members.length || Number(document.getElementById('compose-people')?.value);
-      const slots = [...document.querySelectorAll('[data-compose-day]:checked')];
-      const output = document.getElementById('compose-preview');
-      const candidates = state.recipes.filter(recipe => recipe.minutes <= Number(document.getElementById('compose-minutes').value) && members.every(member => rank[recipe.diet] <= rank[member.diet])).map(recipe => ({ ...recipe, ...recipeTaste(recipe.ingredients, members, state.avoidedIngredients || []) })).sort((a, b) => tasteRank(a) - tasteRank(b));
-      if (!Number.isInteger(people) || people < 1 || people > 100 || !slots.length) { output.innerHTML = '<p class="error">Choisissez au moins une personne et un créneau libre.</p>'; return; }
-      if (!candidates.length) { output.innerHTML = '<p class="error">Aucune recette adaptée aux régimes et au temps choisi. Augmentez le temps disponible ou ajoutez une recette.</p>'; return; }
-      const version = ++menuPreviewVersion, button = document.getElementById('preview-week');
-      button.disabled = true;
-      output.textContent = 'Composition du menu…';
-      let choices;
-      try {
-        const response = await fetch('/api/week/preview', { method: 'POST', headers: { 'content-type': 'application/json' }, signal: AbortSignal.timeout(10000), body: JSON.stringify({ start: key(state.weekStart), maxMinutes: Number(document.getElementById('compose-minutes').value), memberIds: members.map(member => member.id), people, slots: slots.map(input => ({ day: Number(input.dataset.composeDay), slot: input.value })) }) });
-        const result = await response.json();
-        if (version !== menuPreviewVersion || !output.isConnected || !dialog.open) return;
-        if (!response.ok) throw new Error(result.error || 'Menu indisponible. Réessaie.');
-        if (result.some(item => !candidates.some(recipe => recipe.id === item.recipeId))) throw new Error('Le catalogue a changé. Ferme cette fenêtre et recharge la page.');
-        choices = result;
-      } catch (error) {
-        if (version === menuPreviewVersion && output.isConnected && dialog.open) {
-          output.textContent = error.name === 'TimeoutError' ? 'La proposition prend trop de temps. Réessaie : aucun repas n’a été enregistré.' : error.message === 'Failed to fetch' ? 'Connexion indisponible. Réessaie quand le serveur est accessible.' : error.message;
-        }
-        return;
-      } finally { button.disabled = false; }
-      output.innerHTML = `<h2 style="margin:20px 0 10px">Ton menu · ${choices.length} repas</h2><p class="muted">Change un plat avant de valider. Une base commune, sans supplément de protéine ; les quantités s’adaptent aux participants. Des répétitions restent possibles si le catalogue est limité.</p>${choices.map((item, index) => `<label class="field" style="margin-bottom:14px"><span>${fullDayNames[item.day]} · ${item.slot === 'midi' ? 'Midi' : 'Soir'}</span><select data-compose-recipe="${index}">${candidates.map(recipe => `<option value="${recipe.id}"${recipe.id === item.recipeId ? ' selected' : ''}>${escapeHtml(recipe.title)} · ${recipe.minutes} min</option>`).join('')}</select></label>`).join('')}<button id="confirm-week" class="primary" type="button">Ajouter ces repas au planning</button>`;
-      document.getElementById('confirm-week').addEventListener('click', async () => {
-        if (document.getElementById('meal-fields').disabled || document.getElementById('confirm-week').disabled) return;
-        try {
-          const meals = choices.map((item, index) => {
-            const recipe = state.recipes.find(recipe => recipe.id === Number(document.querySelector(`[data-compose-recipe="${index}"]`).value));
-            return { date: key(dateAt(item.day)), slot: item.slot, location: 'home', occasion: 'regular', title: recipe.title, people, recipeId: members.length ? null : recipe.id, assignments: [], dishes: members.map(member => ({ memberId: member.id, recipeId: recipe.id, portions: 1 })) };
-          });
-          await postMeal({ start: key(state.weekStart), meals }, '/api/week/plan');
-        } catch (error) {
-          document.getElementById('dialog-error').textContent = error.message;
-          document.getElementById('dialog-error').hidden = false;
+      guidedMenu ||= MangerMenu.create({
+        dialog: document.getElementById('menu-dialog'), state: () => state,
+        api, fetch: (...args) => fetch(...args), escape: escapeHtml, icon: uiIcon, cover: recipeCover,
+        reload: () => load(), courses: () => document.querySelector('nav [data-panel="shopping"]').click(),
+        search: (recipes, query) => MangerFoodNames.searchRecipes(recipes, query),
+        candidates: criteria => {
+          const rank = { vegan: 0, vegetarian: 1, pescetarian: 2, omnivore: 3 };
+          const members = state.members.filter(member => criteria.memberIds.includes(member.id));
+          return state.recipes.filter(recipe => recipe.minutes <= criteria.maxMinutes && members.every(member => rank[recipe.diet] <= rank[member.diet]))
+            .map(recipe => ({ ...recipe, ...recipeTaste(recipe.ingredients, members, state.avoidedIngredients || []) })).sort((a, b) => tasteRank(a) - tasteRank(b));
+        },
+        notice: (recipe, criteria) => {
+          const members = state.members.filter(member => criteria.memberIds.includes(member.id));
+          const rated = { ...recipe, ...recipeTaste(recipe.ingredients, members, state.avoidedIngredients || []) };
+          return tasteRank(rated) ? tasteNotice(rated) : '';
         }
       });
-      document.getElementById('confirm-week').insertAdjacentHTML('beforebegin', '<div id="compose-taste-notices" aria-live="polite"></div>');
-      document.getElementById('compose-taste-notices').insertAdjacentHTML('beforebegin', '<p class="muted">Tes choix manuels sont conservés. Les autres plats sont recalculés selon le placard et les ingrédients réutilisables.</p><p id="compose-update-status" class="muted" role="status"></p>');
-      const updateNotices = () => {
-        const selected = [...new Set([...output.querySelectorAll('[data-compose-recipe]')].map(select => Number(select.value)))].map(id => candidates.find(recipe => recipe.id === id)).filter(recipe => tasteRank(recipe));
-        document.getElementById('compose-taste-notices').innerHTML = selected.map(recipe => `<p class="muted">${escapeHtml(recipe.title)} — ${escapeHtml(tasteNotice(recipe))}.</p>`).join('');
-      };
-      const manualChoices = new Map();
-      output.querySelectorAll('[data-compose-recipe]').forEach(select => select.addEventListener('change', async () => {
-        if (select.disabled || document.getElementById('meal-fields').disabled) return;
-        const index = Number(select.dataset.composeRecipe), previous = manualChoices.get(index);
-        manualChoices.set(index, Number(select.value));
-        const controls = [...output.querySelectorAll('select, button')], status = output.querySelector('#compose-update-status');
-        controls.forEach(control => control.disabled = true); button.disabled = true;
-        status.textContent = 'Recalcul des autres plats…';
-        try {
-          const result = await api('/api/week/preview', { method: 'POST', headers: { 'content-type': 'application/json' }, signal: AbortSignal.timeout(10000), body: JSON.stringify({ start: key(state.weekStart), maxMinutes: Number(document.getElementById('compose-minutes').value), memberIds: members.map(member => member.id), people, slots: choices.map((item, i) => ({ day: item.day, slot: item.slot, ...(manualChoices.has(i) ? { recipeId: manualChoices.get(i) } : {}) })) }) });
-          if (version !== menuPreviewVersion || !output.isConnected || !dialog.open) return;
-          if (result.length !== choices.length || result.some((item, i) => item.day !== choices[i].day || item.slot !== choices[i].slot || !candidates.some(recipe => recipe.id === item.recipeId))) throw new Error('Le catalogue a changé. Relance la proposition de menu.');
-          choices = result;
-          output.querySelectorAll('[data-compose-recipe]').forEach((control, i) => control.value = choices[i].recipeId);
-          status.textContent = 'Menu recalculé. Tes choix manuels sont conservés.';
-          updateNotices();
-        } catch (error) {
-          if (version !== menuPreviewVersion || !output.isConnected || !dialog.open) return;
-          if (previous === undefined) manualChoices.delete(index); else manualChoices.set(index, previous);
-          select.value = choices[index].recipeId;
-          status.textContent = 'Recalcul impossible. Le menu précédent est conservé. Réessaie de changer le plat.';
-        } finally { controls.forEach(control => control.disabled = false); button.disabled = false; }
-      }));
-      updateNotices();
+      guidedMenu.open(key(state.weekStart));
     }
 
     function recipePicker(mode = 'recipe') {
@@ -2287,17 +2227,11 @@
       button.dataset.remove ? deleteMeal() : button.dataset.duo ? openDuoSetup(suggestionMembers()) : saveMeal(button);
     });
     document.getElementById('choices').addEventListener('change', event => {
-      if (event.target.matches('#compose-minutes, #compose-people, [data-compose-member], [data-compose-day]')) {
-        menuPreviewVersion++;
-        document.getElementById('compose-preview').replaceChildren();
-        document.getElementById('dialog-error').hidden = true;
-      }
       if (event.target.id === 'suggestion-minutes') renderSuggestions(event.target.value);
       if (event.target.matches('[data-suggestion-member]')) renderSuggestions(document.getElementById('suggestion-minutes').value);
       if (event.target.id === 'picker-category') renderPickerRecipes();
     });
     document.getElementById('choices').addEventListener('input', event => {
-      if (event.target.id === 'compose-people') { menuPreviewVersion++; document.getElementById('compose-preview').replaceChildren(); }
       if (event.target.id === 'picker-search') renderPickerRecipes();
     });
     async function browseDate(date) {
@@ -2338,7 +2272,10 @@
     document.querySelector('nav').addEventListener('click', event => {
       const button = event.target.closest('[data-panel]');
       if (!button) return;
-      document.querySelectorAll('nav button').forEach(item => { item.classList.toggle('active', item === button); item.toggleAttribute('aria-current', item === button); });
+      document.querySelectorAll('nav button').forEach(item => {
+        item.classList.toggle('active', item === button);
+        if (item === button) item.setAttribute('aria-current', 'page'); else item.removeAttribute('aria-current');
+      });
       document.querySelectorAll('.panel').forEach(panel => { panel.hidden = true; });
       document.getElementById(`${button.dataset.panel}-panel`).hidden = false;
       shoppingSyncVersion++;

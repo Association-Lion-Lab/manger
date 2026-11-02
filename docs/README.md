@@ -4,6 +4,8 @@ Documentation versionnée dans le dépôt, regroupée le **10 octobre 2026**. El
 
 ## Utiliser et héberger
 
+[Création de menu guidée](MENU-GUIDE.md) : cinq propositions modifiables, ajout d'autres recettes avec recherche, portions, choix des jours et des participants, puis création des courses. Brouillon sans écriture avant la confirmation finale ; aucune modification de schéma ou de déploiement PostgreSQL.
+
 [Saisons françaises](RECETTES-DE-SAISON.md) : filtre unique selon le mois courant de l’appareil, recettes de toutes régions regroupées et anciens réglages régionaux ignorés depuis le 2 novembre. Recherche, favoris et univers conservés ; aucune donnée de recette à réimporter.
 
 [Sauvegardes PostgreSQL automatiques](POSTGRESQL-AUTO-BACKUPS.md) : activation Linux confirmée le 2 novembre avec première copie contrôlée et service utilisateur réussi, tous les jours à 03 h Europe/Paris, sept copies automatiques réussies, diagnostic et reprise d’un verrou. Première échéance du 3 novembre encore à observer ; restauration synthétique testée localement, pas de restauration privée déduite.
