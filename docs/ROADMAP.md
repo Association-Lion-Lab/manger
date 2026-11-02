@@ -419,3 +419,9 @@ Résultat final : **417/417 tests généraux réussis sans échec ou ignoré, HT
 [20 nouvelles fiches](SOUPES-MIJOTES.md) pour deux personnes : 12 soupes végétales et 8 plats mijotés, répartis sur quatre périodes de référence ; catalogue local de 120 recettes. Légumes courants, légumineuses, quatre cocottes à la viande, pas de prix estimé, photos ou avis inventés. Le mois de l'appareil et le calendrier national existants restent la règle ; rien à configurer par région.
 
 436/436 tests généraux réussis, HTTPS inclus ; 12/12 tests d'import/dépôt et 9/9 HTTP avec PostgreSQL natif temporaire réussis. Les 100 fiches précédentes sont inchangées, les réimports n'écrasent pas les personnalisations. Contrôle des modules d'image passé localement, sans construction Docker. Pas d'essai culinaire ou iPhone. Publication Codeberg reportée explicitement, aucun accès Ubuntu ; déploiement puis import volontaire à effectuer après une future publication.
+
+## 2 novembre 2026 — huit mijotés classiques et publication autorisée
+
+Bœuf-carottes existant conservé ; [bourguignon, carbonade, deux joues de porc, blanquette de dinde, pot-au-feu, Marengo et daube](MIJOTES-CLASSIQUES.md) ajoutés. Catalogue de 128 recettes, 36 mijotés. Les 120 fiches précédentes restent identiques. 440/440 tests généraux et 21/21 PostgreSQL ciblés réussis ; imports depuis 100/120 fiches et répétition sans doublons contrôlés. Validation technique, sans essai culinaire ou appareil.
+
+Codeberg répond de nouveau au contrôle distant ; demande explicite de publier ce lot, les soupes précédentes et la simplification des saisons. [Commandes Linux](MISE-A-JOUR-CATALOGUE.md) préparées et syntaxe/remplacement de configuration testés sur fichiers fictifs ; aucun accès Ubuntu. La publication Git et le résultat Linux restent des preuves distinctes : le déploiement, puis l'import volontaire des 28 nouveautés depuis l'ancien catalogue de 100, devront être confirmés par l'administrateur.

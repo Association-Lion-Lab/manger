@@ -1,6 +1,6 @@
 # Soupes de légumes et plats mijotés — 2 novembre 2026
 
-Lot local de **20 recettes pour deux personnes** : 12 soupes végétales, 4 mijotés végétaux et 4 mijotés au poulet ou au porc. Le catalogue passe de 100 à 120 fiches. Les quantités, durées et étapes sont dans `catalog-seasonal.js` ; chaque soupe utilise un mixeur plongeant ou indique une finition avec morceaux.
+Lot initialement local de **20 recettes pour deux personnes** : 12 soupes végétales, 4 mijotés végétaux et 4 mijotés au poulet ou au porc. Il portait le catalogue de 100 à 120 fiches ; [8 classiques ajoutés ensuite](MIJOTES-CLASSIQUES.md) le portent à 128. Les quantités, durées et étapes sont dans `catalog-seasonal.js` ; chaque soupe utilise un mixeur plongeant ou indique une finition avec morceaux.
 
 L'objectif économique repose sur les légumes courants, les légumineuses, les huiles usuelles, les hauts de cuisse de poulet désossés et l'épaule de porc. Aucun prix, coût par portion ou gain financier n'est calculé : les tarifs réels et le coût de cuisson varient. Les soupes ne sont pas présentées comme des repas nutritionnellement complets garantis.
 
@@ -49,8 +49,8 @@ Toutes les soupes sont servies chaudes ; aucun temps de refroidissement n'est ca
 
 ## Import et état de livraison
 
-**Travail local uniquement, publication Codeberg reportée à la demande de l'utilisateur.** Aucun accès ou changement au serveur Ubuntu ni aux données du foyer.
+**Publication initialement reportée, puis autorisée avec le lot de classiques le 2 novembre.** Les [commandes de mise à jour](MISE-A-JOUR-CATALOGUE.md) concernent les deux lots ensemble. Aucun accès ou changement au serveur Ubuntu ni aux données du foyer par l'agent.
 
-Après une future publication et mise à jour de l'image, utiliser **Recettes → Ajouter les recettes manquantes du catalogue**. Depuis les 100 titres historiques inchangés, cela ajoute 20 fiches. Les titres déjà présents, les personnalisations, les photos et les favoris restent conservés. Un nouvel import identique ajoute zéro fiche. La mise à jour de Docker seule n'importe rien.
+Après publication et mise à jour de l'image, utiliser **Recettes → Ajouter les recettes manquantes du catalogue**. Depuis les 100 titres historiques inchangés, les deux lots ajoutent 28 fiches (ces 20, puis 8 classiques). Les titres déjà présents, les personnalisations, les photos et les favoris restent conservés. Un nouvel import identique ajoute zéro fiche. La mise à jour de Docker seule n'importe rien.
 
 La validation technique couvre les filtres de saison et l'import ; elle ne constitue ni un essai culinaire ni une validation iPhone. Résultats finaux consignés dans [DECISIONS.md](DECISIONS.md).

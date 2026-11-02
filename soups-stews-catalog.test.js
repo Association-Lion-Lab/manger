@@ -40,7 +40,7 @@ for (const season of seasons) {
 }
 
 test('lot économique : 12 soupes végétales, 8 mijotés et aucun prix ou avis inventé', () => {
-  const additions = catalog.slice(100);
+  const additions = catalog.slice(100, 120);
   assert.equal(additions.length, 20);
   const soups = additions.filter(item => /^(Soupe|Velouté)/u.test(item.title));
   assert.equal(soups.length, 12);
@@ -53,7 +53,7 @@ test('lot économique : 12 soupes végétales, 8 mijotés et aucun prix ou avis 
   }
 });
 
-test('import depuis 100 fiches : 20 ajouts, personnalisation conservée, répétition sans doublon', async t => {
+test('import depuis 100 fiches : 28 ajouts, personnalisation conservée, répétition sans doublon', async t => {
   const db = createDatabase(':memory:'), server = createApp(db);
   t.after(() => { server.close(); db.close(); });
   for (const item of catalog.slice(0, 100)) saveRecipe(db, validateRecipe(item));
@@ -63,9 +63,9 @@ test('import depuis 100 fiches : 20 ajouts, personnalisation conservée, répét
   const url = `http://127.0.0.1:${server.address().port}/api/catalog/import`;
   const response = await fetch(url, { method: 'POST' });
   assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), { added: 20 });
+  assert.deepEqual(await response.json(), { added: 28 });
   const after = recipes(db);
-  assert.equal(after.length, before.length + 20);
+  assert.equal(after.length, before.length + 28);
   for (const item of before) assert.deepEqual(after.find(saved => saved.id === item.id), item);
   for (const item of catalog.slice(100)) {
     const saved = after.find(recipe => recipe.title === item.title);
