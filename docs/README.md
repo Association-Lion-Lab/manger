@@ -126,3 +126,7 @@ Lors d'une modification, actualise le guide ou les fonctionnalités concernés ;
 **Bascule Linux reçue le27octobre :** [commande `7298c0e` terminée avec succès](POSTGRESQL-ADMIN.md#bascule-linux-confirmée--27-octobre-2026), PostgreSQL retenu sur HTTPS/3000 après archive récente et santé contrôlées. Ancien SQLite arrêté/conservé, mêmes comptes et certificats ; pas de nouvelle copie ou import à lancer. Étape23 encore ouverte pour la recette iPhone ; CI sans runner et limites des tests groupés inchangées.
 
 **Confirmation appareil reçue ensuite :** connexion, ajout d’un repas et courses correspondantes validés par l’utilisateur sur iPhone. Bascule et parcours essentiels acquis ; aucun nouvel essai de ces points requis. [Portée exacte du retour](POSTGRESQL-ADMIN.md#bascule-linux-confirmée--27-octobre-2026) : pas de validation implicite des autres parcours, d’Android, de CI ou des tests groupés.
+
+**Reprise du2novembre :** [diagnostic des contrôles d’image renforcé](DOCKER.md#diagnostic-des-contrôles-dimage--2-novembre-2026) : erreur de lancement/délai/signal distingués du refus normal d’un module manquant, sans assouplir les tests.15 tests ciblés réussis ; cause des anciens arrêts non établie. Aucun déploiement ou changement de données nécessaire pour cette modification des seuls tests.
+
+Vérification finale de cette reprise : **417/417 tests généraux réussis, aucun ignoré, HTTPS inclus**. Premier passage complet du2novembre, aucune réussite de CI ou correction causale des lenteurs anciennes revendiquée.

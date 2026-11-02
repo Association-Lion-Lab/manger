@@ -3,7 +3,25 @@ const assert = require('node:assert/strict');
 const { readFileSync, writeFileSync, readdirSync, cpSync, mkdtempSync, rmSync, existsSync } = require('node:fs');
 const { join } = require('node:path');
 const { tmpdir } = require('node:os');
-const { spawnSync } = require('node:child_process');
+const childProcess = require('node:child_process');
+
+function runImageCheck(directory) {
+  const result = childProcess.spawnSync(process.execPath, ['image-check.js'], { cwd: directory, encoding: 'utf8', timeout: 15000 });
+  assert.ifError(result.error);
+  assert.equal(result.signal, null, `Image check interrupted: ${result.signal}`);
+  return result;
+}
+
+test('image checks distinguish a process timeout from a missing runtime module', t => {
+  const error = Object.assign(new Error('spawnSync ETIMEDOUT'), { code: 'ETIMEDOUT' });
+  t.mock.method(childProcess, 'spawnSync', () => ({ error, status: null, signal: 'SIGTERM', stderr: 'catalog-extra.js' }));
+  assert.throws(() => runImageCheck('synthetic-unused-directory'), /ETIMEDOUT/);
+});
+
+test('image checks reject an interrupted process even after expected error output', t => {
+  t.mock.method(childProcess, 'spawnSync', () => ({ status: null, signal: 'SIGTERM', stderr: 'new-module-is-checked' }));
+  assert.throws(() => runImageCheck('synthetic-unused-directory'), /SIGTERM/);
+});
 
 function isolatedPackage(t) {
   const directory = mkdtempSync(join(tmpdir(), 'manger-package-'));
@@ -23,7 +41,7 @@ test('Docker copies the complete runtime instead of maintaining a module list', 
 
 test('the packaged module check succeeds without creating persistent databases', t => {
   const directory = isolatedPackage(t);
-  const result = spawnSync(process.execPath, ['image-check.js'], { cwd: directory, encoding: 'utf8', timeout: 15000 });
+  const result = runImageCheck(directory);
   assert.equal(result.status, 0, result.stderr);
   assert.equal(existsSync(join(directory, 'data')), false);
 });
@@ -32,8 +50,8 @@ for (const file of ['future-module.js', 'db/future-module.js']) {
   test(`the packaged module check discovers ${file} without an explicit list`, t => {
     const directory = isolatedPackage(t);
     writeFileSync(join(directory, file), 'throw new Error("new-module-is-checked");');
-    const result = spawnSync(process.execPath, ['image-check.js'], { cwd: directory, encoding: 'utf8', timeout: 15000 });
-    assert.notEqual(result.status, 0);
+    const result = runImageCheck(directory);
+    assert.equal(result.status, 1, result.stderr);
     assert.match(result.stderr, /new-module-is-checked/);
   });
 }
@@ -42,8 +60,8 @@ for (const missing of ['catalog-extra.js', 'db/postgres.js', 'db/storage.js', 'p
   test(`the packaged module check rejects a missing ${missing}`, t => {
     const directory = isolatedPackage(t);
     rmSync(join(directory, missing));
-    const result = spawnSync(process.execPath, ['image-check.js'], { cwd: directory, encoding: 'utf8', timeout: 15000 });
-    assert.notEqual(result.status, 0);
+    const result = runImageCheck(directory);
+    assert.equal(result.status, 1, result.stderr);
     assert.match(result.stderr.replaceAll('\\', '/'), new RegExp(missing.replace(/\.js$/, '').replaceAll('.', '\\.')));
   });
 }
