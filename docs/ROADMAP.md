@@ -2,6 +2,8 @@
 
 ## Entretien PostgreSQL — 2 novembre 2026
 
+Relevé administratif ajouté après activation : une commande affiche la dernière exécution connue, le minuteur et les échéances, sans journaux privés, Docker ou lecture d’archives. Aucun écran, dépendance ou changement de données. Douze scénarios simulés réussis et inclus dans la CI préparée ; 429/429 tests généraux réussis sans ignoré. Première utilisation de cette commande sur Linux et premier déclenchement nocturne restent séparés de l’installation déjà réussie.
+
 [Sauvegardes quotidiennes avec rotation](POSTGRESQL-AUTO-BACKUPS.md) activées par l’administrateur avec `3b75f43` : copie manuelle contrôlée, lancement du service utilisateur réussi puis minuteur actif. Paramètres : 03 h Europe/Paris et sept copies automatiques complètes ; application en ligne, contrôles avant suppression et archives manuelles conservées. Tests locaux de rotation, refus et restauration PostgreSQL synthétique acquis. **Première échéance prévue le 3 novembre à 03:00 CET, encore à observer** ; redémarrage hôte, rotation réelle et restauration privée non déduits de l’installation. Aucune nouvelle migration, reconstruction ou intervention distante de l’agent. Une copie indépendante du serveur reste à organiser.
 
 Historique des lots et priorités, regroupé dans `docs/` le 10 octobre 2026. Les résultats de tests cités sont ceux de chaque lot, pas une validation nouvelle des serveurs ou téléphones. Vue actuelle : [fonctionnalités](FONCTIONNALITES.md) et [choix, limites et blocages](DECISIONS.md).

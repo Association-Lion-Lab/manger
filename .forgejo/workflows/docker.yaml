@@ -27,7 +27,7 @@
         },
         {
           "name":"Check rehearsal, promotion and automatic backup safeguards with fake Docker",
-          "run":"set -eu\nif [ \"$CI_STORAGE\" = sqlite ]; then\n  node --test --test-concurrency=1 test-support/private-rehearsal.integration.cjs test-support/postgres-promotion.integration.cjs test-support/automatic-backup-shell.integration.cjs test-support/automatic-backup-install.integration.cjs\nfi"
+          "run":"set -eu\nif [ \"$CI_STORAGE\" = sqlite ]; then\n  node --test --test-concurrency=1 test-support/private-rehearsal.integration.cjs test-support/postgres-promotion.integration.cjs test-support/automatic-backup-shell.integration.cjs test-support/automatic-backup-install.integration.cjs test-support/automatic-backup-status.integration.cjs\nfi"
         },
         {
           "name":"Run the selected storage suite without fallback",

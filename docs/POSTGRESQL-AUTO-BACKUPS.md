@@ -35,6 +35,18 @@ Le lanceur fixe le projet `manger-postgres-validation`, son fichier privé et se
 
 ## Contrôle et entretien
 
+Pour un résumé sans journaux ni accès aux archives, depuis le compte Linux habituel, sans sudo :
+
+```sh
+bash ~/services/manger/scripts/status-postgres-backups.sh
+```
+
+La commande lit uniquement des propriétés ciblées des deux unités systemd utilisateur. Elle indique le résultat et la fin de la dernière exécution connue, l’état du minuteur, sa prochaine échéance et son dernier déclenchement observé. Une tâche oneshot réussie est normalement inactive : cet état seul n’est pas une erreur. Le succès exige aussi un code de sortie normal, un résultat réussi et une date de fin ; les valeurs initiales par défaut ne sont pas une preuve d’exécution. Une tâche en cours ou un état inaccessible/inconnu ne sont pas présentés comme une réussite.
+
+Codes de sortie : `0` pour dernière exécution confirmée réussie et minuteur actif avec prochaine échéance connue ; `1` si une attention est nécessaire (échec, aucune réussite confirmée, minuteur arrêté/échéance absente) ; `2` si le relevé est indisponible ou la tâche encore en cours. Les dates sont celles du gestionnaire, pas une promesse de fraîcheur : lire la fin du service et le dernier déclenchement ensemble. Le relevé ne corrèle pas formellement chaque déclenchement à une copie, ne lit ni ne compte les archives et ne prouve ni leur disponibilité actuelle, leur intégrité ou leur restauration. Ce n’est pas une surveillance avec alerte ou seuil d’ancienneté. Les journaux restent la suite du diagnostic ci-dessous.
+
+La commande ne lance pas de sauvegarde, ne recharge pas les unités, n’active aucun minuteur et ne contacte pas Docker/PostgreSQL. Elle ne lit pas le fichier env ni les secrets et ne publie pas le diagnostic brut de systemctl en cas d’erreur. Propriétés et distinction état/résultat fondées sur [systemctl show](https://www.freedesktop.org/software/systemd/man/latest/systemctl.html) et [les propriétés Service/Timer systemd](https://www.freedesktop.org/software/systemd/man/latest/org.freedesktop.systemd1.html), vérifiées le 2 novembre 2026. Douze scénarios avec faux systemd réussis, dont une tâche terminée inactive et un échec d’accès ; première utilisation Linux du relevé encore à rapporter, sans remettre en cause l’activation déjà confirmée.
+
 ```sh
 systemctl --user list-timers --all manger-postgres-backup.timer
 systemctl --user status manger-postgres-backup.service --no-pager
