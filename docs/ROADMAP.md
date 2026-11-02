@@ -413,3 +413,9 @@ Confirmation suivante du27octobre : l’utilisateur valide les trois contrôles 
 L’instabilité historique n’est pas reproduite dans le premier passage isolé13/13. [Lanceur de test renforcé](DOCKER.md#diagnostic-des-contrôles-dimage--2-novembre-2026) pour refuser explicitement erreurs de lancement/timeouts/signaux, même avec stderr attendu ; code1 strict pour les vrais refus. Deux régressions rouges puis vertes,15/15 ciblés, aucun seuil ou contrôle retiré. Cause des anciens arrêts toujours non établie ; preuve actuelle distincte des journaux d’octobre. Tests/documentation uniquement, sans reconstruire une image ni accéder au Linux ou aux données privées ; résultat général consigné après exécution.
 
 Résultat final : **417/417 tests généraux réussis sans échec ou ignoré, HTTPS inclus**, première suite complète du2novembre. Relecture et liens contrôlés ; aucune nouvelle preuve de CI/nativePG/appareil ou résolution causale des anciennes lenteurs déduite du vert local.
+
+## 2 novembre 2026 — soupes et mijotés préparés localement
+
+[20 nouvelles fiches](SOUPES-MIJOTES.md) pour deux personnes : 12 soupes végétales et 8 plats mijotés, répartis sur quatre périodes de référence ; catalogue local de 120 recettes. Légumes courants, légumineuses, quatre cocottes à la viande, pas de prix estimé, photos ou avis inventés. Le mois de l'appareil et le calendrier national existants restent la règle ; rien à configurer par région.
+
+436/436 tests généraux réussis, HTTPS inclus ; 12/12 tests d'import/dépôt et 9/9 HTTP avec PostgreSQL natif temporaire réussis. Les 100 fiches précédentes sont inchangées, les réimports n'écrasent pas les personnalisations. Contrôle des modules d'image passé localement, sans construction Docker. Pas d'essai culinaire ou iPhone. Publication Codeberg reportée explicitement, aucun accès Ubuntu ; déploiement puis import volontaire à effectuer après une future publication.

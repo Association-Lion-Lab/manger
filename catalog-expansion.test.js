@@ -4,8 +4,8 @@ const { once } = require('node:events');
 const catalog = require('./catalog');
 const { createApp, createDatabase, recipes, saveRecipe, validateRecipe } = require('./server');
 
-test('catalogue enrichi : 100 recettes distinctes, quatre régimes et tous les univers existants', () => {
-  assert.equal(catalog.length, 100);
+test('catalogue enrichi : 120 recettes distinctes, quatre régimes et tous les univers existants', () => {
+  assert.equal(catalog.length, 120);
   const titles = catalog.map(item => item.title.normalize('NFD').replace(/\p{M}/gu, '').toLocaleLowerCase('fr'));
   assert.equal(new Set(titles).size, catalog.length);
   for (const diet of ['vegan', 'vegetarian', 'pescetarian', 'omnivore']) assert.ok(catalog.filter(item => item.diet === diet).length >= 8, diet);
@@ -14,9 +14,9 @@ test('catalogue enrichi : 100 recettes distinctes, quatre régimes et tous les u
   }
 });
 
-test('catalogue enrichi : 62 fiches quantifiées, étapes propres au plat et cru/cuit explicites', () => {
+test('catalogue enrichi : 82 fiches quantifiées, étapes propres au plat et cru/cuit explicites', () => {
   const additions = catalog.slice(38);
-  assert.equal(additions.length, 62);
+  assert.equal(additions.length, 82);
   for (const item of additions) {
     assert.doesNotThrow(() => validateRecipe(item), item.title);
     assert.equal(item.servings, 2, item.title);
@@ -43,9 +43,9 @@ test('catalogue enrichi : import depuis 38 recettes sans doublon ni écrasement 
   server.listen(0, '127.0.0.1'); await once(server, 'listening');
   const url = `http://127.0.0.1:${server.address().port}/api/catalog/import`;
   const imported = await fetch(url, { method: 'POST' });
-  assert.equal(imported.status, 200); assert.deepEqual(await imported.json(), { added: 62 });
+  assert.equal(imported.status, 200); assert.deepEqual(await imported.json(), { added: 82 });
   const after = recipes(db);
-  assert.equal(after.length, before.length + 62);
+  assert.equal(after.length, before.length + 82);
   for (const saved of before) assert.deepEqual(after.find(item => item.id === saved.id), saved);
   for (const item of catalog.slice(38)) {
     const saved = after.find(recipe => recipe.title === item.title);

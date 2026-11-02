@@ -1,10 +1,10 @@
 # Catalogue de recettes
 
-## Lot du 15 octobre 2026
+## Catalogue actuel — 2 novembre 2026
 
-Le catalogue importable contient **100 recettes**, dont **62 nouvelles fiches** ajoutées aux 38 précédentes. Les trois recettes de démarrage et les recettes personnelles du foyer ne font pas partie de ce nombre : le total affiché dans l'application peut donc être supérieur à 100.
+Le catalogue importable contient **120 recettes** : les 38 premières, le lot de 62 du 15 octobre et [20 soupes et mijotés saisonniers](SOUPES-MIJOTES.md) du 2 novembre. Les trois recettes de démarrage et les recettes personnelles du foyer ne font pas partie de ce nombre : le total affiché dans l'application peut donc être supérieur à 120. Ce dernier lot est préparé localement ; sa publication et son déploiement ne sont pas encore effectués.
 
-Dans **Recettes → Ajouter les recettes manquantes du catalogue**, l'application ajoute 62 fiches si les 38 précédentes sont déjà présentes. Elle ignore un titre déjà enregistré, même si sa fiche a été modifiée. Elle ne remplace pas les ingrédients, étapes, photos, notes, favoris ou durées des fiches existantes. Un second import sans changement ajoute zéro recette. Mettre à jour Docker seul ne copie pas les nouvelles fiches dans le foyer : cet import reste volontaire.
+Dans **Recettes → Ajouter les recettes manquantes du catalogue**, l'application ajoute 20 fiches si les 100 précédentes sont déjà présentes, ou 82 si seules les 38 premières sont présentes. Elle ignore un titre déjà enregistré, même si sa fiche a été modifiée. Elle ne remplace pas les ingrédients, étapes, photos, notes, favoris ou durées des fiches existantes. Un second import sans changement ajoute zéro recette. Après publication et déploiement du code, cet import reste volontaire : mettre à jour Docker seul ne copie pas les nouvelles fiches dans le foyer.
 
 ## Répartition
 
@@ -12,40 +12,40 @@ Toutes les fiches du catalogue sont prévues pour deux portions de référence ;
 
 | Régime | Recettes |
 | --- | ---: |
-| Végétal | 43 |
+| Végétal | 59 |
 | Végétarien | 31 |
 | Poisson et fruits de mer | 9 |
-| Sans restriction | 17 |
+| Sans restriction | 21 |
 
 Les univers sont combinables : une même recette peut être économique, japonaise et express. Les nombres ci-dessous ne s'additionnent donc pas pour obtenir le total.
 
 | Univers existant | Recettes |
 | --- | ---: |
-| Recettes du rat | 43 |
+| Recettes du rat | 63 |
 | Recettes de date | 30 |
-| Plats mijotés | 20 |
+| Plats mijotés | 28 |
 | Japon | 12 |
 | Chine | 11 |
-| Terroir français | 28 |
+| Terroir français | 43 |
 | Côté chef | 14 |
 | Express · 30 min max | 40 |
 | Batch cooking | 30 |
 | À emporter | 23 |
-| Doudou food | 32 |
-| Méditerranée | 18 |
+| Doudou food | 52 |
+| Méditerranée | 23 |
 | Italie | 17 |
 | Inde | 9 |
 | Mexique | 8 |
 
-Les ajouts couvrent notamment omelette et galettes de légumes, soupes, croques, donburi, soba, udon, riz et nouilles sautés, currys, dal, lasagnes, quesadillas, burritos, gratins, papillotes, salades, tartes et risottos. Les ingrédients sont quantifiés et chaque fiche contient au moins trois étapes propres au plat. Les 62 nouvelles fiches ont des états cru/cuit explicitement relus ; ils ne sont pas déduits automatiquement d'une étape de cuisson. Un aliment déjà cuit en conserve reste « cuit » même s'il est ensuite servi froid.
+Les ajouts couvrent notamment omelette et galettes de légumes, soupes, croques, donburi, soba, udon, riz et nouilles sautés, currys, dal, lasagnes, quesadillas, burritos, gratins, papillotes, salades, tartes et risottos. Le dernier lot comprend 12 soupes végétales, 4 mijotés végétaux et 4 mijotés à la viande. Les ingrédients sont quantifiés et chaque fiche contient au moins trois étapes propres au plat. Les 82 fiches ajoutées depuis les 38 premières ont des états cru/cuit explicites ; ils ne sont pas déduits automatiquement d'une étape de cuisson. Un aliment déjà cuit en conserve reste « cuit » même s'il est ensuite servi froid.
 
 ## Origine, images et limites
 
-Les nouvelles descriptions sont rédigées pour Manger!, sous le même choix CC0 que les autres textes originaux du catalogue. Il ne s'agit pas d'un import de textes, photos ou avis de sites de recettes. Aucune note, popularité ou approbation culinaire n'est inventée. Les quatre adaptations saisonnières antérieures gardent leurs références ; leurs [sources et avis historiques](RECETTES-DE-SAISON.md) ne deviennent pas des évaluations de ce nouveau lot.
+Les nouvelles descriptions sont rédigées pour Manger!, sous le même choix CC0 que les autres textes originaux du catalogue. Il ne s'agit pas d'un import de textes, photos ou avis de sites de recettes. Aucune note, popularité ou approbation culinaire n'est inventée. Les quatre adaptations saisonnières antérieures gardent leurs références ; leurs [sources et avis historiques](RECETTES-DE-SAISON.md) ne deviennent pas des évaluations de ce nouveau lot. Les inspirations et adaptations du lot soupes/mijotés sont distinguées dans [sa documentation](SOUPES-MIJOTES.md#références-et-limites).
 
 Les recettes sont des propositions maison, pas des recettes testées en cuisine ni une certification d'authenticité régionale. « Côté chef » désigne une présentation ou préparation soignée, sans attribution à un grand chef ; « rat » ne garantit pas un prix calculé. Aucun calcul nutritionnel ou contrôle exhaustif des allergènes n'est ajouté. Les plats sans photo utilisent l'illustration existante, sans photo artificielle présentée comme celle du plat. Une photo personnelle reste prioritaire.
 
-Le filtre de saison continue de lire les ingrédients reconnus avec le mois local et le calendrier choisi. Le titre et l'univers d'une recette ne lui imposent pas une saison. Les produits surgelés ou transformés ne prouvent pas une disponibilité fraîche locale ; couverture et limites du filtre inchangées.
+Le filtre de saison lit les ingrédients reconnus avec le mois local de l'appareil et le calendrier national français unique. Le titre et l'univers d'une recette ne lui imposent pas une saison. Les produits surgelés ou transformés ne prouvent pas une disponibilité fraîche locale ; couverture et limites du filtre inchangées. Une recette peut convenir à plusieurs saisons lorsque ses légumes le permettent.
 
 ## Précautions et références
 
@@ -55,6 +55,6 @@ Les repères de température s'appuient sur le [tableau USDA/FSIS](https://www.f
 
 ## Maintenance et vérification
 
-`catalog.js` conserve les 38 premières fiches et leur ordre ; `catalog-extra.js` ajoute les 62 nouvelles avec le même constructeur. Celui-ci accepte un état de préparation explicite par ingrédient et garde le mécanisme antérieur pour les anciennes fiches. Aucune dépendance, migration ou route nouvelle. L'import volontaire existant reste responsable de l'ajout sans remplacement.
+`catalog.js` conserve les 38 premières fiches et leur ordre ; `catalog-extra.js` ajoute les 62 suivantes et `catalog-seasonal.js` les 20 soupes/mijotés avec le même constructeur. Celui-ci accepte un état de préparation explicite par ingrédient et garde le mécanisme antérieur pour les anciennes fiches. Les 100 anciennes fiches ne sont pas modifiées. Aucune dépendance, migration ou route nouvelle. L'import volontaire existant reste responsable de l'ajout sans remplacement.
 
-Les régressions vérifient nombre, unicité des titres, validation des 100 fiches, ingrédients, durées, étiquettes express, cru/cuit et import depuis une bibliothèque ancienne avec personnalisation. Les quatre tests de référence saisonniers ciblent désormais leur lot précis plutôt que les quatre derniers éléments d'un catalogue qui grandit. La validation technique ne remplace pas un essai culinaire ; les résultats navigateur et les limites de déploiement sont consignés dans [les décisions](DECISIONS.md#catalogue-de-100-recettes--15-octobre-2026).
+Les régressions vérifient nombre, unicité des titres, validation des fiches, ingrédients, durées, étiquettes express, cru/cuit et imports depuis 38 ou 100 fiches avec personnalisation. Le contrat d'import partagé couvre SQLite et PostgreSQL. Le lot soupes/mijotés vérifie aussi les inclusions et exclusions mensuelles des 20 fiches. La validation technique ne remplace pas un essai culinaire ; résultats et limites sont consignés dans [les décisions](DECISIONS.md).
