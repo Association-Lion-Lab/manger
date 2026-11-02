@@ -32,6 +32,12 @@ case ${service[ActiveState]:-} in
       printf 'Dernière exécution : réussie (fin : %s).\n' "${service[ExecMainExitTimestamp]}"
     elif [[ ${service[ActiveState]} == failed || ${service[Result]:-success} != success ]]; then
       echo 'Dernière exécution : échec. Consulter le journal du service.'; status=1
+    elif [[ ${service[Result]:-} == success && ${service[ExecMainCode]:-} == 0 &&
+      ${service[ExecMainStatus]:-} == 0 && ( -z ${service[ExecMainExitTimestamp]:-} || ${service[ExecMainExitTimestamp]} == n/a ) ]]; then
+      # Initial values also return after systemd unloads a completed unit.
+      echo 'Dernière exécution : historique indisponible dans l’état courant de systemd.'
+      echo 'Consulter le journal : journalctl --user -u manger-postgres-backup.service -n 20 --no-pager'
+      status=2
     else
       echo 'Dernière exécution : aucune réussite confirmée.'; status=1
     fi ;;

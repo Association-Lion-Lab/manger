@@ -4,7 +4,7 @@ const bash=process.platform==='win32'?resolve(execFileSync('git',['--exec-path']
 const posix=p=>process.platform==='win32'?p.replaceAll('\\','/').replace(/^([A-Za-z]):/,(_,drive)=>'/'+drive.toLowerCase()):p;
 const start='Mon 2026-11-02 11:11:28 CET',end='Mon 2026-11-02 11:11:29 CET',next='Tue 2026-11-03 03:00:00 CET';
 
-for(const scenario of ['success','triggered','failed','timeout','stopped-timer','running','never-run','unconfirmed-exit','missing-unit','manager-error','missing-next','unknown-state'])test('backup status : '+scenario,async t=>{
+for(const scenario of ['success','triggered','failed','failed-no-history','timeout','stopped-timer','running','never-run','no-history-na','unconfirmed-exit','missing-unit','manager-error','missing-next','unknown-state'])test('backup status : '+scenario,async t=>{
   const root=await fs.mkdtemp(join(tmpdir(),'manger-auto-status-'));t.after(()=>fs.rm(root,{recursive:true,force:true,maxRetries:5,retryDelay:100}));
   const bin=join(root,'bin'),log=join(root,'calls.log');await fs.mkdir(bin);
   await fs.writeFile(join(bin,'uname'),'#!/bin/sh\necho Linux\n',{mode:0o700});
@@ -19,7 +19,11 @@ for(const scenario of ['success','triggered','failed','timeout','stopped-timer',
   if(scenario==='timeout'){properties.ActiveState='failed';properties.Result='timeout';}
   if(scenario==='stopped-timer')timer.ActiveState='inactive';
   if(scenario==='running'){properties.ActiveState='activating';properties.ExecMainExitTimestamp='';}
-  if(scenario==='never-run'){properties.ExecMainStartTimestamp='';properties.ExecMainExitTimestamp='';properties.ExecMainCode='0';}
+  // The same defaults were returned on Linux after the journal confirmed success.
+  if(['never-run','no-history-na','failed-no-history'].includes(scenario)){
+    properties.ExecMainStartTimestamp='';properties.ExecMainExitTimestamp=scenario==='no-history-na'?'n/a':'';properties.ExecMainCode='0';
+    if(scenario==='failed-no-history')properties.ActiveState='failed';
+  }
   if(scenario==='unconfirmed-exit')properties.ExecMainCode='2';
   if(scenario==='missing-unit')properties.LoadState='not-found';
   if(scenario==='missing-next')timer.NextElapseUSecRealtime='';
@@ -35,7 +39,7 @@ case "$*" in
 `,{mode:0o700});
   const result=spawnSync(bash,['scripts/status-postgres-backups.sh'],{encoding:'utf8',timeout:15000,
     env:{...process.env,PATH:posix(bin)+':/usr/bin:/bin:'+process.env.PATH,STATUS_TEST_ROOT:posix(root),STATUS_TEST_CASE:scenario}});
-  const unavailable=['running','missing-unit','manager-error','unknown-state'].includes(scenario);
+  const unavailable=['running','never-run','no-history-na','missing-unit','manager-error','unknown-state'].includes(scenario);
   assert.ifError(result.error);assert.equal(result.status,['success','triggered'].includes(scenario)?0:unavailable?2:1,result.stderr+'\n'+result.stdout);
   assert.equal(result.stdout.includes('Dernière exécution : réussie'),['success','triggered','stopped-timer','missing-next'].includes(scenario));
   assert.doesNotMatch(result.stdout+result.stderr,/private diagnostic/);
@@ -46,8 +50,12 @@ case "$*" in
     assert.match(result.stdout,/Déclenchement du minuteur : aucun observé/);
     assert.match(result.stdout,/sans vérification des archives/);
   }
-  if(scenario==='failed'||scenario==='timeout')assert.match(result.stdout,/Dernière exécution : échec/);
-  if(scenario==='never-run')assert.match(result.stdout,/aucune réussite confirmée/);
+  if(['failed','failed-no-history','timeout'].includes(scenario))assert.match(result.stdout,/Dernière exécution : échec/);
+  if(['never-run','no-history-na'].includes(scenario)){
+    assert.match(result.stdout,/historique indisponible dans l’état courant de systemd/);
+    assert.ok(result.stdout.includes('journalctl --user -u manger-postgres-backup.service -n 20 --no-pager'));
+    assert.doesNotMatch(result.stdout,/Dernière exécution : échec|aucune réussite confirmée/);
+  }
   if(scenario==='triggered'){
     assert.match(result.stdout,/Déclenchement du minuteur : Tue 2026-11-03 03:00:00 CET/);
     assert.ok(result.stdout.includes('Wed 2026-11-04 03:00:00 CET'));

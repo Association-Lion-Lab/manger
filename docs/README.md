@@ -6,7 +6,7 @@ Documentation versionnée dans le dépôt, regroupée le **10 octobre 2026**. El
 
 [Sauvegardes PostgreSQL automatiques](POSTGRESQL-AUTO-BACKUPS.md) : activation Linux confirmée le 2 novembre avec première copie contrôlée et service utilisateur réussi, tous les jours à 03 h Europe/Paris, sept copies automatiques réussies, diagnostic et reprise d’un verrou. Première échéance du 3 novembre encore à observer ; restauration synthétique testée localement, pas de restauration privée déduite.
 
-Résumé de leur état depuis le Linux habituel : `bash ~/services/manger/scripts/status-postgres-backups.sh`. Lecture seule de systemd, avec dates et résultat ; pas une vérification des fichiers d’archive. Commande préparée et testée avec états simulés, premier retour Linux encore attendu.
+Résumé de leur état depuis le Linux habituel : `bash ~/services/manger/scripts/status-postgres-backups.sh`. Lecture seule de systemd, avec dates et résultat ; pas une vérification des fichiers d’archive. Premier retour Linux reçu : le service peut avoir perdu son résultat temporaire malgré un journal de réussite. Ce cas est reclassé en « historique indisponible », avec commande du journal ; texte corrigé testé localement, encore à confirmer sur Linux.
 
 1. [Fonctionnalités réalisées](FONCTIONNALITES.md) : vue d'ensemble par usage, dont les régimes mixtes et l'anti-gaspi.
 2. [Guide complet](GUIDE.md) : installation, utilisation, comptes, invitations, courses, import/export et sauvegarde/restauration.

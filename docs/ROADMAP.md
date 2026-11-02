@@ -2,6 +2,8 @@
 
 ## Entretien PostgreSQL — 2 novembre 2026
 
+Premier retour Linux du relevé reçu : minuteur actif, mais résultats temporaires du service revenus aux valeurs initiales malgré le succès conservé dans le journal. Diagnostic transmis et cas reproduit ; clarification du relevé en « historique indisponible » avec commande du journal, sans nouvelle sauvegarde ni modification de systemd. Les deux archives rapportées par le journal sont confirmées ; première échéance du 3 novembre toujours à observer.
+
 Relevé administratif ajouté après activation : une commande affiche la dernière exécution connue, le minuteur et les échéances, sans journaux privés, Docker ou lecture d’archives. Aucun écran, dépendance ou changement de données. Douze scénarios simulés réussis et inclus dans la CI préparée ; 429/429 tests généraux réussis sans ignoré. Première utilisation de cette commande sur Linux et premier déclenchement nocturne restent séparés de l’installation déjà réussie.
 
 [Sauvegardes quotidiennes avec rotation](POSTGRESQL-AUTO-BACKUPS.md) activées par l’administrateur avec `3b75f43` : copie manuelle contrôlée, lancement du service utilisateur réussi puis minuteur actif. Paramètres : 03 h Europe/Paris et sept copies automatiques complètes ; application en ligne, contrôles avant suppression et archives manuelles conservées. Tests locaux de rotation, refus et restauration PostgreSQL synthétique acquis. **Première échéance prévue le 3 novembre à 03:00 CET, encore à observer** ; redémarrage hôte, rotation réelle et restauration privée non déduits de l’installation. Aucune nouvelle migration, reconstruction ou intervention distante de l’agent. Une copie indépendante du serveur reste à organiser.
