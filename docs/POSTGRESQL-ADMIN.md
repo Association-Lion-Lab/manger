@@ -251,7 +251,7 @@ La sortie contient un mot de passe généré : le conserver dans son gestionnair
 
 ## 6. Sauvegarder une instance PostgreSQL
 
-Pour l’instance principale déjà promue, un [minuteur utilisateur et sa rotation dédiée](POSTGRESQL-AUTO-BACKUPS.md) sont préparés : copie quotidienne en ligne, sept archives automatiques réussies, archives manuelles hors rotation. Activation systemd à confirmer par l’administrateur. La procédure manuelle ci-dessous reste distincte : elle inclut aussi la copie runtime et une comparaison avec les écrivains arrêtés.
+Pour l’instance principale déjà promue, un [minuteur utilisateur et sa rotation dédiée](POSTGRESQL-AUTO-BACKUPS.md) sont préparés : copie quotidienne en ligne, sept archives automatiques réussies, archives manuelles hors rotation. Activation systemd et lancement initial du service confirmés par le retour Linux du 2 novembre ; première échéance du 3 novembre à observer. La procédure manuelle ci-dessous reste distincte : elle inclut aussi la copie runtime et une comparaison avec les écrivains arrêtés.
 
 Le bouton du foyer exporte les données/photos sans les accès. La sauvegarde administrateur suivante inclut 22 tables et métadonnées. Elle n’inclut pas les rôles/secrets/certificats globaux, le code ni les fichiers de récupération du volume runtime : les conserver séparément avec les mêmes protections et une politique de durée.
 

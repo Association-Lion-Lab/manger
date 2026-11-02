@@ -1,5 +1,11 @@
 # Choix techniques, limites et blocages
 
+## 2 novembre 2026 — activation Linux des sauvegardes reçue
+
+L’administrateur fournit le retour complet de l’installateur `3b75f43` : dump Docker réussi avec une première archive contrôlée, activation du gestionnaire persistant autorisée localement, unité utilisateur installée et minuteur actif. Le message final suit obligatoirement la réussite de `systemctl --user start manger-postgres-backup.service` et de `is-active` ; l’environnement du service a donc aussi exécuté la sauvegarde avec succès. Son journal n’est pas affiché : ne pas annoncer de nombre total de copies ou d’anciens fichiers supprimés au-delà de la première copie visible. Première échéance : 3 novembre 2026, 03:00 CET ; aucune précédente dans le tableau.
+
+Choix : clore la vérification d’installation réelle et garder séparée la preuve du déclenchement quotidien. Pas de nouvel essai d’installation, migration, reconstruction ou restauration demandé. Rétention réelle au-delà de sept copies, échéance après déconnexion/redémarrage et restauration privée restent distinctes des tests synthétiques précédents. Mise à jour documentaire uniquement, diff relu ; aucune suite de code rejouée, connexion distante ou donnée privée reçue. [État et contrôle suivant](POSTGRESQL-AUTO-BACKUPS.md#preuves-disponibles).
+
 ## 2 novembre 2026 — sauvegardes PostgreSQL automatiques
 
 **Contexte et choix.** Après la bascule principale déjà acceptée, ajouter l’entretien quotidien sans nouvel écran, dépendance ou changement métier. Valeurs préparées : 03 h Europe/Paris et sept copies automatiques réussies. Un minuteur systemd utilisateur convient à cet hôte Ubuntu ; `loginctl enable-linger` est la seule opération nécessitant sudo à l’installation. L’agent ne se connecte pas au Linux. Le contrôleur actuel est monté en lecture seule dans la tâche utilisant l’image d’outils antérieurement validée, au lieu d’installer Node/PostgreSQL sur l’hôte ou d’imposer une reconstruction préalable de toute l’application. Les API de sauvegarde demeurent celles de l’image compatible ; une future évolution de schéma doit préparer cette compatibilité.

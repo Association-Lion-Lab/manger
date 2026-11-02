@@ -4,7 +4,7 @@ Documentation versionnée dans le dépôt, regroupée le **10 octobre 2026**. El
 
 ## Utiliser et héberger
 
-[Sauvegardes PostgreSQL automatiques](POSTGRESQL-AUTO-BACKUPS.md) : installation sur l’instance principale existante, tous les jours à 03 h Europe/Paris, sept copies automatiques réussies, diagnostic et reprise d’un verrou. Préparation et restauration synthétique testées localement ; activation systemd Linux encore à confirmer.
+[Sauvegardes PostgreSQL automatiques](POSTGRESQL-AUTO-BACKUPS.md) : activation Linux confirmée le 2 novembre avec première copie contrôlée et service utilisateur réussi, tous les jours à 03 h Europe/Paris, sept copies automatiques réussies, diagnostic et reprise d’un verrou. Première échéance du 3 novembre encore à observer ; restauration synthétique testée localement, pas de restauration privée déduite.
 
 1. [Fonctionnalités réalisées](FONCTIONNALITES.md) : vue d'ensemble par usage, dont les régimes mixtes et l'anti-gaspi.
 2. [Guide complet](GUIDE.md) : installation, utilisation, comptes, invitations, courses, import/export et sauvegarde/restauration.

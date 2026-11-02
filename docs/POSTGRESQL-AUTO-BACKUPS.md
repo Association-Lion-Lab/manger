@@ -1,6 +1,6 @@
 # Sauvegardes PostgreSQL automatiques
 
-2 novembre 2026 — préparation pour l’instance PostgreSQL principale de cet administrateur. Activation Linux encore à confirmer. Pas de nouvel écran, d’inscription à un service ou de sauvegarde envoyée à l’extérieur.
+2 novembre 2026 — activation confirmée par l’administrateur sur son instance PostgreSQL principale. Première échéance quotidienne encore à observer. Pas de nouvel écran, d’inscription à un service ou de sauvegarde envoyée à l’extérieur.
 
 ## Comportement
 
@@ -88,4 +88,8 @@ Sources officielles vérifiées le 2 novembre 2026 : [snapshot cohérent de pg_d
 
 ## Preuves disponibles
 
-Préparation locale : 12 tests de rotation/protection sur fausses archives, 18 contrôles du lanceur/installateur/minuteur et de la reprise documentée du verrou avec faux Docker/systemd/sudo, puis 5 tests PostgreSQL natifs incluant écritures après snapshot, inventaire sans connexion, restauration sur secours, rotation réelle et corruption. Suite générale finale : 429/429 réussis, sans ignoré. Aucune donnée utilisateur, Docker Linux, activation systemd ou lendemain planifié exécuté par l’agent ; ces acceptations restent à rapporter. Résultats finaux et relecture consignés dans les décisions.
+Préparation locale : 12 tests de rotation/protection sur fausses archives, 18 contrôles du lanceur/installateur/minuteur et de la reprise documentée du verrou avec faux Docker/systemd/sudo, puis 5 tests PostgreSQL natifs incluant écritures après snapshot, inventaire sans connexion, restauration sur secours, rotation réelle et corruption. Suite générale finale : 429/429 réussis, sans ignoré. Résultats finaux et relecture consignés dans les décisions.
+
+**Retour Linux reçu le 2 novembre 2026, révision `3b75f43` :** première tâche Docker terminée avec une archive conservée, aucune retirée, intégrité et inventaire contrôlés. L’installateur a ensuite terminé après le lancement synchrone du service utilisateur, l’activation du minuteur et le contrôle de son état actif. Le journal de cette seconde copie n’est pas inclus dans le retour : son succès est établi par la séquence du script et son code de sortie, sans affirmer un nombre total d’archives non affiché. Prochaine échéance annoncée : **3 novembre 2026 à 03:00 CET** ; aucune échéance encore passée (`LAST` et `PASSED` vides). Le déclenchement quotidien, le fonctionnement après déconnexion/redémarrage, une purge réelle après sept copies et une restauration privée ne sont pas démontrés par cette installation. Aucun accès serveur ou transfert de données privées à l’agent.
+
+Après la première échéance, contrôler `systemctl --user status manger-postgres-backup.service --no-pager` : le dernier résultat doit être réussi ; un service oneshot terminé peut être inactif. Consulter aussi le minuteur et le journal en cas de doute, sans relancer l’installateur.
