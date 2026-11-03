@@ -9,6 +9,7 @@ test('CI : deux moteurs requis avant la construction et les deux scénarios Dock
   assert.match(commands,/sqlite\) npm test/);assert.match(commands,/postgres\) npm run test:postgres/);
   assert.match(commands,/MANGER_TEST_PG_BIN/);
   assert.ok(commands.includes('node --test --test-concurrency=1 test-support/private-rehearsal.integration.cjs test-support/postgres-promotion.integration.cjs test-support/automatic-backup-shell.integration.cjs test-support/automatic-backup-install.integration.cjs test-support/automatic-backup-status.integration.cjs'));
+  assert.ok(commands.includes('test-support/fdl-upgrade-shell.integration.cjs'));
   assert.ok(JSON.parse(fs.readFileSync('package.json','utf8')).scripts['test:postgres'].includes('test-support/postgres-auto-backup.integration.cjs'));
   const docker=image.steps.map(s=>s.run||'').join('\n');
   for(const required of ['npm audit --omit=dev --audit-level=high','node scripts/check-docker-context.js','node scripts/check-docker-permissions.js','docker build --pull','sh scripts/test-docker.sh','sh scripts/test-postgres-image.sh'])assert.ok(docker.includes(required),required);

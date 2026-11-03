@@ -1,6 +1,6 @@
 # Intégration Faim de Lion
 
-Développement sur `feat/fdl`, à la suite des quatre décisions validées le 3 novembre 2026. Aucune publication ou installation sur le serveur autorisée pour ce lot.
+Développement sur `feat/fdl`, à la suite des quatre décisions validées le 3 novembre 2026. Publication sur `development` et préparation des commandes Linux autorisées ensuite par le porteur ; les commandes sur son serveur sont exécutées par lui.
 
 Une liaison par instance est administrée depuis Compte et partagée par le foyer, recettes privées du compte FDL comprises. Activation PostgreSQL uniquement avec `MANGER_FDL_URL` ; sous SQLite ou sans configuration, les routes FDL répondent 404 et l'interface reste masquée.
 
@@ -48,11 +48,26 @@ La sauvegarde administrative d'instance reste un `pg_dump` privé de toute la ba
 
 Le schéma **004-fdl** est nécessaire à cette version, même sans activation de FDL. Remplacer seulement l'image web d'une base 003 fera refuser le démarrage. **Ne pas utiliser la procédure de mise à jour du catalogue pour ce changement de schéma.**
 
-Séquence à préparer : arrêter le minuteur de sauvegarde et les écritures ; sauvegarder/vérifier la base 003 avec les anciens outils ; construire et tester les nouvelles images web et `docker/postgres-tools.Dockerfile` ; appliquer le schéma avec les nouveaux outils ; remplacer ensemble images web/outils et activer FDL si souhaité ; contrôler santé, nouvelle archive de 25 tables et parcours ; reprendre le minuteur. Conserver anciennes images, configuration privée et archive 003. Ni promotion, import SQLite, réinitialisation ou suppression de volume.
+Pour l'instance Linux déjà promue, depuis le compte habituel, sans sudo :
+
+```sh
+cd ~/services/manger &&
+git diff --quiet && git diff --cached --quiet &&
+git pull --ff-only origin development &&
+bash scripts/upgrade-postgres-fdl.sh
+```
+
+Le script exige le projet existant `manger-postgres-validation` et son dossier privé voisin `manger-postgres-validation-private`. Il n'installe pas une nouvelle instance. Un changement local suivi par Git bloque la procédure : l'examiner avant de recommencer, sans effacement automatique.
+
+Le script met en pause le minuteur et attend la fin d'une sauvegarde en cours, construit et contrôle les images web/outils, puis arrête uniquement l'application pour sauvegarder/vérifier avec les outils correspondant au schéma actuel. Il applique 004, remplace les deux références d'image dans le fichier privé, sauvegarde/vérifie les 25 tables avant reprise des écritures, démarre uniquement l'application et contrôle sa santé. Il exige ensuite la réussite d'une sauvegarde automatique avant de réactiver un minuteur initialement actif. PostgreSQL, comptes, volumes, configuration restante et certificats sont conservés ; aucune promotion, import SQLite ou suppression de volume.
+
+Sans option, `MANGER_FDL_URL` est conservée si elle existe ; sinon FDL reste masqué. Pour renseigner l'origine réelle de FDL, remplacer l'exemple et utiliser `bash scripts/upgrade-postgres-fdl.sh --fdl-url https://fdl.example` à la dernière ligne. L'origine est validée avant l'arrêt applicatif. Cela ne crée aucun compte FDL et ne relie pas automatiquement les comptes ; terminer la liaison dans Compte.
+
+Chaque passage conserve les anciennes images, la configuration et les résultats sous `manger-postgres-validation-private/upgrade-fdl.*`, ainsi que les archives privées avant/après. Ne pas publier ces dossiers. En cas d'échec, le minuteur reste arrêté. Avant toute tentative de migration, le script peut redémarrer l'ancienne application s'il l'avait arrêtée ; après tentative, il ne remet jamais automatiquement une ancienne image sur un schéma potentiellement modifié. Corriger la cause puis relancer : 004 est répétable et un schéma déjà en 004 avec une ancienne configuration d'outils est pris en charge. Une sauvegarde n'est pas une restauration testée du serveur réel ; les anciennes archives 003 nécessitent leurs anciens outils.
 
 Commande explicite sans import : `node postgres-schema.js --apply`, avec les variables administratives existantes. Depuis la fonction `pgc` habituelle, **après sélection de la nouvelle image d'outils et sauvegarde/arrêt des écritures** : `pgc --profile maintenance run --rm --no-deps --entrypoint node instance postgres-schema.js --apply`. Ce n'est pas un déploiement autonome. Migration transactionnelle et répétable, jamais automatique au démarrage.
 
-Le contrôleur de sauvegarde automatique attend maintenant 25 tables : son script monté depuis le dépôt et l'image d'outils doivent être mis à jour ensemble. Ne pas lancer ce nouveau contrôleur contre les anciens outils 003. Aucun déploiement Ubuntu ou publication autorisé pour ce lot sans nouvel accord.
+Le contrôleur de sauvegarde automatique attend maintenant 25 tables : son script monté depuis le dépôt et l'image d'outils doivent être mis à jour ensemble. Ne pas lancer ce nouveau contrôleur contre les anciens outils 003. Le script ci-dessus réalise cette séquence ; la procédure ordinaire de mise à jour d'image ne la remplace pas.
 
 ## Vérification
 
@@ -62,4 +77,4 @@ Chrome isolé avec PostgreSQL et données synthétiques : consentement de test, 
 
 Résultats finaux : **258/258 tests PostgreSQL**, puis **462/462 tests généraux**, aucun ignoré. Le scénario HTTP FDL renforcé par deux retours simultanés passe aussi 7/7 ; désactiver en mémoire la consommation du state fait échouer ce test (deux échanges au lieu d'un). Aucune modification du code source par ce contre-test. Les 27 scénarios des scripts de répétition/promotion réussissent avec l'inventaire à 25 tables. Images web et outils réellement construites ; contrôle des modules/commande de schéma/outils et démarrage/santé/icône/persistance SQLite après redémarrage réussis en conteneurs jetables sans réseau extérieur. La migration et les parcours FDL PostgreSQL sont testés nativement, sans prétendre à un déploiement Docker PostgreSQL/FDL complet.
 
-Aucun essai réel FDL déployé, iPhone/Safari, Android, CI distante ou Ubuntu déduit de ces tests. Aucun push ; les résultats et corrections intermédiaires sont détaillés dans [les décisions](DECISIONS.md).
+La procédure Linux est couverte séparément par quinze scénarios avec Docker/systemd simulés, incluant la reprise après migration, une sauvegarde en cours et les échecs de sauvegarde/migration/démarrage. Aucun essai réel FDL déployé, iPhone/Safari, Android, CI distante ou Ubuntu déduit de ces tests. Les résultats et corrections intermédiaires sont détaillés dans [les décisions](DECISIONS.md).

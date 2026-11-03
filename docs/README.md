@@ -4,7 +4,7 @@ Documentation versionnée dans le dépôt, regroupée le **10 octobre 2026**. El
 
 ## Utiliser et héberger
 
-[Intégration Faim de Lion](FDL.md), branche locale `feat/fdl` : liaison administrée pour le foyer, recherche/import, versions et retraits. PostgreSQL seulement, activation par `MANGER_FDL_URL`, migration 004 explicite et nouvelle image d'outils nécessaires. 258 tests PostgreSQL et 462 tests généraux réussis, parcours Chrome avec faux FDL et images locales vérifiés. Pas encore publié ni déployé.
+[Intégration Faim de Lion](FDL.md) : liaison administrée pour le foyer, recherche/import, versions et retraits. PostgreSQL seulement, activation par `MANGER_FDL_URL`, migration 004 explicite et nouvelle image d'outils nécessaires. 258 tests PostgreSQL et 462 tests généraux réussis, parcours Chrome avec faux FDL et images locales vérifiés. Publication autorisée ; script de mise à jour Linux documenté, exécution du serveur et parcours réel encore à confirmer.
 
 [Création de menu guidée](MENU-GUIDE.md) : cinq propositions modifiables, ajout d'autres recettes avec recherche, portions, choix des jours et des participants, puis création des courses. Brouillon sans écriture avant la confirmation finale ; aucune modification de schéma ou de déploiement PostgreSQL.
 
