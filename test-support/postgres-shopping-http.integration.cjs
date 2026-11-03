@@ -18,6 +18,8 @@ test('tous parcours métier et courses HTTP PostgreSQL réel',{timeout:60000},as
     await post('/api/meals',{date:'2026-11-02',slot:'midi',location:'home',occasion:'regular',recipeId:recipe.id,title:recipe.title,people:2,expectedId:null});
     let week=await(await http.request('/api/week?start=2026-11-02','GET',undefined,cookie)).json();assert.equal(week.recipes[0].id,recipe.id);assert.equal(week.meals[0].recipeId,recipe.id);assert.equal(week.shopping[0].amount,160);
     await post('/api/pantry',{name:'riz',unit:'g',amount:60});
+    // This historical meal must use stock already recorded on its own date, not today's date.
+    await db.query("UPDATE household.pantry SET recorded_on='2026-11-02' WHERE name='riz' AND unit='g'");
     week=await(await http.request('/api/week?start=2026-11-02','GET',undefined,cookie)).json();assert.equal(week.shopping[0].amount,100);
     const model=await post('/api/week-templates',{name:'Semaine test',start:'2026-11-02'});await post(`/api/week-templates/${model.id}/apply`,{targetStart:'2026-11-09'});
     assert.equal((await http.request('/api/calendar.ics?start=2026-11-09','GET',undefined,cookie)).status,200);

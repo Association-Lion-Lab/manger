@@ -1,0 +1,14 @@
+.fdl-card { border: 1px solid var(--line); border-radius: 18px; padding: 16px; margin: 18px 0; background: var(--surface); }
+.fdl-card summary { min-height: 44px; cursor: pointer; font-weight: 650; line-height: 1.5; padding-block: 10px; }
+.fdl-card p { line-height: 1.55; overflow-wrap: anywhere; }
+.fdl-card .muted { font-size: .875rem; }
+.fdl-card form { margin-top: 18px; }
+.fdl-card input { width: 100%; min-width: 0; min-height: 44px; font-size: 1rem; }
+.fdl-card .secondary { width: auto; min-height: 44px; font-size: .875rem; padding: 10px 15px; }
+.fdl-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.fdl-result { display: grid; gap: 9px; padding: 18px 0; border-bottom: 1px solid var(--line); }
+.fdl-result strong { overflow-wrap: anywhere; }
+.fdl-result > button { justify-self: start; }
+.fdl-card [data-fdl-message]:empty { display: none; }
+.fdl-card [data-fdl-message] { color: var(--muted); font-size: .875rem; }
+#fdl-account[hidden], #fdl-recipes[hidden] { display: none; }

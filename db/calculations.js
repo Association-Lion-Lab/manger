@@ -13,7 +13,9 @@ async function postgresSnapshot(tx){
 function postgresCalculations(db){
   const calculate=(method,args)=>db.transaction(async tx=>{
     await tx.query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY');
-    return rules[method](await postgresSnapshot(tx),...args);
+    const snapshot=await postgresSnapshot(tx);
+    if(['suggestions','previewMenu'].includes(method))snapshot.recipes=snapshot.recipes.filter(recipe=>!recipe.fdl?.removed);
+    return rules[method](snapshot,...args);
   });
   return Object.freeze({pantry:(...args)=>calculate('pantry',args),shoppingList:(...args)=>calculate('shoppingList',args),
     pantryShopping:(...args)=>calculate('pantryShopping',args),suggestions:(...args)=>calculate('suggestions',args),preview:(...args)=>calculate('previewMenu',args)});

@@ -69,9 +69,9 @@ export MANGER_SMTP_HOST='' MANGER_SMTP_FROM='' MANGER_SMTP_USER='' MANGER_SMTP_P
 export MANGER_SMTP_PORT=587
 pgc() { docker compose --project-name "$project" --env-file "$private/instance.env" --file "$repo/compose.postgres.yaml" --file "$repo/compose.postgres.instance.yaml" "$@"; }
 report() {
-  expected=$1; file=$2
+  expected=$1; file=$2; table_count=${3:-25}
   grep -Eq "\"status\"[[:space:]]*:[[:space:]]*\"$expected\"" "$file"
-  grep -Eq '"tables"[[:space:]]*:[[:space:]]*22([,}]|[[:space:]])' "$file"
+  grep -Eq "\"tables\"[[:space:]]*:[[:space:]]*$table_count([,}]|[[:space:]])" "$file"
 }
 printf '%s\n' "$source_id" > "$private/original/container-id.txt"
 printf '%s\n' "$source_running" > "$private/original/was-running.txt"
@@ -119,7 +119,7 @@ pgc up -d --wait --wait-timeout 90 postgres > "$private/postgres-start.log" 2>&1
 import_started=$(date +%s)
 pgc run --rm --no-deps -T migrate import /source/manger.db /source/accounts.db --source-stopped --target-empty \
   > "$private/import.json" 2> "$private/import.error.log"
-report ready "$private/import.json"
+report ready "$private/import.json" 22
 import_seconds=$(( $(date +%s) - import_started ))
 stage='archive administrative privée'
 pgc --profile maintenance run --rm --no-deps -T instance backup /archives/after-import > "$private/backup.json" 2> "$private/backup.error.log"

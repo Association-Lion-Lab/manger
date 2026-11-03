@@ -1,5 +1,7 @@
 # Construction et déploiement Docker
 
+**Intégration FDL, branche locale du 3 novembre 2026 :** schéma 004 et nouvelles images web/outils nécessaires, même si FDL n'est pas activé. Une simple reconstruction/remplacement de l'application sur la base 003 sera refusée. Sauvegarder avec les anciens outils avant migration, remplacer ensemble les outils et le contrôleur de sauvegarde, puis vérifier 25 tables. [Procédure et limites FDL](FDL.md). Aucun déploiement ou push effectué pour ce lot ; ne pas reprendre la commande ordinaire de mise à jour du catalogue pour cette migration.
+
 ## Entretien de l’instance PostgreSQL principale
 
 Depuis la bascule confirmée du 27 octobre 2026, suivre le [guide PostgreSQL](POSTGRESQL-ADMIN.md) pour cette instance ; les commandes SQLite historiques ci-dessous ne constituent pas sa mise à jour. Les [sauvegardes automatiques](POSTGRESQL-AUTO-BACKUPS.md) réutilisent l’image d’outils compatible existante avec un contrôleur monté en lecture seule. Leur installation ne reconstruit aucune image et ne recrée aucun service ou volume de l’application. `deploy/` et ses unités utilisateur sont exclus du contexte d’image ; les contrôles Docker continuent d’examiner les modules JavaScript livrés.

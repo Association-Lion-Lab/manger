@@ -8,6 +8,7 @@
   <meta name="apple-mobile-web-app-title" content="Manger!">
   <title>Manger! — On mange quoi cette semaine ?</title>
   <link rel="stylesheet" href="/menu-composer.css">
+  <link rel="stylesheet" href="/fdl.css">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
   <link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192">
@@ -511,6 +512,7 @@
         <button id="reset-recipe-filters" class="text-action" type="button" hidden>Réinitialiser les filtres</button>
         <details id="recipe-season-note" hidden><summary>Fruits et légumes du mois · repères indicatifs</summary><p class="muted"><span id="recipe-season-coverage"></span> Au moins un fruit ou légume saisonnier du mois est nécessaire ; ceux disponibles toute l'année ne suffisent pas. Un fruit ou légume reconnu hors saison exclut la recette. Couverture partielle : l'origine et le mode de culture ne sont pas connus. Les ingrédients inconnus et produits transformés ne sont pas évalués. <a id="recipe-season-source" href="https://www.mangerbouger.fr/manger-mieux/bien-manger-sans-se-ruiner/calendrier-de-saison" target="_blank" rel="noopener noreferrer">Manger Bouger</a></p></details>
         <p id="recipe-feedback" class="error" role="alert" hidden></p>
+        <section id="fdl-recipes" aria-label="Recettes Faim de Lion" hidden></section>
         <div id="recipe-discovery">
           <div id="recipe-spotlight" class="recipe-spotlight" aria-label="Recettes à découvrir"></div>
           <div class="recipe-block-heading"><h2>Choisir un univers</h2></div>
@@ -565,6 +567,7 @@
           <button id="account-tastes" type="button"><span class="account-symbol" aria-hidden="true" data-ui-icon="heart">♡</span><span><strong>Goûts et régimes</strong><small>Les préférences de chacun</small></span><span aria-hidden="true">›</span></button>
           <a id="account-invite" href="/account" hidden><span class="account-symbol" aria-hidden="true" data-ui-icon="plus">＋</span><span><strong>Inviter une personne</strong><small>Gérer les accès au foyer</small></span><span aria-hidden="true">›</span></a>
         </div>
+        <section id="fdl-account" aria-label="Liaison Faim de Lion" hidden></section>
         <h2 class="account-heading">Préférences</h2>
         <div class="account-group account-settings">
           <label><span class="account-symbol" aria-hidden="true" data-ui-icon="palette">◉</span><span><strong>Couleur</strong><small>Choisie pour cet appareil</small></span><select id="theme-accent" aria-label="Couleur de l'application"><option value="potager">Potager</option><option value="ardoise">Ardoise</option><option value="prune">Prune</option></select></label>
@@ -664,6 +667,7 @@
       </div>
       <img id="recipe-view-photo" class="recipe-hero" alt="" hidden>
       <h2 id="recipe-view-title"></h2><span id="recipe-view-meta" class="muted"></span>
+      <p id="recipe-fdl-source" class="muted" hidden></p>
       <p id="recipe-taste-warning" class="muted" hidden></p>
       <a id="recipe-view-source" target="_blank" rel="noreferrer noopener" hidden>Voir la recette sur son site d’origine ↗</a>
       <label class="field recipe-portions"><span>Portions à préparer</span><input id="recipe-view-portions" type="number" min="1" max="100" step="1" required aria-describedby="recipe-portions-description"></label>
@@ -839,6 +843,7 @@
   <script src="/food-names.js"></script>
   <script src="/seasons.js"></script>
   <script src="/menu-composer.js"></script>
+  <script src="/fdl-ui.js"></script>
   <script src="/offline-recipes.js"></script>
   <script src="/offline-shopping.js"></script>
   <script>
@@ -1158,7 +1163,7 @@
       const maxMinutes = Number(document.getElementById('recipe-time-filter').value) || Infinity;
       const seasonal = document.getElementById('recipe-season-filter').getAttribute('aria-pressed') === 'true';
       const seasonInfo = MangerSeasons.seasonCalendars.france;
-      const filtered = MangerFoodNames.searchRecipes(state.recipes.filter(recipe => (category === '__favorites' ? recipe.favorite : !category || recipe.tags.includes(category)) && (!seasonal || MangerSeasons.recipeSeason(recipe, month).matches)), query, maxMinutes);
+      const filtered = MangerFoodNames.searchRecipes(state.recipes.filter(recipe => !recipe.fdl?.removed).filter(recipe => (category === '__favorites' ? recipe.favorite : !category || recipe.tags.includes(category)) && (!seasonal || MangerSeasons.recipeSeason(recipe, month).matches)), query, maxMinutes);
       document.getElementById('recipe-season-month-field').textContent = `En ce moment · ${monthName} · ${filtered.length} recette${filtered.length > 1 ? 's' : ''} de saison`;
       document.getElementById('recipe-season-month-field').hidden = !seasonal;
       document.getElementById('recipe-season-note').hidden = !seasonal;
@@ -1183,7 +1188,7 @@
         const categories = [['__favorites', '♡ Mes favoris'], ...Object.entries(recipeCategories)];
         const categoryTile = ([key, label]) => {
           const [icon, ...words] = label.split(' ');
-          const count = state.recipes.filter(recipe => key === '__favorites' ? recipe.favorite : recipe.tags.includes(key)).length;
+          const count = state.recipes.filter(recipe => !recipe.fdl?.removed).filter(recipe => key === '__favorites' ? recipe.favorite : recipe.tags.includes(key)).length;
           return `<button class="browse-category" type="button" data-browse-category="${key}"><span class="browse-category-icon" aria-hidden="true">${icon}</span><strong>${escapeHtml(words.join(' '))}</strong><small>${count} recette${count > 1 ? 's' : ''}</small></button>`;
         };
         const featuredCategories = ['__favorites', 'rat', 'date', 'japon', 'express', 'mijote'];
@@ -1634,7 +1639,7 @@
         candidates: criteria => {
           const rank = { vegan: 0, vegetarian: 1, pescetarian: 2, omnivore: 3 };
           const members = state.members.filter(member => criteria.memberIds.includes(member.id));
-          return state.recipes.filter(recipe => recipe.minutes <= criteria.maxMinutes && members.every(member => rank[recipe.diet] <= rank[member.diet]))
+          return state.recipes.filter(recipe => !recipe.fdl?.removed).filter(recipe => recipe.minutes <= criteria.maxMinutes && members.every(member => rank[recipe.diet] <= rank[member.diet]))
             .map(recipe => ({ ...recipe, ...recipeTaste(recipe.ingredients, members, state.avoidedIngredients || []) })).sort((a, b) => tasteRank(a) - tasteRank(b));
         },
         notice: (recipe, criteria) => {
@@ -1655,7 +1660,7 @@
       const category = document.getElementById('picker-category').value;
       const container = document.getElementById('picker-recipes');
       if (!document.querySelector('#picker-category option[value="__favorites"]')) document.getElementById('picker-category').insertAdjacentHTML('beforeend', '<option value="__favorites">★ Mes favoris</option>');
-      container.innerHTML = MangerFoodNames.searchRecipes(state.recipes.filter(recipe => category === '__favorites' ? recipe.favorite : !category || recipe.tags.includes(category)), query).map(recipe => choice(recipe.favorite ? '★' : '♨', recipe.title, `${recipe.minutes} min · ${dietLabels[recipe.diet]}${recipe.favorite ? ' · Favori' : ''}`, { [container.dataset.mode]: recipe.id }, recipe)).join('') || '<p class="empty-state">Aucun plat trouvé. Changez le mot recherché ou l’univers.</p>';
+      container.innerHTML = MangerFoodNames.searchRecipes(state.recipes.filter(recipe => !recipe.fdl?.removed).filter(recipe => category === '__favorites' ? recipe.favorite : !category || recipe.tags.includes(category)), query).map(recipe => choice(recipe.favorite ? '★' : '♨', recipe.title, `${recipe.minutes} min · ${dietLabels[recipe.diet]}${recipe.favorite ? ' · Favori' : ''}`, { [container.dataset.mode]: recipe.id }, recipe)).join('') || '<p class="empty-state">Aucun plat trouvé. Changez le mot recherché ou l’univers.</p>';
     }
 
     function openEventSetup(occasion, mode = 'standard', recipe = null) {
@@ -1742,7 +1747,7 @@
 
     function compatibleRecipes(member) {
       const rank = { vegan: 0, vegetarian: 1, pescetarian: 2, omnivore: 3 };
-      return state.recipes.filter(recipe => rank[recipe.diet] <= rank[member.diet]).map(recipe => ({ ...recipe, ...recipeTaste(recipe.ingredients, [member], state.avoidedIngredients || []) })).sort((a, b) => tasteRank(a) - tasteRank(b));
+      return state.recipes.filter(recipe => !recipe.fdl?.removed).filter(recipe => rank[recipe.diet] <= rank[member.diet]).map(recipe => ({ ...recipe, ...recipeTaste(recipe.ingredients, [member], state.avoidedIngredients || []) })).sort((a, b) => tasteRank(a) - tasteRank(b));
     }
 
     function openVariantSetup(recipe, memberIds = null) {
@@ -1908,6 +1913,10 @@
       favoriteButton.setAttribute('aria-pressed', String(Boolean(recipe.favorite)));
       document.getElementById('recipe-view-error').hidden = true;
       document.getElementById('recipe-view-title').textContent = recipe.title;
+      const fdlSource=document.getElementById('recipe-fdl-source');fdlSource.hidden=!recipe.fdl;
+      fdlSource.textContent=recipe.fdl?.removed?'Recette retirée de FDL par la modération.':recipe.fdl?['Faim de Lion',recipe.fdl.metadata?.author,recipe.fdl.metadata?.licence,'Version '+recipe.fdl.version].filter(Boolean).join(' · '):'';
+      document.getElementById('plan-recipe').disabled=Boolean(recipe.fdl?.removed);
+      document.getElementById('start-cooking').disabled=Boolean(recipe.fdl?.removed);
       const source = document.getElementById('recipe-view-source'); source.hidden = !recipe.sourceUrl;
       if (recipe.sourceUrl) source.href = recipe.sourceUrl;
       document.getElementById('recipe-view-meta').textContent = `${recipe.minutes} min · ${recipe.servings} portions · ${dietLabels[recipe.diet]}`;
@@ -3126,6 +3135,9 @@
       if (isSecureContext && navigator.serviceWorker && localStorage.getItem('manger-offline-enabled') === 'yes') navigator.serviceWorker.getRegistration().then(registration => registration?.update()).catch(() => {});
     } catch {}
     document.querySelectorAll('[data-ui-icon]').forEach(element => { element.innerHTML = uiIcon(element.dataset.uiIcon); });
+    const fdlUi=MangerFdl.create({account:document.getElementById('fdl-account'),recipes:document.getElementById('fdl-recipes'),fetch:(...args)=>fetch(...args),escape:escapeHtml,reload:async()=>{if(!await load())throw new Error('La copie est enregistrée. Recharge la page pour actualiser les recettes.');}});
+    document.querySelector('nav').addEventListener('click',event=>{if(event.target.closest('[data-panel="recipes"], [data-panel="account"]'))fdlUi.refresh();});
+    fdlUi.refresh();
     load().catch(() => {}); // The shared loader displays a retry action without replacing the planning.
   </script>
 </body>

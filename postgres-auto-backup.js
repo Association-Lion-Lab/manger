@@ -92,13 +92,13 @@ async function automaticBackup(config,{directory,toolsDirectory,applicationRole,
     await lock.writeFile(token);await lock.sync();await tools.syncDirectory(root);
     const name='auto-'+now.toISOString().replace(/[-:.]/g,'')+'-'+randomBytes(6).toString('hex'),folder=join(root,name);
     const result=await instance.backupInstance(config,folder,{toolsDirectory,applicationRole});
-    if(result.status!=='backed-up'||result.tables!==22)throw failure('MANGER_AUTO_ARCHIVE');
+    if(result.status!=='backed-up'||result.tables!==25)throw failure('MANGER_AUTO_ARCHIVE');
     const hashes=await archiveDigests(folder,owner);
     // Inventory reading does not connect to PostgreSQL or prove a complete restoration.
     await tools.withTools(config,toolsDirectory,run=>run('pg_restore',['--list',join(folder,'database.dump')],['ignore','ignore','pipe']));
     await saveJson(join(folder,'automatic.json'),{format:'manger-automatic-archive',version:1,instance:owner.instance,name,...hashes});
     await tools.syncDirectory(root);
-    return {status:'backed-up',tables:22,archive:name,integrity:'sha256-and-inventory',...await rotate(root,owner,name,keep)};
+    return {status:'backed-up',tables:25,archive:name,integrity:'sha256-and-inventory',...await rotate(root,owner,name,keep)};
   }finally{
     await lock.close();
     if(await fs.readFile(lockPath,'utf8')!==token)throw failure('MANGER_AUTO_LOCK');

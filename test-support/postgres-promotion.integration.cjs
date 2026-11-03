@@ -18,8 +18,8 @@ case "$1" in
  stop) if [ "$PROMOTION_TEST_CASE" = source-stop-fail ]; then exit 47; fi; touch "$PROMOTION_TEST_STOPPED";;
  compose) case "$*" in
  *' stop app'*) if [ "$PROMOTION_TEST_CASE" = app-stop-fail ]; then exit 47; fi;;
- *' instance backup '*) if [ "$PROMOTION_TEST_CASE" = backup-fail ]; then exit 47; fi; echo '{"status":"backed-up","tables":22}';;
- *' instance verify '*) if [ "$PROMOTION_TEST_CASE" = verify-fail ]; then exit 47; fi; echo '{"status":"verified-open","tables":22}';;
+ *' instance backup '*) if [ "$PROMOTION_TEST_CASE" = backup-fail ]; then exit 47; fi; echo '{"status":"backed-up","tables":25}';;
+ *' instance verify '*) if [ "$PROMOTION_TEST_CASE" = verify-fail ]; then exit 47; fi; echo '{"status":"verified-open","tables":25}';;
  *' config --quiet'*) if [ "$PROMOTION_TEST_CASE" = config-fail ]; then exit 47; fi;;
  *' up -d '*) if [ "$PROMOTION_TEST_CASE" = start-fail ]; then exit 47; fi; if [ "$PROMOTION_TEST_CASE" = interrupted ]; then kill -TERM "$PPID"; fi;;
  *' exec -T app node healthcheck.js'*) if [ "$PROMOTION_TEST_CASE" = health-fail ] && [ -f "$PROMOTION_TEST_STOPPED" ]; then exit 47; fi;;

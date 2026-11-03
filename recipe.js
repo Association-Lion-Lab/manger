@@ -3,7 +3,7 @@ function inputError(message) {
 }
 
 function checkedRecipe(result) {
-  const errors={'unknown-recipe':'Recette inconnue','used-recipe':'Cette recette est utilisée dans le planning'};
+  const errors={'unknown-recipe':'Recette inconnue','used-recipe':'Cette recette est utilisée dans le planning','removed-recipe':'Cette recette a été retirée par la modération de FDL.'};
   if(typeof result==='string'&&Object.hasOwn(errors,result))throw inputError(errors[result]);
   return result;
 }

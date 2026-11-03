@@ -7,13 +7,14 @@ const {reservePostgresClient}=require('./db/postgres');
 const {checkRoles,permissions,history:checkHistory,schemaVersion}=require('./db/postgres-schema');
 const {verifyStructure}=require('./db/structure');
 const {TABLES}=require('./migration-format');
+const instanceTables=[...TABLES,...require('./db/fdl-tables')];
 const {secureDirectory,syncDirectory,withTools,instanceError}=require('./db/instance-tools');
 const digest=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const validDigest=value=>typeof value==='string'&&/^[a-f0-9]{64}$/.test(value);
 const validRole=value=>typeof value==='string'&&/^[a-z_][a-z0-9_]{0,62}$/.test(value)&&value!=='public'&&!value.startsWith('pg_');
 function validManifest(manifest){
   if(!manifest||Object.keys(manifest).sort().join(',')!=='applicationRole,archive,data,format,major,metadata,migrationRole,schema,structure,version')return false;
-  const data=manifest.data,keys=TABLES.map(t=>t.key).sort().join(',');
+  const data=manifest.data,keys=instanceTables.map(t=>t.key).sort().join(',');
   return data&&Object.keys(data).sort().join(',')==='algorithm,counts,fingerprints'&&data.algorithm==='pg-json-sha256-v1'&&
     data.counts&&Object.keys(data.counts).sort().join(',')===keys&&Object.values(data.counts).every(n=>Number.isSafeInteger(n)&&n>=0)&&
     data.fingerprints&&Object.keys(data.fingerprints).sort().join(',')===keys&&Object.values(data.fingerprints).every(validDigest)&&
@@ -46,10 +47,10 @@ async function capture(client,applicationRole){
   if(!status?.ready||status.version!==schemaVersion)throw instanceError('MANGER_INSTANCE_SCHEMA');
   await client.query("SET LOCAL bytea_output='hex'; SET LOCAL extra_float_digits=3; SET LOCAL TimeZone='UTC'; SET LOCAL DateStyle='ISO,YMD'");
   const counts={},fingerprints={};
-  for(const table of TABLES){
+  for(const table of instanceTables){
     const columns=table.columns.map(c=>'"'+c+'"').join(','),result=await rowFingerprint(client,`SELECT ${columns} FROM ${table.key}`);
     counts[table.key]=result.count;fingerprints[table.key]=result.hash;
-    const column=table.name==='shopping_aisles'?'sort_order':table.name!=='invitations'&&table.columns.includes('id')?'id':null;
+    const column=table.name==='shopping_aisles'?'sort_order':!['invitations','fdl_link'].includes(table.name)&&table.columns.includes('id')?'id':null;
     if(!column)continue;
     const row=(await client.query(`SELECT last_value::float8 AS value,is_called,
       (SELECT greatest(0,coalesce(max(${column}),0))::float8 FROM ${table.key}) AS maximum FROM ${table.key}_${column}_seq`)).rows[0];
@@ -91,7 +92,7 @@ async function backupInstance(config,folder,{toolsDirectory,applicationRole}={})
         ...report,archive:await archiveHash(join(folder,'database.dump'))};
       const saved=await open(join(folder,'manifest.json'),'wx',0o600);try{await saved.writeFile(JSON.stringify(manifest,null,2));await saved.sync();}finally{await saved.close();}
       await syncDirectory(folder);await syncDirectory(dirname(folder));
-      return {status:'backed-up',tables:22};
+      return {status:'backed-up',tables:instanceTables.length};
     }catch(error){try{await client.query('ROLLBACK');}catch{}throw error;}
   }));
 }
@@ -126,7 +127,7 @@ async function restoreInstance(config,folder,{toolsDirectory,applicationRole,tru
     await permissions(client,applicationRole,{connect:false});
     await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
     try{await compare(client,manifest);await client.query('COMMIT');}catch(error){try{await client.query('ROLLBACK');}catch{}throw error;}
-    return {status:'verified-closed',tables:22};
+    return {status:'verified-closed',tables:instanceTables.length};
     });}finally{await file.close();}
   });
 }
@@ -148,7 +149,7 @@ async function verified(config,folder,options,openAccess){
       await client.query(`GRANT CONNECT ON DATABASE ${names.db} TO ${names.role}`);
     }
     const allowed=(await client.query("SELECT has_database_privilege($1,current_database(),'CONNECT') AS allowed",[options.applicationRole])).rows[0].allowed;
-    return {status:openAccess?'ready':allowed?'verified-open':'verified-closed',tables:22};
+    return {status:openAccess?'ready':allowed?'verified-open':'verified-closed',tables:instanceTables.length};
   });
 }
 const verifyInstance=(config,folder,options)=>verified(config,folder,options,false);

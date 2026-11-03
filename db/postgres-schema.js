@@ -1,7 +1,7 @@
 const { createHash } = require('node:crypto');
 const {structureFingerprint,verifyStructure}=require('./structure');
 const {reservePostgresClient}=require('./postgres');
-const migrations = [require('./migrations/001-initial'),require('./migrations/002-transfer-state'),require('./migrations/003-household-restore')];
+const migrations = [require('./migrations/001-initial'),require('./migrations/002-transfer-state'),require('./migrations/003-household-restore'),require('./migrations/004-fdl')];
 
 // shortcut: require freshly provisioned roles; global parameter/function ACL audits belong to deployment bootstrap.
 async function checkRoles(client, role) {

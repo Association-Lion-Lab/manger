@@ -391,6 +391,10 @@ Les noms de restaurants déjà enregistrés sont conservés. Pour en modifier un
 
 La recherche par ville, code postal ou position, la carte et les listes de restaurants ont été retirées le 15 octobre 2026 à la demande de l'utilisateur. Aucun appel à Overpass, à l'API des communes ou aux tuiles de carte n'est effectué pour ce parcours. Pas de recherche mondiale ni de réservation. Aucune migration de données ou nouveau réglage n'est nécessaire ; le [choix et les vérifications](DECISIONS.md#restaurants-manuels--15-octobre-2026) sont documentés.
 
+## Importer depuis Faim de Lion
+
+Sur PostgreSQL configuré pour FDL, un administrateur relie le compte dans **Compte → Faim de Lion**. La liaison sert au foyer entier, recettes privées du compte comprises. Dans **Recettes → Recettes de Faim de Lion**, rechercher un plat, ouvrir ses recettes FDL ou coller un lien pour importer une copie locale. Mises à jour et avis sont regroupés dans des panneaux repliables. Délier garde les copies ; révoquer l'accès côté FDL se fait dans sa page Sécurité. Une restauration impose une nouvelle liaison. Sous SQLite ou sans configuration FDL, ces sections sont masquées. [Détails et migration nécessaire](FDL.md).
+
 ## Composer sa semaine
 
 Le score anti-gaspi ignore automatiquement les basiques reconnus : sel, poivre, huiles, beurre, vinaigres, sucre, farine, eau, épices courantes et certains condiments. Ils ne donnent aucun bonus de stock disponible, de date proche ou de réutilisation entre recettes. Les légumes, viandes, poissons, œufs et autres ingrédients restent pris en compte, ainsi que le riz et les pâtes. Les herbes fraîches restent utiles ; les versions explicitement séchées ou en poudre sont ignorées pour ce score. Ce vocabulaire local n'est pas exhaustif : un nom inconnu reste pris en compte. Le filtre concerne seulement les propositions, jamais les quantités des recettes, les réservations du placard ou les courses ; la présence d'un basique chez vous n'est pas supposée.

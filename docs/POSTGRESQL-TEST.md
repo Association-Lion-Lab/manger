@@ -1,5 +1,7 @@
 # PostgreSQL local et jetable pour les tests
 
+**Mise à jour du 3 novembre 2026 :** le runtime principal retenu utilise PostgreSQL ; les mentions de préparation SQLite ci-dessous sont historiques. La suite ajoute `postgres-fdl.integration.cjs` (schéma 003 → 004, stockage, concurrence et sauvegarde) et `postgres-fdl-http.integration.cjs` (comptes, PKCE, import et faux FDL local). Aucune instance externe utilisée. L'inventaire complet d'instance passe à 25 tables, le contrat de transfert SQLite reste à 22. Lancer `npm run test:postgres` puis `npm test`, successivement ; preuves et limites dans [FDL](FDL.md).
+
 La tâche 02 du [plan de migration](MIGRATION-POSTGRESQL.md) est réalisée sur Windows le **22 octobre 2026**. Ce dispositif prépare le développement : **Manger! utilise toujours SQLite**. Il ne convertit aucune base, ne démarre aucun service Windows et n'accède pas au serveur Ubuntu.
 
 ## Préparer les outils

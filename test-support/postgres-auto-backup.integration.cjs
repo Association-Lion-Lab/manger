@@ -24,9 +24,9 @@ test('automatic online backup : real dump, offline inventory, rotation and resto
   t.mock.method(tools,'withTools',(settings,bin,work)=>originalTools({...settings,port:1},bin,work));
   await t.test('new live writes do not invalidate snapshot checksum/inventory checks',async()=>{
     first=await automaticBackup(config(source),options);
-    assert.equal(first.integrity,'sha256-and-inventory');assert.equal(first.tables,22);
+    assert.equal(first.integrity,'sha256-and-inventory');assert.equal(first.tables,25);
     const folder=join(directory,first.archive),manifest=JSON.parse(await readFile(join(folder,'manifest.json')));
-    assert.equal(Object.keys(manifest.data.counts).length,22);
+    assert.equal(Object.keys(manifest.data.counts).length,25);
     await assert.rejects(instance.verifyInstance(config(source),folder,options),{code:'MANGER_INSTANCE_MISMATCH'});
     assert.equal((await source.database.query('SELECT title FROM household.recipes WHERE id=5000000001')).rows[0].title,'changed after snapshot');
   });

@@ -10,6 +10,8 @@ Lecture du dépôt le **10 octobre 2026**. Aucun changement de runtime, dépenda
 
 ## Résumé de l'architecture actuelle
 
+**FDL, développement du 3 novembre 2026 :** `fdl.js` encapsule l'API bornée et le suivi quotidien ; `fdl-http.js` gère PKCE et les routes, branchés uniquement dans `postgres-app.js`. Le retour public est une exception explicite de `accounts.js`, désactivée sous SQLite. `db/fdl.js` réutilise les écritures de recettes dans la même transaction et le verrou du foyer ; `004-fdl` ajoute trois tables. `fdl-format.js` valide le suivi exportable sans jeton ; format de foyer v2 compatible avec v1, outils d'instance étendus à 25 tables. Interface isolée dans `public/fdl-ui.js` et `public/fdl.css`, sans nouvel onglet. [Fonctionnement, limites et déploiement spécifique](FDL.md). Pas de migration au démarrage, dépendance de production ou modification du stockage SQLite.
+
 **Menu guidé, 2 novembre 2026 :** `public/menu-composer.js` porte le brouillon en mémoire, ses validations de placement et le contrôleur du dialogue dédié ; `public/menu-composer.css` définit une zone défilante avec en-tête et action principale fixes. `public/index.html` injecte les recherches, illustrations, goûts et données existants. Aperçu par `/api/week/preview`, enregistrement atomique par `/api/week/plan`, puis relecture et ouverture de Courses : aucune nouvelle route, table ou dépendance de production. Les fichiers sont explicitement servis par `public-http.js` et contrôlés dans l'image. [Contrats, limites et vérification](MENU-GUIDE.md).
 
 Manger! est un **monolithe web auto-hébergé** : un seul processus Node.js sert l'interface et l'API. Il n'y a ni serveur frontend distinct ni service cloud obligatoire pour gérer les recettes, le planning et les courses.

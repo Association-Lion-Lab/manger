@@ -8,6 +8,7 @@ const {lockTables,insertTables,sequenceStarts,householdOrder}=require('./postgre
 const {lockHousehold}=require('./db/household');
 const {readPostgresTables,verifyMigration}=require('./migration-verify');
 const {structureFingerprint}=require('./db/structure');
+const {readCopies,restoreCopies}=require('./fdl-format');
 const restoreError=(code='MANGER_RESTORE_INPUT')=>Object.assign(new Error(code==='MANGER_RESTORE_EXPIRED'?'Aperçu expiré. Vérifie à nouveau le fichier.':'Sauvegarde du foyer invalide ou incompatible.'),{code});
 
 async function readUpload(request){
@@ -16,11 +17,11 @@ async function readUpload(request){
   if(!size)throw restoreError();return Buffer.concat(chunks);
 }
 async function parseUpload(bytes){
-  if(!bytes.subarray(0,16).equals(Buffer.from('SQLite format 3\0')))return decodeHousehold(bytes).tables;
+  if(!bytes.subarray(0,16).equals(Buffer.from('SQLite format 3\0')))return decodeHousehold(bytes);
   const folder=await mkdtemp(join(tmpdir(),'manger-restore-source-'));
   try{
     const home=join(folder,'candidate.db');await writeFile(home,bytes,{mode:0o600});
-    return (await analyzeSource({home},{includeAuth:false})).tables;
+    return {tables:(await analyzeSource({home},{includeAuth:false})).tables};
   }finally{
     if(dirname(folder)===resolve(tmpdir())&&basename(folder).startsWith('manger-restore-source-'))await rm(folder,{recursive:true,force:true,maxRetries:5,retryDelay:100});
   }
@@ -52,26 +53,29 @@ function createPostgresRestore(db,{recoveryDirectory,now=Date.now}={}){
   async function preview(request){
     if(busy)throw restoreError('MANGER_RESTORE_BUSY');busy=true;clear();
     try{
-      const tables=await parseUpload(await readUpload(request));sequenceStarts(tables,{includeAuth:false});encodeHousehold(tables);
+      const {tables,fdl=[]}=await parseUpload(await readUpload(request));sequenceStarts(tables,{includeAuth:false});encodeHousehold(tables,fdl);
       const token=randomUUID(),timer=setTimeout(()=>{if(pending?.token===token)clear();},600000);timer.unref();
-      pending={tables,token,timer,expires:now()+600000};
+      pending={tables,fdl,token,timer,expires:now()+600000};
       return {token,recipes:tables['household.recipes'].length,members:tables['household.members'].length,meals:tables['household.meals'].length};
     }finally{busy=false;}
   }
   async function apply(token,{authorize}={}){
     if(busy)throw restoreError('MANGER_RESTORE_BUSY');
     if(!pending||typeof token!=='string'||token!==pending.token||now()>=pending.expires)throw restoreError('MANGER_RESTORE_EXPIRED');
-    const {tables}=pending;clear();busy=true;let recovery;
+    const {tables,fdl}=pending;clear();busy=true;let recovery;
     try{
       return await db.transaction(async tx=>{
         if(authorize&&!await authorize(tx))throw restoreError('MANGER_RESTORE_FORBIDDEN');
         await lockHousehold(tx);await lockTables(tx,{includeAuth:false});
         await checkedStructure(tx);
         await tx.query("SET LOCAL idle_in_transaction_session_timeout='60s'");
-        recovery=await boundedRecovery(recoveryDirectory,encodeHousehold(await readPostgresTables(tx,{includeAuth:false})));
+        await tx.query('LOCK TABLE household.fdl_link,household.fdl_copies,household.fdl_notices IN ACCESS EXCLUSIVE MODE');
+        recovery=await boundedRecovery(recoveryDirectory,encodeHousehold(await readPostgresTables(tx,{includeAuth:false}),await readCopies(tx)));
+        await tx.query('DELETE FROM household.fdl_link; DELETE FROM household.fdl_notices');
         await tx.query('UPDATE household.meals SET leftover_of=NULL');
         for(const key of [...householdOrder].reverse())await tx.query(`DELETE FROM ${key}`);
         await insertTables(tx,tables,{includeAuth:false});
+        await restoreCopies(tx,fdl);
         verifyMigration(tables,await readPostgresTables(tx,{includeAuth:false}),{includeAuth:false});
         await tx.query('SELECT household.restart_sequences()');
         await checkedStructure(tx);

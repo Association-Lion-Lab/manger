@@ -56,13 +56,14 @@ for (const file of ['future-module.js', 'db/future-module.js']) {
   });
 }
 
-for (const missing of ['catalog-extra.js', 'catalog-seasonal.js', 'catalog-classics.js', 'catalog-world.js', 'db/postgres.js', 'db/storage.js', 'public/information.html', 'public/food-names.js', 'public/menu-composer.js', 'public/menu-composer.css', 'public/third-party-notices.txt']) {
+for (const missing of ['catalog-extra.js', 'catalog-seasonal.js', 'catalog-classics.js', 'catalog-world.js', 'db/postgres.js', 'db/storage.js', 'public/information.html', 'public/food-names.js', 'public/menu-composer.js', 'public/menu-composer.css', 'public/fdl-ui.js', 'public/fdl.css', 'db/migrations/004-fdl.js', 'public/third-party-notices.txt']) {
   test(`the packaged module check rejects a missing ${missing}`, t => {
     const directory = isolatedPackage(t);
     rmSync(join(directory, missing));
     const result = runImageCheck(directory);
     assert.equal(result.status, 1, result.stderr);
-    assert.match(result.stderr.replaceAll('\\', '/'), new RegExp(missing.replace(/\.js$/, '').replaceAll('.', '\\.')));
+    const modulePath = missing.startsWith('db/migrations/') ? missing.slice(3) : missing;
+    assert.match(result.stderr.replaceAll('\\', '/'), new RegExp(modulePath.replace(/\.js$/, '').replaceAll('.', '\\.')));
   });
 }
 

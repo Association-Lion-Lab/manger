@@ -14,7 +14,7 @@ async function fixture(t){
     await fs.writeFile(join(folder,'database.dump'),bytes);
     if(failure==='dump')throw Object.assign(new Error('private detail must stay private'),{code:'SYNTHETIC_BACKUP_FAILED'});
     await fs.writeFile(join(folder,'manifest.json'),JSON.stringify({format:'manger-instance',version:1,major:18,applicationRole:'app',migrationRole:'owner',archive:hash(bytes)}));
-    return {status:'backed-up',tables:22};
+    return {status:'backed-up',tables:25};
   });
   t.mock.method(tools,'withTools',async(_config,_directory,work)=>work(async(name,args)=>{
     assert.equal(name,'pg_restore');assert.equal(args[0],'--list');

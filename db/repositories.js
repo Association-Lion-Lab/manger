@@ -6,7 +6,8 @@ const {postgresPantry}=require('./pantry');
 const {postgresCalculations}=require('./calculations');
 const {postgresShopping}=require('./shopping');
 const {postgresHouseholdBackup}=require('../household-backup');
+const {postgresFdl}=require('./fdl');
 function postgresRepositories(db){
-  return {auth:postgresAuth(db),home:postgresHousehold(db),recipes:postgresRecipes(db),meals:postgresMeals(db),pantry:postgresPantry(db),calc:postgresCalculations(db),shopping:postgresShopping(db),backup:postgresHouseholdBackup(db)};
+  return {auth:postgresAuth(db),home:postgresHousehold(db),recipes:postgresRecipes(db),meals:postgresMeals(db),pantry:postgresPantry(db),calc:postgresCalculations(db),shopping:postgresShopping(db),backup:postgresHouseholdBackup(db),fdl:postgresFdl(db)};
 }
 module.exports={postgresRepositories};

@@ -70,7 +70,7 @@ pgc --profile maintenance run --rm --no-deps -T instance verify /archives/before
 for check in 'backup.json:backed-up' 'verify.json:verified-open'; do
   file=${check%%:*}; expected=${check#*:}
   grep -Eq "\"status\"[[:space:]]*:[[:space:]]*\"$expected\"" "$operation/$file"
-  grep -Eq '"tables"[[:space:]]*:[[:space:]]*22([,}]|[[:space:]])' "$operation/$file"
+  grep -Eq '"tables"[[:space:]]*:[[:space:]]*25([,}]|[[:space:]])' "$operation/$file"
 done
 stage='arrêt de l’ancien serveur SQLite'
 docker stop "$source_id" > "$operation/stop-sqlite.log" 2>&1

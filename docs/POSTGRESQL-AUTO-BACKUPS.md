@@ -1,5 +1,7 @@
 # Sauvegardes PostgreSQL automatiques
 
+**Branche locale FDL, 3 novembre 2026 :** le schéma 004 ajoute trois tables et le contrôleur attend 25 tables dans l'archive d'instance. Mettre à jour ensemble le script monté et l'image d'outils, après sauvegarde du schéma 003 avec les anciens outils. Arrêter le minuteur pendant cette opération ; ne pas lancer le nouveau contrôleur contre l'ancienne image. [Ordre de migration spécifique, données et anciennes archives conservées](FDL.md). Ce lot n'est pas encore publié ou déployé ; les confirmations Linux historiques ci-dessous concernent la version précédente.
+
 2 novembre 2026 — activation confirmée par l’administrateur sur son instance PostgreSQL principale. Première échéance quotidienne encore à observer. Pas de nouvel écran, d’inscription à un service ou de sauvegarde envoyée à l’extérieur.
 
 ## Comportement

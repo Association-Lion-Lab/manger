@@ -87,3 +87,7 @@ Les protections locales ne constituent pas une garantie universelle d'idempotenc
 ## Ce qui n'est pas livré
 
 Les vraies interfaces tablette/PC, l'image Docker préconstruite publiée et l'isolation de plusieurs foyers restent différées. Les prix manuels sont écartés faute de fiabilité ; le tri saisonnier régional a été retiré au profit du calendrier national unique demandé. Il n'y a pas de commande d'enseigne, réservation de restaurant, application native, réseau social, générateur de recettes par IA ni calcul nutritionnel avancé. La recherche de restaurants a été abandonnée à la demande de l'utilisateur, pas simplement masquée ou différée. Un tag budget ou une adaptation de largeur ne vaut pas livraison de ces fonctions.
+
+## Faim de Lion — PostgreSQL configuré, branche locale feat/fdl
+
+Liaison FDL réservée à l'administrateur et partagée par le foyer, recettes privées comprises. Recherche, recettes personnelles et import de copie ; mises à jour volontaires et avis de retrait. Une suppression par l'auteur conserve la copie ; un retrait modéré neutralise les recettes encore planifiées sans faux ingrédient dans les courses. Sauvegarde de foyer sans jeton mais avec suivi, restauration déliée. Pas de nouvel onglet, dépendance de production ou stockage SQLite. [Contrats, tests et migration 004 à effectuer avant déploiement](FDL.md). Code local, non publié et non déployé à ce stade.

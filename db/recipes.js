@@ -11,8 +11,10 @@ function postgresRecipes(db) {
          JOIN household.ingredients g ON g.id=l.ingredient_id WHERE l.recipe_id=r.id) i),'[]'::json) AS ingredients,
       COALESCE((SELECT json_agg(s ORDER BY s.position) FROM
         (SELECT position,kind,instruction,minutes FROM household.recipe_steps WHERE recipe_id=r.id) s),'[]'::json) AS steps
+      ,(SELECT json_build_object('origin',f.origin,'id',f.fdl_id,'version',f.version,'removed',f.removed,'metadata',f.metadata)
+        FROM household.fdl_copies f WHERE f.recipe_id=r.id) AS fdl
       FROM household.recipes r WHERE ($1::bigint IS NULL OR r.id=$1) ORDER BY r.title COLLATE "C"`,[id]);
-    return rows.map(({tags,feedback,...recipe})=>({...recipe,...feedback,tags:tags.split(',').filter(Boolean)}));
+    return rows.map(({tags,feedback,fdl,...recipe})=>({...recipe,...feedback,...(fdl?{fdl}:{}),tags:tags.split(',').filter(Boolean)}));
   }
   const write=work=>db.transaction(async tx=>{await lockHousehold(tx);return work(tx);});
   async function children(tx,id,recipe) {
@@ -38,11 +40,13 @@ function postgresRecipes(db) {
     if(id===null)id=(await tx.query(`INSERT INTO household.recipes(title,minutes,servings,tags,diet,source_url,instructions)
       VALUES($1,$2,$3,$4,$5,$6,'') RETURNING id::float8 AS id`,values)).rows[0].id;
     else {
+      if((await tx.query('SELECT 1 FROM household.fdl_copies WHERE recipe_id=$1 AND removed',[id])).rowCount)return 'removed-recipe';
       const result=await tx.query("UPDATE household.recipes SET title=$1,minutes=$2,servings=$3,tags=$4,diet=$5,source_url=$6,instructions='' WHERE id=$7 RETURNING id",[...values,id]);
       if(!result.rowCount)return 'unknown-recipe';
       await tx.query('DELETE FROM household.recipe_ingredients WHERE recipe_id=$1',[id]);
       await tx.query('DELETE FROM household.recipe_steps WHERE recipe_id=$1',[id]);
       await tx.query('UPDATE household.meals SET title=$1 WHERE recipe_id=$2',[recipe.title,id]);
+      await tx.query('UPDATE household.fdl_copies SET modified=true WHERE recipe_id=$1',[id]);
     }
     await photo(tx,id,recipe);await children(tx,id,recipe);
     return (await read(id,tx))[0];
@@ -73,6 +77,6 @@ function postgresRecipes(db) {
     await tx.query('INSERT INTO household.recipe_notes(recipe_id,rating,note) VALUES($1,$2,$3) ON CONFLICT(recipe_id) DO UPDATE SET rating=excluded.rating,note=excluded.note',[id,rating,note]);
     return true;
   });
-  return Object.freeze({engine:'postgres',read:()=>read(),save,remove,readPhoto,setFavorite,setNote,importCatalog});
+  return Object.freeze({engine:'postgres',read:()=>read(),save,saveIn,remove,readPhoto,setFavorite,setNote,importCatalog});
 }
 module.exports={postgresRecipes};

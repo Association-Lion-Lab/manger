@@ -4,7 +4,8 @@ const INDEX_HTML=Buffer.from(readFileSync(join(__dirname,'public','index.html'),
   .replace('<!-- MANGER_INFORMATION -->',readFileSync(join(__dirname,'public','information.html'),'utf8')));
 const offlineAssets={'/sw.js':'text/javascript','/offline.html':'text/html','/manifest.webmanifest':'application/manifest+json','/icon.svg':'image/svg+xml','/apple-touch-icon.png':'image/png','/icon-180.png':'image/png','/icon-192.png':'image/png','/icon-512.png':'image/png'};
 offlineAssets['/menu-composer.css']='text/css';
-const scripts=['/ui-icons.js','/tastes.js','/food-names.js','/seasons.js','/menu-composer.js','/offline-recipes.js','/offline-shopping.js'];
+offlineAssets['/fdl.css']='text/css';
+const scripts=['/ui-icons.js','/tastes.js','/food-names.js','/seasons.js','/menu-composer.js','/fdl-ui.js','/offline-recipes.js','/offline-shopping.js'];
 function publicRoutes(request,response){
   if(request.method!=='GET')return false;
   const path=new URL(request.url,'http://localhost').pathname;

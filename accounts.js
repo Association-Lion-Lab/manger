@@ -82,7 +82,7 @@ async function body(req) {
   } catch { throw inputError('Requête invalide.'); }
 }
 
-function protectAccounts(db, handler, { secure = false, mailer = null, certificate = null, auth: repository = null, backupReady = false, restoreReady = false } = {}) {
+function protectAccounts(db, handler, { secure = false, mailer = null, certificate = null, auth: repository = null, backupReady = false, restoreReady = false, fdlEnabled = false, fdlCallback = null } = {}) {
   if (repository && db) throw new Error('Fournir un seul stockage de comptes, jamais deux moteurs.');
   const auth = repository || sqliteAuth(db);
   let busy = 0, mailBusy = false;
@@ -103,6 +103,8 @@ function protectAccounts(db, handler, { secure = false, mailer = null, certifica
     let path;
     try { path = new URL(req.url, 'http://localhost').pathname; } catch { return json(res, 400, { error: 'Adresse invalide.' }); }
     try {
+      if(path.startsWith('/api/fdl/')&&!fdlEnabled)return json(res,404,{error:'Route inconnue.'});
+      if(path==='/api/fdl/retour'&&req.method==='GET'&&fdlCallback)return await fdlCallback(req,res);
       if (!['GET', 'HEAD'].includes(req.method)) {
         // No proxy headers trusted. An explicit Secure setting is needed after HTTPS deployment.
         const origin = `${secure ? 'https' : 'http'}://${req.headers.host}`;

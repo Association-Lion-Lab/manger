@@ -10,13 +10,16 @@ const {readPostgresTables,verifyMigration}=require('../migration-verify');const 
 const {createServer}=require('node:http');const {protectAccounts}=require('../accounts');
 test('instance complète : vrais pg_dump et pg_restore sur deux clusters privés',{timeout:120000},async t=>{
   const source=await databaseFixture(t),target=await postgresFixture(t),data=await analyzeSource(await migrationSourceFixture(t));await migratePostgres(source.migrationPool,data);
+  await source.database.query("INSERT INTO household.fdl_link(id,origin,client_origin,token) VALUES(1,'https://fdl.example','https://manger.example','fdl-secret-fixture')");
+  await source.database.query("INSERT INTO household.fdl_copies(recipe_id,origin,fdl_id,version,metadata) SELECT min(id),'https://fdl.example','12',2,'{\"author\":\"Auteur fixture\"}' FROM household.recipes");
+  await source.database.query("INSERT INTO household.fdl_notices(title) VALUES('Retrait de test')");
   const config=f=>{const o=f.migrationPool.options;return{host:o.host,port:o.port,user:o.user,password:o.password,database:o.database,ssl:false};};
   const root=await mkdtemp(join(tmpdir(),'manger-instance-test-'));t.after(()=>rm(root,{recursive:true,force:true,maxRetries:5,retryDelay:100}));
   const toolsDirectory=process.env.MANGER_TEST_PG_BIN||join(__dirname,'..','.test-tools','postgresql-18.6-5','pgsql','bin'),applicationRole='manger_test_app',folder=join(root,'backup');
   const options={toolsDirectory,applicationRole};
   await t.test('archive privée, métadonnées et empreintes complètes, aucune donnée dans le rapport',async()=>{
     const report=await backupInstance(config(source),folder,options);assert.equal(report.status,'backed-up');assert.doesNotMatch(JSON.stringify(report),/Avis|password|Café|tomate/);
-    const manifest=JSON.parse(await readFile(join(folder,'manifest.json')));assert.equal(Object.keys(manifest.data.counts).length,22);assert.match(manifest.metadata,/^[a-f0-9]{64}$/);
+    const manifest=JSON.parse(await readFile(join(folder,'manifest.json')));assert.equal(Object.keys(manifest.data.counts).length,25);assert.match(manifest.metadata,/^[a-f0-9]{64}$/);
     await assert.rejects(backupInstance(config(source),folder,options));
   });
   await t.test('cible occupée ou connexion encore ouverte refusée sans écrasement',async()=>{
@@ -71,6 +74,9 @@ test('instance complète : vrais pg_dump et pg_restore sur deux clusters privés
     assert.equal((await verifyInstance(config(target),folder,options)).status,'verified-open');
     const db=await openPostgres(appConfig);try{
       assert.equal(verifyMigration(data.tables,await readPostgresTables(db)).tables,22);
+      assert.equal((await db.query('SELECT token FROM household.fdl_link')).rows[0].token,'fdl-secret-fixture');
+      assert.equal((await db.query('SELECT metadata FROM household.fdl_copies')).rows[0].metadata.author,'Auteur fixture');
+      assert.equal((await db.query('SELECT title FROM household.fdl_notices')).rows[0].title,'Retrait de test');
       const auth=postgresAuth(db),admin=await auth.findUser('admin');assert.equal(admin.password,data.tables['auth.accounts'].find(r=>r.username==='admin').password);
       assert.ok(await auth.session(require('node:crypto').createHash('sha256').update('c'.repeat(64)).digest('hex')));
       const server=createServer(protectAccounts(null,()=>assert.fail('Connexion doit être gérée avant le métier'),{auth}));await new Promise(r=>server.listen(0,'127.0.0.1',r));

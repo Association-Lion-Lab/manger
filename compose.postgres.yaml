@@ -27,6 +27,7 @@
       "image": "${MANGER_CANDIDATE_IMAGE:?Construire et choisir une image candidate}",
       "environment": {
         "MANGER_STORAGE":"postgres", "MANGER_POSTGRES_CANDIDATE":"1", "MANGER_PORT":"3000", "MANGER_DATA_DIR":"/data",
+        "MANGER_FDL_URL":"${MANGER_FDL_URL:-}",
         "MANGER_PG_HOST":"postgres", "MANGER_PG_PORT":"5432", "MANGER_PG_DATABASE":"manger", "MANGER_PG_USER":"manger_app",
         "MANGER_PG_PASSWORD_FILE":"/run/secrets/pg_app_password", "MANGER_PG_TLS":"verify-full", "MANGER_PG_CA_FILE":"/run/secrets/pg_ca"
       },

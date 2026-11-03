@@ -33,8 +33,8 @@ case "$1" in
  compose)
  case "$*" in
  *' migrate import '*) if [ "$PRIVATE_TEST_CASE" = import-fail ]; then exit 47; fi; echo '{"status":"ready","tables":22}';;
- *' instance backup '*) if [ "$PRIVATE_TEST_CASE" = backup-fail ]; then exit 47; fi; echo '{"status":"backed-up","tables":22}';;
- *' instance verify '*) if [ "$PRIVATE_TEST_CASE" = verify-fail ]; then exit 47; fi; echo '{"status":"verified-open","tables":22}';;
+ *' instance backup '*) if [ "$PRIVATE_TEST_CASE" = backup-fail ]; then exit 47; fi; echo '{"status":"backed-up","tables":25}';;
+ *' instance verify '*) if [ "$PRIVATE_TEST_CASE" = verify-fail ]; then exit 47; fi; echo '{"status":"verified-open","tables":25}';;
  *' port app '*) echo 127.0.0.1:54321;;
  *) exit 0;; esac;;
  *) exit 98;; esac

@@ -1,5 +1,11 @@
 # Données et confidentialité d'une instance Manger!
 
+## Échanges Faim de Lion — 3 novembre 2026
+
+Sur PostgreSQL activé pour FDL, l'administrateur relie un compte pour le foyer entier, recettes privées comprises. Le consentement communique à FDL l'origine de Manger! ; les recherches, identifiants importés et vérifications de version passent du serveur Manger! à FDL avec un jeton permanent révocable. FDL reçoit aussi les données techniques habituelles de connexion et gère ses propres traces. Le navigateur contacte FDL pour le consentement ou l'ouverture volontaire d'une source, sans recevoir le jeton serveur. Aucune photo distante téléchargée. Sans activation, aucun de ces appels n'est effectué.
+
+Un cookie de flux OAuth temporaire HttpOnly, SameSite=Lax et Secure en HTTPS dure dix minutes, en plus du cookie de session Strict. State/verifier sont en mémoire ; jeton et suivi des copies dans PostgreSQL. Le téléchargement de sauvegarde du foyer v2 inclut le suivi et la provenance mais exclut le jeton, les comptes et la liaison. Une archive administrative complète de l'instance inclut ces secrets et reste privée. Une déliaison oublie le jeton ici, sans effacer les copies ou révoquer l'accès côté FDL. Les métadonnées d'auteur et de licence sont conservées ; leur présence ne change pas les droits applicables aux recettes. [Parcours, retrait et limites](FDL.md).
+
 Notice initiale du **19 octobre 2026**, d’après le code `034311b` ; précisions techniques du candidat PostgreSQL ajoutées le **26 octobre 2026**.
 
 **Cette notice décrit le logiciel auto-hébergé. Un résumé est accessible dans « Confidentialité et licences », sur Connexion, la page Mon compte et l'onglet Compte. Il ne remplace pas les informations propres à l'administrateur lorsqu'elles sont légalement requises.** Pour le dossier et les actions ouvertes, lire [Conformité France/UE](CONFORMITE.md).

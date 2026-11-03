@@ -13,6 +13,8 @@ const {protectAccounts}=require('./accounts');
 const {createInvitationMailer}=require('./invitation-mail');
 const {publicRoutes}=require('./public-http');
 const {syncDirectory}=require('./db/instance-tools');
+const {fdlUrl,fdlClient,startFdlChecks}=require('./fdl');
+const {fdlRoutes}=require('./fdl-http');
 async function runtimeDirectory(path){
   try{await mkdir(path,{mode:0o700});}catch(error){if(error.code!=='EEXIST')throw error;}
   const info=await lstat(path);
@@ -22,12 +24,22 @@ async function runtimeDirectory(path){
 function json(response,status,data){const body=Buffer.from(JSON.stringify(data));response.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Content-Length':body.length,'Cache-Control':'no-store'});response.end(body);}
 async function createPostgresRuntime(env=process.env){
   requirePostgresCandidate(env);
-  const tls=tlsOptions(env),mailer=createInvitationMailer(env),db=await openPostgres(postgresConfig(env));
+  const base=fdlUrl(env),tls=tlsOptions(env),mailer=createInvitationMailer(env),db=await openPostgres(postgresConfig(env));
   try{
     await checkApplicationStorage(db);
     const directory=await runtimeDirectory(resolve(env.MANGER_DATA_DIR||join(__dirname,'data')));
     const stores=postgresRepositories(db);
     stores.restoration=createPostgresRestore(db,{recoveryDirectory:join(directory,'recovery')});
+    const secure=Boolean(tls)||env.MANGER_SECURE_COOKIE==='1',client=base?fdlClient(base):null;
+    const checks=base?startFdlChecks({store:stores.fdl,client,report:message=>console.error(message)}):null;
+    const fdl=base?fdlRoutes({store:stores.fdl,auth:stores.auth,base,client,secure,sendJson:json,onLinked:()=>checks.run()}):null;
+    if(fdl){
+      const restore=stores.restoration;
+      stores.restoration={...restore,apply:async(...args)=>{
+        await fdl.invalidate();
+        try{return await restore.apply(...args);}finally{await fdl.invalidate();}
+      }};
+    }
     const business=require('./server').createBusinessHandler(stores);
     const handler=async(request,response,context)=>{
       if(request.method==='GET'&&new URL(request.url,'http://localhost').pathname==='/api/health'){
@@ -35,14 +47,15 @@ async function createPostgresRuntime(env=process.env){
         catch{return json(response,503,{error:'Stockage temporairement indisponible.'});}
       }
       if(publicRoutes(request,response))return;
+      if(fdl&&await fdl.handle(request,response,context))return;
       return business(request,response,context);
     };
-    const protectedHandler=protectAccounts(null,handler,{auth:stores.auth,backupReady:true,restoreReady:true,secure:Boolean(tls)||env.MANGER_SECURE_COOKIE==='1',mailer,certificate:localCertificate(tls)});
+    const protectedHandler=protectAccounts(null,handler,{auth:stores.auth,backupReady:true,restoreReady:true,secure,mailer,certificate:localCertificate(tls),fdlEnabled:Boolean(fdl),fdlCallback:fdl?.callback});
     const server=tls?createHttpsServer(tls,protectedHandler):createServer(protectedHandler);
     const sockets=new Set();server.on('connection',socket=>{sockets.add(socket);socket.once('close',()=>sockets.delete(socket));});
     let closing;
     const close=()=>closing||=(async()=>{
-      stores.restoration.clear();let timer;
+      stores.restoration.clear();fdl?.close();await checks?.stop();let timer;
       try{if(server.listening)await new Promise((resolveClose,reject)=>{timer=setTimeout(()=>{server.closeAllConnections();for(const socket of sockets)socket.destroy();},5000);server.close(error=>error?reject(error):resolveClose());server.closeIdleConnections();});}
       finally{clearTimeout(timer);await db.close();}
     })();

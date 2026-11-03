@@ -1,5 +1,9 @@
 # Schéma PostgreSQL en préparation
 
+## Extension 004-fdl — 3 novembre 2026
+
+Migration additive après les trois migrations historiques inchangées : `household.fdl_link` (liaison unique et jeton serveur), `household.fdl_copies` (FK recette en cascade, unicité origine/identifiant, versions, métadonnées JSONB) et `household.fdl_notices` (avis). Recalage sécurisé des séquences et verrous étendus, aucun droit DDL au rôle applicatif. Historique et empreinte de structure utilisent le mécanisme existant. Le transfert SQLite garde 22 tables ; sauvegarde/restauration d'instance : 25 tables contrôlées. Migration testée depuis 003 avec données conservées, puis répétée sans changement. [Activation et déploiement distinct](FDL.md).
+
 22 octobre 2026 — tranche 03b du [plan validé](MIGRATION-POSTGRESQL.md). **L'application utilise encore SQLite.** Le schéma cible est testé sur un PostgreSQL local jetable, sans import utilisateur, amorçage de recettes/comptes, changement de Compose ou connexion au serveur personnel.
 
 ## Organisation et types
