@@ -32,3 +32,25 @@ test('FDL : les routes restent en 404 sous SQLite, sans compte et sans table ajo
   for(const path of ['/api/fdl/etat','/api/fdl/retour?state=x&code=x'])assert.equal((await fetch(base+path)).status,404);
   assert.equal(db.prepare("SELECT count(*) AS n FROM sqlite_schema WHERE name LIKE 'fdl_%'").get().n,0);
 });
+
+async function myRecipes(minutes){
+  const calls=[],base='https://fdl.example',item={id:12,title:'Soupe',state:'published',version:1,...(minutes===undefined?{}:{minutes})};
+  const route=require('./fdl-http').fdlRoutes({base,auth:{},store:{link:async()=>({origin:base,token:'test-token'}),copies:async()=>[]},
+    client:{get:async path=>{calls.push(path);return {items:[item]};}},sendJson:(res,status,body)=>Object.assign(res,{status,body})});
+  const response={};await route.handle({url:'/api/fdl/mes-recettes',method:'GET'},response);route.close();
+  assert.deepEqual(calls,['/api/v1/mes-recettes?']);return response;
+}
+
+test('FDL : Mes recettes transmet la durée optionnelle, ancien FDL sans durée accepté',async()=>{
+  for(const minutes of [undefined,1,25,1440]){
+    const response=await myRecipes(minutes);assert.equal(response.status,200);
+    const item=response.body.items[0];assert.equal(item.minutes,minutes);
+    assert.equal(Object.hasOwn(item,'minutes'),minutes!==undefined);
+  }
+});
+
+test('FDL : une durée distante invalide est refusée avant affichage',async()=>{
+  for(const minutes of [null,0,-1,1.5,1441,'25','<img src=x onerror=alert(1)>']){
+    const response=await myRecipes(minutes);assert.equal(response.status,502);assert.equal(response.body.items,undefined);
+  }
+});

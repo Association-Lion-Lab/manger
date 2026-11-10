@@ -10,7 +10,9 @@ La sauvegarde du foyer conservera le suivi des copies et leur provenance, jamais
 
 Dans **Compte**, un administrateur relie Faim de Lion. Le texte local annonce l'accès du foyer aux recettes privées ; le consentement FDL reste sur FDL. Aucun mot de passe FDL n'est saisi dans Manger!. Dans **Recettes → Recettes de Faim de Lion**, rechercher un plat, consulter **Mes recettes FDL** ou coller un lien/identifiant pour importer une copie locale. L'auteur, la licence, la version et le lien figurent dans la fiche. Les saisons et la provenance sont conservées séparément des univers locaux ; aucune photo distante n'est téléchargée.
 
-Les mises à jour et avis sont regroupés dans des panneaux repliables. Une mise à jour demande confirmation avant de remplacer texte et ingrédients, signale les modifications locales, conserve la photo personnelle, les favoris et notes. **Ignorer** masque cette version jusqu'à une version supérieure. **Délier** conserve les copies et oublie le jeton local ; sa révocation côté FDL se fait dans la page Sécurité du compte FDL.
+Les mises à jour et avis sont regroupés dans des panneaux repliables. Une mise à jour demande confirmation avant de remplacer texte et ingrédients, signale les modifications locales, conserve la photo personnelle, les favoris et notes. **Ignorer** masque cette version jusqu'à une version supérieure. **Délier** conserve les copies et oublie le jeton local ; sa révocation côté FDL se fait dans la page Sécurité du compte FDL. Le succès ou l'erreur est annoncé une seule fois dans la section visible ; le message Recettes reste lisible même lorsque la recherche FDL est repliée.
+
+Décisions validées le 10 novembre : le titre du repas suit une mise à jour de sa recette principale et reste historique après un retrait. Depuis le contrat FDL `fb8b067`, **Mes recettes FDL** affiche la durée lorsqu'elle est fournie ; les anciennes réponses sans durée restent acceptées et n'affichent aucun temps fictif. Aucun chargement de détail par recette. [Contexte et portée](DECISIONS.md#10-novembre-2026--décisions-après-lessai-réel-fdl--manger).
 
 ## Configuration
 
@@ -70,6 +72,8 @@ Commande explicite sans import : `node postgres-schema.js --apply`, avec les var
 Le contrôleur de sauvegarde automatique attend maintenant 25 tables : son script monté depuis le dépôt et l'image d'outils doivent être mis à jour ensemble. Ne pas lancer ce nouveau contrôleur contre les anciens outils 003. Le script ci-dessus réalise cette séquence ; la procédure ordinaire de mise à jour d'image ne la remplace pas.
 
 ## Vérification
+
+[Essai complémentaire du 10 novembre 2026 avec le vrai FDL](ESSAI-FDL-2026-11-10.md) : Délier, Ignorer, confirmations natives, copie modifiée puis mise à jour et sauvegarde/restauration v2 testés dans Chrome isolé avec deux bases temporaires. Tous les parcours demandés réussissent. Après validation des trois propositions, un second passage avec FDL `fb8b067` confirme aussi la durée reçue et l'annonce unique, y compris pour une erreur ou avec la recherche repliée. Ancien format sans durée couvert par les tests d'adaptation et d'interface. Publication sur `development` ensuite autorisée sous condition de réussite des suites PostgreSQL et générale. Ce résultat local ne vaut pas essai HTTPS, Docker, Ubuntu ou Safari/iPhone.
 
 Tests ciblés réussis : migration 003 conservant les données, répétition, import/rollback, versions, recette principale retirée, assiette séparée, sauvegarde sans jeton, restauration, permissions, state invalide/expiré/réutilisé/mauvais navigateur, administrateur révoqué, recherche/import et pannes. Faux FDL local, aucun compte réel.
 

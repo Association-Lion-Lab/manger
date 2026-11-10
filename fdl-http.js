@@ -70,6 +70,10 @@ function fdlRoutes({store,auth,base,client,sendJson,secure=false,now=Date.now,on
       if(mine){
         if(!['published','private'].includes(item.state)||!version(item.version))throw unavailable();
         Object.assign(clean,{state:item.state,version:item.version});
+        if(item.minutes!==undefined){
+          if(!Number.isInteger(item.minutes)||item.minutes<1||item.minutes>1440)throw unavailable();
+          clean.minutes=item.minutes;
+        }
       }else{
         if(!Number.isInteger(item.minutes)||item.minutes<1||item.minutes>1440||!['vegan','vegetarian','pescetarian','omnivore'].includes(item.diet)||(item.author!==null&&typeof item.author!=='string'))throw unavailable();
         Object.assign(clean,{minutes:item.minutes,diet:item.diet,author:item.author});
