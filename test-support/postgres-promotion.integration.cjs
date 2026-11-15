@@ -44,9 +44,9 @@ for(const [scenario,expected] of Object.entries(outcomes))test('bascule de donnÃ
   await writeFile(join(bin,'docker'),docker,{mode:0o700});
   await writeFile(join(bin,'openssl'),'#!/bin/bash\n[ "$PROMOTION_TEST_CASE" != certificate-fail ] || exit 47\n',{mode:0o700});
   await writeFile(join(bin,'uname'),'#!/bin/sh\necho Linux\n',{mode:0o700});
-  await writeFile(join(bin,'ip'),'#!/bin/bash\n[ "$PROMOTION_TEST_CASE" = not-local ] || echo "2: eno1 inet 192.168.1.31/24 scope global eno1"\nexit 0\n',{mode:0o700});
+  await writeFile(join(bin,'ip'),'#!/bin/bash\n[ "$PROMOTION_TEST_CASE" = not-local ] || echo "2: eno1 inet 192.168.1.10/24 scope global eno1"\nexit 0\n',{mode:0o700});
   const env={...process.env,PATH:posix(bin)+':/usr/bin:/bin:'+process.env.PATH,PROMOTION_TEST_CASE:scenario,PROMOTION_TEST_LOG:posix(log),PROMOTION_TEST_STOPPED:posix(join(parent,'stopped'))};
-  const child=spawn(bash,['scripts/promote-postgres-test-instance.sh','192.168.1.31','--test-data-only'],{cwd:repo,env,stdio:['ignore','pipe','pipe']});
+  const child=spawn(bash,['scripts/promote-postgres-test-instance.sh','192.168.1.10','--test-data-only'],{cwd:repo,env,stdio:['ignore','pipe','pipe']});
   t.after(()=>{if(child.exitCode===null)child.kill();});
   let output='';child.stdout.on('data',chunk=>output+=chunk);child.stderr.on('data',chunk=>output+=chunk);
   const result=await new Promise((resolve,reject)=>{child.once('error',reject);child.once('close',resolve);});

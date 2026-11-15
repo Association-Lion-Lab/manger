@@ -337,7 +337,7 @@ Sur le Linux déjà préparé, pour l’adresse LAN indiquée et après vérific
   git diff --quiet
   git diff --cached --quiet
   git pull --ff-only origin development
-  bash scripts/promote-postgres-test-instance.sh 192.168.1.31 --test-data-only
+  bash scripts/promote-postgres-test-instance.sh 192.168.1.10 --test-data-only
 )
 ```
 

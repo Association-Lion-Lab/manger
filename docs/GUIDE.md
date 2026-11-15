@@ -65,7 +65,7 @@ Contrôle d'une installation neuve :
 Dans le dossier du dépôt, créez un fichier `.env` (ou modifiez celui qui existe) :
 
 ```dotenv
-MANGER_BIND_ADDRESS=192.168.1.31
+MANGER_BIND_ADDRESS=192.168.1.10
 MANGER_HTTP_PORT=3000
 ```
 
@@ -77,7 +77,7 @@ Appliquez et contrôlez la configuration :
 docker compose config
 docker compose up -d --build
 docker compose ps
-curl --fail http://192.168.1.31:3000/api/health
+curl --fail http://192.168.1.10:3000/api/health
 ```
 
 Le navigateur du téléphone utilise cette même adresse si le Wi-Fi ou le VPN permet de joindre le réseau local. Si le VPN arrive sur le routeur, le serveur n'a pas nécessairement sa propre interface VPN. Après liaison à cette IPv4, `localhost:3000` n'est plus l'adresse de contrôle du port publié ; le contrôle de santé interne au conteneur reste inchangé.
@@ -142,7 +142,7 @@ Le lien « Voir mes recettes enregistrées » ouvre la page hors connexion commu
 
 La copie est accessible aux personnes utilisant ce navigateur ; elle peut être ancienne et le navigateur peut supprimer son stockage. Vérifiez qu'elle est disponible avant de partir. Aucune modification hors connexion n'est envoyée automatiquement. Seuls les nouveaux achats peuvent être envoyés volontairement avec l'action décrite ci-dessus ; les décoches restent locales. Revenez à Manger une fois connecté pour modifier la liste partagée du foyer.
 
-Le manifeste et les icônes permettent l'ajout à l'écran d'accueil depuis le menu du navigateur compatible (sur iPhone, le menu de partage de Safari). Activez la copie depuis le mode installé si son stockage est distinct de celui du navigateur. L'installation et le stockage restent gérés par le navigateur. HTTPS est requis pour le service worker, sauf en développement sur localhost : `http://192.168.1.31:3000` et un VPN seuls ne suffisent pas. Voir [le fonctionnement des service workers](https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API/Using_Service_Workers). HTTPS et l'affichage du logo sur iPhone ont été confirmés par l'utilisateur après activation de la confiance totale pour le certificat local ; le cochage hors connexion sur iPhone et Android reste à valider.
+Le manifeste et les icônes permettent l'ajout à l'écran d'accueil depuis le menu du navigateur compatible (sur iPhone, le menu de partage de Safari). Activez la copie depuis le mode installé si son stockage est distinct de celui du navigateur. L'installation et le stockage restent gérés par le navigateur. HTTPS est requis pour le service worker, sauf en développement sur localhost : `http://192.168.1.10:3000` et un VPN seuls ne suffisent pas. Voir [le fonctionnement des service workers](https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API/Using_Service_Workers). HTTPS et l'affichage du logo sur iPhone ont été confirmés par l'utilisateur après activation de la confiance totale pour le certificat local ; le cochage hors connexion sur iPhone et Android reste à valider.
 
 Le service worker ne conserve que la page de secours `/offline.html` ; les données de courses sont enregistrées séparément dans le stockage local après consentement. Les API et les écritures ne sont jamais interceptées. Lors d'une modification de la page de secours, incrémentez la version du cache dans `public/sw.js`.
 

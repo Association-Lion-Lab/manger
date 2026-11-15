@@ -64,7 +64,7 @@ Le fichier `instance.env.before-catalogue.…` conserve la configuration précé
 
 ## 2. Ajouter les recettes dans Manger!
 
-Recharger Manger! à l'adresse habituelle **https://192.168.1.31:3000**, puis ouvrir **Recettes → Ajouter les recettes manquantes du catalogue**.
+Recharger Manger! à l'adresse habituelle **https://192.168.1.10:3000**, puis ouvrir **Recettes → Ajouter les recettes manquantes du catalogue**.
 
 Depuis les 128 titres précédents : **50 ajouts** attendus ; depuis 120 : **58** ; depuis 100 : **78**. Si certains titres manquent ou sont déjà présents, le résultat dépend des titres exacts du foyer. Un deuxième import ajoute zéro titre déjà enregistré. La reconstruction seule n'effectue pas cet import volontaire et ne remplace pas les fiches personnalisées.
 

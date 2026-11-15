@@ -7,7 +7,7 @@ const { createInvitationMailer, emailAddress } = require('./invitation-mail');
 const { createApp, createDatabase } = require('./server');
 const { openAccounts, createAccount } = require('./accounts');
 
-const config = { MANGER_SMTP_HOST: 'smtp.example.org', MANGER_SMTP_FROM: 'admin@example.org', MANGER_APP_URL: 'https://192.168.1.31:3000' };
+const config = { MANGER_SMTP_HOST: 'smtp.example.org', MANGER_SMTP_FROM: 'admin@example.org', MANGER_APP_URL: 'https://192.168.1.10:3000' };
 const token = 'a'.repeat(64), expires = () => Date.now() + 86400000;
 
 test('SMTP is opt-in, validates configuration and insists on verified TLS', async () => {
