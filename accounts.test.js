@@ -105,6 +105,13 @@ test('login attempts are bounded, unknown accounts give the same error', async t
   assert.equal((await request('/api/account/login','POST',{username:'admin',password:'long-password-admin'})).status,429);
 });
 
+test('failures spread over many names and addresses never lock out the whole instance', async t => {
+  const { accounts, login } = await fixture(t);
+  // State left by 60 failures from other addresses under the former instance-wide counter.
+  accounts.prepare('INSERT INTO attempts VALUES(?,?,?)').run('global', 60, Date.now() + 15 * 60000);
+  await login();
+});
+
 test('logout-all revokes only the current account, requires authentication and same origin', async t => {
   const { request, login, member } = await fixture(t);
   const first = await login(), second = await login();

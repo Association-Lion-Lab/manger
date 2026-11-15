@@ -14,7 +14,7 @@ function postgresAuth(db) {
   }
   async function throttle(keys) {
     return db.transaction(async tx => {
-      // This lock covers all three counters across application processes, never the scrypt work.
+      // This lock covers every counter passed in across application processes, never the scrypt work.
       await tx.query('SELECT pg_advisory_xact_lock(1296125511,2)');
       const now = Date.now();
       await tx.query('DELETE FROM auth.attempts WHERE expires<=$1', [now]);

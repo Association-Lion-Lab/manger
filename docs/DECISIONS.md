@@ -1,5 +1,17 @@
 # Choix techniques, limites et blocages
 
+## 15 novembre 2026 — plus de compteur global de tentatives de connexion
+
+**Contexte.** La connexion, l'inscription par invitation et le changement de mot de passe comptaient aussi les échecs dans un compteur commun à toute l'instance (60 par 15 minutes). N'importe qui pouvait l'épuiser avec des noms au hasard et bloquer toutes les connexions, administrateur compris, pendant 15 minutes.
+
+**Choix.** Le compteur `global` est retiré de `accounts.js`. Restent les compteurs par adresse réseau (20 par 15 minutes) et par nom de connexion (8 par 15 minutes), avec scrypt. Aucune migration : d'anciennes lignes `global` ne sont plus lues et expirent d'elles-mêmes.
+
+**Alternatives écartées.** Relever le plafond global retarde le blocage sans le supprimer ; un captcha ou un service externe ajouterait une dépendance.
+
+**Conséquences.** Une attaque répartie sur beaucoup d'adresses peut essayer plus de noms en parallèle, mais chaque compte reste limité à 8 essais par 15 minutes. Derrière un proxy inverse, toutes les requêtes partagent l'adresse du proxy : le compteur par adresse devient alors commun (comportement inchangé, à vérifier si un proxy est ajouté).
+
+**Validation.** Test `accounts.test.js` rouge avant le correctif (429), vert après ; suite générale sous PowerShell : 470 tests, 469 réussis, 1 ignoré (`tls.test.js`, OpenSSL absent), aucun échec. Sous Git Bash, les tests de permissions échouent car `whoami.exe` y désigne la commande GNU : limite de l'environnement, pas du code. Suite PostgreSQL non relancée.
+
 ## 2 novembre 2026 — saisonnalité française unique
 
 **Demande.** L’utilisateur souhaite des recettes de saison pour la France globalement, en mélangeant les régions, sans tri géographique. Le filtre conserve donc un seul calendrier national, la date locale de l’appareil, la recherche et les univers de recettes. La cuisine d’origine ou la région d’une recette ne devient pas un critère d’exclusion : seuls les ingrédients saisonniers reconnus interviennent comme auparavant.

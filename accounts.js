@@ -93,7 +93,8 @@ function protectAccounts(db, handler, { secure = false, mailer = null, certifica
     return token ? auth.session(hash(token)) : undefined;
   };
   function throttle(req, name) {
-    const keys = [['global', 60], [`ip:${hash(req.socket.remoteAddress || '')}`, 20], [`name:${hash(name)}`, 8]];
+    // No instance-wide counter: anyone could otherwise lock every account, the admin included.
+    const keys = [[`ip:${hash(req.socket.remoteAddress || '')}`, 20], [`name:${hash(name)}`, 8]];
     return auth.throttle(keys);
   }
   return async (req, res) => {
