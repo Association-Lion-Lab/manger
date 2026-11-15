@@ -369,7 +369,7 @@ test('les invitations se partagent volontairement, sans courriel automatique ni 
     if (!nodes.has(id)) nodes.set(id, { value: '', disabled: false, hidden: true, textContent: '', addEventListener() {}, focus() { this.focused = true; }, select() { this.selected = true; } });
     return nodes.get(id);
   };
-  const location = { origin: 'https://192.168.1.31:3000', href: '/account' }, navigator = {};
+  const location = { origin: 'https://192.168.1.10:3000', href: '/account' }, navigator = {};
   const calls = [], copies = []; let token = 'a'.repeat(64), fail = false, finish;
   const state = new Script(source + ';({expire(){invitationExpires=0;}})').runInNewContext({ $, location, navigator, Date, encodeURIComponent,
     api: async (path, method) => {
