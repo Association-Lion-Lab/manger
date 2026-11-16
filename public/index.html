@@ -543,7 +543,7 @@
           <div class="quick-add"><label class="field"><span class="sr-only">Article à ajouter</span><input id="manual-name" required maxlength="80" placeholder="Ajouter un article…" autocomplete="off" enterkeyhint="done"></label><button class="primary" type="submit">Ajouter</button></div>
           <details class="quiet-details"><summary>Quantité et rayon</summary><div class="compact-form">
             <label class="field"><span>Quantité</span><input id="manual-amount" type="number" value="1" min="0.01" max="10000" step="0.01" required></label>
-            <label class="field"><span>Unité</span><input id="manual-unit" value="pièce" required maxlength="24"></label>
+            <label class="field"><span>Unité</span><select id="manual-unit" required><option selected>pièce</option><option>g</option><option>kg</option><option>l</option><option>cl</option><option>ml</option><option>paquet</option><option>boîte</option><option>bouteille</option><option>pot</option><option>sachet</option><option>tranche</option><option>gousse</option></select></label>
             <label class="field wide"><span>Rayon</span><select id="manual-aisle"><option value="">Automatique</option><option>Fruits et légumes</option><option>Frais</option><option>Épicerie</option><option>Surgelés</option><option>Maison</option><option>Autres</option></select></label>
           </div></details>
         </fieldset></form>
@@ -749,7 +749,7 @@
           <div id="shopping-edit-manual" class="compact-form" hidden>
             <label class="field wide"><span>Article</span><input id="shopping-edit-name" maxlength="80" required></label>
             <label class="field"><span>Quantité</span><input id="shopping-edit-amount" type="number" min="0.001" max="10000" step="any" required></label>
-            <label class="field"><span>Unité</span><input id="shopping-edit-unit" maxlength="24" required></label>
+            <label class="field"><span>Unité</span><select id="shopping-edit-unit" required></select></label>
           </div>
           <label class="field"><span>Rayon</span><select id="shopping-move-aisle"></select></label>
           <button id="save-shopping-move" class="primary" type="submit">Déplacer</button>
@@ -1344,7 +1344,7 @@
       const checkedOpen = container.querySelector('#shopping-checked')?.open || false;
       const renderGroups = rows => {
         const groups = new Map();
-        rows.forEach(({ item, index }) => {
+        shoppingNeighbors(rows).forEach(({ item, index }) => {
           const aisle = shoppingAisle(item);
           const checkKey = shoppingCheckKey(item), pending = pendingShoppingChecks.has(checkKey);
           if (!groups.has(aisle)) groups.set(aisle, []);
@@ -1377,6 +1377,13 @@
 
     function formatAmount(amount) {
       return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(amount);
+    }
+
+    // Même aliment côte à côte (recette en g, en tranches, ajout manuel) : l'ordre du reste et les index ne changent pas, rien n'est additionné.
+    function shoppingNeighbors(rows) {
+      const first = new Map(), name = row => MangerFoodNames.foodName(row.item.name);
+      rows.forEach((row, position) => { if (!first.has(name(row))) first.set(name(row), position); });
+      return [...rows].sort((a, b) => first.get(name(a)) - first.get(name(b)));
     }
 
     function shoppingAisle(item) {
@@ -2398,6 +2405,11 @@
         shoppingMoveDialog.close();
       } finally { shoppingEditBusy = false; container.inert = false; document.getElementById('organize-shopping').disabled = false; document.getElementById('organize-shopping').focus(); }
     }
+    // Une seule liste d'unités : celle de l'ajout rapide. Une unité absente (ancienne donnée) est proposée en tête pour ne pas être perdue.
+    function shoppingUnitOptions(unit) {
+      const units = Array.from(document.getElementById('manual-unit').options, option => option.value);
+      return (units.includes(unit) ? units : [unit, ...units]).map(value => `<option value="${escapeHtml(value)}"${value === unit ? ' selected' : ''}>${escapeHtml(value)}</option>`).join('');
+    }
     document.getElementById('shopping').addEventListener('click', event => {
       if (shoppingEditBusy) return;
       const handle = event.target.closest('[data-shopping-handle], [data-edit-shopping]');
@@ -2410,10 +2422,10 @@
       const manual = Boolean(shoppingMove.manualId);
       document.getElementById('shopping-move-title').textContent = manual ? 'Modifier l’article' : `Déplacer ${shoppingMove.name}`;
       document.getElementById('shopping-edit-manual').hidden = !manual;
-      document.querySelectorAll('#shopping-edit-manual input').forEach(input => { input.disabled = !manual; });
+      document.querySelectorAll('#shopping-edit-manual input, #shopping-edit-manual select').forEach(input => { input.disabled = !manual; });
       document.getElementById('shopping-edit-name').value = shoppingMove.name;
       document.getElementById('shopping-edit-amount').value = shoppingMove.amount;
-      document.getElementById('shopping-edit-unit').value = shoppingMove.unit;
+      document.getElementById('shopping-edit-unit').innerHTML = shoppingUnitOptions(shoppingMove.unit);
       document.getElementById('save-shopping-move').textContent = manual ? 'Enregistrer' : 'Déplacer';
       document.getElementById('delete-shopping-item').hidden = !manual;
       document.getElementById('shopping-edit-error').hidden = true;
@@ -2498,8 +2510,10 @@
     document.getElementById('shopping').addEventListener('lostpointercapture', () => finishShoppingDrag(true));
     document.addEventListener('keydown', event => { if (event.key === 'Escape') finishShoppingDrag(true); });
     let manualShoppingBusy = false;
-    function manualShoppingAdded(name) {
-      document.getElementById('manual-shopping-status').textContent = `Ajouté aux courses : ${name}.`;
+    function manualShoppingAdded(name, merged) {
+      document.getElementById('manual-shopping-status').textContent = merged
+        ? `Déjà dans la liste : ${merged.name}. Quantité portée à ${formatAmount(merged.amount)}${merged.unit === 'pièce' ? '' : ' ' + merged.unit}.`
+        : `Ajouté aux courses : ${name}.`;
       // Pas de défilement vers la ligne : le champ doit rester à l'écran pour saisir plusieurs articles de suite.
       document.getElementById('manual-name').focus({ preventScroll: true });
     }
@@ -2516,10 +2530,11 @@
       document.getElementById('shopping-error').hidden = true;
       document.getElementById('manual-shopping-status').textContent = '';
       const name = document.getElementById('manual-name').value.trim();
-      let saved = false, shown = false;
+      let saved = false, shown = false, merged = null;
       try {
-        await api('/api/shopping-manual', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ weekStart: key(state.weekStart), name: document.getElementById('manual-name').value, amount: Number(document.getElementById('manual-amount').value), unit: document.getElementById('manual-unit').value, aisle: document.getElementById('manual-aisle').value }), signal: AbortSignal.timeout(15000) });
+        const result = await api('/api/shopping-manual', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ weekStart: key(state.weekStart), name: document.getElementById('manual-name').value, amount: Number(document.getElementById('manual-amount').value), unit: document.getElementById('manual-unit').value, aisle: document.getElementById('manual-aisle').value }), signal: AbortSignal.timeout(15000) });
         saved = true;
+        if (result.merged) merged = result;
         form.reset();
         await load();
         shown = true;
@@ -2534,7 +2549,7 @@
         fields.disabled = false;
         form.setAttribute('aria-busy', 'false');
         button.textContent = 'Ajouter';
-        if (shown) manualShoppingAdded(name); // Après la réactivation du champ, sinon le focus est refusé.
+        if (shown) manualShoppingAdded(name, merged); // Après la réactivation du champ, sinon le focus est refusé.
       }
     }
     document.getElementById('manual-shopping-form').addEventListener('submit', addManualShopping);

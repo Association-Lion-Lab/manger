@@ -180,14 +180,14 @@ test('ajouter un article bloque les doubles envois et les champs, garde le broui
   const html = readFileSync(join(__dirname, 'public', 'index.html'), 'utf8');
   const source = html.match(/    async function addManualShopping[\s\S]*?(?=\n    document.getElementById\('manual-shopping-form'\))/)[0];
   const controls = new Map([['manual-shopping-fields', {}], ['manual-shopping-status', {}], ['shopping-error', {}], ['manual-name', { value: 'Café' }], ['manual-amount', { value: '2' }], ['manual-unit', { value: 'paquet' }], ['manual-aisle', { value: 'Épicerie' }]]);
-  const button = {}; let valid = true, resets = 0, busy, release, failure = null, readFails = false;
+  const button = {}; let valid = true, resets = 0, busy, release, failure = null, readFails = false, reply = { id: 1 };
   const form = { reportValidity: () => valid, querySelector: () => button, setAttribute: (_, value) => { busy = value; }, reset() { resets++; controls.get('manual-name').value = ''; } };
   const writes = [], errors = [], added = [];
   const context = {
     manualShoppingBusy: false, AbortSignal, Error, state: { weekStart: '2026-09-28' }, key: value => value,
     document: { getElementById: id => controls.get(id) }, shoppingError: error => errors.push(error.message),
-    api: async (path, options) => { writes.push({ path, options }); await new Promise(resolve => { release = resolve; }); if (failure) throw failure; },
-    load: async () => { if (readFails) throw new Error('Lecture échouée'); }, manualShoppingAdded: name => added.push(name)
+    api: async (path, options) => { writes.push({ path, options }); await new Promise(resolve => { release = resolve; }); if (failure) throw failure; return reply; },
+    load: async () => { if (readFails) throw new Error('Lecture échouée'); }, manualShoppingAdded: (name, merged) => added.push(merged ? [name, merged.amount] : name)
   };
   const add = new Script(source + ';addManualShopping').runInNewContext(context);
   const event = { preventDefault() {}, currentTarget: form };
@@ -219,6 +219,9 @@ test('ajouter un article bloque les doubles envois et les champs, garde le broui
     assert.equal(controls.get('manual-name').value, 'Savon');
     assert.equal(resets, 2);
   }
+  failure = null; reply = { id: 1, merged: true, name: 'savon', amount: 2, unit: 'pièce' };
+  const merged = add(event); release(); await merged;
+  assert.deepEqual(added, ['Pain', ['Savon', 2]]); assert.equal(resets, 3);
 });
 
 test('le placard protège ajout, édition et retrait, conserve les échecs et ne rejoue pas un stock confirmé', async () => {
@@ -648,6 +651,44 @@ test('ajout rapide aux courses : champ en haut de liste, aucun défilement, focu
   assert.equal(status.textContent, 'Ajouté aux courses : Pain.');
   assert.equal(JSON.stringify(calls), JSON.stringify([['focus', { preventScroll: true }]]));
   assert.doesNotMatch(source, /scrollIntoView/);
+  const announce = new Script(html.match(/    function formatAmount[\s\S]*?\n    }\n/)[0] + source + ';manualShoppingAdded').runInNewContext(context);
+  announce('Jambon', { name: 'jambon', amount: 2, unit: 'pièce' });
+  assert.equal(status.textContent, 'Déjà dans la liste : jambon. Quantité portée à 2.');
+  announce('Farine', { name: 'farine', amount: 1.5, unit: 'kg' });
+  assert.equal(status.textContent, 'Déjà dans la liste : farine. Quantité portée à 1,5 kg.');
+  assert.equal(calls.length, 3);
+});
+
+test('courses : l’unité se choisit dans une liste, « pièce » par défaut, et une unité hors liste reste modifiable', () => {
+  const html = readFileSync(join(__dirname, 'public', 'index.html'), 'utf8');
+  const select = html.match(/<label class="field"><span>Unité<\/span><select id="manual-unit" required>(.*?)<\/select><\/label>/)[1];
+  const units = Array.from(select.matchAll(/<option(?: selected)?>([^<]+)<\/option>/g), match => match[1]);
+  assert.deepEqual(units, ['pièce', 'g', 'kg', 'l', 'cl', 'ml', 'paquet', 'boîte', 'bouteille', 'pot', 'sachet', 'tranche', 'gousse']);
+  assert.match(select, /^<option selected>pièce<\/option>/);
+  assert.match(html, /<label class="field"><span>Unité<\/span><select id="shopping-edit-unit" required><\/select><\/label>/);
+  assert.doesNotMatch(html, /<input id="(?:manual|shopping-edit)-unit"/);
+  assert.match(html, /querySelectorAll\('#shopping-edit-manual input, #shopping-edit-manual select'\)/);
+  assert.match(html, /getElementById\('shopping-edit-unit'\)\.innerHTML = shoppingUnitOptions\(shoppingMove\.unit\);/);
+  const source = html.match(/    function escapeHtml[\s\S]*?\n    }\n/)[0] + html.match(/    function shoppingUnitOptions[\s\S]*?\n    }\n/)[0];
+  const options = new Script(source + ';shoppingUnitOptions').runInNewContext({ document: { getElementById: () => ({ options: units.map(value => ({ value })) }) } });
+  const known = options('kg');
+  assert.equal(known.match(/<option /g).length, units.length);
+  assert.match(known, /<option value="kg" selected>kg<\/option>/);
+  assert.equal(known.match(/ selected/g).length, 1);
+  const legacy = options('c. à "soupe"');
+  assert.equal(legacy.match(/<option /g).length, units.length + 1);
+  assert.match(legacy, /^<option value="c\. à &quot;soupe&quot;" selected>c\. à &quot;soupe&quot;<\/option><option value="pièce">/);
+});
+
+test('courses : les lignes d’un même aliment sont voisines, sans addition ni changement d’index', () => {
+  const html = readFileSync(join(__dirname, 'public', 'index.html'), 'utf8');
+  const source = html.match(/    function shoppingNeighbors[\s\S]*?\n    }\n/)[0];
+  const neighbors = new Script(source + ';shoppingNeighbors').runInNewContext({ MangerFoodNames: require('./public/food-names') });
+  const names = [['jambon cuit', 'g'], ['lait', 'ml'], ['jambon cuit', 'tranche'], ['Pain', 'pièce'], ['Jambon  cuit', 'pièce']];
+  const rows = names.map(([name, unit], index) => ({ item: { name, unit, amount: 1 }, index }));
+  assert.deepEqual(Array.from(neighbors(rows), row => row.index), [0, 2, 4, 1, 3]);
+  assert.equal(rows[1].index, 1);
+  assert.match(html, /shoppingNeighbors\(rows\)\.forEach\(\(\{ item, index \}\) => \{/);
 });
 
 test('libellés : saison sans calendrier manuel, bouton de planification fidèle à son effet', () => {

@@ -10,7 +10,7 @@ function shoppingRoutes(store,sendJson){
       else if(method==='DELETE'){await store.removeManual(Number(match[1]));sendJson(response,200,{});}
       else {
         const input=await readRecipeBody(request,32768);
-        if(match||path==='/api/shopping-manual')sendJson(response,match?200:201,{id:await store.saveManual(input,match?Number(match[1]):null)});
+        if(match||path==='/api/shopping-manual'){const saved=await store.saveManual(input,match?Number(match[1]):null);sendJson(response,match||saved.merged?200:201,saved);}
         else if(path.endsWith('/sync'))sendJson(response,200,await store.sync(input));
         else {await store[path==='/api/shopping-aisles'?'aisle':'check'](input);sendJson(response,200,{});}
       }

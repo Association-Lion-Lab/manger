@@ -16,7 +16,7 @@ function list() {
     document: { getElementById: node, querySelector: () => null, hidden: false }, organizingShopping: false, shoppingInteraction: false, pendingLoads: 0,
     renderShopping() { renders++; }, shoppingError(error) { errors.push(error.message); }, saveOfflineShopping() { copies.push(JSON.parse(JSON.stringify(context.state.shopping))); },
     fetch(path, options) { requests.push({ path, options }); return new Promise((resolve, reject) => { replies.push(resolve); failures.push(reject); }); },
-    shoppingAisle: () => 'Épicerie', shoppingText: item => item.name, escapeHtml: text => text
+    shoppingAisle: () => 'Épicerie', shoppingNeighbors: rows => rows,shoppingText: item => item.name, escapeHtml: text => text
   };
   const identity = html.match(/^    function shoppingCheckKey[^\n]+/m)[0];
   const source = html.match(/^    document.getElementById\('shopping'\).addEventListener\('change',[\s\S]*?(?=\n    function shoppingError)/m)[0];
