@@ -659,6 +659,27 @@ test('ajout rapide aux courses : champ en haut de liste, aucun défilement, focu
   assert.equal(calls.length, 3);
 });
 
+test('courses : l’unité se choisit dans une liste, « pièce » par défaut, et une unité hors liste reste modifiable', () => {
+  const html = readFileSync(join(__dirname, 'public', 'index.html'), 'utf8');
+  const select = html.match(/<label class="field"><span>Unité<\/span><select id="manual-unit" required>(.*?)<\/select><\/label>/)[1];
+  const units = Array.from(select.matchAll(/<option(?: selected)?>([^<]+)<\/option>/g), match => match[1]);
+  assert.deepEqual(units, ['pièce', 'g', 'kg', 'l', 'cl', 'ml', 'paquet', 'boîte', 'bouteille', 'pot', 'sachet', 'tranche', 'gousse']);
+  assert.match(select, /^<option selected>pièce<\/option>/);
+  assert.match(html, /<label class="field"><span>Unité<\/span><select id="shopping-edit-unit" required><\/select><\/label>/);
+  assert.doesNotMatch(html, /<input id="(?:manual|shopping-edit)-unit"/);
+  assert.match(html, /querySelectorAll\('#shopping-edit-manual input, #shopping-edit-manual select'\)/);
+  assert.match(html, /getElementById\('shopping-edit-unit'\)\.innerHTML = shoppingUnitOptions\(shoppingMove\.unit\);/);
+  const source = html.match(/    function escapeHtml[\s\S]*?\n    }\n/)[0] + html.match(/    function shoppingUnitOptions[\s\S]*?\n    }\n/)[0];
+  const options = new Script(source + ';shoppingUnitOptions').runInNewContext({ document: { getElementById: () => ({ options: units.map(value => ({ value })) }) } });
+  const known = options('kg');
+  assert.equal(known.match(/<option /g).length, units.length);
+  assert.match(known, /<option value="kg" selected>kg<\/option>/);
+  assert.equal(known.match(/ selected/g).length, 1);
+  const legacy = options('c. à "soupe"');
+  assert.equal(legacy.match(/<option /g).length, units.length + 1);
+  assert.match(legacy, /^<option value="c\. à &quot;soupe&quot;" selected>c\. à &quot;soupe&quot;<\/option><option value="pièce">/);
+});
+
 test('courses : les lignes d’un même aliment sont voisines, sans addition ni changement d’index', () => {
   const html = readFileSync(join(__dirname, 'public', 'index.html'), 'utf8');
   const source = html.match(/    function shoppingNeighbors[\s\S]*?\n    }\n/)[0];

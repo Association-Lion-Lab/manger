@@ -1,5 +1,21 @@
 # Choix techniques, limites et blocages
 
+## 16 novembre 2026 — Courses : l'unité se choisit dans une liste
+
+**Contexte.** Retour d'essai sur téléphone après la fusion des ajouts manuels : « taper l'unité c'est risque d'erreur, il faudrait plutôt un sélecteur ». Une faute de frappe ou une variante (« Pièce », « tranches » au lieu de « tranche », « gr ») donne une autre unité : pas de fusion, donc un doublon.
+
+**Choix.** Dans Courses, les deux champs texte d'unité deviennent des `<select>` : ajout rapide (`#manual-unit`, « pièce » par défaut) et modification au crayon (`#shopping-edit-unit`). Liste au singulier, dans cet ordre : pièce, g, kg, l, cl, ml, paquet, boîte, bouteille, pot, sachet, tranche, gousse. Elle reprend les unités que `unitInfo` (`ingredients.js`) sait convertir, les conditionnements d'achat courants, et deux unités libres du catalogue qui s'achètent (tranche, gousse). Les unités de cuisine du catalogue (c. à soupe, c. à café, pincée, branche, feuille) et « dl » n'y sont pas : on ne les achète pas ainsi. La liste n'existe qu'à un endroit, le sélecteur de l'ajout rapide ; le crayon la relit (`shoppingUnitOptions`). Le libellé « Unité » et les styles `.field select` existants sont conservés.
+
+**Unité hors liste.** Une ligne manuelle dont l'unité n'est pas dans la liste (ancienne saisie libre, faute de frappe passée) reste modifiable : son unité est ajoutée en tête du sélecteur et sélectionnée, donc enregistrer sans y toucher ne la change pas. On peut aussi la remplacer par une unité de la liste.
+
+**Alternatives écartées.** `<datalist>` sur le champ texte (comme le garde-manger) : il suggère mais laisse taper, donc ne supprime pas la faute de frappe. Normaliser côté serveur les variantes d'unités libres : change les clés des coches et du placard, différé le même jour. Option « Autre… » avec saisie libre : rouvre le problème ; à reconsidérer si une unité manque à l'usage.
+
+**Conséquences.** Aucun changement d'API, de schéma, de dépendance ni de format hors connexion : le serveur accepte toujours n'importe quelle unité (imports, anciennes données, autres clients). Dans Courses, on ne peut plus saisir une unité absente de la liste. Les unités du garde-manger, des protéines et des recettes ne sont pas touchées : ce n'est pas la même liste (les recettes ont besoin des cuillères et pincées) et le garde-manger a déjà ses suggestions. Les doublons déjà créés par une faute de frappe ne sont pas regroupés : corriger l'unité au crayon ne fusionne pas (règle du même jour), il faut en supprimer un.
+
+**Validation.** `ui.test.js` : sélecteur présent avec la liste et « pièce » par défaut, plus aucun champ texte d'unité dans Courses, sélecteur du crayon désactivé avec les autres champs pour une ligne de recette, unité connue sélectionnée sans doublon d'option, unité hors liste conservée, sélectionnée et échappée. Suite générale sous PowerShell : **482 tests, 481 réussis, 1 ignoré (`tls.test.js`), aucun échec**. Tests PostgreSQL non relancés : aucun code serveur modifié.
+
+**Reste à vérifier.** Aucun essai dans un navigateur ni sur téléphone : rendu du sélecteur natif sur iOS et Android, largeur dans « Quantité et rayon » à 375 px, retour à « pièce » après un ajout, lecteur d'écran. Pas de déploiement ; une nouvelle image applicative est nécessaire, sans migration.
+
 ## 16 novembre 2026 — un ajout manuel aux courses cumule au lieu de doubler
 
 **Contexte.** Retour d'essai sur téléphone : ajouter deux fois « jambon » dans Courses créait deux lignes « 1 × jambon ». Chaque envoi insérait une ligne sans chercher l'existant ; c'était un contrat écrit (« les articles manuels restent distincts »). L'utilisateur a validé l'option A de la proposition du même jour : additionner sans convertir entre unités de recette et unités d'achat.
