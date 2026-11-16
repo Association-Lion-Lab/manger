@@ -179,15 +179,15 @@ test('modifier les courses bloque les doubles envois, conserve la saisie en éch
 test('ajouter un article bloque les doubles envois et les champs, garde le brouillon et distingue écriture et lecture échouées', async () => {
   const html = readFileSync(join(__dirname, 'public', 'index.html'), 'utf8');
   const source = html.match(/    async function addManualShopping[\s\S]*?(?=\n    document.getElementById\('manual-shopping-form'\))/)[0];
-  const controls = new Map([['manual-shopping-fields', {}], ['shopping-error', {}], ['manual-name', { value: 'Café' }], ['manual-amount', { value: '2' }], ['manual-unit', { value: 'paquet' }], ['manual-aisle', { value: 'Épicerie' }]]);
+  const controls = new Map([['manual-shopping-fields', {}], ['manual-shopping-status', {}], ['shopping-error', {}], ['manual-name', { value: 'Café' }], ['manual-amount', { value: '2' }], ['manual-unit', { value: 'paquet' }], ['manual-aisle', { value: 'Épicerie' }]]);
   const button = {}; let valid = true, resets = 0, busy, release, failure = null, readFails = false;
   const form = { reportValidity: () => valid, querySelector: () => button, setAttribute: (_, value) => { busy = value; }, reset() { resets++; controls.get('manual-name').value = ''; } };
-  const writes = [], errors = [];
+  const writes = [], errors = [], added = [];
   const context = {
     manualShoppingBusy: false, AbortSignal, Error, state: { weekStart: '2026-09-28' }, key: value => value,
     document: { getElementById: id => controls.get(id) }, shoppingError: error => errors.push(error.message),
     api: async (path, options) => { writes.push({ path, options }); await new Promise(resolve => { release = resolve; }); if (failure) throw failure; },
-    load: async () => { if (readFails) throw new Error('Lecture échouée'); }
+    load: async () => { if (readFails) throw new Error('Lecture échouée'); }, manualShoppingAdded: name => added.push(name)
   };
   const add = new Script(source + ';addManualShopping').runInNewContext(context);
   const event = { preventDefault() {}, currentTarget: form };
@@ -201,20 +201,23 @@ test('ajouter un article bloque les doubles envois et les champs, garde le broui
   assert.equal(resets, 0); assert.equal(controls.get('manual-name').value, 'Café');
   assert.match(errors[0], /peut-être reçu/); assert.equal(controls.get('manual-shopping-fields').disabled, false);
   assert.equal(context.manualShoppingBusy, false); assert.equal(busy, 'false');
-  assert.equal(button.textContent, 'Ajouter aux courses');
+  assert.equal(button.textContent, 'Ajouter'); assert.deepEqual(added, []);
   failure = null; readFails = true;
   const retry = add(event); release(); await retry;
   assert.equal(writes.length, 2); assert.equal(resets, 1); assert.equal(controls.get('manual-name').value, '');
   assert.match(errors[1], /a été ajouté/); assert.match(errors[1], /Réessayer/);
   assert.equal(context.manualShoppingBusy, false);
   readFails = false;
+  controls.get('manual-name').value = ' Pain ';
+  const success = add(event); release(); await success;
+  assert.deepEqual(added, ['Pain']); assert.equal(resets, 2);
   for (const name of ['TimeoutError', 'SyntaxError']) {
     failure = { name, message: 'Réponse indisponible' };
     controls.get('manual-name').value = 'Savon';
     const uncertain = add(event); release(); await uncertain;
     assert.match(errors.at(-1), /peut-être reçu/);
     assert.equal(controls.get('manual-name').value, 'Savon');
-    assert.equal(resets, 1);
+    assert.equal(resets, 2);
   }
 });
 
@@ -627,4 +630,28 @@ test('la dernière semaine demandée seule actualise le planning, une erreur pr�
   requests.get('2026-11-02').resolve(response({ meals: [], shopping: [] })); await newer;
   requests.get('2026-10-26').reject(new Error('Erreur ancienne')); assert.equal(await staleFailure, false);
   assert.equal(nodes.get('connection-error').hidden, true); assert.equal(state.weekStart.toISOString().slice(0, 10), '2026-11-02');
+});
+
+test('ajout rapide aux courses : champ en haut de liste, ligne visible, focus rendu et annonce polie', () => {
+  const html = readFileSync(join(__dirname, 'public', 'index.html'), 'utf8');
+  assert.ok(html.indexOf('id="manual-shopping-form"') < html.indexOf('<div id="shopping" '), 'formulaire avant la liste');
+  assert.doesNotMatch(html, /<details><summary>Ajouter un article/);
+  assert.match(html, /<span class="sr-only">Article à ajouter<\/span><input id="manual-name"/);
+  assert.match(html, /<p id="manual-shopping-status" class="muted" role="status">/);
+  const source = html.match(/    function manualShoppingAdded[\s\S]*?\n    }\n/)[0];
+  const status = {}, calls = [];
+  const context = { state: { shopping: [{ name: 'Pain', manualId: null }, { name: 'Pain', manualId: 4 }] }, document: {
+    getElementById: id => id === 'manual-shopping-status' ? status : { focus: options => calls.push(['focus', options]) },
+    querySelector: selector => ({ scrollIntoView: options => calls.push([selector, options]) })
+  } };
+  new Script(source + ';manualShoppingAdded').runInNewContext(context)('Pain');
+  assert.equal(status.textContent, 'Ajouté aux courses : Pain.');
+  assert.equal(JSON.stringify(calls), JSON.stringify([['[data-shopping="1"]', { block: 'center' }], ['focus', { preventScroll: true }]]));
+});
+
+test('libellés : saison sans calendrier manuel, bouton de planification fidèle à son effet', () => {
+  const html = readFileSync(join(__dirname, 'public', 'index.html'), 'utf8');
+  assert.doesNotMatch(html, /Change de calendrier/);
+  assert.match(html, /Désactive « De saison » pour retrouver les autres plats/);
+  assert.match(html, /<button class="primary" type="submit">\$\{state\.members\.length \? 'Continuer' : 'Enregistrer le repas'\}<\/button>/);
 });

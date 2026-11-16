@@ -308,6 +308,10 @@
     .compact-form { display: grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
     .compact-form .wide { grid-column: 1 / -1; }
     .compact-form .primary { min-height: 46px; }
+    .quick-add { display: flex; align-items: end; gap: 8px; margin-top: 12px; }
+    .quick-add .field { flex: 1; min-width: 0; }
+    .quick-add .primary { width: auto; min-height: 48px; border-radius: 14px; }
+    #manual-shopping-fields .quiet-details { margin: 0; border-top: 0; }
     .field select { width: 100%; min-width: 0; min-height: 48px; padding: 12px 14px; color: var(--text); border: 1px solid var(--line); border-radius: 14px; background: var(--field); }
     .assignment { display: grid; grid-template-columns: minmax(0, 1fr) 130px; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--line); }
     .assignment label { display: flex; align-items: center; gap: 8px; min-width: 0; }
@@ -535,16 +539,18 @@
           <button id="send-offline-purchases" class="secondary" type="button">Envoyer mes achats au foyer</button>
         </div>
         <div class="shopping-progress" aria-hidden="true"><span id="shopping-progress-bar"></span></div>
+        <form id="manual-shopping-form"><fieldset id="manual-shopping-fields" aria-label="Article à ajouter aux courses">
+          <div class="quick-add"><label class="field"><span class="sr-only">Article à ajouter</span><input id="manual-name" required maxlength="80" placeholder="Ajouter un article…" autocomplete="off" enterkeyhint="done"></label><button class="primary" type="submit">Ajouter</button></div>
+          <details class="quiet-details"><summary>Quantité et rayon</summary><div class="compact-form">
+            <label class="field"><span>Quantité</span><input id="manual-amount" type="number" value="1" min="0.01" max="10000" step="0.01" required></label>
+            <label class="field"><span>Unité</span><input id="manual-unit" value="pièce" required maxlength="24"></label>
+            <label class="field wide"><span>Rayon</span><select id="manual-aisle"><option value="">Automatique</option><option>Fruits et légumes</option><option>Frais</option><option>Épicerie</option><option>Surgelés</option><option>Maison</option><option>Autres</option></select></label>
+          </div></details>
+        </fieldset></form>
+        <p id="manual-shopping-status" class="muted" role="status"></p>
         <div class="subtle-tools"><button id="open-pantry" class="text-action" type="button">Mon placard</button><button id="organize-shopping" class="text-action" type="button" aria-pressed="false" aria-controls="shopping">Organiser les rayons</button></div>
         <p id="organize-shopping-help" class="muted" hidden>Glisse la poignée ⠿ vers un rayon. Ou touche-la pour choisir le rayon. Les corrections sont enregistrées immédiatement.</p>
         <div id="shopping" class="shopping-list"></div>
-        <details><summary>Ajouter un article</summary><form id="manual-shopping-form"><fieldset id="manual-shopping-fields" class="compact-form" aria-label="Article à ajouter aux courses">
-          <label class="field wide"><span>Article</span><input id="manual-name" required maxlength="80" placeholder="Café, savon…"></label>
-          <label class="field"><span>Quantité</span><input id="manual-amount" type="number" value="1" min="0.01" max="10000" step="0.01" required></label>
-          <label class="field"><span>Unité</span><input id="manual-unit" value="pièce" required maxlength="24"></label>
-          <label class="field wide"><span>Rayon</span><select id="manual-aisle"><option value="">Automatique</option><option>Fruits et légumes</option><option>Frais</option><option>Épicerie</option><option>Surgelés</option><option>Maison</option><option>Autres</option></select></label>
-          <button class="primary wide" type="submit">Ajouter aux courses</button>
-        </fieldset></form></details>
         <p class="muted">Les ajouts restent dans cette semaine. Le rangement automatique des ingrédients est indicatif.</p>
         <p id="shopping-error" class="error" role="alert" hidden></p>
         <details class="quiet-details"><summary>Courses hors connexion</summary>
@@ -1196,7 +1202,7 @@
         document.getElementById('browse-more-categories').innerHTML = categories.filter(([key]) => !featuredCategories.includes(key)).map(categoryTile).join('');
       }
       document.getElementById('recipes').innerHTML = filtered.map(recipe => `<article class="recipe"><button class="recipe-main" type="button" data-edit-recipe="${recipe.id}" aria-label="Voir la recette ${escapeHtml(recipe.title)}">${recipeCover(recipe)}<span class="recipe-copy"><strong>${escapeHtml(recipe.title)}</strong><span class="recipe-badges"><small>${uiIcon('clock')} ${recipe.minutes} min</small><small>${escapeHtml(dietLabels[recipe.diet])}</small></span></span></button><div class="recipe-card-actions">${recipeFavoriteButton(recipe)}<button class="recipe-add" type="button" data-plan-recipe="${recipe.id}">${uiIcon('plus')} Ajouter</button></div></article>`).join('') || `<div class="empty-state">${Number.isFinite(maxMinutes) ? 'Aucune recette pour cette durée. Choisis un temps plus long.' : 'Aucune recette ici. Essaie un autre mot ou ajoute un plat.'}</div>`;
-      if (seasonal && !filtered.length) document.getElementById('recipes').innerHTML = '<div class="empty-state">Aucune recette avec ces repères et ces filtres pour ce mois. Change de calendrier ou désactive « De saison » pour retrouver les autres plats.</div>';
+      if (seasonal && !filtered.length) document.getElementById('recipes').innerHTML = '<div class="empty-state">Aucune recette de saison avec ces filtres ce mois-ci. Désactive « De saison » pour retrouver les autres plats.</div>';
     }
 
     function refreshSeasonMonth() {
@@ -1365,7 +1371,7 @@
     function renderHousehold() {
       document.getElementById('avoided-ingredients').value = (state.avoidedIngredients || []).join(', ');
       document.getElementById('legacy-preferences').hidden = !(state.avoidedIngredients || []).length;
-      document.getElementById('member-list').innerHTML = state.members.length ? state.members.map(member => `<div class="member-row"><button class="food-tag" type="button" data-member="${member.id}" aria-pressed="${member.id === editingMemberId}">${escapeHtml(member.name)} · ${dietLabels[member.diet]}</button><button class="text-action member-remove" type="button" data-remove-member="${member.id}" aria-label="Retirer ${escapeHtml(member.name)} du foyer">Retirer</button></div>`).join('') : '<span class="muted">Ajoutez les personnes qui mangent régulièrement ici.</span>';
+      document.getElementById('member-list').innerHTML = state.members.length ? state.members.map(member => `<div class="member-row"><button class="food-tag" type="button" data-member="${member.id}" aria-pressed="${member.id === editingMemberId}">${escapeHtml(member.name)} · ${dietLabels[member.diet]}</button><button class="text-action member-remove" type="button" data-remove-member="${member.id}" aria-label="Retirer ${escapeHtml(member.name)} du foyer">Retirer</button></div>`).join('') : '<span class="muted">Ajoute les personnes qui mangent régulièrement ici.</span>';
       document.getElementById('protein-list').innerHTML = state.proteins.map(protein => `<button class="food-tag" type="button" data-protein="${protein.id}" data-category="${protein.category}" aria-pressed="${protein.id === editingProteinId}" title="${formatAmount(protein.amount)} ${escapeHtml(protein.unit)} par portion">${escapeHtml(protein.name)} · ${categoryLabels[protein.category]}</button>`).join('');
     }
 
@@ -1391,7 +1397,9 @@
       const amount = formatAmount(item.amount);
       if (item.unit === 'pièce') return `${amount} × ${item.name}`;
       const article = /^[aàâäeéèêëiîïoôöuùûüyÿœæ]/i.test(item.name) || /^huile\b/i.test(item.name) ? 'd’' : 'de ';
-      return `${amount} ${item.unit} ${article}${item.name}`;
+      // ponytail: seules les unités entières du catalogue s'accordent ; les abréviations et unités libres restent telles quelles.
+      const unit = item.amount >= 2 && /^\s*(gousse|pincée|branche|feuille|tranche)\s*$/i.test(item.unit) ? item.unit.trim() + 's' : item.unit;
+      return `${amount} ${unit} ${article}${item.name}`;
     }
 
     function escapeHtml(value) {
@@ -1634,7 +1642,7 @@
       guidedMenu ||= MangerMenu.create({
         dialog: document.getElementById('menu-dialog'), state: () => state,
         api, fetch: (...args) => fetch(...args), escape: escapeHtml, icon: uiIcon, cover: recipeCover,
-        reload: () => load(), courses: () => document.querySelector('nav [data-panel="shopping"]').click(),
+        reload: () => load(), today: () => key(new Date()), week: start => load({ weekStart: new Date(`${start}T12:00:00`), selected: 0 }), courses: () => document.querySelector('nav [data-panel="shopping"]').click(),
         search: (recipes, query) => MangerFoodNames.searchRecipes(recipes, query),
         candidates: criteria => {
           const rank = { vegan: 0, vegetarian: 1, pescetarian: 2, omnivore: 3 };
@@ -1940,7 +1948,7 @@
       document.getElementById('dialog-title').textContent = 'Planifier ce repas';
       document.getElementById('dialog-subtitle').textContent = recipe.title;
       document.getElementById('dialog-error').hidden = true;
-      document.getElementById('choices').innerHTML = `<form id="plan-recipe-form" class="recipe-form"><label class="field"><span>Jour</span><input id="plan-recipe-date" type="date" value="${key(dateAt(state.selected))}" required></label><label class="field"><span>Repas</span><select id="plan-recipe-slot"><option value="midi">Midi</option><option value="soir">Soir</option></select></label><button class="primary" type="submit">Continuer</button></form>`;
+      document.getElementById('choices').innerHTML = `<form id="plan-recipe-form" class="recipe-form"><label class="field"><span>Jour</span><input id="plan-recipe-date" type="date" value="${key(dateAt(state.selected))}" required></label><label class="field"><span>Repas</span><select id="plan-recipe-slot"><option value="midi">Midi</option><option value="soir">Soir</option></select></label><button class="primary" type="submit">${state.members.length ? 'Continuer' : 'Enregistrer le repas'}</button></form>`;
       document.getElementById('plan-recipe-slot').value = mealFor(state.selected, 'soir') ? 'midi' : 'soir';
       document.getElementById('plan-recipe-form').addEventListener('submit', async event => {
         event.preventDefault();
@@ -2490,6 +2498,12 @@
     document.getElementById('shopping').addEventListener('lostpointercapture', () => finishShoppingDrag(true));
     document.addEventListener('keydown', event => { if (event.key === 'Escape') finishShoppingDrag(true); });
     let manualShoppingBusy = false;
+    function manualShoppingAdded(name) {
+      document.getElementById('manual-shopping-status').textContent = `Ajouté aux courses : ${name}.`;
+      const index = state.shopping.findLastIndex(item => item.manualId && item.name === name);
+      document.querySelector(`[data-shopping="${index}"]`)?.scrollIntoView({ block: 'center' });
+      document.getElementById('manual-name').focus({ preventScroll: true });
+    }
     async function addManualShopping(event) {
       event.preventDefault();
       if (manualShoppingBusy) return;
@@ -2499,14 +2513,17 @@
       const fields = document.getElementById('manual-shopping-fields'), button = form.querySelector('button');
       fields.disabled = true;
       form.setAttribute('aria-busy', 'true');
-      button.textContent = 'Ajout en cours…';
+      button.textContent = 'Ajout…';
       document.getElementById('shopping-error').hidden = true;
-      let saved = false;
+      document.getElementById('manual-shopping-status').textContent = '';
+      const name = document.getElementById('manual-name').value.trim();
+      let saved = false, shown = false;
       try {
         await api('/api/shopping-manual', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ weekStart: key(state.weekStart), name: document.getElementById('manual-name').value, amount: Number(document.getElementById('manual-amount').value), unit: document.getElementById('manual-unit').value, aisle: document.getElementById('manual-aisle').value }), signal: AbortSignal.timeout(15000) });
         saved = true;
         form.reset();
         await load();
+        shown = true;
       } catch (error) {
         shoppingError(new Error(saved
           ? 'L’article a été ajouté, mais les courses n’ont pas pu être actualisées. Utilise « Réessayer » sans ajouter l’article à nouveau.'
@@ -2517,7 +2534,8 @@
         manualShoppingBusy = false;
         fields.disabled = false;
         form.setAttribute('aria-busy', 'false');
-        button.textContent = 'Ajouter aux courses';
+        button.textContent = 'Ajouter';
+        if (shown) manualShoppingAdded(name); // Après la réactivation du champ, sinon le focus est refusé.
       }
     }
     document.getElementById('manual-shopping-form').addEventListener('submit', addManualShopping);

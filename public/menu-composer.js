@@ -8,17 +8,23 @@
     date.setUTCDate(date.getUTCDate() + day);
     return date.toISOString().slice(0, 10);
   }
-  function availableSlots(start, meals) {
+  // Créneaux libres à partir d'aujourd'hui : le menu guidé ne planifie jamais un jour passé.
+  function availableSlots(start, meals, today = '') {
     return ['soir', 'midi'].flatMap(slot => Array.from({ length: 7 }, (_, day) => ({ day, slot })))
-      .filter(item => !meals.some(meal => meal.date === dayKey(start, item.day) && meal.slot === item.slot));
+      .filter(item => dayKey(start, item.day) >= today && !meals.some(meal => meal.date === dayKey(start, item.day) && meal.slot === item.slot));
   }
-  function planPayload({ start, rows, recipes, members, meals }) {
+  function followingWeek(start, today) {
+    const current = dayKey(today, -((new Date(today + 'T12:00:00Z').getUTCDay() + 6) % 7));
+    return start < current ? current : dayKey(start, 7);
+  }
+  function planPayload({ start, rows, recipes, members, meals, today = '' }) {
     if (!Array.isArray(rows) || !rows.length || rows.length > 14) throw new Error('Choisis entre une et quatorze recettes.');
     const groups = new Map(), rank = { vegan: 0, vegetarian: 1, pescetarian: 2, omnivore: 3 };
     for (const row of rows) {
       if (!Number.isInteger(row.day) || row.day < 0 || row.day > 6 || !['midi', 'soir'].includes(row.slot)) throw new Error('Choisis un jour et un créneau valides.');
       const date = dayKey(start, row.day), recipe = recipes.find(item => item.id === row.recipeId);
       if (!recipe) throw new Error('Une recette manque. Recharge le catalogue.');
+      if (date < today) throw new Error('Ce jour est déjà passé. Choisis un autre jour.');
       if (meals.some(meal => meal.date === date && meal.slot === row.slot)) throw new Error('Ce repas est déjà prévu. Choisis un autre créneau.');
       const ids = row.memberIds;
       if (!Array.isArray(ids) || new Set(ids).size !== ids.length || ids.some(id => !members.some(member => member.id === id))) throw new Error('Participants inconnus.');
@@ -41,7 +47,8 @@
     const dialog = config.dialog, e = config.escape, icon = config.icon;
     let start, criteria, rows = [], phase = 'menu', pickerIndex = null, busy = false, saved = false, uncertain = false, pendingPlan = null, version = 0, error = '';
     const data = () => config.state();
-    const free = () => availableSlots(start, data().meals);
+    const today = () => config.today();
+    const free = () => availableSlots(start, data().meals, today());
     const candidates = () => config.candidates(criteria);
     const recipeFor = row => data().recipes.find(recipe => recipe.id === row.recipeId);
     const button = (action, label, style = 'secondary', extra = '') => `<button type="button" class="${style}" data-menu-action="${action}" ${extra}>${label}</button>`;
@@ -69,19 +76,21 @@
         const recipe = recipeFor(row);
         if (!recipe) return '<p class="error">Une recette manque. Reviens au menu pour la retirer.</p>';
         const participants = data().members.length ? `<details class="menu-participants"><summary>Pour ${row.memberIds.map(id => e(data().members.find(member => member.id === id)?.name || '')).join(', ') || 'qui ?'}</summary><div class="category-options">${data().members.filter(member => criteria.memberIds.includes(member.id)).map(member => `<label><input type="checkbox" data-menu-person="${index}" value="${member.id}"${row.memberIds.includes(member.id) ? ' checked' : ''}><span>${e(member.name)}</span></label>`).join('')}</div></details>` : '';
-        return `<article class="menu-placement"><div class="menu-placement-title"><div class="menu-cover">${config.cover(recipe)}</div><h3>${e(recipe.title)}</h3></div><div class="menu-placement-fields"><label class="field"><span>Jour</span><select data-menu-day="${index}" aria-label="Jour pour ${e(recipe.title)}">${Array.from({ length: 7 }, (_, day) => `<option value="${day}"${row.day === day ? ' selected' : ''}>${e(dateLabel(day))}</option>`).join('')}</select></label><label class="field"><span>Repas</span><select data-menu-slot="${index}" aria-label="Repas pour ${e(recipe.title)}"><option value="midi"${row.slot === 'midi' ? ' selected' : ''}>Midi</option><option value="soir"${row.slot === 'soir' ? ' selected' : ''}>Soir</option></select></label></div>${participants}<div class="menu-placement-portions">${portions(row, index)}<span class="muted">${row.memberIds.length > 1 ? row.people / row.memberIds.length + ' par personne' : ''}</span></div></article>`;
+        return `<article class="menu-placement"><div class="menu-placement-title"><div class="menu-cover">${config.cover(recipe)}</div><h3>${e(recipe.title)}</h3></div><div class="menu-placement-fields"><label class="field"><span>Jour</span><select data-menu-day="${index}" aria-label="Jour pour ${e(recipe.title)}">${Array.from({ length: 7 }, (_, day) => day).filter(day => dayKey(start, day) >= today()).map(day => `<option value="${day}"${row.day === day ? ' selected' : ''}>${e(dateLabel(day))}</option>`).join('')}</select></label><label class="field"><span>Repas</span><select data-menu-slot="${index}" aria-label="Repas pour ${e(recipe.title)}"><option value="midi"${row.slot === 'midi' ? ' selected' : ''}>Midi</option><option value="soir"${row.slot === 'soir' ? ' selected' : ''}>Soir</option></select></label></div>${participants}<div class="menu-placement-portions">${portions(row, index)}<span class="muted">${row.memberIds.length > 1 ? row.people / row.memberIds.length + ' par personne' : ''}</span></div></article>`;
       }).join('');
     }
     function render(focusHeading = false) {
       const picking = phase === 'picker', placing = phase === 'days';
+      const ended = phase === 'menu' && !rows.length && !free().length && !saved && !uncertain;
       const title = picking ? pickerIndex === rows.length ? 'Ajouter une recette' : 'Remplacer ce plat' : placing ? 'Les jours de ton menu' : 'Mon menu';
       const subtitle = saved ? 'Ton menu est enregistré.' : picking ? 'Un plat, un ingrédient…' : placing ? 'Plusieurs plats par jour, à ton rythme.' : 'Choisis les plats qui te font envie.';
       const body = picking ? '<label class="recipe-search-field"><span class="sr-only">Chercher une recette</span><input id="menu-search" type="search" placeholder="Un plat, un ingrédient…" autocomplete="off"></label><div id="menu-search-results" class="menu-search-results"></div>'
         : placing ? `<p class="muted menu-intro">Choisis midi ou soir. Pour des plats différents au même repas, ajuste les participants.</p>${placements()}`
+          : ended ? '<p class="empty-state">Plus de repas libre à venir cette semaine. Les jours passés ne sont pas proposés.</p>'
           : `${controls()}<div class="menu-count"><strong>${rows.length} recette${rows.length === 1 ? '' : 's'}</strong><span class="muted">Ton menu, à ajuster</span></div>${menuRows()}${rows.length < free().length ? button('add', icon('plus') + ' Ajouter une recette', 'menu-add') : '<p class="muted">Le menu atteint le nombre de repas libres de cette semaine.</p>'}`;
-      const action = saved ? 'refresh' : uncertain ? 'check' : placing ? 'save' : 'days';
-      const label = saved ? 'Afficher les courses' : uncertain ? 'Vérifier le planning' : placing ? 'Créer la liste de courses' : 'Choisir les jours';
-      dialog.innerHTML = `<div class="menu-shell"><header class="menu-header">${button('back', icon('back'), 'icon-button', 'aria-label="Retour"')}<div><h2 id="menu-title" tabindex="-1">${title}</h2><p id="menu-subtitle" class="muted" role="status">${subtitle}</p></div>${button('close', icon('close'), 'icon-button', 'aria-label="Fermer le menu"')}</header><fieldset class="menu-body" id="menu-body" aria-label="Contenu du menu"${saved || uncertain ? ' disabled' : ''}>${body}</fieldset><footer class="menu-footer"><p id="menu-error" class="error" role="alert"${error ? '' : ' hidden'}>${e(error)}</p>${picking ? '' : button(action, label, 'primary', rows.length ? '' : 'disabled')}<span class="menu-save-status muted" role="status">${busy ? 'Préparation du menu…' : !saved && !uncertain && !picking ? 'Aucun changement avant la création des courses.' : ''}</span></footer></div>`;
+      const action = saved ? 'refresh' : uncertain ? 'check' : placing ? 'save' : ended ? 'next' : 'days';
+      const label = saved ? 'Afficher les courses' : uncertain ? 'Vérifier le planning' : placing ? 'Créer la liste de courses' : ended ? 'Composer la semaine suivante' : 'Choisir les jours';
+      dialog.innerHTML = `<div class="menu-shell"><header class="menu-header">${button('back', icon('back'), 'icon-button', 'aria-label="Retour"')}<div><h2 id="menu-title" tabindex="-1">${title}</h2><p id="menu-subtitle" class="muted" role="status">${subtitle}</p></div>${button('close', icon('close'), 'icon-button', 'aria-label="Fermer le menu"')}</header><fieldset class="menu-body" id="menu-body" aria-label="Contenu du menu"${saved || uncertain ? ' disabled' : ''}>${body}</fieldset><footer class="menu-footer"><p id="menu-error" class="error" role="alert"${error ? '' : ' hidden'}>${e(error)}</p>${picking ? '' : button(action, label, 'primary', rows.length || ended ? '' : 'disabled')}<span class="menu-save-status muted" role="status">${busy ? 'Préparation du menu…' : !saved && !uncertain && !picking ? 'Aucun changement avant la création des courses.' : ''}</span></footer></div>`;
       lock(busy);
       if (picking) { search(''); dialog.querySelector('#menu-search').focus(); }
       else if (focusHeading) dialog.querySelector('#menu-title').focus({ preventScroll: true });
@@ -132,7 +141,7 @@
     }
     function currentPlan() {
       const { recipes, members, meals } = data();
-      return planPayload({ start, rows, recipes, members, meals });
+      return planPayload({ start, rows, recipes, members, meals, today: today() });
     }
     async function refreshCourses() {
       if (busy) return;
@@ -172,6 +181,15 @@
       finally { busy = false; if (dialog.open) render(); }
       if (saved) await refreshCourses();
     }
+    async function nextWeek() {
+      const target = followingWeek(start, today());
+      busy = true; lock(true);
+      const loaded = await config.week(target).catch(() => false);
+      busy = false;
+      if (!dialog.open) return;
+      if (loaded === false) { render(); showError('La semaine suivante n’a pas pu être chargée. Réessaie.'); return; }
+      await open(target);
+    }
     function change(event) {
       if (busy || saved || uncertain) return;
       const node = event.target, d = node.dataset;
@@ -200,28 +218,39 @@
       if (action === 'remove') { rows.splice(index, 1); render(); }
       if (action === 'replace' || action === 'add') { pickerIndex = action === 'add' ? rows.length : index; phase = 'picker'; error = ''; render(); }
       if (action === 'pick') await propose(Math.max(rows.length, pickerIndex + 1), { index: pickerIndex, recipeId: Number(node.dataset.menuRecipe) });
-      if (action === 'days') { if (!rows.length) return; phase = 'days'; error = ''; render(true); }
+      if (action === 'days') { dropPastRows(); if (!rows.length) { render(); return; } phase = 'days'; error = ''; render(true); }
       if (action === 'criteria') {
         const ids = [...dialog.querySelectorAll('[data-menu-member]:checked')].map(input => Number(input.dataset.menuMember));
         await propose(rows.length || Math.min(5, free().length), null, { memberIds: ids, people: ids.length || Number(dialog.querySelector('[data-menu-people]')?.value), maxMinutes: Number(dialog.querySelector('[data-menu-minutes]').value) });
       }
       if (action === 'save') await save();
+      if (action === 'next') await nextWeek();
     }
     dialog.addEventListener('click', click);
     dialog.addEventListener('change', change);
     dialog.addEventListener('input', event => { if (event.target.id === 'menu-search' && !busy) search(event.target.value); });
     dialog.addEventListener('cancel', event => { if (busy) event.preventDefault(); });
     dialog.addEventListener('close', () => { version++; });
+    // Brouillon rouvert après minuit : un plat resté sur un jour passé glisse vers un repas libre à venir, sinon il est retiré.
+    function dropPastRows() {
+      if (saved || uncertain) return;
+      rows = rows.filter(row => {
+        if (dayKey(start, row.day) >= today()) return true;
+        const slot = free().find(item => !rows.some(other => other.day === item.day && other.slot === item.slot));
+        return Boolean(slot && Object.assign(row, slot));
+      });
+    }
     async function open(weekStart) {
       if (busy) return;
+      dropPastRows();
       if (start !== weekStart) {
         start = weekStart; rows = []; saved = false; uncertain = false; pendingPlan = null; phase = 'menu'; error = '';
         criteria = { memberIds: data().members.map(member => member.id), people: data().members.length || 2, maxMinutes: 30 };
       }
       render(); if (!dialog.open) dialog.showModal();
-      if (!rows.length) await propose(Math.min(5, free().length));
+      if (!rows.length && free().length) await propose(Math.min(5, free().length));
     }
     return { open };
   }
-  return { availableSlots, planPayload, create };
+  return { availableSlots, followingWeek, planPayload, create };
 });

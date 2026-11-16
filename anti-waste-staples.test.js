@@ -40,3 +40,13 @@ test('suggestions et menu : les basiques ne gonflent aucun score, mais restent d
   db.exec('DELETE FROM pantry');
   assert.equal((await shopping()).length, staples.length); // Not assumed to be owned.
 });
+
+test('courses : l’eau du robinet n’est pas à acheter, mais reste dans les recettes', () => {
+  const { pantryShopping, shoppingList } = require('./calculations');
+  const date = '2026-11-16', data = { stocks: [], meals: [{ date }], items: [{ date, name: 'eau', unit: 'ml', amount: 530 }, { date, name: 'Eau', unit: 'c. à soupe', amount: 2 }, { date, name: 'eau de coco', unit: 'ml', amount: 200 }, { date, name: 'riz', unit: 'g', amount: 160 }] };
+  assert.deepEqual(pantryShopping(data, date).map(item => item.name), ['eau de coco', 'riz']);
+  assert.equal(shoppingList(data, date).length, 4);
+  const { isTapWater } = require('./ingredients');
+  for (const name of ['eau', 'Eau froide', 'eau chaude', 'eau tiède', 'eau tiede', 'eau bouillante', 'eau du robinet', 'eau du robinet froide']) assert.equal(isTapWater(name), true, name);
+  for (const name of ['eau gazeuse', 'eau de coco', 'eau de fleur d’oranger', 'eau-de-vie', 'eau minérale']) assert.equal(isTapWater(name), false, name);
+});

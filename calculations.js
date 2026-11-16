@@ -1,4 +1,4 @@
-const {foodName,foodKey,inUnit,groupIngredients,isAntiWasteIngredient}=require('./ingredients');
+const {foodName,foodKey,inUnit,groupIngredients,isAntiWasteIngredient,isTapWater}=require('./ingredients');
 const {recipeTaste,tasteRank}=require('./public/tastes');
 const {isDietCompatible}=require('./household');
 const {dateKey,addDays,isDateKey}=require('./dates');
@@ -62,7 +62,7 @@ function pantryShopping(data, start) {
     const stock = covered.find(row => foodKey(row) === foodKey(item));
     const used = stock ? Math.min(item.amount, inUnit(stock, item.unit)) : 0;
     return { ...item, amount: Math.max(0, Math.round((item.amount - used) * 100) / 100), fromPantry: Math.round(used * 100) / 100 };
-  }).filter(item => item.amount > 0);
+  }).filter(item => item.amount > 0 && !isTapWater(item.name));
 }
 
 function availablePantry(data, end) {

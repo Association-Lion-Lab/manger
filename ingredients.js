@@ -8,6 +8,8 @@ function isAntiWasteIngredient(name) {
   if (/^(?:ail|oignons?|gingembre|piments?|persil|basilic|coriandre|thym|origan|romarin|aneth|ciboulette|menthe|laurier)(?:\s+(?:en poudre|seche?s?|deshydrate[es]*|lyophilise[es]*|en flocons))+$/.test(value)) return false;
   return true;
 }
+// L'eau du robinet reste dans les recettes mais ne s'achète pas ; une eau achetée s'ajoute à la main.
+const isTapWater = name => /^eau(?: du robinet)?(?: (?:froide|chaude|tiede|bouillante))?$/.test(foodName(name).toLocaleLowerCase('fr').normalize('NFD').replace(/[̀-ͯ]/g, ''));
 function unitInfo(unit) {
   const value = unit.trim().toLocaleLowerCase('fr');
   const units = { g: ['g', 1], gramme: ['g', 1], grammes: ['g', 1], kg: ['g', 1000], ml: ['ml', 1], cl: ['ml', 10], dl: ['ml', 100], l: ['ml', 1000], litre: ['ml', 1000], litres: ['ml', 1000], pièce: ['pièce', 1], pièces: ['pièce', 1] };
@@ -27,4 +29,4 @@ function groupIngredients(items) {
   }
   return [...groups.values()].map(item => ({ ...item, amount: Math.round(item.amount * 100) / 100 }));
 }
-module.exports = { foodName, foodKey, unitInfo, inUnit, groupIngredients, isAntiWasteIngredient };
+module.exports = { foodName, foodKey, unitInfo, inUnit, groupIngredients, isAntiWasteIngredient, isTapWater };

@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { availableSlots, planPayload } = require('./public/menu-composer');
+const { availableSlots, planPayload, followingWeek } = require('./public/menu-composer');
 const { planMeals } = require('./planning');
 const start = '2026-11-02';
 const recipes = [{ id: 1, title: 'Riz', diet: 'vegan' }, { id: 2, title: 'Soupe', diet: 'vegan' }];
@@ -47,4 +47,20 @@ test('menu : sans profil, recette partagée et portions libres, pas deux recette
   assert.equal(result.meals[0].people, 3);
   assert.deepEqual(result.meals[0].dishes, []);
   assert.throws(() => planPayload({ start, rows: [...rows, row({ recipeId: 2, memberIds: [], people: 2 })], recipes, members: [], meals: [] }), /profil|autre repas/i);
+});
+
+test('menu : un dimanche, seuls les repas du jour restent proposés et un jour passé est refusé', () => {
+  const week = '2026-11-09', sunday = '2026-11-15';
+  assert.deepEqual(availableSlots(week, [], sunday), [{ day: 6, slot: 'soir' }, { day: 6, slot: 'midi' }]);
+  assert.deepEqual(availableSlots(week, [{ date: sunday, slot: 'soir' }, { date: sunday, slot: 'midi' }], sunday), []);
+  assert.equal(availableSlots('2026-11-16', [], sunday).length, 14);
+  const plan = day => planPayload({ start: week, rows: [row({ day })], recipes, members, meals: [], today: sunday });
+  assert.throws(() => plan(0), /déjà passé/i);
+  assert.equal(plan(6).meals[0].date, sunday);
+});
+
+test('menu : la semaine proposée ensuite ne tombe jamais dans le passé', () => {
+  assert.equal(followingWeek('2026-11-09', '2026-11-15'), '2026-11-16');
+  assert.equal(followingWeek('2026-10-26', '2026-11-15'), '2026-11-09');
+  assert.equal(followingWeek('2026-11-23', '2026-11-15'), '2026-11-30');
 });

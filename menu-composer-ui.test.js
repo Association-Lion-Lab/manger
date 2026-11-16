@@ -2,8 +2,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { create } = require('./public/menu-composer');
 
-function composer(members = []) {
-  const nodes = new Map(), listeners = new Map(), reads = [], writes = [];
+function composer(members = [], today = '2026-11-02') {
+  const nodes = new Map(), listeners = new Map(), reads = [], writes = [], weeks = [];
   const node = selector => {
     if (!nodes.has(selector)) nodes.set(selector, { disabled: false, dataset: {}, textContent: '', hidden: true, value: '', focus() {} });
     return nodes.get(selector);
@@ -18,7 +18,7 @@ function composer(members = []) {
     showModal() { this.open = true; },
     close() { this.open = false; closes++; listeners.get('close')?.(); }
   };
-  const control = { state, dialog, reads, writes, fields, node, readError: null, reloadError: null, afterReload: null };
+  const control = { state, dialog, reads, writes, weeks, fields, node, today, readError: null, reloadError: null, afterReload: null };
   const menu = create({ dialog, state: () => state, escape: value => String(value), icon: () => '', cover: () => '', notice: () => '',
     candidates: () => state.recipes, search: (list, query) => list.filter(recipe => recipe.title.includes(query)),
     async api(path, options) {
@@ -28,10 +28,11 @@ function composer(members = []) {
     },
     fetch(path, options) { writes.push({ path, options }); return new Promise((resolve, reject) => { resolveWrite = resolve; rejectWrite = reject; }); },
     async reload() { reloads++; if (control.reloadError) throw control.reloadError; control.afterReload?.(); return true; },
-    courses() { navigations++; }
+    courses() { navigations++; }, today: () => control.today,
+    async week(start) { weeks.push(start); state.meals = []; return true; }
   });
   Object.assign(control, {
-    open: () => menu.open('2026-11-02'),
+    open: (start = '2026-11-02') => menu.open(start),
     click: (action, extra = {}) => listeners.get('click')({ target: { closest: () => ({ disabled: false, dataset: { menuAction: action, ...extra } }) } }),
     reply: response => resolveWrite(response), fail: error => rejectWrite(error),
     counts: () => ({ closes, navigations, reloads })
@@ -106,4 +107,39 @@ test('menu guidé : échec du recalcul conserve les plats et débloque les contr
   assert.ok(form.fields.every(field => !field.disabled));
   await form.click('back'); assert.match(form.dialog.innerHTML, /Plat 1/);
   assert.equal(form.writes.length, 0);
+});
+
+test('menu guidé : un dimanche, aucun jour passé proposé ni sélectionnable', async () => {
+  const form = composer([], '2026-11-15'); await form.open('2026-11-09');
+  assert.deepEqual(JSON.parse(form.reads[0].options.body).slots, [{ day: 6, slot: 'soir' }, { day: 6, slot: 'midi' }]);
+  await form.click('days');
+  assert.match(form.dialog.innerHTML, /dimanche 15 nov/);
+  assert.doesNotMatch(form.dialog.innerHTML, /lundi 9 nov|samedi 14 nov/);
+});
+
+test('menu guidé : semaine sans repas libre à venir, la suivante est proposée sans rien écrire', async () => {
+  const form = composer([], '2026-11-15');
+  form.state.meals = [{ date: '2026-11-15', slot: 'midi' }, { date: '2026-11-15', slot: 'soir' }];
+  await form.open('2026-11-09');
+  assert.equal(form.reads.length, 0);
+  assert.match(form.dialog.innerHTML, /Plus de repas libre à venir/);
+  assert.match(form.dialog.innerHTML, /data-menu-action="next"/);
+  await form.click('next');
+  assert.deepEqual(form.weeks, ['2026-11-16']);
+  const preview = JSON.parse(form.reads[0].options.body);
+  assert.equal(preview.start, '2026-11-16'); assert.equal(preview.slots.length, 5);
+  assert.equal(form.writes.length, 0);
+});
+
+test('menu guidé : brouillon rouvert plus tard, les plats des jours passés glissent vers un repas libre à venir', async () => {
+  const form = composer([], '2026-11-09'); await form.open('2026-11-09');
+  await form.click('close'); form.today = '2026-11-12'; await form.open('2026-11-09');
+  assert.equal(form.reads.length, 1);
+  await form.click('days');
+  assert.equal(form.dialog.innerHTML.match(/ selected/g).length, 10);
+  const pending = form.click('save');
+  assert.equal(form.writes.length, 1, form.dialog.innerHTML.match(/role="alert"[^<]*>[^<]*/)?.[0]);
+  const dates = JSON.parse(form.writes[0].options.body).meals.map(meal => meal.date + '/' + meal.slot).sort();
+  assert.deepEqual(dates, ['2026-11-12/midi', '2026-11-12/soir', '2026-11-13/soir', '2026-11-14/soir', '2026-11-15/soir']);
+  form.reply({ ok: true, json: async () => ({}) }); await pending;
 });
