@@ -2500,8 +2500,7 @@
     let manualShoppingBusy = false;
     function manualShoppingAdded(name) {
       document.getElementById('manual-shopping-status').textContent = `Ajouté aux courses : ${name}.`;
-      const index = state.shopping.findLastIndex(item => item.manualId && item.name === name);
-      document.querySelector(`[data-shopping="${index}"]`)?.scrollIntoView({ block: 'center' });
+      // Pas de défilement vers la ligne : le champ doit rester à l'écran pour saisir plusieurs articles de suite.
       document.getElementById('manual-name').focus({ preventScroll: true });
     }
     async function addManualShopping(event) {

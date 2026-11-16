@@ -632,7 +632,7 @@ test('la dernière semaine demandée seule actualise le planning, une erreur pr�
   assert.equal(nodes.get('connection-error').hidden, true); assert.equal(state.weekStart.toISOString().slice(0, 10), '2026-11-02');
 });
 
-test('ajout rapide aux courses : champ en haut de liste, ligne visible, focus rendu et annonce polie', () => {
+test('ajout rapide aux courses : champ en haut de liste, aucun défilement, focus rendu et annonce polie', () => {
   const html = readFileSync(join(__dirname, 'public', 'index.html'), 'utf8');
   assert.ok(html.indexOf('id="manual-shopping-form"') < html.indexOf('<div id="shopping" '), 'formulaire avant la liste');
   assert.doesNotMatch(html, /<details><summary>Ajouter un article/);
@@ -646,7 +646,8 @@ test('ajout rapide aux courses : champ en haut de liste, ligne visible, focus re
   } };
   new Script(source + ';manualShoppingAdded').runInNewContext(context)('Pain');
   assert.equal(status.textContent, 'Ajouté aux courses : Pain.');
-  assert.equal(JSON.stringify(calls), JSON.stringify([['[data-shopping="1"]', { block: 'center' }], ['focus', { preventScroll: true }]]));
+  assert.equal(JSON.stringify(calls), JSON.stringify([['focus', { preventScroll: true }]]));
+  assert.doesNotMatch(source, /scrollIntoView/);
 });
 
 test('libellés : saison sans calendrier manuel, bouton de planification fidèle à son effet', () => {

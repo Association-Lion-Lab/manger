@@ -2,7 +2,7 @@
 
 ## Lot UX 1 : menu sans jours passés, ajout rapide aux courses, libellés — 16 novembre 2026
 
-Trois points retenus de la revue de parcours du 15 novembre. Le menu guidé ne propose plus de jour passé et offre la semaine suivante quand il ne reste aucun repas libre à venir. Dans Courses, le champ « Ajouter un article… » est en tête de liste, avec ligne ajoutée visible, focus rendu et annonce. Libellés corrigés (saison, bouton de planification, accord des unités, tutoiement) et eau du robinet retirée des courses calculées. 478 tests généraux, 477 réussis, 1 ignoré ; contrôle dans le navigateur intégré en 375 × 812 sur une base de test. Suite PostgreSQL non relancée ; iPhone, Android, lecteur d'écran et serveur Ubuntu non vérifiés. Détails dans [les décisions](DECISIONS.md). Les points 4 à 8 de la revue restent des propositions non livrées.
+Trois points retenus de la revue de parcours du 15 novembre. Le menu guidé ne propose plus de jour passé et offre la semaine suivante quand il ne reste aucun repas libre à venir. Dans Courses, le champ « Ajouter un article… » est en tête de liste, avec focus rendu et annonce (le défilement vers la ligne ajoutée a été retiré le 16 novembre après essai réel). Libellés corrigés (saison, bouton de planification, accord des unités, tutoiement) et eau du robinet retirée des courses calculées. 478 tests généraux, 477 réussis, 1 ignoré ; contrôle dans le navigateur intégré en 375 × 812 sur une base de test. Suite PostgreSQL non relancée ; iPhone, Android, lecteur d'écran et serveur Ubuntu non vérifiés. Détails dans [les décisions](DECISIONS.md). Les points 4 à 8 de la revue restent des propositions non livrées.
 
 ## Saisons françaises — 2 novembre 2026
 

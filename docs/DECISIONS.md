@@ -1121,3 +1121,13 @@ Résultat final de cette nouvelle vérification : **417/417 tests généraux ré
 **Limite connue :** « Composer la semaine suivante » change aussi la semaine affichée dans l'onglet Semaine, même si le menu est ensuite fermé sans rien créer. Comportement conservé : les courses ouvertes après création sont celles de cette semaine.
 
 **Reste à vérifier :** suite PostgreSQL non relancée (aucun SQL ni stockage modifié) ; le cas « dimanche » n'a été vu en direct qu'avant correction, il est couvert par les tests. iPhone, Android, clavier virtuel, lecteur d'écran et serveur Ubuntu non vérifiés. Rien n'est commité ni publié.
+
+## 16 novembre 2026 — ajout rapide aux courses : plus de défilement vers la ligne ajoutée
+
+**Retour d'usage :** essai du lot UX 1 par le porteur sur son serveur. Après chaque ajout, la page sautait vers la nouvelle ligne et le champ sortait de l'écran : saisir plusieurs articles de suite devenait pénible. La limite était notée dans l'entrée du lot 1, mais sous-estimée.
+
+**Choix, validé par le porteur :** `manualShoppingAdded` ne fait plus défiler la page. L'annonce « Ajouté aux courses : … » (`role="status"`) et le retour du focus dans le champ, sans défilement, sont conservés. Cette entrée remplace sur ce point celle du lot 1.
+
+**Conséquence :** la ligne ajoutée n'est plus amenée à l'écran ; le message placé sous le champ est le seul retour immédiat, et la ligne se trouve dans son rayon plus bas. Alternative écartée pour l'instant : une surbrillance ou un aperçu de la ligne près du champ, non demandés.
+
+**Preuve :** le test d'interface de l'ajout rapide exige désormais l'absence de défilement, le focus et l'annonce ; vu en échec avant la correction, puis réussi. npm test depuis PowerShell : 478 tests, 477 réussis, 1 ignoré, 0 échec ; un passage précédent avait vu le fichier anti-gaspi échouer au chargement, non reproduit, cause non établie. Non revérifié dans un navigateur ni sur téléphone : à confirmer par le porteur sur son serveur.
