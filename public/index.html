@@ -1344,7 +1344,7 @@
       const checkedOpen = container.querySelector('#shopping-checked')?.open || false;
       const renderGroups = rows => {
         const groups = new Map();
-        rows.forEach(({ item, index }) => {
+        shoppingNeighbors(rows).forEach(({ item, index }) => {
           const aisle = shoppingAisle(item);
           const checkKey = shoppingCheckKey(item), pending = pendingShoppingChecks.has(checkKey);
           if (!groups.has(aisle)) groups.set(aisle, []);
@@ -1377,6 +1377,13 @@
 
     function formatAmount(amount) {
       return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(amount);
+    }
+
+    // Même aliment côte à côte (recette en g, en tranches, ajout manuel) : l'ordre du reste et les index ne changent pas, rien n'est additionné.
+    function shoppingNeighbors(rows) {
+      const first = new Map(), name = row => MangerFoodNames.foodName(row.item.name);
+      rows.forEach((row, position) => { if (!first.has(name(row))) first.set(name(row), position); });
+      return [...rows].sort((a, b) => first.get(name(a)) - first.get(name(b)));
     }
 
     function shoppingAisle(item) {
@@ -2498,8 +2505,10 @@
     document.getElementById('shopping').addEventListener('lostpointercapture', () => finishShoppingDrag(true));
     document.addEventListener('keydown', event => { if (event.key === 'Escape') finishShoppingDrag(true); });
     let manualShoppingBusy = false;
-    function manualShoppingAdded(name) {
-      document.getElementById('manual-shopping-status').textContent = `Ajouté aux courses : ${name}.`;
+    function manualShoppingAdded(name, merged) {
+      document.getElementById('manual-shopping-status').textContent = merged
+        ? `Déjà dans la liste : ${merged.name}. Quantité portée à ${formatAmount(merged.amount)}${merged.unit === 'pièce' ? '' : ' ' + merged.unit}.`
+        : `Ajouté aux courses : ${name}.`;
       // Pas de défilement vers la ligne : le champ doit rester à l'écran pour saisir plusieurs articles de suite.
       document.getElementById('manual-name').focus({ preventScroll: true });
     }
@@ -2516,10 +2525,11 @@
       document.getElementById('shopping-error').hidden = true;
       document.getElementById('manual-shopping-status').textContent = '';
       const name = document.getElementById('manual-name').value.trim();
-      let saved = false, shown = false;
+      let saved = false, shown = false, merged = null;
       try {
-        await api('/api/shopping-manual', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ weekStart: key(state.weekStart), name: document.getElementById('manual-name').value, amount: Number(document.getElementById('manual-amount').value), unit: document.getElementById('manual-unit').value, aisle: document.getElementById('manual-aisle').value }), signal: AbortSignal.timeout(15000) });
+        const result = await api('/api/shopping-manual', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ weekStart: key(state.weekStart), name: document.getElementById('manual-name').value, amount: Number(document.getElementById('manual-amount').value), unit: document.getElementById('manual-unit').value, aisle: document.getElementById('manual-aisle').value }), signal: AbortSignal.timeout(15000) });
         saved = true;
+        if (result.merged) merged = result;
         form.reset();
         await load();
         shown = true;
@@ -2534,7 +2544,7 @@
         fields.disabled = false;
         form.setAttribute('aria-busy', 'false');
         button.textContent = 'Ajouter';
-        if (shown) manualShoppingAdded(name); // Après la réactivation du champ, sinon le focus est refusé.
+        if (shown) manualShoppingAdded(name, merged); // Après la réactivation du champ, sinon le focus est refusé.
       }
     }
     document.getElementById('manual-shopping-form').addEventListener('submit', addManualShopping);

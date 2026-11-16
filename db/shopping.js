@@ -1,5 +1,5 @@
 const {foodKey}=require('../ingredients');
-const {validate,weekKey,identity,shoppingError,shoppingState,weekState,syncMatches}=require('../shopping');
+const {validate,weekKey,identity,shoppingError,shoppingState,weekState,syncMatches,manualMerge}=require('../shopping');
 const {postgresSnapshot}=require('./calculations');
 const {lockHousehold}=require('./household');
 function postgresShopping(db){
@@ -32,8 +32,12 @@ function postgresShopping(db){
   });};
   const saveManual=(input,id=null)=>{validate('manual',input,id);return write(async tx=>{
     const values=[input.name.trim(),input.amount,input.unit.trim(),input.aisle];
-    if(id===null)return(await tx.query('INSERT INTO household.shopping_manual(week_start,name,amount,unit,aisle) VALUES($1,$2,$3,$4,$5) RETURNING id::float8 AS id',[input.weekStart,...values])).rows[0].id;
-    const p=input.previous;if(!(await tx.query('UPDATE household.shopping_manual SET name=$1,amount=$2,unit=$3,aisle=$4 WHERE id=$5 AND week_start=$6 AND name=$7 AND amount=$8 AND unit=$9 AND aisle=$10 RETURNING id',[...values,id,input.weekStart,p.name,p.amount,p.unit,p.aisle])).rowCount)throw shoppingError('Cet article a été modifié ou supprimé ailleurs. Ferme cette fenêtre et recharge la page avant de réessayer.',409);return id;
+    if(id===null){
+      const merged=manualMerge((await tx.query('SELECT id::float8 AS id,name,amount,unit FROM household.shopping_manual WHERE week_start=$1 AND checked=0 ORDER BY id',[input.weekStart])).rows,input);
+      if(!merged)return {id:(await tx.query('INSERT INTO household.shopping_manual(week_start,name,amount,unit,aisle) VALUES($1,$2,$3,$4,$5) RETURNING id::float8 AS id',[input.weekStart,...values])).rows[0].id};
+      await tx.query('UPDATE household.shopping_manual SET amount=$1 WHERE id=$2',[merged.amount,merged.id]);return merged;
+    }
+    const p=input.previous;if(!(await tx.query('UPDATE household.shopping_manual SET name=$1,amount=$2,unit=$3,aisle=$4 WHERE id=$5 AND week_start=$6 AND name=$7 AND amount=$8 AND unit=$9 AND aisle=$10 RETURNING id',[...values,id,input.weekStart,p.name,p.amount,p.unit,p.aisle])).rowCount)throw shoppingError('Cet article a été modifié ou supprimé ailleurs. Ferme cette fenêtre et recharge la page avant de réessayer.',409);return {id};
   });};
   const removeManual=id=>write(async tx=>{if(!Number.isSafeInteger(id)||!(await tx.query('DELETE FROM household.shopping_manual WHERE id=$1 RETURNING id',[id])).rowCount)throw shoppingError('Article inconnu');});
   return {read,week,check,sync,aisle,saveManual,removeManual};

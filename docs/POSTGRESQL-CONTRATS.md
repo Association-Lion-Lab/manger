@@ -25,7 +25,7 @@ Les IDs entiers existants restent des nombres JSON sûrs, y compris au-delà de 
 | `meal_assignments` | `meal_id, member_id, protein_id, portions` | Clé repas/personne ; cascade repas/personne, supplément référencé protégé. |
 | `meal_dishes` | `meal_id, member_id, recipe_id, portions, protein_id` | Clé repas/personne ; cascade repas/personne ; recette protégée, supplément facultatif. |
 | `shopping_checks` | `week_start, name, unit` | Clé composée des coches calculées ; aucune normalisation destructive des libellés. |
-| `shopping_manual` | `id, week_start, name, amount, unit, aisle, checked` | ID ; état coché indépendant d'une modification d'article ; édition conditionnelle/409. |
+| `shopping_manual` | `id, week_start, name, amount, unit, aisle, checked` | ID ; état coché indépendant d'une modification d'article ; édition conditionnelle/409 ; depuis le 16 novembre, un ajout du même aliment en unité compatible augmente la ligne non cochée de la semaine ([contrat](POSTGRESQL-COURSES.md)). |
 | `shopping_aisles` | `name, unit, aisle` | Clé composée ; l'ordre historique `rowid` intervient dans le choix d'une correction canonique. |
 | `avoided_ingredients` | `name` | Clé texte ; préférence globale héritée, différente des goûts individuels. |
 | `pantry` | `id, food_key, name, unit, amount, recorded_on, use_by, explicit_lot` | ID ; clé opaque unique avec séparateur NUL ou préfixe de lot ; date facultative et lots explicites. |

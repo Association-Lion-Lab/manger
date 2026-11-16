@@ -1,4 +1,4 @@
-const {foodKey}=require('./ingredients');
+const {foodKey,inUnit,unitInfo}=require('./ingredients');
 const {isDateKey,addDays}=require('./dates');
 const {pantryShopping}=require('./calculations');
 const aisles=['','Fruits et légumes','Frais','Épicerie','Surgelés','Maison','Autres'];
@@ -28,6 +28,14 @@ function shoppingState(data,start){
     ...data.manual.filter(i=>i.week_start===start).map(({week_start,...i})=>({...i,checked:Boolean(i.checked)}))];
 }
 const weekState=(data,start)=>({recipes:data.recipes,meals:data.meals.filter(i=>i.date>=start&&i.date<=addDays(start,6)),shopping:shoppingState(data,start)});
+// Ajout manuel d'un aliment déjà présent : la ligne existante garde son nom, son unité et son rayon ; seule sa quantité augmente.
+function manualMerge(rows,input){
+  const row=rows.find(r=>foodKey(r)===foodKey(input));if(!row)return null;
+  const amount=Math.round((row.amount+inUnit(input,row.unit))*1e6)/1e6; // six décimales : 1 mg compte dans une ligne en kg, sans bruit flottant
+  if(amount===row.amount)return null; // ajout trop petit pour cette unité : ligne séparée plutôt qu'une fusion qui ne change rien
+  if(amount>10000)throw shoppingError('Cet article est déjà dans la liste et sa quantité deviendrait trop grande. Modifie la ligne existante.');
+  return {id:row.id,merged:true,name:row.name,amount,unit:unitInfo(row.unit)[0]==='pièce'?'pièce':row.unit}; // « Pièce », « pièces » : même écriture que l'affichage
+}
 function syncMatches(current,input){
   const accepted=[],rejected=[];
   for(const [index,item] of input.items.entries()){
@@ -36,4 +44,4 @@ function syncMatches(current,input){
   }
   return {accepted,rejected};
 }
-module.exports={validate,weekKey,identity,shoppingError,shoppingState,weekState,syncMatches};
+module.exports={validate,weekKey,identity,shoppingError,shoppingState,weekState,syncMatches,manualMerge};

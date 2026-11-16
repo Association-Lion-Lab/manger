@@ -1,5 +1,5 @@
 const {foodKey}=require('../ingredients');
-const {validate,weekKey,identity,shoppingError,shoppingState,weekState,syncMatches}=require('../shopping');
+const {validate,weekKey,identity,shoppingError,shoppingState,weekState,syncMatches,manualMerge}=require('../shopping');
 const {sqliteSnapshot}=require('./calculations-sqlite');
 function sqliteShopping(db){
   function transaction(work,write=false){db.exec(write?'BEGIN IMMEDIATE':'BEGIN');try{const result=work();db.exec('COMMIT');return result;}catch(error){db.exec('ROLLBACK');throw error;}}
@@ -26,8 +26,12 @@ function sqliteShopping(db){
   },true);};
   const saveManual=(input,id=null)=>{validate('manual',input,id);return transaction(()=>{
     const values=[input.name.trim(),input.amount,input.unit.trim(),input.aisle];
-    if(id===null)return Number(db.prepare('INSERT INTO shopping_manual(week_start,name,amount,unit,aisle) VALUES(?,?,?,?,?)').run(input.weekStart,...values).lastInsertRowid);
-    const p=input.previous;if(!db.prepare('UPDATE shopping_manual SET name=?,amount=?,unit=?,aisle=? WHERE id=? AND week_start=? AND name=? AND amount=? AND unit=? AND aisle=?').run(...values,id,input.weekStart,p.name,p.amount,p.unit,p.aisle).changes)throw shoppingError('Cet article a été modifié ou supprimé ailleurs. Ferme cette fenêtre et recharge la page avant de réessayer.',409);return id;
+    if(id===null){
+      const merged=manualMerge(db.prepare('SELECT id,name,amount,unit FROM shopping_manual WHERE week_start=? AND checked=0 ORDER BY id').all(input.weekStart),input);
+      if(!merged)return {id:Number(db.prepare('INSERT INTO shopping_manual(week_start,name,amount,unit,aisle) VALUES(?,?,?,?,?)').run(input.weekStart,...values).lastInsertRowid)};
+      db.prepare('UPDATE shopping_manual SET amount=? WHERE id=?').run(merged.amount,merged.id);return merged;
+    }
+    const p=input.previous;if(!db.prepare('UPDATE shopping_manual SET name=?,amount=?,unit=?,aisle=? WHERE id=? AND week_start=? AND name=? AND amount=? AND unit=? AND aisle=?').run(...values,id,input.weekStart,p.name,p.amount,p.unit,p.aisle).changes)throw shoppingError('Cet article a été modifié ou supprimé ailleurs. Ferme cette fenêtre et recharge la page avant de réessayer.',409);return {id};
   },true);};
   const removeManual=id=>transaction(()=>{if(!Number.isSafeInteger(id)||!db.prepare('DELETE FROM shopping_manual WHERE id=?').run(id).changes)throw shoppingError('Article inconnu');},true);
   return {read,week,check,sync,aisle,saveManual,removeManual};

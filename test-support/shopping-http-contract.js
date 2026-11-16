@@ -15,6 +15,7 @@ async function shoppingHttpContract(t,{request,login,failDatabase}){
     rows=await(await request(`/api/shopping?start=${start}`,'GET',undefined,cookie)).json();assert.equal(rows[0].checked,true);
     const week=await(await request(`/api/week?start=${start}`,'GET',undefined,cookie)).json();assert.deepEqual(week.shopping,rows);assert.ok(Array.isArray(week.recipes)&&Array.isArray(week.meals));
     assert.equal((await request('/api/shopping-checks','POST',{...manual,manualId:id,checked:false},cookie)).status,200);
+    r=await request('/api/shopping-manual','POST',manual,cookie);assert.equal(r.status,200);assert.deepEqual(await r.json(),{id,merged:true,name:'Pain',amount:5,unit:'pièce'});
     assert.equal((await request(`/api/shopping-manual/${id}`,'DELETE',undefined,cookie)).status,200);
     assert.equal((await request('/api/shopping?start=wrong','GET',undefined,cookie)).status,400);
   });

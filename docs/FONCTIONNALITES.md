@@ -60,7 +60,7 @@ Cuisines : **Japon**, **Chine**, **Terroir français**, **Méditerranée**, **It
 ## 6. Courses et appareils
 
 - Liste calculée depuis les recettes, suppléments, portions et restes ; unités compatibles regroupées, sans conversion masse/volume ni fusion de préparations distinctes.
-- Articles manuels par semaine : ajout, modification, retrait confirmé et coche conservée. Une modification concurrente d'un article manuel est refusée plutôt que d'écraser l'autre appareil.
+- Articles manuels par semaine : ajout, modification, retrait confirmé et coche conservée. Ajouter un article déjà présent et non coché augmente sa quantité au lieu de créer une seconde ligne (unités compatibles seulement) ; les lignes d'un même aliment sont voisines dans leur rayon. Une modification concurrente d'un article manuel est refusée plutôt que d'écraser l'autre appareil.
 - Rayons automatiques indicatifs, correction manuelle prioritaire, déplacement par poignée à la souris ou au toucher, avec animation et respect du mouvement réduit ; alternative par clavier ou sélection du rayon.
 - Articles cochés regroupés dans une section repliée, actualisation de l'onglet visible toutes les 15 secondes et partage des articles non cochés ; repli vers copie ou fichier texte si nécessaire.
 - Copie hors connexion volontaire et coches locales persistantes. Envoi manuel des nouveaux achats encore compatibles avec la liste d'origine, sans décocher le foyer ni recréer un article disparu ; copie préservée tant que des achats restent en attente.
