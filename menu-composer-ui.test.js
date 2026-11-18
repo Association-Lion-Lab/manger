@@ -1,5 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const { readFileSync } = require('node:fs');
+const { join } = require('node:path');
 const { create } = require('./public/menu-composer');
 
 function composer(members = [], today = '2026-11-02') {
@@ -18,7 +20,7 @@ function composer(members = [], today = '2026-11-02') {
     showModal() { this.open = true; },
     close() { this.open = false; closes++; listeners.get('close')?.(); }
   };
-  const control = { state, dialog, reads, writes, weeks, fields, node, today, readError: null, reloadError: null, afterReload: null };
+  const control = { state, dialog, reads, writes, weeks, fields, node, today, readError: null, reloadError: null, afterReload: null, delays: [], pause: null, reduced: false };
   const menu = create({ dialog, state: () => state, escape: value => String(value), icon: () => '', cover: () => '', notice: () => '',
     candidates: () => state.recipes, search: (list, query) => list.filter(recipe => recipe.title.includes(query)),
     async api(path, options) {
@@ -29,7 +31,9 @@ function composer(members = [], today = '2026-11-02') {
     fetch(path, options) { writes.push({ path, options }); return new Promise((resolve, reject) => { resolveWrite = resolve; rejectWrite = reject; }); },
     async reload() { reloads++; if (control.reloadError) throw control.reloadError; control.afterReload?.(); return true; },
     courses() { navigations++; }, today: () => control.today,
-    async week(start) { weeks.push(start); state.meals = []; return true; }
+    async week(start) { weeks.push(start); state.meals = []; return true; },
+    reducedMotion: () => control.reduced,
+    delay: ms => { control.delays.push(ms); return control.pause || Promise.resolve(); }
   });
   Object.assign(control, {
     open: (start = '2026-11-02') => menu.open(start),
@@ -142,4 +146,68 @@ test('menu guidé : brouillon rouvert plus tard, les plats des jours passés gli
   const dates = JSON.parse(form.writes[0].options.body).meals.map(meal => meal.date + '/' + meal.slot).sort();
   assert.deepEqual(dates, ['2026-11-12/midi', '2026-11-12/soir', '2026-11-13/soir', '2026-11-14/soir', '2026-11-15/soir']);
   form.reply({ ok: true, json: async () => ({}) }); await pending;
+});
+
+test('menu guidé : première proposition mise en scène, 900 ms minimum même si le serveur répond avant', async () => {
+  const form = composer(); let release; form.pause = new Promise(resolve => { release = resolve; });
+  const opening = form.open();
+  await new Promise(setImmediate);
+  assert.equal(form.reads.length, 1); assert.deepEqual(form.delays, [900]);
+  const html = form.dialog.innerHTML;
+  assert.match(html, /<img class="menu-mascot" src="\/icon\.svg"[^>]* alt="">/);
+  assert.match(html, /<p role="status">On compose ton menu…<\/p>/);
+  assert.equal(html.match(/On compose ton menu|Composition du menu|Préparation du menu/g).length, 1, 'une seule annonce');
+  assert.match(html, /<li>2 personnes<\/li><li>30 min max<\/li>/);
+  assert.match(html, /menu-shell menu-wait/, 'bouton principal atténué pendant l’attente');
+  assert.match(html, /<p id="menu-subtitle" class="muted" role="status"><\/p>/, 'pas de seconde annonce');
+  assert.doesNotMatch(html, /Plat 1/, 'réponse reçue mais attente minimale en cours');
+  release(); await opening;
+  assert.match(form.dialog.innerHTML, /Plat 1/); assert.match(form.dialog.innerHTML, /menu-shell menu-arrive/);
+  assert.doesNotMatch(form.dialog.innerHTML, /menu-mascot/);
+  assert.ok(form.fields.every(field => !field.disabled));
+});
+
+test('menu guidé : ni attente ni cascade pour Remplacer, Actualiser ou un brouillon rouvert', async () => {
+  const form = composer(); await form.open();
+  await form.click('replace', { menuIndex: '1' }); await form.click('pick', { menuRecipe: '7' });
+  assert.deepEqual(form.delays, [900]);
+  assert.doesNotMatch(form.dialog.innerHTML, /menu-arrive|menu-mascot/);
+  assert.equal(form.dialog.innerHTML.match(/class="menu-recipe(?: [^"]*)?"/g)[1], 'class="menu-recipe menu-recipe-new"');
+  assert.equal(form.dialog.innerHTML.match(/menu-recipe-new/g).length, 1);
+  form.node('[data-menu-people]').value = '2'; form.node('[data-menu-minutes]').value = '30';
+  await form.click('criteria'); assert.deepEqual(form.delays, [900]);
+  await form.click('close'); await form.open();
+  assert.equal(form.reads.length, 3); assert.deepEqual(form.delays, [900]);
+  assert.doesNotMatch(form.dialog.innerHTML, /menu-arrive|menu-recipe-new|menu-mascot/);
+});
+
+test('menu guidé : mouvement réduit, menu affiché dès la réponse sans cascade', async () => {
+  const form = composer(); form.reduced = true; await form.open();
+  assert.deepEqual(form.delays, []);
+  assert.match(form.dialog.innerHTML, /Plat 1/);
+  assert.doesNotMatch(form.dialog.innerHTML, /menu-arrive/);
+});
+
+test('menu guidé : première proposition en échec, erreur existante sans mascotte', async () => {
+  const form = composer(); form.readError = new TypeError('fetch failed'); await form.open();
+  assert.match(form.dialog.innerHTML, /Connexion indisponible/);
+  assert.doesNotMatch(form.dialog.innerHTML, /menu-mascot/);
+  assert.ok(form.fields.every(field => !field.disabled));
+});
+
+test('menu guidé : tout le mouvement est enfermé dans prefers-reduced-motion: no-preference', () => {
+  const css = readFileSync(join(__dirname, 'public', 'menu-composer.css'), 'utf8');
+  const marker = '@media (prefers-reduced-motion: no-preference) {';
+  let outside = css, start;
+  while ((start = outside.indexOf(marker)) >= 0) {
+    let depth = 0, end = start + marker.length - 1;
+    do { if (outside[end] === '{') depth++; else if (outside[end] === '}') depth--; end++; } while (depth);
+    const block = outside.slice(start, end);
+    assert.match(block, /@keyframes menu-hop/);
+    assert.match(block, /@media \(max-width: 480px\) \{ #menu-dialog\[open\] \{ animation: menu-slide-in \.22s ease-out; \} \}/);
+    assert.match(block, /@keyframes menu-slide-in \{ from \{ transform: translateX\(100%\); \}/);
+    outside = outside.slice(0, start) + outside.slice(end);
+  }
+  assert.notEqual(outside, css, 'bloc de mouvement présent');
+  assert.doesNotMatch(outside, /animation|@keyframes|transition/);
 });

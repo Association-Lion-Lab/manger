@@ -1,5 +1,9 @@
 # Suite du développement
 
+## Menu guidé : attente mise en scène et arrivée des cartes — 18 novembre 2026
+
+Idée UX n° 6 (toucher et mouvement), partie compositeur seulement. À la première proposition d'une ouverture, le rat cuisinier de l'icône saute doucement avec « On compose ton menu… » et les critères en pastilles, au moins 900 ms ; puis les cartes arrivent une à une et « Choisir les jours » s'allume. Sur mobile, le compositeur glisse depuis la droite ; la recette remplacée ou ajoutée entre en glissant. Mouvement réduit : ni sauts, ni cascade, ni délai. Serveur, API, schéma, dépendances et service worker inchangés. 493 tests généraux, 492 réussis, 1 ignoré ; rendu réel, iPhone et VoiceOver non vérifiés. Reste de l'idée n° 6 non livré : retour tactile des boutons, changement d'onglet en fondu, cascade dans les autres listes, gestes, animation des courses cochées et fête de fin. [Décision](DECISIONS.md#18-novembre-2026--menu-guidé--attente-mise-en-scène-et-arrivée-des-cartes).
+
 ## Recettes : résultats visibles, état vide actionnable — 18 novembre 2026
 
 Item 7 de la revue de parcours, validé par l'utilisateur. Dans Recettes, une recherche saisie masque surtitre, titre et boutons d'import/ajout et affiche « N recette(s) » (annonce `role="status"`) à côté de « Réinitialiser les filtres » ; vider la recherche rétablit tout, le retour d'univers reste visible. L'état vide gagne un bouton : « Réinitialiser les filtres » ou, filtre de saison actif, « Voir hors saison » (aucun bouton n'existait auparavant malgré la revue). Dans le choix d'une recette pour un repas, favoris d'abord sous « Favoris », puis « Autres recettes », ordre interne inchangé ; sans favori, pas d'intertitre. Serveur, API et schéma inchangés. Résultats de tests et limites dans [la décision](DECISIONS.md#18-novembre-2026--recettes--résultats-visibles-état-vide-actionnable).

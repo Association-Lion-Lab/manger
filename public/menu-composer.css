@@ -74,3 +74,37 @@
 
 .menu-portions-caption { font-size: .8125rem; color: var(--muted); }
 #menu-dialog .category-options label > span { font-size: .8125rem; }
+
+.menu-waiting { display: grid; justify-items: center; gap: 14px; padding: 48px 0 24px; text-align: center; }
+.menu-mascot { width: 96px; height: 96px; border-radius: 24px; }
+.menu-waiting p { margin: 0; font-weight: 650; }
+.menu-dots { display: flex; gap: 6px; }
+.menu-dots span { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.menu-criteria { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 4px 0 0; padding: 0; list-style: none; }
+.menu-criteria li { padding: 6px 12px; border-radius: 999px; color: var(--text); background: var(--accent-soft); font-size: .8125rem; }
+.menu-wait .menu-footer > .primary { opacity: .45; }
+/* Tout le mouvement du compositeur reste ici (vérifié par menu-composer-ui.test.js). */
+@media (prefers-reduced-motion: no-preference) {
+  @media (max-width: 480px) { #menu-dialog[open] { animation: menu-slide-in .22s ease-out; } }
+  .menu-mascot { transform-origin: 50% 100%; animation: menu-hop .9s ease-in-out infinite; }
+  .menu-dots span { animation: menu-dot .9s ease-in-out infinite; }
+  .menu-dots span:nth-child(2) { animation-delay: .15s; }
+  .menu-dots span:nth-child(3) { animation-delay: .3s; }
+  .menu-criteria li { animation: menu-fade-in .2s ease-out backwards; }
+  .menu-criteria li:nth-child(2) { animation-delay: .12s; }
+  .menu-criteria li:nth-child(3) { animation-delay: .24s; }
+  .menu-arrive .menu-recipe { animation: menu-card-in .2s ease-out backwards; }
+  .menu-arrive .menu-recipe:nth-of-type(2) { animation-delay: .12s; }
+  .menu-arrive .menu-recipe:nth-of-type(3) { animation-delay: .24s; }
+  .menu-arrive .menu-recipe:nth-of-type(4) { animation-delay: .36s; }
+  .menu-arrive .menu-recipe:nth-of-type(5) { animation-delay: .48s; }
+  /* shortcut: délai calé sur cinq cartes (maximum de la première proposition) ; avec moins de cartes le bouton s'allume un peu après la cascade. */
+  .menu-arrive .menu-footer > .primary { animation: menu-ready .2s ease-out .48s backwards; }
+  .menu-recipe-new { animation: menu-card-in .18s ease-out; }
+  @keyframes menu-slide-in { from { transform: translateX(100%); } to { transform: translateX(0); } }
+  @keyframes menu-hop { 0%, 100% { transform: translateY(0) scale(1, 1); } 15% { transform: translateY(0) scale(1.06, .94); } 45% { transform: translateY(-12px) scale(.97, 1.03); } 75% { transform: translateY(0) scale(1.04, .96); } }
+  @keyframes menu-dot { 0%, 60%, 100% { transform: translateY(0); opacity: .5; } 30% { transform: translateY(-6px); opacity: 1; } }
+  @keyframes menu-fade-in { from { opacity: 0; transform: translateY(6px); } }
+  @keyframes menu-card-in { from { opacity: 0; transform: translateX(-24px); } }
+  @keyframes menu-ready { from { opacity: .45; } }
+}
