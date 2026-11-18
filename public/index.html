@@ -375,7 +375,9 @@
     .recipe-season-tools label { display: flex; align-items: center; gap: 8px; color: var(--muted); min-width: 0; }
     .recipe-season-tools select { min-height: 44px; min-width: 0; max-width: 100%; color: var(--text); background: var(--surface); border: 1px solid var(--line); border-radius: 24px; padding: 8px 12px; font-size: 1rem; }
     #recipe-season-month-field { flex-basis: 100%; margin: 0; color: var(--muted); font-size: .875rem; }
-    #reset-recipe-filters { margin: -8px 0 16px; padding: 8px 0; font-size: .875rem; }
+    #recipe-filter-bar { margin: -8px 0 16px; }
+    #recipe-filter-bar:has(#reset-recipe-filters[hidden]) { margin: 0; }
+    #reset-recipe-filters { padding: 8px 0; font-size: .875rem; }
     #recipe-season-note { margin: 0 0 24px; }
     #recipe-season-note summary { color: var(--muted); font-size: 13px; min-height: 44px; cursor: pointer; }
     #recipe-search { width: 100%; min-width: 0; min-height: 52px; padding: 0; border: 0; outline: 0; color: var(--text); background: transparent; font-size: 16px; }
@@ -511,10 +513,10 @@
       </section>
 
       <section id="recipes-panel" class="panel" hidden>
-        <div class="recipe-page-heading">
+        <div id="recipe-page-heading" class="recipe-page-heading">
           <button id="recipes-back" class="icon-button" type="button" aria-label="Retour à toutes les recettes" hidden><span data-ui-icon="back" aria-hidden="true">←</span></button>
           <div class="recipe-page-heading-copy"><span id="recipes-kicker" class="section-kicker">À découvrir</span><h1 id="recipes-title">Explorer les recettes</h1><span id="recipe-count" class="muted"></span></div>
-          <div class="recipe-page-actions"><button id="import-recipes" class="icon-button" type="button" aria-label="Importer une recette"><span data-ui-icon="download" aria-hidden="true">⇩</span></button><button id="new-recipe" class="icon-button" type="button" aria-label="Ajouter une recette"><span data-ui-icon="plus" aria-hidden="true">＋</span></button></div>
+          <div id="recipe-page-actions" class="recipe-page-actions"><button id="import-recipes" class="icon-button" type="button" aria-label="Importer une recette"><span data-ui-icon="download" aria-hidden="true">⇩</span></button><button id="new-recipe" class="icon-button" type="button" aria-label="Ajouter une recette"><span data-ui-icon="plus" aria-hidden="true">＋</span></button></div>
         </div>
         <label class="recipe-search-field" for="recipe-search"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg><input id="recipe-search" type="search" placeholder="Un plat, un ingrédient…" autocomplete="off"><span class="sr-only">Chercher une recette</span></label>
         <div class="recipe-season-tools" role="group" aria-label="Filtrer les recettes">
@@ -522,7 +524,7 @@
           <button id="recipe-season-filter" type="button" aria-pressed="false" aria-controls="recipes recipe-season-month-field recipe-season-note"><span data-ui-icon="leaf" aria-hidden="true">🌿</span> De saison <span class="filter-check" aria-hidden="true">✓</span></button>
           <p id="recipe-season-month-field" role="status" aria-atomic="true" hidden></p>
         </div>
-        <button id="reset-recipe-filters" class="text-action" type="button" hidden>Réinitialiser les filtres</button>
+        <div id="recipe-filter-bar" class="section-heading"><button id="reset-recipe-filters" class="text-action" type="button" hidden>Réinitialiser les filtres</button><span id="recipe-result-count" class="muted" role="status" aria-atomic="true"></span></div>
         <details id="recipe-season-note" hidden><summary>Fruits et légumes du mois · repères indicatifs</summary><p class="muted"><span id="recipe-season-coverage"></span> Au moins un fruit ou légume saisonnier du mois est nécessaire ; ceux disponibles toute l'année ne suffisent pas. Un fruit ou légume reconnu hors saison exclut la recette. Couverture partielle : l'origine et le mode de culture ne sont pas connus. Les ingrédients inconnus et produits transformés ne sont pas évalués. <a id="recipe-season-source" href="https://www.mangerbouger.fr/manger-mieux/bien-manger-sans-se-ruiner/calendrier-de-saison" target="_blank" rel="noopener noreferrer">Manger Bouger</a></p></details>
         <p id="recipe-feedback" class="error" role="alert" hidden></p>
         <section id="fdl-recipes" aria-label="Recettes Faim de Lion" hidden></section>
@@ -1202,6 +1204,7 @@
       document.getElementById('recipe-count').textContent = query || category || seasonal || Number.isFinite(maxMinutes) ? `${filtered.length} recette${filtered.length > 1 ? 's' : ''}` : `${state.recipes.length} recettes à explorer`;
       search.placeholder = category ? `Chercher dans ${title.toLocaleLowerCase('fr')}…` : 'Un plat, un ingrédient…';
       document.getElementById('reset-recipe-filters').hidden = !(query || seasonal || Number.isFinite(maxMinutes));
+      showRecipeSearchMode(Boolean(query), category, filtered.length);
       document.getElementById('recipe-discovery').hidden = Boolean(query || category || seasonal || Number.isFinite(maxMinutes));
       document.getElementById('recipe-results-heading').hidden = Boolean(category);
       document.getElementById('recipe-results-title').textContent = seasonal ? `En ${monthName}` : query || Number.isFinite(maxMinutes) ? 'Résultats de recherche' : 'Toutes les recettes';
@@ -1220,8 +1223,20 @@
         document.getElementById('browse-categories').innerHTML = categories.filter(([key]) => featuredCategories.includes(key)).map(categoryTile).join('');
         document.getElementById('browse-more-categories').innerHTML = categories.filter(([key]) => !featuredCategories.includes(key)).map(categoryTile).join('');
       }
-      document.getElementById('recipes').innerHTML = filtered.map(recipe => `<article class="recipe"><button class="recipe-main" type="button" data-edit-recipe="${recipe.id}" aria-label="Voir la recette ${escapeHtml(recipe.title)}">${recipeCover(recipe)}<span class="recipe-copy"><strong>${escapeHtml(recipe.title)}</strong><span class="recipe-badges"><small>${uiIcon('clock')} ${recipe.minutes} min</small><small>${escapeHtml(dietLabels[recipe.diet])}</small></span></span></button><div class="recipe-card-actions">${recipeFavoriteButton(recipe)}<button class="recipe-add" type="button" data-plan-recipe="${recipe.id}">${uiIcon('plus')} Ajouter</button></div></article>`).join('') || `<div class="empty-state">${Number.isFinite(maxMinutes) ? 'Aucune recette pour cette durée. Choisis un temps plus long.' : 'Aucune recette ici. Essaie un autre mot ou ajoute un plat.'}</div>`;
-      if (seasonal && !filtered.length) document.getElementById('recipes').innerHTML = '<div class="empty-state">Aucune recette de saison avec ces filtres ce mois-ci. Désactive « De saison » pour retrouver les autres plats.</div>';
+      document.getElementById('recipes').innerHTML = filtered.map(recipe => `<article class="recipe"><button class="recipe-main" type="button" data-edit-recipe="${recipe.id}" aria-label="Voir la recette ${escapeHtml(recipe.title)}">${recipeCover(recipe)}<span class="recipe-copy"><strong>${escapeHtml(recipe.title)}</strong><span class="recipe-badges"><small>${uiIcon('clock')} ${recipe.minutes} min</small><small>${escapeHtml(dietLabels[recipe.diet])}</small></span></span></button><div class="recipe-card-actions">${recipeFavoriteButton(recipe)}<button class="recipe-add" type="button" data-plan-recipe="${recipe.id}">${uiIcon('plus')} Ajouter</button></div></article>`).join('') || `<div class="empty-state">${Number.isFinite(maxMinutes) ? 'Aucune recette pour cette durée. Choisis un temps plus long.' : query ? 'Aucune recette ne correspond à cette recherche. Essaie un autre mot.' : 'Aucune recette ici. Essaie un autre mot ou ajoute un plat.'}${query || Number.isFinite(maxMinutes) ? recipeEmptyAction('reset-recipe-filters', 'Réinitialiser les filtres') : ''}</div>`;
+      if (seasonal && !filtered.length) document.getElementById('recipes').innerHTML = `<div class="empty-state">Aucune recette de saison avec ces filtres ce mois-ci. Désactive « De saison » pour retrouver les autres plats.${recipeEmptyAction('recipe-season-filter', 'Voir hors saison')}</div>`;
+    }
+
+    // Pendant une recherche, l'en-tête cède la place aux résultats ; le retour d'univers reste visible.
+    function showRecipeSearchMode(searching, category, count) {
+      document.getElementById('recipe-page-heading').hidden = searching && !category;
+      for (const id of ['recipes-kicker', 'recipes-title', 'recipe-count', 'recipe-page-actions']) document.getElementById(id).hidden = searching;
+      document.getElementById('recipe-result-count').textContent = searching ? `${count} recette${count > 1 ? 's' : ''}` : '';
+    }
+
+    // Le bouton de l'état vide déclenche le contrôle existant : une seule logique de filtre.
+    function recipeEmptyAction(controlId, label) {
+      return `<br><button class="text-action" type="button" data-recipe-empty-action="${controlId}">${label}</button>`;
     }
 
     function refreshSeasonMonth() {
@@ -1694,7 +1709,12 @@
       const category = document.getElementById('picker-category').value;
       const container = document.getElementById('picker-recipes');
       if (!document.querySelector('#picker-category option[value="__favorites"]')) document.getElementById('picker-category').insertAdjacentHTML('beforeend', '<option value="__favorites">★ Mes favoris</option>');
-      container.innerHTML = MangerFoodNames.searchRecipes(state.recipes.filter(recipe => !recipe.fdl?.removed).filter(recipe => category === '__favorites' ? recipe.favorite : !category || recipe.tags.includes(category)), query).map(recipe => choice(recipe.favorite ? '★' : '♨', recipe.title, `${recipe.minutes} min · ${dietLabels[recipe.diet]}${recipe.favorite ? ' · Favori' : ''}`, { [container.dataset.mode]: recipe.id }, recipe)).join('') || '<p class="empty-state">Aucun plat trouvé. Changez le mot recherché ou l’univers.</p>';
+      const found = MangerFoodNames.searchRecipes(state.recipes.filter(recipe => !recipe.fdl?.removed).filter(recipe => category === '__favorites' ? recipe.favorite : !category || recipe.tags.includes(category)), query);
+      const item = recipe => choice(recipe.favorite ? '★' : '♨', recipe.title, `${recipe.minutes} min · ${dietLabels[recipe.diet]}${recipe.favorite ? ' · Favori' : ''}`, { [container.dataset.mode]: recipe.id }, recipe);
+      const favorites = found.filter(recipe => recipe.favorite), others = found.filter(recipe => !recipe.favorite);
+      const title = text => `<h3 class="group-title">${text}</h3>`;
+      // Favoris d'abord ; sans favori, liste inchangée et sans intertitre.
+      container.innerHTML = (favorites.length ? title('Favoris') + favorites.map(item).join('') + (others.length ? title('Autres recettes') : '') : '') + others.map(item).join('') || '<p class="empty-state">Aucun plat trouvé. Changez le mot recherché ou l’univers.</p>';
     }
 
     function openEventSetup(occasion, mode = 'standard', recipe = null) {
@@ -2691,6 +2711,8 @@
       } finally { button.disabled = false; button.setAttribute('aria-busy', 'false'); button.textContent = label; }
     });
     document.getElementById('recipes-panel').addEventListener('click', async event => {
+      const emptyAction = event.target.closest('[data-recipe-empty-action]');
+      if (emptyAction) { const control = document.getElementById(emptyAction.dataset.recipeEmptyAction); control.focus(); control.click(); return; }
       const category = event.target.closest('[data-browse-category]');
       if (category) {
         activeRecipeCategory = category.dataset.browseCategory;

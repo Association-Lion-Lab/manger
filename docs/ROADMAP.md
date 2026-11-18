@@ -1,5 +1,9 @@
 # Suite du développement
 
+## Recettes : résultats visibles, état vide actionnable — 18 novembre 2026
+
+Item 7 de la revue de parcours, validé par l'utilisateur. Dans Recettes, une recherche saisie masque surtitre, titre et boutons d'import/ajout et affiche « N recette(s) » (annonce `role="status"`) à côté de « Réinitialiser les filtres » ; vider la recherche rétablit tout, le retour d'univers reste visible. L'état vide gagne un bouton : « Réinitialiser les filtres » ou, filtre de saison actif, « Voir hors saison » (aucun bouton n'existait auparavant malgré la revue). Dans le choix d'une recette pour un repas, favoris d'abord sous « Favoris », puis « Autres recettes », ordre interne inchangé ; sans favori, pas d'intertitre. Serveur, API et schéma inchangés. Résultats de tests et limites dans [la décision](DECISIONS.md#18-novembre-2026--recettes--résultats-visibles-état-vide-actionnable).
+
 ## Semaine vide : une action de départ évidente — 18 novembre 2026
 
 Item 5 de la revue de parcours, validé par l'utilisateur. Une semaine sans repas qui garde des jours à venir affiche une carte « Semaine vide » avant les jours : « Compose N repas et leur liste de courses en deux minutes. » (N = ce que le menu guidé proposera, cinq au plus), bouton primaire « Créer mon menu » relié au compositeur existant, lien « ou ajoute un repas à la main » vers la fenêtre « Ajouter ». Le « Créer mon menu » du bas est masqué pendant ce temps ; dès qu'un repas existe, la carte disparaît et la disposition précédente revient. Semaine entièrement passée : pas de carte. Serveur, API et schéma inchangés. 483 tests généraux, 482 réussis, 1 ignoré ; navigateur intégré en 375 × 812 clair et sombre sur une base jetable. PostgreSQL non relancé ; iPhone, Android et lecteur d'écran non vérifiés. Non faits : icônes distinctes, masquage du sous-titre. [Décision](DECISIONS.md#18-novembre-2026--semaine-vide--une-action-de-départ-évidente).

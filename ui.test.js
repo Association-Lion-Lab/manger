@@ -729,3 +729,80 @@ test('libellés : saison sans calendrier manuel, bouton de planification fidèle
   assert.match(html, /Désactive « De saison » pour retrouver les autres plats/);
   assert.match(html, /<button class="primary" type="submit">\$\{state\.members\.length \? 'Continuer' : 'Enregistrer le repas'\}<\/button>/);
 });
+
+function recipeListContext(recipes) {
+  const html = readFileSync(join(__dirname, 'public', 'index.html'), 'utf8');
+  const source = html.match(/^    function renderRecipes\(\) \{[\s\S]*?(?=\n    function refreshSeasonMonth)/m)[0];
+  const controls = {};
+  const element = id => controls[id] ||= { value: '', getAttribute: () => 'false', focus() {}, click() {} };
+  const context = {
+    activeRecipeCategory: '', renderedSeasonMonth: null, Date, Intl, document: { getElementById: element },
+    MangerSeasons: require('./public/seasons'), MangerFoodNames: require('./public/food-names'),
+    state: { recipes }, recipeCategories: {}, dietLabels: { vegetarian: 'Végétarien' },
+    escapeHtml: value => value, recipeCover: () => '', recipeFavoriteButton: () => '', uiIcon: require('./public/ui-icons').icon,
+  };
+  new Script(source).runInNewContext(context);
+  return { context, element, html };
+}
+
+test('une recherche de recettes masque l’en-tête et annonce le nombre de résultats avec le bon accord', () => {
+  const recipe = id => ({ id, title: `Poulet ${id}`, ingredients: [], tags: [], minutes: 20, diet: 'vegetarian' });
+  const { context, element, html } = recipeListContext([]);
+  assert.match(html, /id="recipe-result-count" class="muted" role="status"/);
+  element('recipe-search').value = 'poulet';
+  for (const [count, label] of [[1, '1 recette'], [14, '14 recettes']]) {
+    context.state.recipes = Array.from({ length: count }, (_, id) => recipe(id));
+    context.renderRecipes();
+    assert.equal(element('recipe-result-count').textContent, label);
+  }
+  for (const id of ['recipe-page-heading', 'recipes-kicker', 'recipes-title', 'recipe-count', 'recipe-page-actions']) assert.equal(element(id).hidden, true, id);
+  element('recipe-search').value = '';
+  context.renderRecipes();
+  assert.equal(element('recipe-result-count').textContent, '');
+  for (const id of ['recipe-page-heading', 'recipes-kicker', 'recipes-title', 'recipe-count', 'recipe-page-actions']) assert.equal(element(id).hidden, false, id);
+});
+
+test('une recherche dans un univers garde le bouton retour visible', () => {
+  const { context, element } = recipeListContext([]);
+  context.activeRecipeCategory = '__favorites';
+  element('recipe-search').value = 'riz';
+  context.renderRecipes();
+  assert.equal(element('recipe-page-heading').hidden, false);
+  assert.equal(element('recipes-title').hidden, true);
+});
+
+test('une recherche sans résultat propose une action pour réinitialiser ou sortir du filtre de saison', () => {
+  const { context, element } = recipeListContext([{ id: 1, title: 'Gratin', ingredients: [], tags: [], minutes: 20, diet: 'vegetarian' }]);
+  element('recipe-search').value = 'zzzzzz';
+  context.renderRecipes();
+  assert.match(element('recipes').innerHTML, /data-recipe-empty-action="reset-recipe-filters"[^>]*>Réinitialiser les filtres</);
+  assert.equal(element('recipe-result-count').textContent, '0 recette');
+  assert.match(element('recipes').innerHTML, /Aucune recette ne correspond à cette recherche/);
+  assert.doesNotMatch(element('recipes').innerHTML, /ajoute un plat/);
+  element('recipe-season-filter').getAttribute = () => 'true';
+  context.renderRecipes();
+  assert.match(element('recipes').innerHTML, /data-recipe-empty-action="recipe-season-filter"[^>]*>Voir hors saison</);
+});
+
+test('le bouton de l’état vide des recettes réutilise le contrôle existant', () => {
+  const html = readFileSync(join(__dirname, 'public', 'index.html'), 'utf8');
+  assert.match(html, /const emptyAction = event.target.closest\('\[data-recipe-empty-action\]'\);\s*if \(emptyAction\) \{ const control = document.getElementById\(emptyAction.dataset.recipeEmptyAction\); control.focus\(\); control.click\(\); return; \}/);
+});
+
+test('le sélecteur de repas présente les favoris d’abord sous un intertitre, sans changer l’ordre de chaque groupe', () => {
+  const html = readFileSync(join(__dirname, 'public', 'index.html'), 'utf8');
+  const source = html.match(/^    function renderPickerRecipes\(\) \{[\s\S]*?\n    \}/m)[0];
+  const controls = { 'picker-search': { value: '' }, 'picker-category': { value: '' }, 'picker-recipes': { dataset: { mode: 'recipe' } } };
+  const recipe = (id, favorite) => ({ id, title: `R${id}`, favorite, ingredients: [], tags: [], minutes: 10, diet: 'vegetarian' });
+  const context = {
+    document: { getElementById: id => controls[id], querySelector: () => true }, MangerFoodNames: require('./public/food-names'),
+    state: { recipes: [recipe(1, false), recipe(2, true), recipe(3, false), recipe(4, true)] }, dietLabels: { vegetarian: 'Végétarien' },
+    choice: (icon, title) => `[${title}]`,
+  };
+  new Script(source).runInNewContext(context);
+  context.renderPickerRecipes();
+  assert.equal(controls['picker-recipes'].innerHTML, '<h3 class="group-title">Favoris</h3>[R2][R4]<h3 class="group-title">Autres recettes</h3>[R1][R3]');
+  context.state.recipes = [recipe(1, false), recipe(3, false)];
+  context.renderPickerRecipes();
+  assert.equal(controls['picker-recipes'].innerHTML, '[R1][R3]');
+});
