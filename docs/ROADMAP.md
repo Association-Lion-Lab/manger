@@ -1,5 +1,9 @@
 # Suite du développement
 
+## Semaine vide : une action de départ évidente — 18 novembre 2026
+
+Item 5 de la revue de parcours, validé par l'utilisateur. Une semaine sans repas qui garde des jours à venir affiche une carte « Semaine vide » avant les jours : « Compose N repas et leur liste de courses en deux minutes. » (N = ce que le menu guidé proposera, cinq au plus), bouton primaire « Créer mon menu » relié au compositeur existant, lien « ou ajoute un repas à la main » vers la fenêtre « Ajouter ». Le « Créer mon menu » du bas est masqué pendant ce temps ; dès qu'un repas existe, la carte disparaît et la disposition précédente revient. Semaine entièrement passée : pas de carte. Serveur, API et schéma inchangés. 483 tests généraux, 482 réussis, 1 ignoré ; navigateur intégré en 375 × 812 clair et sombre sur une base jetable. PostgreSQL non relancé ; iPhone, Android et lecteur d'écran non vérifiés. Non faits : icônes distinctes, masquage du sous-titre. [Décision](DECISIONS.md#18-novembre-2026--semaine-vide--une-action-de-départ-évidente).
+
 ## Courses : unité choisie dans une liste — 16 novembre 2026
 
 Retour d'essai sur téléphone : taper l'unité expose aux fautes de frappe, qui empêchent la fusion et créent des doublons. L'ajout rapide et la modification au crayon proposent désormais un sélecteur : pièce (par défaut), g, kg, l, cl, ml, paquet, boîte, bouteille, pot, sachet, tranche, gousse. Une ligne existante dont l'unité est hors liste la conserve au crayon. Serveur, API, schéma et format hors connexion inchangés ; garde-manger, protéines et recettes non touchés. 482 tests généraux, 481 réussis, 1 ignoré ; PostgreSQL non relancé (aucun code serveur modifié). Aucun essai navigateur, téléphone ou déploiement. Différés : option « Autre… », regroupement des anciens doublons, accord des unités libres. [Décision](DECISIONS.md#16-novembre-2026--courses--lunité-se-choisit-dans-une-liste).

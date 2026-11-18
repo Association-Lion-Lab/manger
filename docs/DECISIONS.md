@@ -1,5 +1,21 @@
 # Choix techniques, limites et blocages
 
+## 18 novembre 2026 — Semaine vide : une action de départ évidente
+
+**Contexte.** Item 5 de la revue de parcours, validé par l'utilisateur. Sur une semaine vide, on voyait deux cases « Rien de prévu » puis, sous la ligne de flottaison, deux boutons à la même étincelle : « Proposer le prochain repas » (primaire) et « Créer mon menu » (secondaire). Rien n'indiquait par où commencer.
+
+**Choix.** Une carte `#week-empty` (région titrée « Semaine vide », dans `#week-content`, entre la période et les jours) affiche « Compose N repas et leur liste de courses en deux minutes. », un vrai bouton primaire « Créer mon menu » et un bouton texte « ou ajoute un repas à la main ». Le bouton primaire est relié au même gestionnaire `openWeekComposer` que `#compose-week` ; le lien déclenche `#add-meal`, donc la même fenêtre d'ajout pour le jour sélectionné. `renderEmptyWeek`, appelée par `render()`, calcule N avec `MangerMenu.availableSlots` (la fonction du compositeur) puis `min(5, …)`, comme le compositeur à l'ouverture : le nombre annoncé est celui qui sera proposé, sauf si un brouillon non enregistré de la même semaine existe déjà (le compositeur le rouvre tel quel). Une semaine vide garde au moins midi et soir du jour courant, donc N vaut 2 au minimum et « leur » reste juste. Tant que la carte est visible, `#compose-week` est masqué pour éviter deux « Créer mon menu » ; dès qu'un repas existe, la carte disparaît et la disposition précédente revient. Styles : une règle `.week-empty` reprenant bordure, rayon 22 px et `--surface` des cartes existantes, classes `.primary` et `.text-action` existantes (50 px et 44 px de haut).
+
+**Semaine entièrement passée.** Aucun créneau libre à venir, donc N = 0 et la carte reste masquée : on ne pousse pas à composer dans le passé. Le bouton « Créer mon menu » du bas reste disponible et le compositeur y propose déjà « Composer la semaine en cours » (comportement du 16 novembre). C'est le plus simple et cohérent : une seule règle, partagée avec le compositeur, sans texte spécifique à maintenir.
+
+**Alternatives écartées.** Texte fixe « 5 repas » : faux en fin de semaine (un dimanche, le compositeur n'en propose que 2). Carte orientée vers la semaine suivante pour une semaine passée : second chemin vers le compositeur, refusé par la demande. Élément `<section>` : il cassait la découpe `<section id="week-panel">…</section>` d'un test existant ; `<div role="region" aria-labelledby>` donne la même sémantique. Extras de l'item non faits : icônes distinctes étincelle/calendrier et masquage du sous-titre une fois la semaine entamée.
+
+**Conséquences.** Aucun changement serveur, API, schéma ni dépendance. Le calcul utilise la date de l'appareil, comme le compositeur.
+
+**Validation.** `ui.test.js` : carte et titre présents, placée avant les jours, bouton relié à `openWeekComposer`, lien relié à `#add-meal`, appel dans `render()`, puis avec une date figée au dimanche 22 novembre 2026 : semaine suivante vide → 5 et bouton du bas masqué, semaine en cours vide → 2, un repas → carte masquée, semaine passée → carte masquée. Suite générale sous PowerShell : **483 tests, 482 réussis, 1 ignoré (`tls.test.js`), aucun échec**. Navigateur intégré, 375 × 812 clair et sombre, base SQLite jetable hors dépôt : carte lisible, bouton 50 px, lien 44 px, pas de débordement horizontal, compositeur ouvert avec 5 recettes, fenêtre « Ajouter un repas » ouverte par le lien, carte absente sur la semaine précédente. PostgreSQL non relancé (aucun code serveur modifié).
+
+**Reste à vérifier.** Sur téléphone (Safari iPhone, Android) : rendu de la carte, lecteur d'écran (annonce de la région), texte agrandi. Pas de déploiement ; nouvelle image applicative sans migration.
+
 ## 16 novembre 2026 — Courses : l'unité se choisit dans une liste
 
 **Contexte.** Retour d'essai sur téléphone après la fusion des ajouts manuels : « taper l'unité c'est risque d'erreur, il faudrait plutôt un sélecteur ». Une faute de frappe ou une variante (« Pièce », « tranches » au lieu de « tranche », « gr ») donne une autre unité : pas de fusion, donc un doublon.
