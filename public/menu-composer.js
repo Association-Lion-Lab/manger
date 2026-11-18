@@ -46,6 +46,9 @@
   function create(config) {
     const dialog = config.dialog, e = config.escape, icon = config.icon;
     let start, criteria, rows = [], phase = 'menu', pickerIndex = null, busy = false, saved = false, uncertain = false, pendingPlan = null, version = 0, error = '';
+    let waiting = false, arriving = false, fresh = null;
+    const calm = config.reducedMotion || (() => Boolean(globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches));
+    const delay = config.delay || (ms => new Promise(resolve => setTimeout(resolve, ms)));
     const data = () => config.state();
     const today = () => config.today();
     const free = () => availableSlots(start, data().meals, today());
@@ -54,10 +57,17 @@
     const button = (action, label, style = 'secondary', extra = '') => `<button type="button" class="${style}" data-menu-action="${action}" ${extra}>${label}</button>`;
     const dateLabel = day => new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'short', timeZone: 'UTC' }).format(new Date(dayKey(start, day) + 'T12:00:00Z'));
 
+    function criteriaLabels() {
+      return [`${criteria.memberIds.length || criteria.people} personnes`, criteria.maxMinutes === 1440 ? 'Toutes les durées' : `${criteria.maxMinutes} min max`];
+    }
+    // Attente de la première proposition : mascotte (/icon.svg), une seule annonce, critères en pastilles.
+    function waitingScreen() {
+      return `<div class="menu-waiting"><img class="menu-mascot" src="/icon.svg" width="96" height="96" alt=""><span class="menu-dots" aria-hidden="true"><span></span><span></span><span></span></span><p role="status">On compose ton menu…</p><ul class="menu-criteria">${criteriaLabels().map(label => `<li>${e(label)}</li>`).join('')}</ul></div>`;
+    }
     function controls() {
       const group = data().members.length ? data().members.map(member => `<label><input type="checkbox" data-menu-member="${member.id}"${criteria.memberIds.includes(member.id) ? ' checked' : ''}><span>${e(member.name)}</span></label>`).join('') : `<label class="field"><span>Personnes</span><input data-menu-people type="number" min="1" max="100" value="${criteria.people}"></label>`;
-      const duration = criteria.maxMinutes === 1440 ? 'Toutes les durées' : `${criteria.maxMinutes} min max`;
-      return `<details class="menu-preferences"><summary>${icon('people')} ${criteria.memberIds.length || criteria.people} personnes <span>· ${duration}</span></summary><div class="menu-preferences-body"><div class="category-options">${group}</div><label class="field"><span>Temps par recette</span><select data-menu-minutes>${[15, 30, 45, 60, 1440].map(n => `<option value="${n}"${n === criteria.maxMinutes ? ' selected' : ''}>${n === 1440 ? 'Toutes les durées' : n + ' min'}</option>`).join('')}</select></label>${button('criteria', 'Actualiser les propositions')}</div></details>`;
+      const [people, duration] = criteriaLabels();
+      return `<details class="menu-preferences"><summary>${icon('people')} ${people} <span>· ${duration}</span></summary><div class="menu-preferences-body"><div class="category-options">${group}</div><label class="field"><span>Temps par recette</span><select data-menu-minutes>${[15, 30, 45, 60, 1440].map(n => `<option value="${n}"${n === criteria.maxMinutes ? ' selected' : ''}>${n === 1440 ? 'Toutes les durées' : n + ' min'}</option>`).join('')}</select></label>${button('criteria', 'Actualiser les propositions')}</div></details>`;
     }
     function portions(row, index) {
       const step = row.memberIds.length || 1, maximum = row.memberIds.length ? Math.min(100, 20 * step) : 100;
@@ -68,7 +78,7 @@
         const recipe = recipeFor(row);
         if (!recipe) return `<article class="menu-recipe"><p class="error">Une recette manque.</p>${button('remove', 'Retirer ce plat', 'secondary', `data-menu-index="${index}"`)}</article>`;
         const notice = config.notice(recipe, criteria);
-        return `<article class="menu-recipe"><div class="menu-recipe-top"><div class="menu-cover">${config.cover(recipe)}</div><div class="menu-recipe-copy"><h3>${e(recipe.title)}</h3><span class="menu-duration">${icon('clock')} ${recipe.minutes} min</span>${notice ? `<p class="muted menu-taste">${e(notice)}</p>` : ''}</div></div><div class="menu-row-actions">${button('replace', 'Remplacer', 'secondary', `data-menu-index="${index}"`)}${portions(row, index)}${button('remove', icon('trash'), 'icon-button', `data-menu-index="${index}" aria-label="Retirer ${e(recipe.title)}"`)}</div></article>`;
+        return `<article class="menu-recipe${index === fresh ? ' menu-recipe-new' : ''}"><div class="menu-recipe-top"><div class="menu-cover">${config.cover(recipe)}</div><div class="menu-recipe-copy"><h3>${e(recipe.title)}</h3><span class="menu-duration">${icon('clock')} ${recipe.minutes} min</span>${notice ? `<p class="muted menu-taste">${e(notice)}</p>` : ''}</div></div><div class="menu-row-actions">${button('replace', 'Remplacer', 'secondary', `data-menu-index="${index}"`)}${portions(row, index)}${button('remove', icon('trash'), 'icon-button', `data-menu-index="${index}" aria-label="Retirer ${e(recipe.title)}"`)}</div></article>`;
       }).join('');
     }
     function placements() {
@@ -83,14 +93,16 @@
       const picking = phase === 'picker', placing = phase === 'days';
       const ended = phase === 'menu' && !rows.length && !free().length && !saved && !uncertain;
       const title = picking ? pickerIndex === rows.length ? 'Ajouter une recette' : 'Remplacer ce plat' : placing ? 'Les jours de ton menu' : 'Mon menu';
-      const subtitle = saved ? 'Ton menu est enregistré.' : picking ? 'Un plat, un ingrédient…' : placing ? 'Plusieurs plats par jour, à ton rythme.' : 'Choisis les plats qui te font envie.';
+      const subtitle = saved ? 'Ton menu est enregistré.' : picking ? 'Un plat, un ingrédient…' : placing ? 'Plusieurs plats par jour, à ton rythme.' : waiting ? '' : 'Choisis les plats qui te font envie.';
       const body = picking ? '<label class="recipe-search-field"><span class="sr-only">Chercher une recette</span><input id="menu-search" type="search" placeholder="Un plat, un ingrédient…" autocomplete="off"></label><div id="menu-search-results" class="menu-search-results"></div>'
         : placing ? `<p class="muted menu-intro">Choisis midi ou soir. Pour des plats différents au même repas, ajuste les participants.</p>${placements()}`
+          : waiting ? waitingScreen()
           : ended ? '<p class="empty-state">Plus de repas libre à venir cette semaine. Les jours passés ne sont pas proposés.</p>'
           : `${controls()}<div class="menu-count"><strong>${rows.length} recette${rows.length === 1 ? '' : 's'}</strong><span class="muted">Ton menu, à ajuster</span></div>${menuRows()}${rows.length < free().length ? button('add', icon('plus') + ' Ajouter une recette', 'menu-add') : '<p class="muted">Le menu atteint le nombre de repas libres de cette semaine.</p>'}`;
       const action = saved ? 'refresh' : uncertain ? 'check' : placing ? 'save' : ended ? 'next' : 'days';
       const label = saved ? 'Afficher les courses' : uncertain ? 'Vérifier le planning' : placing ? 'Créer la liste de courses' : ended ? 'Composer la semaine suivante' : 'Choisir les jours';
-      dialog.innerHTML = `<div class="menu-shell"><header class="menu-header">${button('back', icon('back'), 'icon-button', 'aria-label="Retour"')}<div><h2 id="menu-title" tabindex="-1">${title}</h2><p id="menu-subtitle" class="muted" role="status">${subtitle}</p></div>${button('close', icon('close'), 'icon-button', 'aria-label="Fermer le menu"')}</header><fieldset class="menu-body" id="menu-body" aria-label="Contenu du menu"${saved || uncertain ? ' disabled' : ''}>${body}</fieldset><footer class="menu-footer"><p id="menu-error" class="error" role="alert"${error ? '' : ' hidden'}>${e(error)}</p>${picking ? '' : button(action, label, 'primary', rows.length || ended ? '' : 'disabled')}<span class="menu-save-status muted" role="status">${busy ? 'Préparation du menu…' : !saved && !uncertain && !picking ? 'Aucun changement avant la création des courses.' : ''}</span></footer></div>`;
+      dialog.innerHTML = `<div class="menu-shell${arriving ? ' menu-arrive' : ''}${waiting ? ' menu-wait' : ''}"><header class="menu-header">${button('back', icon('back'), 'icon-button', 'aria-label="Retour"')}<div><h2 id="menu-title" tabindex="-1">${title}</h2><p id="menu-subtitle" class="muted" role="status">${subtitle}</p></div>${button('close', icon('close'), 'icon-button', 'aria-label="Fermer le menu"')}</header><fieldset class="menu-body" id="menu-body" aria-label="Contenu du menu"${saved || uncertain ? ' disabled' : ''}>${body}</fieldset><footer class="menu-footer"><p id="menu-error" class="error" role="alert"${error ? '' : ' hidden'}>${e(error)}</p>${picking ? '' : button(action, label, 'primary', rows.length || ended ? '' : 'disabled')}<span class="menu-save-status muted" role="status">${waiting ? '' : busy ? 'Préparation du menu…' : !saved && !uncertain && !picking ? 'Aucun changement avant la création des courses.' : ''}</span></footer></div>`;
+      arriving = false; fresh = null;
       lock(busy);
       if (picking) { search(''); dialog.querySelector('#menu-search').focus(); }
       else if (focusHeading) dialog.querySelector('#menu-title').focus({ preventScroll: true });
@@ -108,7 +120,8 @@
       const list = config.search(candidates(), query);
       dialog.querySelector('#menu-search-results').innerHTML = `<p class="muted" role="status">${list.length} recette${list.length === 1 ? '' : 's'}</p>` + list.slice(0, 80).map(recipe => `<button type="button" class="menu-search-recipe" data-menu-action="pick" data-menu-recipe="${recipe.id}"><span class="menu-cover">${config.cover(recipe)}</span><span><strong>${e(recipe.title)}</strong><small class="muted">${recipe.minutes} min</small></span>${icon('plus')}</button>`).join('') + (!list.length ? '<p class="empty-state">Aucun résultat avec ces critères. Tu peux changer le temps disponible dans ton menu.</p>' : list.length > 80 ? '<p class="muted">Précise ta recherche pour voir les autres recettes.</p>' : '');
     }
-    async function propose(count, override = null, nextCriteria = criteria) {
+    // first : proposition initiale d'une ouverture, montrée avec l'écran d'attente ; 900 ms minimum et cascade seulement si le mouvement est permis.
+    async function propose(count, override = null, nextCriteria = criteria, first = false) {
       if (busy) return;
       const slots = free().slice(0, count), request = ++version, previousPhase = phase;
       if (!slots.length) { showError('Cette semaine est complète. Choisis une autre semaine dans le calendrier.'); return; }
@@ -116,10 +129,14 @@
       if (!Number.isInteger(nextCriteria.people) || nextCriteria.people < 1 || nextCriteria.people > 100) { showError('Choisis un nombre de personnes valide.'); return; }
       const reset = nextCriteria !== criteria;
       const payload = { start, ...nextCriteria, slots: slots.map((item, index) => ({ ...item, ...(!reset && rows[index] && (override || rows[index].pinned) ? { recipeId: rows[index].recipeId } : {}), ...(override?.index === index ? { recipeId: override.recipeId } : {}) })) };
-      busy = true; showError(''); lock(true);
-      dialog.querySelector('.menu-save-status').textContent = 'Composition du menu…';
+      const staged = first && !calm();
+      busy = true; showError('');
+      if (first) { waiting = true; render(); }
+      else { lock(true); dialog.querySelector('.menu-save-status').textContent = 'Composition du menu…'; }
+      const pause = staged ? delay(900) : null;
       try {
         const choices = await config.api('/api/week/preview', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload), signal: AbortSignal.timeout(10000) });
+        await pause;
         if (request !== version || !dialog.open) return;
         const allowed = config.candidates(nextCriteria);
         if (!Array.isArray(choices) || choices.length !== slots.length) throw new Error('Proposition incomplète. Réessaie.');
@@ -129,13 +146,13 @@
           const old = !reset && rows[index];
           return { ...(old || { ...slot, people: nextCriteria.people, memberIds: [...nextCriteria.memberIds] }), recipeId: choice.recipeId, pinned: Boolean(old?.pinned || override?.index === index) };
         });
-        rows = next; criteria = nextCriteria; phase = 'menu';
+        rows = next; criteria = nextCriteria; phase = 'menu'; arriving = staged; fresh = override ? override.index : null;
       } catch (failure) {
         if (request !== version || !dialog.open) return;
         phase = previousPhase;
         error = failure.name === 'TimeoutError' ? 'La proposition prend trop de temps. Ton menu est conservé, aucun repas enregistré.' : failure.name === 'TypeError' ? 'Connexion indisponible. Ton menu est conservé, aucun repas enregistré.' : failure.message;
       } finally {
-        busy = false;
+        busy = false; waiting = false;
         if (request === version && dialog.open) render();
       }
     }
@@ -248,7 +265,7 @@
         criteria = { memberIds: data().members.map(member => member.id), people: data().members.length || 2, maxMinutes: 30 };
       }
       render(); if (!dialog.open) dialog.showModal();
-      if (!rows.length && free().length) await propose(Math.min(5, free().length));
+      if (!rows.length && free().length) await propose(Math.min(5, free().length), null, criteria, true);
     }
     return { open };
   }
