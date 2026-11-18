@@ -691,6 +691,38 @@ test('courses : les lignes d’un même aliment sont voisines, sans addition ni 
   assert.match(html, /shoppingNeighbors\(rows\)\.forEach\(\(\{ item, index \}\) => \{/);
 });
 
+test('semaine vide : une carte de départ reliée au compositeur, absente dès qu’un repas existe ou si la semaine est passée', () => {
+  const html = readFileSync(join(__dirname, 'public', 'index.html'), 'utf8');
+  const card = html.match(/<div id="week-empty"[\s\S]*?\n        <\/div>/)?.[0] || '';
+  assert.match(card, /role="region" aria-labelledby="week-empty-title" hidden>/);
+  assert.match(card, /<h2 id="week-empty-title">Semaine vide<\/h2>/);
+  assert.match(card, /<button id="week-empty-compose" class="primary" type="button">Créer mon menu<\/button>/);
+  assert.match(card, /<button id="week-empty-manual" class="text-action" type="button">ou ajoute un repas à la main<\/button>/);
+  assert.ok(html.indexOf('id="week-empty"') < html.indexOf('id="days"'), 'carte avant les jours et les créneaux');
+  assert.match(html, /document\.getElementById\('week-empty-compose'\)\.addEventListener\('click', openWeekComposer\);/);
+  assert.match(html, /document\.getElementById\('week-empty-manual'\)\.addEventListener\('click', \(\) => document\.getElementById\('add-meal'\)\.click\(\)\);/);
+  assert.match(html.match(/    function render\(\) \{[\s\S]*?\n    \}\n/)[0], /renderEmptyWeek\(\);/);
+  const source = html.match(/    function key\(date\)[\s\S]*?\n    }\n/)[0] + html.match(/    function renderEmptyWeek[\s\S]*?\n    }\n/)[0];
+  const controls = new Map();
+  const control = id => { if (!controls.has(id)) controls.set(id, { hidden: false, textContent: '' }); return controls.get(id); };
+  // Dimanche 22 novembre 2026 : seuls midi et soir du jour restent libres dans la semaine du 16.
+  const FixedDate = class extends Date { constructor(...args) { super(...(args.length ? args : ['2026-11-22T12:00:00'])); } };
+  const state = { weekStart: new Date('2026-11-23T12:00:00'), meals: [] };
+  const renderEmptyWeek = new Script(source + ';renderEmptyWeek').runInNewContext({ Date: FixedDate, state, MangerMenu: require('./public/menu-composer'), document: { getElementById: control } });
+  renderEmptyWeek();
+  assert.equal(control('week-empty').hidden, false);
+  assert.equal(control('compose-week').hidden, true, 'pas de second « Créer mon menu » sous la carte');
+  assert.equal(control('week-empty-text').textContent, 'Compose 5 repas et leur liste de courses en deux minutes.');
+  state.weekStart = new Date('2026-11-16T12:00:00'); renderEmptyWeek();
+  assert.equal(control('week-empty-text').textContent, 'Compose 2 repas et leur liste de courses en deux minutes.');
+  state.meals = [{ date: '2026-11-22', slot: 'soir' }]; renderEmptyWeek();
+  assert.equal(control('week-empty').hidden, true);
+  assert.equal(control('compose-week').hidden, false);
+  state.meals = []; state.weekStart = new Date('2026-11-09T12:00:00'); renderEmptyWeek();
+  assert.equal(control('week-empty').hidden, true, 'semaine écoulée : pas d’invitation à composer dedans');
+  assert.equal(control('compose-week').hidden, false);
+});
+
 test('libellés : saison sans calendrier manuel, bouton de planification fidèle à son effet', () => {
   const html = readFileSync(join(__dirname, 'public', 'index.html'), 'utf8');
   assert.doesNotMatch(html, /Change de calendrier/);

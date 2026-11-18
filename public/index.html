@@ -112,6 +112,9 @@
     .text-action { min-height: 44px; display: inline-flex; align-items: center; gap: 5px; border: 0; color: var(--accent); background: transparent; font-weight: 650; cursor: pointer; }
     .schedule { display: grid; gap: 20px; margin: 22px 0 28px; }
     .week-actions { display: grid; gap: 10px; }
+    .week-empty { display: grid; gap: 10px; margin-top: 22px; padding: 20px; border: 1px solid var(--line); border-radius: 22px; background: var(--surface); }
+    .week-empty h2, .week-empty p { margin: 0; }
+    .week-empty .text-action { justify-self: center; }
     .week-tools { display: flex; flex-wrap: wrap; gap: 8px; }
     .week-tools > button { flex: 1 1 140px; min-width: 0; justify-content: center; padding: 8px 12px; border-radius: 12px; font-size: .875rem; overflow-wrap: anywhere; }
     .week-tools > button:active { background: var(--field); }
@@ -484,6 +487,12 @@
         </div>
         <p id="week-status" class="muted" role="status" hidden></p>
         <fieldset id="week-content" aria-label="Repas de la semaine">
+        <div id="week-empty" class="week-empty" role="region" aria-labelledby="week-empty-title" hidden>
+          <h2 id="week-empty-title">Semaine vide</h2>
+          <p id="week-empty-text" class="muted"></p>
+          <button id="week-empty-compose" class="primary" type="button">Créer mon menu</button>
+          <button id="week-empty-manual" class="text-action" type="button">ou ajoute un repas à la main</button>
+        </div>
         <div id="days" class="days" role="tablist" aria-label="Jours de la semaine"></div>
         <div class="day-heading">
           <div><h2 id="selected-day"></h2><span id="day-summary" class="muted"></span></div>
@@ -1108,6 +1117,7 @@
       document.getElementById('selected-day').textContent = `${fullDayNames[state.selected]} ${dateAt(state.selected).getDate()}`;
       renderDays();
       renderSchedule();
+      renderEmptyWeek();
       renderRecipes();
       renderShopping();
       renderHousehold();
@@ -1141,6 +1151,15 @@
       const count = Number(Boolean(midi)) + Number(Boolean(soir));
       document.getElementById('day-summary').textContent = `${count} repas prévu${count > 1 ? 's' : ''}`;
       document.getElementById('schedule').innerHTML = `<div><span class="slot-label">Midi</span>${mealMarkup('midi', midi)}</div><div><span class="slot-label">Soir</span>${mealMarkup('soir', soir)}</div>`;
+    }
+
+    // Carte de départ seulement pour une semaine vide qui garde des repas à venir : même calcul que le compositeur.
+    function renderEmptyWeek() {
+      const free = state.meals.length ? [] : MangerMenu.availableSlots(key(state.weekStart), state.meals, key(new Date()));
+      const count = Math.min(5, free.length);
+      document.getElementById('week-empty').hidden = !count;
+      document.getElementById('compose-week').hidden = Boolean(count);
+      document.getElementById('week-empty-text').textContent = `Compose ${count} repas et leur liste de courses en deux minutes.`;
     }
 
     function recipeIcon(recipe) {
@@ -2216,6 +2235,8 @@
     document.getElementById('add-meal').addEventListener('click', () => openAdd(mealFor(state.selected, 'soir') ? 'midi' : 'soir'));
     document.getElementById('suggest').addEventListener('click', openSuggestions);
     document.getElementById('compose-week').addEventListener('click', openWeekComposer);
+    document.getElementById('week-empty-compose').addEventListener('click', openWeekComposer);
+    document.getElementById('week-empty-manual').addEventListener('click', () => document.getElementById('add-meal').click());
     document.getElementById('export-calendar').addEventListener('click', () => { location.href = `/api/calendar.ics?start=${key(state.weekStart)}&download=1`; });
     document.getElementById('close-dialog').addEventListener('click', () => dialog.close());
     dialog.addEventListener('cancel', event => { if (document.getElementById('meal-fields').disabled) event.preventDefault(); });
