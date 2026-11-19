@@ -27,6 +27,13 @@
 
 Contrôle dans le navigateur intégré (Chromium, 375 px, thème sombre, base jetable, 2 articles fictifs) : ligne estompée et barrée, puis rangée ; mascotte et message après la dernière coche ; animations `shopping-hop` et `panel-in` actives.
 
+**Retouches après test sur iPhone (même jour).** La vidéo de l'utilisateur montrait deux défauts et un manque.
+- **Photo ronde qui saute** : toucher une carte recette la faisait descendre sur le titre. Cause : un `transform` sur `.recipe-main` (le bouton de la carte) en fait le bloc conteneur des descendants en `position: absolute`. La photo, placée à `top: -44px` par rapport à la carte `.recipe`, se recalait alors sur le bouton. Correctif : `button:active` exclut `.recipe-main`, et le fond vert existant de `.recipe:active` suffit comme retour.
+- **Sélection à l'appui long** : un appui long sélectionnait l'image, avec les poignées bleues d'iOS. Correctif : `.recipe-cover` interdit la sélection et le menu d'appui long (`user-select: none`, `-webkit-touch-callout: none`).
+- **Bouton introuvable** : « Actualiser les propositions » était caché dans le résumé replié du compositeur. Correctif : un bouton « Autres idées », avec l'icône `refresh` existante, toujours visible à droite de « N recettes » et de 44 px de haut, à la place du sous-titre « Ton menu, à ajuster ». Celui du résumé devient « Appliquer ces critères ». Les deux déclenchent la même action `criteria`.
+
+Le style `.menu-count .menu-refresh` remonte la spécificité, car `.secondary { width: 100% }` de `index.html` l'emportait. Les tests ont été écrits avant (2 en échec, puis réussis). Contrôle dans le navigateur intégré (375 px, catalogue importé) : bouton compact à droite, et un clic donne 5 recettes nouvelles sur 5. Non vérifié sur iPhone : la disparition du saut au toucher.
+
 **Reste à vérifier.** Thème clair, fluidité et sensation de l'appui sur téléphone réel, réglage « Réduire les animations » sur iPhone et Android. Annonce par lecteur d'écran : la case cochée disparaît de la liste visible au rendu, comme avant ce changement.
 
 ## 19 novembre 2026 — Menu guidé : roulement sans limite et propositions toujours nouvelles

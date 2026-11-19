@@ -437,11 +437,13 @@
     .account-footnote { margin: 22px 4px; color: var(--muted); font-size: 12px; }
     #shopping-summary, .day strong { font-variant-numeric: tabular-nums; }
     h1, h2 { text-wrap: balance; }
+    .recipe-cover { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
     .shopping-done { display: grid; justify-items: center; gap: 10px; color: var(--text); font-weight: 650; }
     .shopping-done p { margin: 0; }
     @media (prefers-reduced-motion: no-preference) {
       button { transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease, transform .12s ease; }
-      button:active:not(:disabled) { transform: scale(.97); }
+      /* Pas sur .recipe-main : un transform ferait de ce bouton le repère de la photo ronde en absolu, qui sauterait sur le titre. */
+      button:active:not(:disabled):not(.recipe-main) { transform: scale(.97); }
       dialog[open] { animation: sheet-appear .18s ease-out; }
       @keyframes sheet-appear { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
       .panel { animation: panel-in .12s ease-out; }

@@ -10,6 +10,11 @@ Livré sur la branche `feat/animations-app`, non fusionné. Fin de l'idée UX n�
 - cœur qui bat à l'ajout d'un favori ;
 - chiffres alignés et titres équilibrés.
 
+Après le test sur iPhone :
+- la photo ronde ne saute plus au toucher d'une carte ;
+- un appui long ne sélectionne plus l'image ;
+- un bouton « Autres idées » toujours visible remplace « Actualiser les propositions », qui était caché dans le résumé replié du menu.
+
 Tout est désactivé si le téléphone demande de réduire les animations. Serveur, API, schéma et dépendances sont inchangés. Non vérifiés : thème clair, téléphone réel, lecteur d'écran. [Décision](DECISIONS.md#19-novembre-2026--toucher-et-mouvement-dans-toute-lappli). Ensuite : invitation directe (idée n° 4), puis « Mon foyer » (idée n° 8).
 
 ## Menu guidé : roulement sans limite et propositions toujours nouvelles — 19 novembre 2026

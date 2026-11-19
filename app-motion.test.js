@@ -22,3 +22,8 @@ test('lisibilité : chiffres alignés et titres équilibrés', () => {
   assert.match(css, /#shopping-summary, \.day strong \{ font-variant-numeric: tabular-nums; \}/);
   assert.match(css, /h1, h2 \{ text-wrap: balance; \}/);
 });
+
+test('cartes recettes : pas de rétrécissement du bouton de carte (photo ronde positionnée sur la carte), pas de sélection à l’appui long', () => {
+  assert.match(motion, /button:active:not\(:disabled\):not\(\.recipe-main\) \{ transform: scale\(\.97\); \}/);
+  assert.match(css, /\.recipe-cover \{ -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; \}/);
+});
