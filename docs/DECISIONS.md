@@ -29,7 +29,7 @@ Les recettes jamais mangées passent donc d'abord, tirées au sort entre elles. 
   - champ accepté et refusé par HTTP.
 - `menu-composer-ui.test.js` : liste vide à l'ouverture, `[1..5]` après une actualisation, recette choisie ajoutée, liste vidée pour une autre semaine.
 
-**Reste à vérifier.** Suite PostgreSQL non lancée (OpenSSL absent sur le PC de développement). Ressenti sur le vrai catalogue et sur téléphone, à valider par l'utilisateur sur son serveur.
+**Reste à vérifier.** Suite PostgreSQL non lancée (OpenSSL absent sur le PC de développement). Ressenti sur le vrai catalogue et sur téléphone validé par l'utilisateur sur son serveur le 19 novembre (« c'est bon »), sans mesure chiffrée.
 
 ## 19 novembre 2026 — Menu guidé : variété et régimes différents
 

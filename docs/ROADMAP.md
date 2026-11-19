@@ -2,7 +2,7 @@
 
 ## Menu guidé : roulement sans limite et propositions toujours nouvelles — 19 novembre 2026
 
-Livré sur la branche `feat/roulement-illimite`, non fusionné.
+Testé par l'utilisateur sur son serveur et fusionné dans `development` le 19 novembre (`f9a4214`).
 - **Historique complet** : le menu guidé tient compte de tout l'historique, et non plus des 21 derniers jours. Les recettes jamais mangées passent d'abord.
 - **Après un tour du catalogue** : le tirage au sort favorise les recettes mangées il y a longtemps, en proportion des jours écoulés, sans ordre figé.
 - **Pendant la composition** : les recettes déjà proposées pour la semaine ouverte passent derrière celles pas encore vues. C'est vrai pour « Actualiser les propositions », « Remplacer » et la bascule « Un plat chacun » / « Plat commun ».
