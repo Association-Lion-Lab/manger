@@ -1,5 +1,17 @@
 # Suite du développement
 
+## Toucher et mouvement dans toute l'appli — 19 novembre 2026
+
+Livré sur la branche `feat/animations-app`, non fusionné. Fin de l'idée UX n° 6 :
+- boutons et jours qui s'enfoncent légèrement à l'appui ;
+- onglets en fondu ;
+- ligne de courses cochée estompée 200 ms avant de rejoindre « Déjà dans le panier » ;
+- mascotte qui saute avec « Tout est dans le panier ! » quand tout est coché ;
+- cœur qui bat à l'ajout d'un favori ;
+- chiffres alignés et titres équilibrés.
+
+Tout est désactivé si le téléphone demande de réduire les animations. Serveur, API, schéma et dépendances sont inchangés. Non vérifiés : thème clair, téléphone réel, lecteur d'écran. [Décision](DECISIONS.md#19-novembre-2026--toucher-et-mouvement-dans-toute-lappli). Ensuite : invitation directe (idée n° 4), puis « Mon foyer » (idée n° 8).
+
 ## Menu guidé : roulement sans limite et propositions toujours nouvelles — 19 novembre 2026
 
 Testé par l'utilisateur sur son serveur et fusionné dans `development` le 19 novembre (`f9a4214`).

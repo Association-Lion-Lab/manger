@@ -1,5 +1,34 @@
 # Choix techniques, limites et blocages
 
+## 19 novembre 2026 — Toucher et mouvement dans toute l'appli
+
+**Contexte.** Suite de l'idée UX n° 6, après le compositeur du 18 novembre. Les moments choisis par l'utilisateur sont : changement d'onglet, gestes (boutons, cœur, jours) et coche des courses avec une petite fête. Avant ce changement, seule la couleur changeait à l'appui, les onglets changeaient sec et une ligne cochée sautait sans transition.
+
+**Choix et raison.** Tout le mouvement CSS reste dans l'unique bloc `prefers-reduced-motion: no-preference` de `public/index.html`. Un test refuse toute règle `animation`, `transition` ou `@keyframes` hors de ce bloc.
+- **Appui** : `button:active:not(:disabled)` réduit à 97 % en 120 ms. Les jours sont des boutons et en profitent.
+- **Onglets** : `.panel` apparaît en fondu de 120 ms. L'animation repart d'elle-même quand le panneau quitte `hidden`, sans changer le code de navigation.
+- **Coche des courses** : la ligne cochée en cours d'envoi (`aria-busy`) passe à 0,4 d'opacité. Le gestionnaire attend 200 ms au moins avant le nouveau rendu, seulement en cochant et si le mouvement est permis. La pause démarre avec la requête, donc une réponse lente n'est pas allongée.
+- **Fête** : quand la dernière coche est confirmée, `renderShopping({ celebrate: true })` affiche la mascotte `/icon.svg` (`alt=""`) et « Tout est dans le panier ! » avec la classe `shopping-done-new`. La mascotte saute deux fois, avec le saut déjà utilisé par le compositeur. Le message reste ensuite, sans animation, à chaque rendu où tout est coché.
+- **Cœur** : `popHearts` fait battre l'icône (240 ms, Web Animations API, comme le déplacement de rayon existant). Seulement quand un favori est ajouté et confirmé, sur les vues de ce plat, avec la fiche ouverte seulement si elle montre ce plat.
+- **Lisibilité** : chiffres alignés (`tabular-nums`) sur le résumé des courses et les dates des jours, titres `h1` et `h2` équilibrés (`text-wrap: balance`).
+
+**Alternatives écartées.**
+- Confettis ou bibliothèque d'animation : une dépendance pour un effet ponctuel, et trop chargé pour une appli sobre.
+- Animation de sortie des onglets : il faudrait retarder le changement de `hidden`.
+- Fête à chaque affichage de la liste vide : elle se répéterait à chaque synchronisation.
+- Animer le cœur au retrait : un retour visuel sur une suppression n'apporte rien.
+
+**Conséquences.** Aucun changement de serveur, d'API, de schéma, de dépendance ni de service worker. Le message « Tout est coché. » devient « Tout est dans le panier ! ». En mouvement réduit, il n'y a ni pause ni saut, mais le message et la mascotte restent.
+
+**Validation.** Tests écrits d'abord, en échec (5) puis réussis :
+- `app-motion.test.js` : bloc unique, appui, onglets, coche, fête, lisibilité ;
+- `shopping-check-ui.test.js` : pause de 200 ms seulement en cochant avec mouvement, fête sur la dernière coche confirmée, pas sur un refus ni en décochant, rendu de la mascotte ;
+- `favorite-ui.test.js` : battement à l'ajout seulement, jamais au retrait, en échec ou en mouvement réduit, fiche d'un autre plat exclue.
+
+Contrôle dans le navigateur intégré (Chromium, 375 px, thème sombre, base jetable, 2 articles fictifs) : ligne estompée et barrée, puis rangée ; mascotte et message après la dernière coche ; animations `shopping-hop` et `panel-in` actives.
+
+**Reste à vérifier.** Thème clair, fluidité et sensation de l'appui sur téléphone réel, réglage « Réduire les animations » sur iPhone et Android. Annonce par lecteur d'écran : la case cochée disparaît de la liste visible au rendu, comme avant ce changement.
+
 ## 19 novembre 2026 — Menu guidé : roulement sans limite et propositions toujours nouvelles
 
 **Contexte.** Après la livraison de la variété, l'utilisateur a demandé un roulement « illimité » et des propositions « différentes en permanence, pas les mêmes au bout de 4 fois », qui « évoluent vraiment en mode aléatoire », sans que l'appli invente de recettes. Deux causes de répétition : `previewMenu` oubliait tout repas de plus de 21 jours, et « Actualiser les propositions » ne gardait aucune trace des recettes déjà montrées, si bien que le hasard pouvait les ressortir après quelques clics.
