@@ -1,5 +1,36 @@
 # Choix techniques, limites et blocages
 
+## 19 novembre 2026 — Menu guidé : roulement sans limite et propositions toujours nouvelles
+
+**Contexte.** Après la livraison de la variété, l'utilisateur a demandé un roulement « illimité » et des propositions « différentes en permanence, pas les mêmes au bout de 4 fois », qui « évoluent vraiment en mode aléatoire », sans que l'appli invente de recettes. Deux causes de répétition : `previewMenu` oubliait tout repas de plus de 21 jours, et « Actualiser les propositions » ne gardait aucune trace des recettes déjà montrées, si bien que le hasard pouvait les ressortir après quelques clics.
+
+**Choix et raison.** Dans `scoreRecipe` (`calculations.js`), le critère « mangée dans les 21 jours » est remplacé par deux critères stricts puis un poids :
+- « déjà vue » : la recette figure dans `seenRecipeIds`, champ facultatif de l'aperçu, contrôlé par `seenRecipes` (tableau d'au plus 1 000 entiers, sinon 400) ;
+- « déjà mangée » : `eatenDaysAgo` parcourt tout l'historique avant le lundi, repas communs et plats séparés compris ;
+- poids du tirage multiplié par le nombre de jours depuis le dernier repas.
+
+Les recettes jamais mangées passent donc d'abord, tirées au sort entre elles. Une fois le catalogue passé, le tirage favorise fortement les plus anciennes sans fixer d'ordre, ce qui répond à « vraiment aléatoire ». Le compositeur (`public/menu-composer.js`) retient dans `seen` chaque recette reçue d'un aperçu pour la semaine ouverte, l'envoie au suivant et vide la liste au changement de semaine.
+
+**Alternatives écartées.**
+- Ordre strict du plus ancien au plus récent : il aurait refait le même ordre à chaque tour de catalogue, soit l'inverse de la demande.
+- Paliers par semaine d'ancienneté : moins de hasard pour un gain nul.
+- Fenêtre plus longue (60 ou 90 jours) : elle repousse seulement le problème.
+- Mémoire des propositions côté serveur : il aurait fallu un stockage et un état par session, contraire au principe d'un aperçu sans écriture.
+
+**Conséquences.** Le contrat HTTP de l'aperçu gagne un champ d'entrée facultatif, sans changement de réponse, de schéma ni de moteur : SQLite et PostgreSQL appellent la même règle avec leur instantané de tous les repas. Le calcul lit tout l'historique à chaque aperçu, ce qui est linéaire en nombre de repas et négligeable à l'échelle d'un foyer. Goûts et anti-gaspi urgent restent avant « déjà vue ». La liste `seen` est perdue au rechargement de la page.
+
+**Validation.** Tests écrits d'abord, en échec (5) puis réussis :
+- `menu-variety.test.js` :
+  - une recette mangée il y a près de trois ans reste derrière toute recette jamais mangée ;
+  - poids 1 contre 90 vérifié par tirages injectés ;
+  - plus de 10 menus différents sur 20 graines une fois tout le catalogue mangé ;
+  - deux aperçus successifs couvrent 10 recettes distinctes sur 10 ;
+  - valeurs invalides refusées ;
+  - champ accepté et refusé par HTTP.
+- `menu-composer-ui.test.js` : liste vide à l'ouverture, `[1..5]` après une actualisation, recette choisie ajoutée, liste vidée pour une autre semaine.
+
+**Reste à vérifier.** Suite PostgreSQL non lancée (OpenSSL absent sur le PC de développement). Ressenti sur le vrai catalogue et sur téléphone, à valider par l'utilisateur sur son serveur.
+
 ## 19 novembre 2026 — Menu guidé : variété et régimes différents
 
 **Contexte.** « Créer mon menu » classait les recettes de façon déterministe : pénalité de 2 pour une recette déjà dans la semaine (doublons possibles), goûts, anti-gaspi (`soon`, `covered`, `reused`), puis ordre alphabétique, sans regarder l'historique. À placard égal, les mêmes recettes revenaient chaque semaine. Et `candidates` ne gardait que les recettes compatibles avec tous les participants : un foyer pescétarien + omnivore ne recevait jamais de viande. Demandes de l'utilisateur : « il faut qu'il propose evidement 5 recette / personnes si les régimes sont différent avec des propositions communes » et pouvoir manger de la viande sans que cela soit proposé à la personne pescétarienne. Spécification validée avant le code (ordre strict, roulement, tirage, règle « mixte 3 + 2 », bouton par repas).

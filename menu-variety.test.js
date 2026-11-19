@@ -24,15 +24,38 @@ test('variété : pas deux fois la même recette dans la semaine tant qu’une a
   assert.ok([1, 2].every(id => ids(short).filter(value => value === id).length <= 2), 'doublon seulement faute de choix');
 });
 
-test('variété : roulement sur les 21 jours précédant la semaine, plats séparés compris', () => {
+test('variété : historique sans limite, une recette jamais mangée passe avant toute recette déjà mangée', () => {
   const eaten = [
-    { date: '2026-11-15', slot: 'soir', recipeId: 1, dishes: [] }, { date: '2026-10-26', slot: 'soir', recipeId: 2, dishes: [] },
+    { date: '2026-11-15', slot: 'soir', recipeId: 1, dishes: [] }, { date: '2024-01-08', slot: 'soir', recipeId: 2, dishes: [] },
     { date: '2026-11-10', slot: 'midi', recipeId: null, dishes: [{ memberId: 1, recipeId: 3 }, { memberId: 2, recipeId: 4 }] },
-    { date: '2026-11-01', slot: 'midi', recipeId: 5, dishes: [] }, { date: '2026-10-25', slot: 'soir', recipeId: 6, dishes: [] }
+    { date: '2025-06-01', slot: 'midi', recipeId: 5, dishes: [] }
   ];
   for (const seed of seeds) assert.deepEqual(ids(previewMenu(data(recipes(10), { meals: eaten }), input(), seeded(seed))).sort((a, b) => a - b), [6, 7, 8, 9, 10], `graine ${seed}`);
   const all = previewMenu(data(recipes(5), { meals: eaten }), input(5), seeded(3));
-  assert.equal(new Set(ids(all)).size, 5, 'une recette récente reste possible quand il n’y a pas mieux');
+  assert.equal(new Set(ids(all)).size, 5, 'une recette déjà mangée reste possible quand il n’y a pas mieux');
+});
+
+test('variété : catalogue déjà passé, tirage pondéré par l’ancienneté du dernier repas', () => {
+  // Plat 01 mangé la veille (poids 1), Plat 02 il y a 90 jours (poids 90).
+  const pair = data(recipes(2), { meals: [{ date: '2026-11-15', slot: 'soir', recipeId: 1, dishes: [] }, { date: '2026-08-18', slot: 'soir', recipeId: 2, dishes: [] }] });
+  assert.equal(previewMenu(pair, input(1), () => 0.005)[0].recipeId, 1, 'la recette de la veille garde une petite chance');
+  assert.equal(previewMenu(pair, input(1), () => 0.02)[0].recipeId, 2);
+  const picks = Array.from({ length: 200 }, (_, seed) => previewMenu(pair, input(1), seeded(seed))[0].recipeId);
+  assert.ok(picks.filter(id => id === 2).length > 180, 'la plus ancienne sort presque toujours');
+  const eatenAll = data(recipes(10), { meals: recipes(10).map((item, index) => ({ date: `2026-10-${String(index + 1).padStart(2, '0')}`, slot: 'soir', recipeId: item.id, dishes: [] })) });
+  const menus = new Set(seeds.map(seed => ids(previewMenu(eatenAll, input(), seeded(seed))).join()));
+  assert.ok(menus.size > 10, 'pas d’ordre figé une fois le catalogue passé');
+});
+
+test('variété : les recettes déjà proposées pendant la composition passent derrière les autres', () => {
+  const week = data(recipes(10));
+  for (const seed of seeds) {
+    const first = ids(previewMenu(week, input(), seeded(seed)));
+    const second = ids(previewMenu(week, input(5, { seenRecipeIds: first }), seeded(seed + 100)));
+    assert.deepEqual([...first, ...second].sort((a, b) => a - b), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], `graine ${seed}`);
+  }
+  assert.equal(new Set(ids(previewMenu(week, input(5, { seenRecipeIds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] }), seeded(1)))).size, 5, 'tour terminé : les recettes vues reviennent');
+  for (const seenRecipeIds of ['1', [1.5], ['2'], Array(1001).fill(1)]) assert.throws(() => previewMenu(week, input(5, { seenRecipeIds })), /Critères du menu invalides/);
 });
 
 test('variété : tirage injectable, reproductible, et Math.random par défaut', () => {
@@ -114,7 +137,10 @@ test('foyer mixte : aperçu puis enregistrement HTTP d’un menu avec plats sép
   const memberIds = members.map(member => member.id);
   const choices = await post('/api/week/preview', { start, maxMinutes: 30, people: 2, memberIds, slots: [0, 1, 2, 3, 4].map(day => ({ day, slot: 'soir' })) });
   assert.equal(choices.filter(item => item.memberIds).length, 4);
-  const rows = choices.map(item => ({ day: item.day, slot: item.slot, recipeId: item.recipeId, memberIds: item.memberIds || memberIds, people: (item.memberIds || memberIds).length }));
+  const again = { start, maxMinutes: 30, people: 2, memberIds, slots: [{ day: 0, slot: 'soir' }] };
+  assert.equal((await post('/api/week/preview', { ...again, seenRecipeIds: choices.map(item => item.recipeId) })).length > 0, true, 'liste des recettes vues acceptée');
+  assert.equal((await fetch(base + '/api/week/preview', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...again, seenRecipeIds: 'tout' }) })).status, 400);
+  const rows =choices.map(item => ({ day: item.day, slot: item.slot, recipeId: item.recipeId, memberIds: item.memberIds || memberIds, people: (item.memberIds || memberIds).length }));
   const plan = planPayload({ start, rows, recipes: created, members, meals: [] });
   assert.deepEqual(await post('/api/week/plan', plan), { added: 5 });
   const week = await (await fetch(`${base}/api/week?start=${start}`)).json();

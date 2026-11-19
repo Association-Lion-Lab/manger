@@ -48,6 +48,8 @@
     const dialog = config.dialog, e = config.escape, icon = config.icon;
     let start, criteria, rows = [], phase = 'menu', pickerIndex = null, busy = false, saved = false, uncertain = false, pendingPlan = null, version = 0, error = '';
     let waiting = false, arriving = false, fresh = null;
+    // Recettes déjà proposées pour cette semaine : l'aperçu les fait passer derrière celles pas encore vues.
+    let seen = new Set();
     const calm = config.reducedMotion || (() => Boolean(globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches));
     const delay = config.delay || (ms => new Promise(resolve => setTimeout(resolve, ms)));
     const data = () => config.state();
@@ -164,7 +166,7 @@
       if (data().members.length && !nextCriteria.memberIds.length) { showError('Choisis au moins une personne.'); return; }
       if (!Number.isInteger(nextCriteria.people) || nextCriteria.people < 1 || nextCriteria.people > 100) { showError('Choisis un nombre de personnes valide.'); return; }
       const reset = nextCriteria !== criteria, current = reset ? [] : mealsOf(rows);
-      const payload = { start, ...nextCriteria, slots: slots.map((slot, index) => slotRequest(slot, current[index] || [], index, override)) };
+      const payload = { start, ...nextCriteria, slots: slots.map((slot, index) => slotRequest(slot, current[index] || [], index, override)), seenRecipeIds: [...seen].slice(-1000) };
       const staged = first && !calm();
       busy = true; showError('');
       if (first) { waiting = true; render(); }
@@ -184,6 +186,7 @@
           return slotRows(slot, index, found, current[index] || [], override, nextCriteria, changed);
         });
         rows = next; criteria = nextCriteria; phase = 'menu'; arriving = staged; fresh = override ? changed : null;
+        next.forEach(row => seen.add(row.recipeId));
       } catch (failure) {
         if (request !== version || !dialog.open) return;
         phase = previousPhase;
@@ -304,7 +307,7 @@
       if (busy) return;
       dropPastRows();
       if (start !== weekStart) {
-        start = weekStart; rows = []; saved = false; uncertain = false; pendingPlan = null; phase = 'menu'; error = '';
+        start = weekStart; rows = []; seen = new Set(); saved = false; uncertain = false; pendingPlan = null; phase = 'menu'; error = '';
         criteria = { memberIds: data().members.map(member => member.id), people: data().members.length || 2, maxMinutes: 30 };
       }
       render(); if (!dialog.open) dialog.showModal();

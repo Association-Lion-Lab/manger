@@ -255,3 +255,17 @@ test('menu guidé : brouillon rouvert plus tard, les plats d’un repas séparé
   const split = JSON.parse(form.writes[0].options.body).meals.filter(meal => meal.title === 'Un plat par personne');
   assert.equal(split.length, 1); assert.equal(split[0].dishes.length, 2);
 });
+
+test('menu guidé : les recettes déjà proposées sont envoyées à l’aperçu, remises à zéro pour une autre semaine', async () => {
+  const form = composer(); await form.open();
+  const seen = index => JSON.parse(form.reads[index].options.body).seenRecipeIds;
+  assert.deepEqual(seen(0), []);
+  form.node('[data-menu-people]').value = '2'; form.node('[data-menu-minutes]').value = '30';
+  await form.click('criteria');
+  assert.deepEqual(seen(1), [1, 2, 3, 4, 5]);
+  await form.click('replace', { menuIndex: '0' }); await form.click('pick', { menuRecipe: '7' });
+  await form.click('criteria');
+  assert.deepEqual(seen(3), [1, 2, 3, 4, 5, 7]);
+  await form.click('close'); await form.open('2026-11-09');
+  assert.deepEqual(seen(4), []);
+});
