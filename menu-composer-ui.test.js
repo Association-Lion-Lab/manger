@@ -20,12 +20,13 @@ function composer(members = [], today = '2026-11-02') {
     showModal() { this.open = true; },
     close() { this.open = false; closes++; listeners.get('close')?.(); }
   };
-  const control = { state, dialog, reads, writes, weeks, fields, node, today, readError: null, reloadError: null, afterReload: null, delays: [], pause: null, reduced: false };
+  const control = { state, dialog, reads, writes, weeks, fields, node, today, readError: null, reloadError: null, afterReload: null, delays: [], pause: null, reduced: false, answer: null };
   const menu = create({ dialog, state: () => state, escape: value => String(value), icon: () => '', cover: () => '', notice: () => '',
     candidates: () => state.recipes, search: (list, query) => list.filter(recipe => recipe.title.includes(query)),
     async api(path, options) {
       reads.push({ path, options });
       if (control.readError) throw control.readError;
+      if (control.answer) return control.answer(JSON.parse(options.body));
       return JSON.parse(options.body).slots.map((slot, index) => ({ ...slot, recipeId: slot.recipeId || index + 1 }));
     },
     fetch(path, options) { writes.push({ path, options }); return new Promise((resolve, reject) => { resolveWrite = resolve; rejectWrite = reject; }); },
@@ -210,4 +211,47 @@ test('menu guidé : tout le mouvement est enfermé dans prefers-reduced-motion: 
   }
   assert.notEqual(outside, css, 'bloc de mouvement présent');
   assert.doesNotMatch(outside, /animation|@keyframes|transition/);
+});
+
+test('menu guidé : régimes différents, bascule « Un plat chacun » / « Plat commun » et plat remplacé non reproposé', async () => {
+  // Profils fictifs. Faux aperçu : deuxième repas séparé par défaut, un plat par régime, le plus strict d'abord.
+  const form = composer([{ id: 1, name: 'Alex', diet: 'omnivore' }, { id: 2, name: 'Sam', diet: 'pescetarian' }]);
+  const dishes = [{ memberIds: [2], recipeId: 6 }, { memberIds: [1], recipeId: 7 }];
+  form.answer = body => body.slots.flatMap((slot, index) => slot.dishes || (slot.split ?? (index === 1 && !slot.recipeId)) ? (slot.dishes || dishes).map(dish => ({ day: slot.day, slot: slot.slot, ...dish })) : [{ day: slot.day, slot: slot.slot, recipeId: slot.recipeId || index + 1 }]);
+  await form.open();
+  let html = form.dialog.innerHTML;
+  assert.match(html, /6 recettes/); assert.match(html, /Pour Sam/); assert.match(html, /Pour Alex/);
+  assert.equal(html.match(/data-menu-action="split"/g).length, 5, 'une bascule par repas');
+  assert.equal(html.match(/>Plat commun</g).length, 1); assert.match(html, /menu-shell menu-arrive/, 'cascade conservée');
+  await form.click('split', { menuMeal: '1' });
+  const shared = JSON.parse(form.reads[1].options.body).slots;
+  assert.deepEqual(shared[1], { day: shared[1].day, slot: shared[1].slot, split: false });
+  assert.deepEqual(shared.filter((_, index) => index !== 1).map(slot => slot.recipeId), [1, 3, 4, 5], 'autres repas gardés');
+  html = form.dialog.innerHTML;
+  assert.match(html, /5 recettes/); assert.doesNotMatch(html, /Pour Sam/); assert.equal(html.match(/menu-recipe-new/g).length, 1);
+  await form.click('split', { menuMeal: '0' });
+  assert.equal(JSON.parse(form.reads[2].options.body).slots[0].split, true);
+  assert.match(form.dialog.innerHTML, /6 recettes/); assert.equal(form.dialog.innerHTML.match(/menu-recipe-new/g).length, 2);
+  await form.click('replace', { menuIndex: '1' });
+  assert.doesNotMatch(form.node('#menu-search-results').innerHTML, /data-menu-recipe="7"/, 'recette remplacée absente');
+  await form.click('pick', { menuRecipe: '8' });
+  assert.deepEqual(JSON.parse(form.reads[3].options.body).slots[0].dishes, [{ memberIds: [2], recipeId: 6 }, { memberIds: [1], recipeId: 8 }]);
+  await form.click('days'); form.click('save');
+  const meal = JSON.parse(form.writes[0].options.body).meals[0];
+  assert.equal(meal.title, 'Un plat par personne');
+  assert.deepEqual(meal.dishes, [{ memberId: 2, recipeId: 6, portions: 1 }, { memberId: 1, recipeId: 8, portions: 1 }]);
+});
+
+test('menu guidé : un seul régime, aucune bascule de plat', async () => {
+  const form = composer([{ id: 1, name: 'Alex', diet: 'vegan' }, { id: 2, name: 'Sam', diet: 'vegan' }]); await form.open();
+  assert.doesNotMatch(form.dialog.innerHTML, /data-menu-action="split"/);
+});
+
+test('menu guidé : brouillon rouvert plus tard, les plats d’un repas séparé glissent ensemble', async () => {
+  const form = composer([{ id: 1, name: 'Alex', diet: 'omnivore' }, { id: 2, name: 'Sam', diet: 'pescetarian' }], '2026-11-09');
+  form.answer = body => body.slots.flatMap((slot, index) => index === 1 ? [{ memberIds: [2], recipeId: 6 }, { memberIds: [1], recipeId: 7 }].map(dish => ({ day: slot.day, slot: slot.slot, ...dish })) : [{ day: slot.day, slot: slot.slot, recipeId: index + 1 }]);
+  await form.open('2026-11-09'); await form.click('close');
+  form.today = '2026-11-11'; await form.open('2026-11-09'); await form.click('days'); form.click('save');
+  const split = JSON.parse(form.writes[0].options.body).meals.filter(meal => meal.title === 'Un plat par personne');
+  assert.equal(split.length, 1); assert.equal(split[0].dishes.length, 2);
 });

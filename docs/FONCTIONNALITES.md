@@ -15,7 +15,7 @@ Les commandes, le compte et les menus utilisent une famille SVG locale harmonis�
 - Maison, extérieur ou restaurant ; occasion ordinaire, date ou invités. Une sortie peut être enregistrée sans recette ; les invités peuvent avoir une recette ou un repas nommé, par exemple une commande.
 - Date à la maison avec choix de recette ; à l'extérieur avec saisie manuelle. Modification d'une sortie/date/invitation avec reprise de ses champs quand le parcours le permet ; nom conservé lors d'un changement de lieu. « Nom du repas » reste utilisé pour Maison et Autre lieu.
 - Consultation ou remplacement d'un repas, déplacement et copie vers un créneau libre, export de la semaine en calendrier ICS ; protection des créneaux occupés et des liens de restes.
-- [Menu guidé](MENU-GUIDE.md) : cinq propositions, ajout/recherche/remplacement/retrait et portions, puis choix des jours et midi/soir. Plusieurs plats par jour et plats distincts par participant au même repas ; création atomique puis ouverture des courses. Copie d'une semaine et jusqu'à 30 semaines types nommées, sans écraser les repas déjà prévus.
+- [Menu guidé](MENU-GUIDE.md) : cinq propositions, ajout/recherche/remplacement/retrait et portions, puis choix des jours et midi/soir. Plusieurs plats par jour et plats distincts par participant au même repas ; depuis le 19 novembre 2026, pas de recette en double dans la semaine, roulement sur 21 jours et tirage au sort, et, si les régimes diffèrent, environ deux repas sur cinq séparés avec un plat par régime (bouton « Un plat chacun » / « Plat commun ») ; création atomique puis ouverture des courses. Copie d'une semaine et jusqu'à 30 semaines types nommées, sans écraser les repas déjà prévus.
 
 ## 2. Foyer mixte et assiettes
 

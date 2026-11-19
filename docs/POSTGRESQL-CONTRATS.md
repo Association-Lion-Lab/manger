@@ -78,7 +78,7 @@ Le serveur expose les recettes via `GET /api/week` (pas via un nouveau `GET /api
 
 | Domaine | Routes et méthodes | Preuve existante à conserver |
 | --- | --- | --- |
-| Semaine/suggestions | `GET /api/week`, `GET /api/suggestions`, `POST /api/week/preview`, `POST /api/week/plan`, `POST /api/week/copy` | `server.test.js`, `preferences.test.js`, `menu-pantry.test.js`, `week-copy.test.js` ; aucune écriture à l'aperçu. |
+| Semaine/suggestions | `GET /api/week`, `GET /api/suggestions`, `POST /api/week/preview`, `POST /api/week/plan`, `POST /api/week/copy` | `server.test.js`, `preferences.test.js`, `menu-pantry.test.js`, `menu-variety.test.js`, `week-copy.test.js` ; aucune écriture à l'aperçu. Depuis le 19 novembre 2026, l'aperçu tire au sort entre recettes à égalité et peut renvoyer plusieurs plats par créneau avec `memberIds` : « sorties identiques » s'entend à hasard égal, même règle pour les deux moteurs ([décision](DECISIONS.md#19-novembre-2026--menu-guidé--variété-et-régimes-différents)). |
 | Semaines types | `GET/POST /api/week-templates`, `POST /api/week-templates/:id/apply`, `DELETE /api/week-templates/:id` | `week-templates.test.js`, `week-template-ui.test.js` ; nom, conflits et snapshots. |
 | Repas | `POST/DELETE /api/meals`, `POST /api/meals/:id/placement`, `POST /api/meals/leftovers`, `GET /api/calendar.ics` | `dish-proteins.test.js`, `leftovers.test.js`, `notes-placement.test.js`, `restaurant-manual.test.js`. |
 | Recettes | `POST /api/recipes`, `PUT/DELETE /api/recipes/:id`, `GET /api/recipes/:id/photo`, `PUT /api/recipes/:id/favorite`, `PUT /api/recipes/:id/notes` | `photos.test.js`, `favorites.test.js`, `recipe-notes.test.js`, `preparation.test.js`, `server.test.js`. |

@@ -16,8 +16,11 @@ test('la réservation ne modifie pas la photographie réutilisée',()=>{
   const data={items:[{date:'2026-11-02',name:'riz',unit:'g',amount:100}],meals:[{date:'2026-11-02'}],stocks:[{id:1,name:'riz',unit:'g',amount:80,recordedOn:'2026-01-01',useBy:null,explicitLot:1}]};
   const before=structuredClone(data);assert.deepEqual(pantryShopping(data,'2026-11-02'),[{name:'riz',unit:'g',amount:20,fromPantry:80}]);assert.deepEqual(data,before);assert.deepEqual(pantry(data),pantry(data));assert.deepEqual(data,before);
 });
+// Tirage injecté : à hasard égal, les titres identiques sont rangés par ID, quel que soit l’ordre physique.
 test('les titres identiques sont départagés par ID, indépendamment de l’ordre physique',()=>{
   const recipe=id=>({id,title:'Même titre',minutes:10,servings:1,diet:'vegan',ingredients:[{name:'riz',unit:'g',amount:100}]});
-  const data={recipes:[recipe(2),recipe(1)],home:{members:[],avoidedIngredients:[]},stocks:[],items:[],meals:[]};
-  assert.equal(previewMenu(data,{start:'2026-11-02',maxMinutes:15,people:1,memberIds:[],slots:[{day:0,slot:'midi'}]})[0].recipeId,1);
+  const data=recipes=>({recipes,home:{members:[],avoidedIngredients:[]},stocks:[],items:[],meals:[]});
+  const input={start:'2026-11-02',maxMinutes:15,people:1,memberIds:[],slots:[{day:0,slot:'midi'}]};
+  for(const value of [0,.99])assert.equal(previewMenu(data([recipe(2),recipe(1)]),input,()=>value)[0].recipeId,previewMenu(data([recipe(1),recipe(2)]),input,()=>value)[0].recipeId);
+  assert.equal(previewMenu(data([recipe(2),recipe(1)]),input,()=>0)[0].recipeId,1);
 });

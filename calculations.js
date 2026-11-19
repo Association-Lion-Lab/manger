@@ -69,44 +69,112 @@ function availablePantry(data, end) {
   return reservePantry(data, end).stocks.filter(item => !item.ambiguous && item.recordedOn <= end);
 }
 
-function previewMenu(data, input) {
+// Validates the shared criteria; returns the selected members and portions.
+function menuCriteria(home, input) {
   if (!input || !isDateKey(input.start) || new Date(`${input.start}T12:00:00Z`).getUTCDay() !== 1 || !Number.isInteger(input.maxMinutes) || input.maxMinutes < 1 || input.maxMinutes > 1440 || !Array.isArray(input.memberIds) || !Array.isArray(input.slots) || !input.slots.length || input.slots.length > 14) throw new Error('Critères du menu invalides.');
-  const home = data.home;
   if (new Set(input.memberIds).size !== input.memberIds.length || input.memberIds.some(id => !Number.isInteger(id) || !home.members.some(member => member.id === id))) throw new Error('Participants inconnus.');
   const members = home.members.filter(member => input.memberIds.includes(member.id));
   const people = members.length || input.people;
   if ((home.members.length && !members.length) || !Number.isInteger(people) || people < 1 || people > 100) throw new Error('Choisis au moins une personne.');
-  const existing = data.meals.filter(row=>row.date>=input.start&&row.date<=addDays(input.start,6)), seen = new Set();
-  const slots = input.slots.map(item => {
-    if (!item || !Number.isInteger(item.day) || item.day < 0 || item.day > 6 || !['midi', 'soir'].includes(item.slot)) throw new Error('Créneau invalide.');
+  return { members, people };
+}
+
+function menuSlots(data, input) {
+  const existing = data.meals.filter(row => row.date >= input.start && row.date <= addDays(input.start, 6)), seen = new Set();
+  return input.slots.map(item => {
+    if (!item || !Number.isInteger(item.day) || item.day < 0 || item.day > 6 || !['midi', 'soir'].includes(item.slot) || (item.split !== undefined && typeof item.split !== 'boolean') || (item.dishes !== undefined && item.recipeId !== undefined)) throw new Error('Créneau invalide.');
     const key = `${item.day}/${item.slot}`;
     if (seen.has(key) || existing.some(meal => meal.date === addDays(input.start, item.day) && meal.slot === item.slot)) throw new Error('Créneau déjà occupé ou répété. Recharge le planning.');
     seen.add(key); return item;
   }).sort((a, b) => a.day - b.day || a.slot.localeCompare(b.slot));
-  const candidates = [...data.recipes].sort((a,b)=>Buffer.compare(Buffer.from(a.title),Buffer.from(b.title))||a.id-b.id).filter(recipe => recipe.minutes <= input.maxMinutes && members.every(member => isDietCompatible(member.diet, recipe.diet))).map(recipe => ({ ...recipe, ...recipeTaste(recipe.ingredients, members, home.avoidedIngredients), needs: groupIngredients(recipe.ingredients.map(item => ({ ...item, amount: item.amount * people / recipe.servings }))) }));
-  if (!candidates.length) throw new Error('Aucune recette adaptée aux régimes et au temps choisi.');
-  for (const slot of slots) if (slot.recipeId !== undefined && (!Number.isInteger(slot.recipeId) || !candidates.some(recipe => recipe.id === slot.recipeId))) throw new Error('Le plat choisi ne respecte plus les critères du menu.');
-  const stocks = availablePantry(data, addDays(input.start, 6));
-  const ingredients = new Set(shoppingList(data, input.start).map(item => foodName(item.name))), used = new Map();
-  existing.forEach(meal => [meal.recipeId, ...(meal.dishes || []).map(dish => dish.recipeId)].filter(Boolean).forEach(id => used.set(id, (used.get(id) || 0) + 1)));
+}
+
+const mealRecipeIds = meal => [meal.recipeId, ...(meal.dishes || []).map(dish => dish.recipeId)].filter(Boolean);
+
+// Members grouped by diet, strictest first (vegan before omnivore).
+function dietGroups(members) {
+  const diets = [...new Set(members.map(member => member.diet))].sort((a, b) => isDietCompatible(a, b) ? 1 : -1);
+  return diets.map(diet => members.filter(member => member.diet === diet));
+}
+
+// Mixed diets: about two meals out of five are split, every other meal from the second one.
+function defaultSplit(index, count) {
+  return index % 2 === 1 && index < 2 * Math.round(count * 2 / 5);
+}
+
+// Recipes these members can all eat in time, with their tastes and the quantities for their portions.
+function menuPool(data, input, members, people) {
+  return [...data.recipes].sort((a, b) => Buffer.compare(Buffer.from(a.title), Buffer.from(b.title)) || a.id - b.id)
+    .filter(recipe => recipe.minutes <= input.maxMinutes && members.every(member => isDietCompatible(member.diet, recipe.diet)))
+    .map(recipe => ({ ...recipe, ...recipeTaste(recipe.ingredients, members, data.home.avoidedIngredients), needs: groupIngredients(recipe.ingredients.map(item => ({ ...item, amount: item.amount * people / recipe.servings }))) }));
+}
+
+// For a less strict group, prefer what the strictest group cannot eat (meat for an omnivore beside a pescetarian).
+function ownDishes(pool, strictest) {
+  const own = pool.filter(recipe => !isDietCompatible(strictest[0].diet, recipe.diet));
+  return own.some(recipe => tasteRank(recipe) < 3) ? own : pool;
+}
+
+function fixedDishes(slot, members) {
+  const dishes = slot.dishes, ids = Array.isArray(dishes) ? dishes.flatMap(dish => Array.isArray(dish?.memberIds) ? dish.memberIds : []) : [];
+  if (!Array.isArray(dishes) || !dishes.length || dishes.some(dish => !Array.isArray(dish?.memberIds) || !dish.memberIds.length) || new Set(ids).size !== ids.length || ids.some(id => !members.some(member => member.id === id))) throw new Error('Plats du repas invalides.');
+  return dishes;
+}
+
+// One plate per dish to fill: one shared plate, or one plate per diet group for a split meal.
+function mealPlates(slot, index, context) {
+  const { members, people, groups, count, pool } = context, place = { day: slot.day, slot: slot.slot };
+  if (slot.dishes !== undefined) return fixedDishes(slot, members).map(dish => ({ ...place, memberIds: dish.memberIds, recipeId: dish.recipeId, pool: pool(members.filter(member => dish.memberIds.includes(member.id))) }));
+  const split = groups.length > 1 && slot.recipeId === undefined && (slot.split ?? defaultSplit(index, count));
+  if (!split) return [{ ...place, recipeId: slot.recipeId, pool: pool(members, people) }];
+  return groups.map((group, rank) => ({ ...place, memberIds: group.map(member => member.id), pool: rank ? ownDishes(pool(group), groups[0]) : pool(group) }));
+}
+
+function scoreRecipe(recipe, date, { stocks, ingredients, used, recent }) {
+  const stockFor = item => matchingStocks(stocks, item, date);
+  const relevant = recipe.needs.filter(item => isAntiWasteIngredient(item.name));
+  const covered = relevant.filter(item => stockFor(item).reduce((sum, stock) => sum + inUnit(stock, item.unit), 0) + 1e-8 >= item.amount);
+  const soon = covered.filter(item => stockFor(item).some(stock => stock.amount > 0 && stock.useBy && stock.useBy <= addDays(date, 3))).length;
+  const reused = relevant.filter(item => ingredients.has(foodName(item.name))).length;
+  // Strict order: no repeat in the week, tastes, urgent anti-waste, not eaten recently; then a weighted draw.
+  return { recipe, covered, key: [used.get(recipe.id) || 0, tasteRank(recipe), -soon, Number(recent.has(recipe.id))], weight: 1 + covered.length + reused };
+}
+
+function draw(ranked, random) {
+  const order = (a, b) => a.key.reduce((diff, value, index) => diff || value - b.key[index], 0);
+  const best = ranked.reduce((top, item) => order(item, top) < 0 ? item : top);
+  const tied = ranked.filter(item => order(item, best) === 0);
+  let point = random() * tied.reduce((sum, item) => sum + item.weight, 0);
+  return tied.find(item => (point -= item.weight) < 0) || tied.at(-1);
+}
+
+function choosePlate(plate, start, context) {
+  const date = addDays(start, plate.day);
+  const ranked = plate.pool.map(recipe => scoreRecipe(recipe, date, context));
+  const { recipe, covered } = plate.recipeId === undefined ? draw(ranked, context.random) : ranked.find(item => item.recipe.id === plate.recipeId);
+  context.used.set(recipe.id, (context.used.get(recipe.id) || 0) + 1);
+  recipe.needs.forEach(item => { context.ingredients.add(foodName(item.name)); consumeStocks(context.stocks, item, date); });
+  plate.choice = { day: plate.day, slot: plate.slot, recipeId: recipe.id, ...(plate.memberIds ? { memberIds: plate.memberIds } : {}), pantryIngredients: covered.map(item => item.name) };
+}
+
+// random is injectable for tests; the HTTP routes keep Math.random.
+function previewMenu(data, input, random = Math.random) {
+  const { members, people } = menuCriteria(data.home, input), slots = menuSlots(data, input), pools = new Map();
+  const pool = (group, portions = group.length) => {
+    const key = group.map(member => member.id).join();
+    if (!pools.has(key)) pools.set(key, menuPool(data, input, group, portions));
+    return pools.get(key);
+  };
+  if (!pool(members, people).length) throw new Error('Aucune recette adaptée aux régimes et au temps choisi.');
+  const plates = slots.flatMap((slot, index) => mealPlates(slot, index, { members, people, groups: dietGroups(members), count: slots.length, pool }));
+  for (const plate of plates) if (plate.recipeId !== undefined && (!Number.isInteger(plate.recipeId) || !plate.pool.some(recipe => recipe.id === plate.recipeId))) throw new Error('Le plat choisi ne respecte plus les critères du menu.');
+  const recent = new Set(data.meals.filter(meal => meal.date >= addDays(input.start, -21) && meal.date < input.start).flatMap(mealRecipeIds)), used = new Map();
+  data.meals.filter(meal => meal.date >= input.start && meal.date <= addDays(input.start, 6)).flatMap(mealRecipeIds).forEach(id => used.set(id, (used.get(id) || 0) + 1));
+  const context = { stocks: availablePantry(data, addDays(input.start, 6)), ingredients: new Set(shoppingList(data, input.start).map(item => foodName(item.name))), used, recent, random };
   // ponytail: greedy chronological choice, not a global menu optimization.
   // Reserve manual choices first, including later meals, before proposing the rest.
-  return [...slots].sort((a, b) => Number(b.recipeId !== undefined) - Number(a.recipeId !== undefined)).map(slot => {
-    const date = addDays(input.start, slot.day);
-    const stockFor = item => matchingStocks(stocks, item, date);
-    const ranked = candidates.map(recipe => {
-      const relevant = recipe.needs.filter(item => isAntiWasteIngredient(item.name));
-      const covered = relevant.filter(item => stockFor(item).reduce((sum, stock) => sum + inUnit(stock, item.unit), 0) + 1e-8 >= item.amount);
-      return { recipe, covered, soon: covered.filter(item => stockFor(item).some(stock => stock.amount > 0 && stock.useBy && stock.useBy <= addDays(date, 3))).length, reused: relevant.filter(item => ingredients.has(foodName(item.name))).length };
-    }).sort((a, b) => ((used.get(a.recipe.id) || 0) * 2 + tasteRank(a.recipe)) - ((used.get(b.recipe.id) || 0) * 2 + tasteRank(b.recipe)) || tasteRank(a.recipe) - tasteRank(b.recipe) || b.soon - a.soon || b.covered.length - a.covered.length || b.reused - a.reused || a.recipe.title.localeCompare(b.recipe.title, 'fr'));
-    const { recipe, covered } = slot.recipeId === undefined ? ranked[0] : ranked.find(item => item.recipe.id === slot.recipeId);
-    used.set(recipe.id, (used.get(recipe.id) || 0) + 1);
-    recipe.needs.forEach(item => {
-      ingredients.add(foodName(item.name));
-      consumeStocks(stocks, item, date);
-    });
-    return { day: slot.day, slot: slot.slot, recipeId: recipe.id, pantryIngredients: covered.map(item => item.name) };
-  }).sort((a, b) => a.day - b.day || a.slot.localeCompare(b.slot));
+  [...plates.filter(plate => plate.recipeId !== undefined), ...plates.filter(plate => plate.recipeId === undefined)].forEach(plate => choosePlate(plate, input.start, context));
+  return plates.map(plate => plate.choice);
 }
 
 function suggestions(data, start = null, maxMinutes = null, memberIds = null, targetDate = start || dateKey(new Date())) {

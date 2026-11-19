@@ -126,3 +126,30 @@ test('foyer mixte : aperçu puis enregistrement HTTP d’un menu avec plats sép
     assert.equal(meal.title, 'Un plat par personne');
   }
 });
+
+test('foyer mixte : 12 repas dont 5 séparés, plafond compté en repas de l’aperçu à l’enregistrement', async t => {
+  const db = createDatabase(':memory:'); db.exec('DELETE FROM recipes');
+  const server = createApp(db); server.listen(0, '127.0.0.1'); await once(server, 'listening');
+  t.after(() => { server.close(); db.close(); });
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const post = async (path, body) => {
+    const response = await fetch(base + path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    const value = await response.json(); assert.ok(response.ok, JSON.stringify(value)); return value;
+  };
+  const members = [await post('/api/members', { name: 'Alex', diet: 'omnivore' }), await post('/api/members', { name: 'Sam', diet: 'pescetarian' })];
+  const created = [];
+  for (const [index, diet] of [...Array(12).fill('pescetarian'), ...Array(5).fill('omnivore')].entries()) {
+    created.push(await post('/api/recipes', { title: `Plat ${index}`, minutes: 10, servings: 2, diet, tags: [], ingredients: [{ name: `aliment ${index}`, amount: 200, unit: 'g' }], steps: [{ kind: 'prep', instruction: 'Préparer.' }] }));
+  }
+  const memberIds = members.map(member => member.id);
+  const slots = [...[0, 1, 2, 3, 4, 5, 6].map(day => ({ day, slot: 'soir' })), ...[0, 1, 2, 3, 4].map(day => ({ day, slot: 'midi' }))];
+  const choices = await post('/api/week/preview', { start, maxMinutes: 30, people: 2, memberIds, slots });
+  assert.equal(choices.length, 17, '7 communs + 5 repas séparés de deux plats');
+  const rows = choices.map(item => ({ day: item.day, slot: item.slot, recipeId: item.recipeId, memberIds: item.memberIds || memberIds, people: (item.memberIds || memberIds).length }));
+  const plan = planPayload({ start, rows, recipes: created, members, meals: [] });
+  assert.equal(plan.meals.length, 12);
+  assert.deepEqual(await post('/api/week/plan', plan), { added: 12 });
+  const extra = slots.concat([5, 6].map(day => ({ day, slot: 'midi' })), [{ day: 6, slot: 'midi' }]).map(slot => ({ ...slot, recipeId: created[0].id, memberIds, people: 2 }));
+  assert.throws(() => planPayload({ start, rows: [], recipes: created, members, meals: [] }), /repas/);
+  assert.throws(() => planPayload({ start, rows: extra, recipes: created, members, meals: [] }), /deux plats|plusieurs plats/, '15 lignes sur 14 créneaux : un créneau répété');
+});
