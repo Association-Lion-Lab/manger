@@ -29,6 +29,7 @@
 .menu-duration { display: inline-flex; align-items: center; gap: 5px; padding: 5px 9px; border-radius: 9px; color: var(--muted); background: var(--raised); font-size: .8125rem; white-space: nowrap; }
 .menu-duration .ui-icon { width: 15px; height: 15px; }
 .menu-taste { margin: 8px 0 0; font-size: .75rem; line-height: 1.45; }
+.menu-for { margin: -4px 0 8px; font-size: .8125rem; }
 .menu-row-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
 #menu-dialog .menu-row-actions .secondary { width: auto; min-height: 44px; padding: 8px 14px; font-size: .875rem; }
 .menu-portions { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; padding: 0 10px; border: 1px solid var(--line); border-radius: 22px; background: var(--raised); }
@@ -98,7 +99,10 @@
   .menu-arrive .menu-recipe:nth-of-type(3) { animation-delay: .24s; }
   .menu-arrive .menu-recipe:nth-of-type(4) { animation-delay: .36s; }
   .menu-arrive .menu-recipe:nth-of-type(5) { animation-delay: .48s; }
-  /* shortcut: délai calé sur cinq cartes (maximum de la première proposition) ; avec moins de cartes le bouton s'allume un peu après la cascade. */
+  /* Régimes différents : deux plats de plus sur les repas séparés. */
+  .menu-arrive .menu-recipe:nth-of-type(6) { animation-delay: .6s; }
+  .menu-arrive .menu-recipe:nth-of-type(7) { animation-delay: .72s; }
+  /* shortcut: délai calé sur cinq cartes (première proposition sans régimes différents) ; avec moins de cartes le bouton s'allume un peu après la cascade. */
   .menu-arrive .menu-footer > .primary { animation: menu-ready .2s ease-out .48s backwards; }
   .menu-recipe-new { animation: menu-card-in .18s ease-out; }
   @keyframes menu-slide-in { from { transform: translateX(100%); } to { transform: translateX(0); } }

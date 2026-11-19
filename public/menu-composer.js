@@ -18,7 +18,8 @@
     return start < current ? current : dayKey(start, 7);
   }
   function planPayload({ start, rows, recipes, members, meals, today = '' }) {
-    if (!Array.isArray(rows) || !rows.length || rows.length > 14) throw new Error('Choisis entre une et quatorze recettes.');
+    // Plafond compté en repas (jour/créneau), pas en plats : un repas séparé a un plat par régime.
+    if (!Array.isArray(rows) || !rows.length || new Set(rows.map(row => row.day + '/' + row.slot)).size > 14) throw new Error('Choisis entre un et quatorze repas.');
     const groups = new Map(), rank = { vegan: 0, vegetarian: 1, pescetarian: 2, omnivore: 3 };
     for (const row of rows) {
       if (!Number.isInteger(row.day) || row.day < 0 || row.day > 6 || !['midi', 'soir'].includes(row.slot)) throw new Error('Choisis un jour et un créneau valides.');
@@ -52,7 +53,16 @@
     const data = () => config.state();
     const today = () => config.today();
     const free = () => availableSlots(start, data().meals, today());
-    const candidates = () => config.candidates(criteria);
+    // Un repas = les plats issus d'un même créneau proposé : un plat commun, ou un plat par régime.
+    const mealsOf = list => [...new Set(list.map(row => row.group))].map(group => list.filter(row => row.group === group));
+    const membersOf = ids => data().members.filter(member => ids.includes(member.id));
+    const mixedDiets = () => new Set(membersOf(criteria.memberIds).map(member => member.diet)).size > 1;
+    // Remplacer : recettes permises pour les mangeurs de ce plat, sans la recette remplacée quand une autre existe.
+    function pickerRecipes() {
+      const row = rows[pickerIndex], list = config.candidates(row?.split ? { ...criteria, memberIds: row.memberIds } : criteria);
+      const others = list.filter(recipe => recipe.id !== row?.recipeId);
+      return others.length ? others : list;
+    }
     const recipeFor = row => data().recipes.find(recipe => recipe.id === row.recipeId);
     const button = (action, label, style = 'secondary', extra = '') => `<button type="button" class="${style}" data-menu-action="${action}" ${extra}>${label}</button>`;
     const dateLabel = day => new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'short', timeZone: 'UTC' }).format(new Date(dayKey(start, day) + 'T12:00:00Z'));
@@ -73,12 +83,19 @@
       const step = row.memberIds.length || 1, maximum = row.memberIds.length ? Math.min(100, 20 * step) : 100;
       return `<label class="menu-portions"><span class="menu-portions-caption" aria-hidden="true">Portions</span><input type="number" data-menu-portions="${index}" min="${step}" max="${maximum}" step="${step}" value="${row.people}" aria-label="Portions pour ${e(recipeFor(row)?.title || 'ce plat')}"></label>`;
     }
+    // Régimes différents : bascule « Un plat chacun » / « Plat commun » sur le premier plat de chaque repas.
+    function splitToggle(row, meals) {
+      const meal = meals.findIndex(list => list.includes(row));
+      return mixedDiets() && meals[meal][0] === row ? button('split', row.split ? 'Plat commun' : 'Un plat chacun', 'secondary', `data-menu-meal="${meal}"`) : '';
+    }
     function menuRows() {
+      const meals = mealsOf(rows);
       return rows.map((row, index) => {
         const recipe = recipeFor(row);
         if (!recipe) return `<article class="menu-recipe"><p class="error">Une recette manque.</p>${button('remove', 'Retirer ce plat', 'secondary', `data-menu-index="${index}"`)}</article>`;
-        const notice = config.notice(recipe, criteria);
-        return `<article class="menu-recipe${index === fresh ? ' menu-recipe-new' : ''}"><div class="menu-recipe-top"><div class="menu-cover">${config.cover(recipe)}</div><div class="menu-recipe-copy"><h3>${e(recipe.title)}</h3><span class="menu-duration">${icon('clock')} ${recipe.minutes} min</span>${notice ? `<p class="muted menu-taste">${e(notice)}</p>` : ''}</div></div><div class="menu-row-actions">${button('replace', 'Remplacer', 'secondary', `data-menu-index="${index}"`)}${portions(row, index)}${button('remove', icon('trash'), 'icon-button', `data-menu-index="${index}" aria-label="Retirer ${e(recipe.title)}"`)}</div></article>`;
+        const notice = config.notice(recipe, row.split ? { ...criteria, memberIds: row.memberIds } : criteria);
+        const eaters = row.split ? `<p class="muted menu-for">Pour ${membersOf(row.memberIds).map(member => e(member.name)).join(', ')}</p>` : '';
+        return `<article class="menu-recipe${fresh?.includes(row) ? ' menu-recipe-new' : ''}"><div class="menu-recipe-top"><div class="menu-cover">${config.cover(recipe)}</div><div class="menu-recipe-copy"><h3>${e(recipe.title)}</h3>${eaters}<span class="menu-duration">${icon('clock')} ${recipe.minutes} min</span>${notice ? `<p class="muted menu-taste">${e(notice)}</p>` : ''}</div></div><div class="menu-row-actions">${splitToggle(row, meals)}${button('replace', 'Remplacer', 'secondary', `data-menu-index="${index}"`)}${portions(row, index)}${button('remove', icon('trash'), 'icon-button', `data-menu-index="${index}" aria-label="Retirer ${e(recipe.title)}"`)}</div></article>`;
       }).join('');
     }
     function placements() {
@@ -98,7 +115,7 @@
         : placing ? `<p class="muted menu-intro">Choisis midi ou soir. Pour des plats différents au même repas, ajuste les participants.</p>${placements()}`
           : waiting ? waitingScreen()
           : ended ? '<p class="empty-state">Plus de repas libre à venir cette semaine. Les jours passés ne sont pas proposés.</p>'
-          : `${controls()}<div class="menu-count"><strong>${rows.length} recette${rows.length === 1 ? '' : 's'}</strong><span class="muted">Ton menu, à ajuster</span></div>${menuRows()}${rows.length < free().length ? button('add', icon('plus') + ' Ajouter une recette', 'menu-add') : '<p class="muted">Le menu atteint le nombre de repas libres de cette semaine.</p>'}`;
+          : `${controls()}<div class="menu-count"><strong>${rows.length} recette${rows.length === 1 ? '' : 's'}</strong><span class="muted">Ton menu, à ajuster</span></div>${menuRows()}${mealsOf(rows).length < free().length ? button('add', icon('plus') + ' Ajouter une recette', 'menu-add') : '<p class="muted">Le menu atteint le nombre de repas libres de cette semaine.</p>'}`;
       const action = saved ? 'refresh' : uncertain ? 'check' : placing ? 'save' : ended ? 'next' : 'days';
       const label = saved ? 'Afficher les courses' : uncertain ? 'Vérifier le planning' : placing ? 'Créer la liste de courses' : ended ? 'Composer la semaine suivante' : 'Choisir les jours';
       dialog.innerHTML = `<div class="menu-shell${arriving ? ' menu-arrive' : ''}${waiting ? ' menu-wait' : ''}"><header class="menu-header">${button('back', icon('back'), 'icon-button', 'aria-label="Retour"')}<div><h2 id="menu-title" tabindex="-1">${title}</h2><p id="menu-subtitle" class="muted" role="status">${subtitle}</p></div>${button('close', icon('close'), 'icon-button', 'aria-label="Fermer le menu"')}</header><fieldset class="menu-body" id="menu-body" aria-label="Contenu du menu"${saved || uncertain ? ' disabled' : ''}>${body}</fieldset><footer class="menu-footer"><p id="menu-error" class="error" role="alert"${error ? '' : ' hidden'}>${e(error)}</p>${picking ? '' : button(action, label, 'primary', rows.length || ended ? '' : 'disabled')}<span class="menu-save-status muted" role="status">${waiting ? '' : busy ? 'Préparation du menu…' : !saved && !uncertain && !picking ? 'Aucun changement avant la création des courses.' : ''}</span></footer></div>`;
@@ -117,8 +134,27 @@
       if (node) { node.textContent = message; node.hidden = !message; }
     }
     function search(query) {
-      const list = config.search(candidates(), query);
+      const list = config.search(pickerRecipes(), query);
       dialog.querySelector('#menu-search-results').innerHTML = `<p class="muted" role="status">${list.length} recette${list.length === 1 ? '' : 's'}</p>` + list.slice(0, 80).map(recipe => `<button type="button" class="menu-search-recipe" data-menu-action="pick" data-menu-recipe="${recipe.id}"><span class="menu-cover">${config.cover(recipe)}</span><span><strong>${e(recipe.title)}</strong><small class="muted">${recipe.minutes} min</small></span>${icon('plus')}</button>`).join('') + (!list.length ? '<p class="empty-state">Aucun résultat avec ces critères. Tu peux changer le temps disponible dans ton menu.</p>' : list.length > 80 ? '<p class="muted">Précise ta recherche pour voir les autres recettes.</p>' : '');
+    }
+    // Créneau envoyé à l'aperçu : plats gardés (sauf celui remplacé), bascule commun/séparé, recette ajoutée, ou libre.
+    function slotRequest(slot, dishes, index, override) {
+      const target = override?.meal === index;
+      if (target && override.split !== undefined) return { ...slot, split: override.split };
+      if (target && !dishes.length) return { ...slot, recipeId: override.recipeId };
+      if (!dishes.length || (!override && !dishes.some(row => row.pinned))) return slot;
+      const recipeId = row => row === override?.row ? override.recipeId : row.recipeId;
+      return dishes[0].split ? { ...slot, dishes: dishes.map(row => ({ memberIds: row.memberIds, recipeId: recipeId(row) })) } : { ...slot, recipeId: recipeId(dishes[0]) };
+    }
+    // Lignes du brouillon pour un créneau : un plat commun, ou un plat par régime (memberIds renvoyés par l'aperçu).
+    function slotRows(slot, index, found, old, override, nextCriteria, changed) {
+      return found.map((choice, rank) => {
+        const same = old.length === found.length ? old[rank] : null, place = old[0] || slot, memberIds = choice.memberIds || [...nextCriteria.memberIds];
+        const touched = override?.meal === index && (!override.row || override.row === same);
+        const row = { ...(same || { day: place.day, slot: place.slot, people: memberIds.length || nextCriteria.people, memberIds }), group: index, split: Boolean(choice.memberIds), recipeId: choice.recipeId, pinned: Boolean(same?.pinned || (touched && override.recipeId !== undefined)) };
+        if (touched) changed.push(row);
+        return row;
+      });
     }
     // first : proposition initiale d'une ouverture, montrée avec l'écran d'attente ; 900 ms minimum et cascade seulement si le mouvement est permis.
     async function propose(count, override = null, nextCriteria = criteria, first = false) {
@@ -127,8 +163,8 @@
       if (!slots.length) { showError('Cette semaine est complète. Choisis une autre semaine dans le calendrier.'); return; }
       if (data().members.length && !nextCriteria.memberIds.length) { showError('Choisis au moins une personne.'); return; }
       if (!Number.isInteger(nextCriteria.people) || nextCriteria.people < 1 || nextCriteria.people > 100) { showError('Choisis un nombre de personnes valide.'); return; }
-      const reset = nextCriteria !== criteria;
-      const payload = { start, ...nextCriteria, slots: slots.map((item, index) => ({ ...item, ...(!reset && rows[index] && (override || rows[index].pinned) ? { recipeId: rows[index].recipeId } : {}), ...(override?.index === index ? { recipeId: override.recipeId } : {}) })) };
+      const reset = nextCriteria !== criteria, current = reset ? [] : mealsOf(rows);
+      const payload = { start, ...nextCriteria, slots: slots.map((slot, index) => slotRequest(slot, current[index] || [], index, override)) };
       const staged = first && !calm();
       busy = true; showError('');
       if (first) { waiting = true; render(); }
@@ -138,15 +174,16 @@
         const choices = await config.api('/api/week/preview', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload), signal: AbortSignal.timeout(10000) });
         await pause;
         if (request !== version || !dialog.open) return;
-        const allowed = config.candidates(nextCriteria);
-        if (!Array.isArray(choices) || choices.length !== slots.length) throw new Error('Proposition incomplète. Réessaie.');
-        const next = slots.map((slot, index) => {
-          const choice = choices.find(item => item.day === slot.day && item.slot === slot.slot);
-          if (!choice || !allowed.some(recipe => recipe.id === choice.recipeId)) throw new Error('Le catalogue a changé. Recharge la page avant de poursuivre.');
-          const old = !reset && rows[index];
-          return { ...(old || { ...slot, people: nextCriteria.people, memberIds: [...nextCriteria.memberIds] }), recipeId: choice.recipeId, pinned: Boolean(old?.pinned || override?.index === index) };
+        if (!Array.isArray(choices)) throw new Error('Proposition incomplète. Réessaie.');
+        const allowed = choice => config.candidates(choice.memberIds ? { ...nextCriteria, memberIds: choice.memberIds } : nextCriteria).some(recipe => recipe.id === choice.recipeId);
+        const changed = [];
+        const next = slots.flatMap((slot, index) => {
+          const found = choices.filter(item => item.day === slot.day && item.slot === slot.slot);
+          if (!found.length) throw new Error('Proposition incomplète. Réessaie.');
+          if (!found.every(allowed)) throw new Error('Le catalogue a changé. Recharge la page avant de poursuivre.');
+          return slotRows(slot, index, found, current[index] || [], override, nextCriteria, changed);
         });
-        rows = next; criteria = nextCriteria; phase = 'menu'; arriving = staged; fresh = override ? override.index : null;
+        rows = next; criteria = nextCriteria; phase = 'menu'; arriving = staged; fresh = override ? changed : null;
       } catch (failure) {
         if (request !== version || !dialog.open) return;
         phase = previousPhase;
@@ -234,11 +271,15 @@
       if (action === 'back') { if (phase === 'menu') dialog.close(); else { phase = 'menu'; error = ''; render(true); } }
       if (action === 'remove') { rows.splice(index, 1); render(); }
       if (action === 'replace' || action === 'add') { pickerIndex = action === 'add' ? rows.length : index; phase = 'picker'; error = ''; render(); }
-      if (action === 'pick') await propose(Math.max(rows.length, pickerIndex + 1), { index: pickerIndex, recipeId: Number(node.dataset.menuRecipe) });
+      if (action === 'pick') {
+        const meals = mealsOf(rows), row = rows[pickerIndex], meal = row ? meals.findIndex(list => list.includes(row)) : meals.length;
+        await propose(Math.max(meals.length, meal + 1), { meal, row, recipeId: Number(node.dataset.menuRecipe) });
+      }
+      if (action === 'split') { const meals = mealsOf(rows), meal = Number(node.dataset.menuMeal); await propose(meals.length, { meal, split: !meals[meal][0].split }); }
       if (action === 'days') { dropPastRows(); if (!rows.length) { render(); return; } phase = 'days'; error = ''; render(true); }
       if (action === 'criteria') {
         const ids = [...dialog.querySelectorAll('[data-menu-member]:checked')].map(input => Number(input.dataset.menuMember));
-        await propose(rows.length || Math.min(5, free().length), null, { memberIds: ids, people: ids.length || Number(dialog.querySelector('[data-menu-people]')?.value), maxMinutes: Number(dialog.querySelector('[data-menu-minutes]').value) });
+        await propose(mealsOf(rows).length || Math.min(5, free().length), null, { memberIds: ids, people: ids.length || Number(dialog.querySelector('[data-menu-people]')?.value), maxMinutes: Number(dialog.querySelector('[data-menu-minutes]').value) });
       }
       if (action === 'save') await save();
       if (action === 'next') await nextWeek();
@@ -249,11 +290,13 @@
     dialog.addEventListener('cancel', event => { if (busy) event.preventDefault(); });
     dialog.addEventListener('close', () => { version++; });
     // Brouillon rouvert après minuit : un plat resté sur un jour passé glisse vers un repas libre à venir, sinon il est retiré.
+    // Les plats d'un repas séparé suivent le premier déplacé.
     function dropPastRows() {
       if (saved || uncertain) return;
       rows = rows.filter(row => {
         if (dayKey(start, row.day) >= today()) return true;
-        const slot = free().find(item => !rows.some(other => other.day === item.day && other.slot === item.slot));
+        const mate = row.split && rows.find(other => other !== row && other.group === row.group && dayKey(start, other.day) >= today());
+        const slot = mate ? { day: mate.day, slot: mate.slot } : free().find(item => !rows.some(other => other.day === item.day && other.slot === item.slot));
         return Boolean(slot && Object.assign(row, slot));
       });
     }
