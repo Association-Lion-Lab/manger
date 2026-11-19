@@ -1,8 +1,18 @@
 # Suite du développement
 
+## Menu guidé : roulement sans limite et propositions toujours nouvelles — 19 novembre 2026
+
+Livré sur la branche `feat/roulement-illimite`, non fusionné.
+- **Historique complet** : le menu guidé tient compte de tout l'historique, et non plus des 21 derniers jours. Les recettes jamais mangées passent d'abord.
+- **Après un tour du catalogue** : le tirage au sort favorise les recettes mangées il y a longtemps, en proportion des jours écoulés, sans ordre figé.
+- **Pendant la composition** : les recettes déjà proposées pour la semaine ouverte passent derrière celles pas encore vues. C'est vrai pour « Actualiser les propositions », « Remplacer » et la bascule « Un plat chacun » / « Plat commun ».
+- **Aperçu** : il accepte un champ facultatif `seenRecipeIds`. Réponse, schéma, moteurs et dépendances sont inchangés.
+
+Tests : 507 au total, 506 réussis, 1 ignoré. Non vérifiés : PostgreSQL, navigateur et téléphone. [Décision](DECISIONS.md#19-novembre-2026--menu-guidé--roulement-sans-limite-et-propositions-toujours-nouvelles).
+
 ## Menu guidé : variété et régimes différents — 19 novembre 2026
 
-Livré sur la branche `feat/menu-variete`, non fusionné. Le menu guidé ne propose plus deux fois la même recette dans la semaine quand une autre existe, fait passer derrière les recettes mangées dans les 21 jours précédents, garde goûts et anti-gaspi urgent en priorité, puis tire au sort au lieu de l'ordre alphabétique (le placard augmente les chances). Avec des régimes différents parmi les participants, environ deux repas sur cinq sont séparés : un plat par régime, avec par exemple de la viande pour la personne omnivore seulement ; les autres repas restent communs. Bouton « Un plat chacun » / « Plat commun » par repas, prénom du profil sur chaque plat séparé, enregistrement en « Un plat par personne ». Serveur, routes, schéma et dépendances inchangés ; la réponse de l'aperçu gagne `memberIds` pour les plats séparés. 504 tests généraux, 503 réussis, 1 ignoré ; PostgreSQL, navigateur, iPhone et lecteur d'écran non vérifiés ; durée de 21 jours à confirmer. [Décision](DECISIONS.md#19-novembre-2026--menu-guidé--variété-et-régimes-différents).
+Fusionné dans `development` (`0f3fb20`) et testé par l'utilisateur sur son serveur le 19 novembre ; les 21 jours de roulement ont ensuite été remplacés par le roulement sans limite ci-dessus. Le menu guidé ne propose plus deux fois la même recette dans la semaine quand une autre existe, fait passer derrière les recettes mangées dans les 21 jours précédents, garde goûts et anti-gaspi urgent en priorité, puis tire au sort au lieu de l'ordre alphabétique (le placard augmente les chances). Avec des régimes différents parmi les participants, environ deux repas sur cinq sont séparés : un plat par régime, avec par exemple de la viande pour la personne omnivore seulement ; les autres repas restent communs. Bouton « Un plat chacun » / « Plat commun » par repas, prénom du profil sur chaque plat séparé, enregistrement en « Un plat par personne ». Serveur, routes, schéma et dépendances inchangés ; la réponse de l'aperçu gagne `memberIds` pour les plats séparés. 504 tests généraux, 503 réussis, 1 ignoré ; PostgreSQL, navigateur, iPhone et lecteur d'écran non vérifiés ; durée de 21 jours à confirmer. [Décision](DECISIONS.md#19-novembre-2026--menu-guidé--variété-et-régimes-différents).
 
 ## Menu guidé : attente mise en scène et arrivée des cartes — 18 novembre 2026
 

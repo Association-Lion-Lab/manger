@@ -130,14 +130,30 @@ function mealPlates(slot, index, context) {
   return groups.map((group, rank) => ({ ...place, memberIds: group.map(member => member.id), pool: rank ? ownDishes(pool(group), groups[0]) : pool(group) }));
 }
 
-function scoreRecipe(recipe, date, { stocks, ingredients, used, recent }) {
+function scoreRecipe(recipe, date, { stocks, ingredients, used, seen, eatenDaysAgo }) {
   const stockFor = item => matchingStocks(stocks, item, date);
   const relevant = recipe.needs.filter(item => isAntiWasteIngredient(item.name));
   const covered = relevant.filter(item => stockFor(item).reduce((sum, stock) => sum + inUnit(stock, item.unit), 0) + 1e-8 >= item.amount);
   const soon = covered.filter(item => stockFor(item).some(stock => stock.amount > 0 && stock.useBy && stock.useBy <= addDays(date, 3))).length;
   const reused = relevant.filter(item => ingredients.has(foodName(item.name))).length;
-  // Strict order: no repeat in the week, tastes, urgent anti-waste, not eaten recently; then a weighted draw.
-  return { recipe, covered, key: [used.get(recipe.id) || 0, tasteRank(recipe), -soon, Number(recent.has(recipe.id))], weight: 1 + covered.length + reused };
+  const daysAgo = eatenDaysAgo.get(recipe.id);
+  // Strict order: no repeat in the week, tastes, urgent anti-waste, not yet shown while composing, never eaten;
+  // then a weighted draw where a recipe eaten long ago weighs more (90 days ago: 90 times yesterday).
+  return { recipe, covered, key: [used.get(recipe.id) || 0, tasteRank(recipe), -soon, Number(seen.has(recipe.id)), Number(daysAgo !== undefined)], weight: (1 + covered.length + reused) * (daysAgo || 1) };
+}
+
+// Days since each recipe was last eaten before the week, over the whole history.
+function eatenDaysAgo(meals, start) {
+  const days = new Map(), day = date => Date.parse(`${date}T12:00:00Z`) / 864e5;
+  for (const meal of meals) if (meal.date < start) for (const id of mealRecipeIds(meal)) days.set(id, Math.min(days.get(id) ?? Infinity, Math.round(day(start) - day(meal.date))));
+  return days;
+}
+
+// Recipes already proposed while composing this menu (optional, sent by the composer).
+function seenRecipes(input) {
+  const ids = input.seenRecipeIds ?? [];
+  if (!Array.isArray(ids) || ids.length > 1000 || !ids.every(Number.isInteger)) throw new Error('Critères du menu invalides.');
+  return new Set(ids);
 }
 
 function draw(ranked, random) {
@@ -168,9 +184,9 @@ function previewMenu(data, input, random = Math.random) {
   if (!pool(members, people).length) throw new Error('Aucune recette adaptée aux régimes et au temps choisi.');
   const plates = slots.flatMap((slot, index) => mealPlates(slot, index, { members, people, groups: dietGroups(members), count: slots.length, pool }));
   for (const plate of plates) if (plate.recipeId !== undefined && (!Number.isInteger(plate.recipeId) || !plate.pool.some(recipe => recipe.id === plate.recipeId))) throw new Error('Le plat choisi ne respecte plus les critères du menu.');
-  const recent = new Set(data.meals.filter(meal => meal.date >= addDays(input.start, -21) && meal.date < input.start).flatMap(mealRecipeIds)), used = new Map();
+  const seen = seenRecipes(input), used = new Map();
   data.meals.filter(meal => meal.date >= input.start && meal.date <= addDays(input.start, 6)).flatMap(mealRecipeIds).forEach(id => used.set(id, (used.get(id) || 0) + 1));
-  const context = { stocks: availablePantry(data, addDays(input.start, 6)), ingredients: new Set(shoppingList(data, input.start).map(item => foodName(item.name))), used, recent, random };
+  const context = { stocks: availablePantry(data, addDays(input.start, 6)), ingredients: new Set(shoppingList(data, input.start).map(item => foodName(item.name))), used, seen, eatenDaysAgo: eatenDaysAgo(data.meals, input.start), random };
   // ponytail: greedy chronological choice, not a global menu optimization.
   // Reserve manual choices first, including later meals, before proposing the rest.
   [...plates.filter(plate => plate.recipeId !== undefined), ...plates.filter(plate => plate.recipeId === undefined)].forEach(plate => choosePlate(plate, input.start, context));
