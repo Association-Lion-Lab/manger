@@ -32,9 +32,11 @@ Contrôle dans le navigateur intégré (Chromium, 375 px, thème sombre, base je
 - **Sélection à l'appui long** : un appui long sélectionnait l'image, avec les poignées bleues d'iOS. Correctif : `.recipe-cover` interdit la sélection et le menu d'appui long (`user-select: none`, `-webkit-touch-callout: none`).
 - **Bouton introuvable** : « Actualiser les propositions » était caché dans le résumé replié du compositeur. Correctif : un bouton « Autres idées », avec l'icône `refresh` existante, toujours visible à droite de « N recettes » et de 44 px de haut, à la place du sous-titre « Ton menu, à ajuster ». Celui du résumé devient « Appliquer ces critères ». Les deux déclenchent la même action `criteria`.
 
-Le style `.menu-count .menu-refresh` remonte la spécificité, car `.secondary { width: 100% }` de `index.html` l'emportait. Les tests ont été écrits avant (2 en échec, puis réussis). Contrôle dans le navigateur intégré (375 px, catalogue importé) : bouton compact à droite, et un clic donne 5 recettes nouvelles sur 5. Non vérifié sur iPhone : la disparition du saut au toucher.
+Le style `.menu-count .menu-refresh` remonte la spécificité, car `.secondary { width: 100% }` de `index.html` l'emportait. Les tests ont été écrits avant (2 en échec, puis réussis). Contrôle dans le navigateur intégré (375 px, catalogue importé) : bouton compact à droite, et un clic donne 5 recettes nouvelles sur 5.
 
-**Reste à vérifier.** Thème clair, fluidité et sensation de l'appui sur téléphone réel, réglage « Réduire les animations » sur iPhone et Android. Annonce par lecteur d'écran : la case cochée disparaît de la liste visible au rendu, comme avant ce changement.
+**Validation réelle.** L'utilisateur a testé la branche sur son serveur et son iPhone le 22 novembre : plus de saut de la photo, plus de sélection à l'appui long, bouton « Autres idées » trouvé. Fusion dans `development` (`a1ba698`), 514 tests réussis sur 515 (1 ignoré : TLS).
+
+**Reste à vérifier.** Thème clair, Android, réglage « Réduire les animations » sur iPhone et Android. Annonce par lecteur d'écran : la case cochée disparaît de la liste visible au rendu, comme avant ce changement.
 
 ## 19 novembre 2026 — Menu guidé : roulement sans limite et propositions toujours nouvelles
 

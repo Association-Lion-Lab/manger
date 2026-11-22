@@ -2,7 +2,7 @@
 
 ## Toucher et mouvement dans toute l'appli — 19 novembre 2026
 
-Livré sur la branche `feat/animations-app`, non fusionné. Fin de l'idée UX n° 6 :
+Testé par l'utilisateur sur son serveur et son iPhone, puis fusionné dans `development` (`a1ba698`). Fin de l'idée UX n° 6 :
 - boutons et jours qui s'enfoncent légèrement à l'appui ;
 - onglets en fondu ;
 - ligne de courses cochée estompée 200 ms avant de rejoindre « Déjà dans le panier » ;
@@ -15,7 +15,7 @@ Après le test sur iPhone :
 - un appui long ne sélectionne plus l'image ;
 - un bouton « Autres idées » toujours visible remplace « Actualiser les propositions », qui était caché dans le résumé replié du menu.
 
-Tout est désactivé si le téléphone demande de réduire les animations. Serveur, API, schéma et dépendances sont inchangés. Non vérifiés : thème clair, téléphone réel, lecteur d'écran. [Décision](DECISIONS.md#19-novembre-2026--toucher-et-mouvement-dans-toute-lappli). Ensuite : invitation directe (idée n° 4), puis « Mon foyer » (idée n° 8).
+Tout est désactivé si le téléphone demande de réduire les animations. Serveur, API, schéma et dépendances sont inchangés. Validé sur iPhone par l'utilisateur. Non vérifiés : thème clair, Android, lecteur d'écran. [Décision](DECISIONS.md#19-novembre-2026--toucher-et-mouvement-dans-toute-lappli). Ensuite : invitation directe (idée n° 4), puis « Mon foyer » (idée n° 8).
 
 ## Menu guidé : roulement sans limite et propositions toujours nouvelles — 19 novembre 2026
 
