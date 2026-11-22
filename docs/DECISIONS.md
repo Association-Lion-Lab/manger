@@ -1,5 +1,31 @@
 # Choix techniques, limites et blocages
 
+## 22 novembre 2026 — Invitation directe
+
+**Contexte.** Idée UX n° 4. « Inviter une personne » ouvrait `/account` en haut, sur « Mot de passe ». L'invitation était plus bas, dans un `<details>` d'environ 26 px de haut, et « Revenir aux repas » ramenait au planning plutôt qu'à l'onglet Compte d'où l'on venait.
+
+**Choix et raison.**
+- **Lien** : `#account-invite` vise `/account#invitation-options`. Le défilement natif vers l'ancre ne suffit pas, car `#account` est masqué tant que `/api/account` n'a pas répondu.
+- **Arrivée** : `openInvitationFromLink()` s'exécute après l'affichage du compte et le chargement de la liste des comptes, pour que la position ne bouge plus ensuite. Elle s'exécute aussi si ce chargement échoue (`people().finally(...)`), l'erreur restant affichée. Elle ne fait rien hors de ce fragment ni pour un membre (la section administrateur reste masquée). Elle ouvre le `<details>` et le place en haut avec `scrollIntoView({ block: 'start' })`, sans défilement animé, à 16 px du bord (`scroll-margin-top`). Le fragment `#invite=` des liens d'invitation n'est pas concerné : `URLSearchParams` n'y lit pas `invite`.
+- **Rien d'automatique** : le lien d'invitation donne accès aux données du foyer, il reste créé par un geste volontaire.
+- **Retour** : « ‹ Compte » vise `/#account`. Au démarrage, `openPanelFromLink()` de `index.html` efface le fragment avec `history.replaceState`, puis clique l'onglet Compte de la barre, sans dupliquer la logique de navigation. Elle s'exécute avant l'abonnement de la liaison Faim de Lion à la barre, pour ne pas lancer deux rafraîchissements.
+- **Cibles** : règle générale `summary { min-height: 44px }` sur la page du compte. Les résumés du courriel serveur et du certificat gardent leurs 48 px.
+
+**Alternatives écartées.**
+- Remonter l'invitation au-dessus du mot de passe pour tout le monde : utile seulement à l'administrateur, et rarement.
+- Créer le lien dès l'arrivée : action sensible et non demandée.
+- `history.back()` pour le retour : l'arrivée directe ou une page restaurée ne garantissent pas l'onglet Compte.
+
+**Conséquences.** Aucun changement de serveur, d'API, de schéma, de dépendance ni de service worker. Une adresse `/#account` ouvre désormais l'onglet Compte. Hors ligne, le service worker sert `offline.html` pour `/#account` comme pour `/` : « ‹ Compte » mène alors à la page hors ligne, ce qui reste acceptable puisque la page du compte demande de toute façon le serveur. Si la session a expiré, le fragment est effacé et la reconnexion ramène à l'onglet par défaut.
+
+**Relecture.** Relecture Sonnet sans bloquant ; trois remarques mineures appliquées (ouverture même si la liste des comptes échoue, test moins dépendant de l'indentation, cas hors ligne documenté).
+
+**Validation.** Tests écrits d'abord (`invitation-direct-ui.test.js`, 4 en échec puis réussis) : lien, ouverture pour un administrateur seulement et jamais sur `#invite=`, aucun appel réseau à l'arrivée, retour vers l'onglet Compte, lignes de 44 px. Suite complète : 519 tests, 518 réussis, 1 ignoré (TLS).
+
+Contrôle dans le navigateur intégré (Chromium, 375 px, thème sombre, bases jetables, compte de test `admin`) : « Inviter une personne » ouvre `/account#invitation-options`, section dépliée à 16 px du haut, aucun lien créé ; résumés visibles de 46 à 50 px ; « ‹ Compte » rouvre l'onglet Compte et efface `#account` de l'adresse.
+
+**Reste à vérifier.** Comportement sur iPhone (application installée et Safari), annonce par lecteur d'écran du `<details>` ouvert.
+
 ## 19 novembre 2026 — Toucher et mouvement dans toute l'appli
 
 **Contexte.** Suite de l'idée UX n° 6, après le compositeur du 18 novembre. Les moments choisis par l'utilisateur sont : changement d'onglet, gestes (boutons, cœur, jours) et coche des courses avec une petite fête. Avant ce changement, seule la couleur changeait à l'appui, les onglets changeaient sec et une ligne cochée sautait sans transition.

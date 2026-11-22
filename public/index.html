@@ -596,7 +596,7 @@
         <div class="account-group">
           <button id="account-household" type="button"><span class="account-symbol" aria-hidden="true" data-ui-icon="people">♧</span><span><strong>Personnes du foyer</strong><small>Repas partagés ou séparés</small></span><span aria-hidden="true">›</span></button>
           <button id="account-tastes" type="button"><span class="account-symbol" aria-hidden="true" data-ui-icon="heart">♡</span><span><strong>Goûts et régimes</strong><small>Les préférences de chacun</small></span><span aria-hidden="true">›</span></button>
-          <a id="account-invite" href="/account" hidden><span class="account-symbol" aria-hidden="true" data-ui-icon="plus">＋</span><span><strong>Inviter une personne</strong><small>Gérer les accès au foyer</small></span><span aria-hidden="true">›</span></a>
+          <a id="account-invite" href="/account#invitation-options" hidden><span class="account-symbol" aria-hidden="true" data-ui-icon="plus">＋</span><span><strong>Inviter une personne</strong><small>Gérer les accès au foyer</small></span><span aria-hidden="true">›</span></a>
         </div>
         <section id="fdl-account" aria-label="Liaison Faim de Lion" hidden></section>
         <h2 class="account-heading">Préférences</h2>
@@ -3239,6 +3239,9 @@
       if (isSecureContext && navigator.serviceWorker && localStorage.getItem('manger-offline-enabled') === 'yes') navigator.serviceWorker.getRegistration().then(registration => registration?.update()).catch(() => {});
     } catch {}
     document.querySelectorAll('[data-ui-icon]').forEach(element => { element.innerHTML = uiIcon(element.dataset.uiIcon); });
+    // « ‹ Compte » sur /account revient ici avec #account : rouvrir cet onglet, puis effacer le fragment.
+    function openPanelFromLink() { if (location.hash !== '#account') return; history.replaceState(null, '', location.pathname + location.search); document.querySelector('nav [data-panel="account"]').click(); }
+    openPanelFromLink();
     const fdlUi=MangerFdl.create({account:document.getElementById('fdl-account'),recipes:document.getElementById('fdl-recipes'),fetch:(...args)=>fetch(...args),escape:escapeHtml,reload:async()=>{if(!await load())throw new Error('La copie est enregistrée. Recharge la page pour actualiser les recettes.');}});
     document.querySelector('nav').addEventListener('click',event=>{if(event.target.closest('[data-panel="recipes"], [data-panel="account"]'))fdlUi.refresh();});
     fdlUi.refresh();
