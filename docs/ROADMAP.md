@@ -1,5 +1,15 @@
 # Suite du développement
 
+## « Mon foyer » réorganisé — 22 novembre 2026
+
+Livré sur la branche `feat/mon-foyer`, non fusionné. Idée UX n° 8 :
+- dans l'onglet Compte, une seule ligne **Personnes et régimes** remplace « Personnes du foyer » et « Goûts et régimes » ;
+- nouvelle ligne **Sauvegarde du foyer** (administrateurs) : la fenêtre s'ouvre sur la sauvegarde dépliée ;
+- dans la fenêtre, **Bar à protéines** et la sauvegarde sont repliés ; le lien vers le compte est retiré ;
+- pastilles poisson, viande et œuf aux couleurs du thème clair ou sombre, 44 px de haut dans la fenêtre.
+
+Serveur, API et données inchangés. Non vérifiés : téléphone réel, lecteur d'écran. [Décision](DECISIONS.md#22-novembre-2026--mon-foyer--une-entrée-trois-blocs).
+
 ## Invitation directe — 22 novembre 2026
 
 Testé sur iPhone et fusionné dans `development` (`17a9049`). Idée UX n° 4 :
@@ -8,7 +18,7 @@ Testé sur iPhone et fusionné dans `development` (`17a9049`). Idée UX n° 4 :
 - « Revenir aux repas » devient **‹ Compte** et ramène à l'onglet Compte de l'appli ;
 - les lignes repliées de la page du compte font au moins 44 px de haut.
 
-Serveur, API, schéma et règles d'invitation (24 heures, une seule inscription) sont inchangés. Validé sur iPhone le 22 novembre. Non vérifiés : Android, lecteur d'écran. [Décision](DECISIONS.md#22-novembre-2026--invitation-directe). Ensuite : « Mon foyer » réorganisé (idée n° 8).
+Serveur, API, schéma et règles d'invitation (24 heures, une seule inscription) sont inchangés. Validé sur iPhone le 22 novembre. Non vérifiés : Android, lecteur d'écran. [Décision](DECISIONS.md#22-novembre-2026--invitation-directe).
 
 ## Toucher et mouvement dans toute l'appli — 19 novembre 2026
 

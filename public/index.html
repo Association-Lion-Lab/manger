@@ -40,6 +40,9 @@
       --glass-sheen: rgb(255 255 255 / .65);
       --green: #287257;
       --purple: #76508f;
+      --fish: #1f6a82;
+      --meat: #a33b2a;
+      --egg: #7a5a10;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       font-size: 16px;
       line-height: 1.5;
@@ -63,6 +66,9 @@
       --glass-sheen: rgb(255 255 255 / .07);
       --green: #7bd5a2;
       --purple: #e1a9bb;
+      --fish: #8fd0e6;
+      --meat: #f0a090;
+      --egg: #f0c870;
     }
     :root[data-mode="light"] { color-scheme: light; }
     :root[data-accent="ardoise"] { --accent: #3b5f9b; --accent-soft: #e8eef9; }
@@ -305,9 +311,10 @@
     button.food-tag { cursor: pointer; }
     button.food-tag[aria-pressed="true"] { outline: 2px solid var(--accent); outline-offset: 2px; }
     .food-tag[data-category="plant"] { color: var(--green); background: color-mix(in srgb, var(--green) 13%, transparent); }
-    .food-tag[data-category="fish"] { color: #23718a; background: #e5f3f7; }
-    .food-tag[data-category="meat"] { color: #a33b2a; background: #fae9e5; }
-    .food-tag[data-category="egg"] { color: #8b6515; background: #fff3d3; }
+    .food-tag[data-category="fish"] { color: var(--fish); background: color-mix(in srgb, var(--fish) 13%, transparent); }
+    .food-tag[data-category="meat"] { color: var(--meat); background: color-mix(in srgb, var(--meat) 13%, transparent); }
+    .food-tag[data-category="egg"] { color: var(--egg); background: color-mix(in srgb, var(--egg) 13%, transparent); }
+    .household-list .food-tag { min-height: 44px; padding: 10px 14px; font-size: 13px; }
     .compact-form { display: grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
     .compact-form .wide { grid-column: 1 / -1; }
     .compact-form .primary { min-height: 46px; }
@@ -594,8 +601,8 @@
         <a class="account-hero" href="/account"><span class="account-avatar" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 21c.5-4.2 3.1-6.5 7.5-6.5s7 2.3 7.5 6.5"/></svg></span><span><strong id="account-name">Mon compte</strong><small>Identité et sécurité</small></span><span aria-hidden="true">›</span></a>
         <h2 class="account-heading">Mon foyer</h2>
         <div class="account-group">
-          <button id="account-household" type="button"><span class="account-symbol" aria-hidden="true" data-ui-icon="people">♧</span><span><strong>Personnes du foyer</strong><small>Repas partagés ou séparés</small></span><span aria-hidden="true">›</span></button>
-          <button id="account-tastes" type="button"><span class="account-symbol" aria-hidden="true" data-ui-icon="heart">♡</span><span><strong>Goûts et régimes</strong><small>Les préférences de chacun</small></span><span aria-hidden="true">›</span></button>
+          <button id="account-household" type="button"><span class="account-symbol" aria-hidden="true" data-ui-icon="people">♧</span><span><strong>Personnes et régimes</strong><small>Qui mange, et ce que chacun évite</small></span><span aria-hidden="true">›</span></button>
+          <button id="account-backup" type="button" hidden><span class="account-symbol" aria-hidden="true" data-ui-icon="download">⇩</span><span><strong>Sauvegarde du foyer</strong><small>Télécharger ou restaurer</small></span><span aria-hidden="true">›</span></button>
           <a id="account-invite" href="/account#invitation-options" hidden><span class="account-symbol" aria-hidden="true" data-ui-icon="plus">＋</span><span><strong>Inviter une personne</strong><small>Gérer les accès au foyer</small></span><span aria-hidden="true">›</span></a>
         </div>
         <section id="fdl-account" aria-label="Liaison Faim de Lion" hidden></section>
@@ -789,7 +796,6 @@
         <div><h2>Mon foyer</h2><span class="muted">Des goûts différents, une seule tablée.</span></div>
         <button id="close-household" class="icon-button" type="button" aria-label="Fermer"><span data-ui-icon="close" aria-hidden="true">×</span></button>
       </div>
-      <p><a href="/account">Mon compte et les accès au foyer →</a></p>
       <details id="legacy-preferences" class="quiet-details" hidden>
         <summary>Anciens goûts communs à vérifier</summary>
         <form id="preferences-form">
@@ -806,8 +812,8 @@
         <button id="new-member" class="secondary" type="button">＋ Ajouter une personne</button>
         <p id="member-status" class="muted" role="status"></p>
       </section>
-      <section class="household-section">
-        <div><h2>Bar à protéines</h2><span class="muted">Quantité conseillée pour une portion.</span></div>
+      <details id="protein-details" class="quiet-details"><summary>Bar à protéines</summary><section class="household-section">
+        <span class="muted">Quantité conseillée pour une portion.</span>
         <div id="protein-list" class="household-list"></div>
         <form id="protein-form"><fieldset id="protein-fields" class="compact-form" aria-label="Protéine par portion">
           <label class="field wide"><span>Nom</span><input id="protein-name" required maxlength="60" placeholder="Seitan grillé"></label>
@@ -819,8 +825,8 @@
         </fieldset></form>
         <p id="protein-status" class="muted" role="status"></p>
         <p id="household-error" class="error" role="alert" hidden></p>
-      </section>
-      <details class="quiet-details">
+      </section></details>
+      <details id="backup-details" class="quiet-details">
         <summary id="backup-summary">Sauvegarde du foyer</summary>
         <p class="muted">Télécharge toutes tes données, photos comprises, dans un fichier de sauvegarde. Garde une copie sur un autre appareil : elle contient les données personnelles du foyer et n’est pas chiffrée.</p>
         <button id="download-backup" class="secondary" type="button">Télécharger la sauvegarde complète</button>
@@ -863,7 +869,7 @@
           <div id="member-taste-choices" class="member-taste-chips"></div>
           <p id="member-tastes-help" class="muted">Les goûts orientent les propositions sans cacher les recettes mal renseignées. Un état cru/cuit manquant est signalé. Goûts uniquement : pas une protection contre les allergies.</p>
         </section>
-        <section id="member-step-recap" hidden><dl id="member-recap"></dl><p class="muted">Tu pourras modifier ce profil dans Compte → Personnes du foyer.</p><button id="delete-member" class="text-action" type="button" hidden>Retirer cette personne</button></section>
+        <section id="member-step-recap" hidden><dl id="member-recap"></dl><p class="muted">Tu pourras modifier ce profil dans Compte → Personnes et régimes.</p><button id="delete-member" class="text-action" type="button" hidden>Retirer cette personne</button></section>
         <p id="member-error" class="error" role="alert" hidden></p>
         <div class="member-actions"><button id="member-next" class="primary" type="submit">Continuer</button><button id="save-member" class="primary" type="submit" hidden>Enregistrer ce profil</button><button id="member-skip" class="text-action" type="button" hidden>Passer cette étape</button></div>
       </fieldset>
@@ -892,7 +898,7 @@
     fetch('/api/account').then(async response => {
       if (!response.ok) return;
       const account = await response.json();
-      document.getElementById('backup-summary').closest('details').hidden = !account.admin;
+      document.getElementById('backup-summary').closest('details').hidden = document.getElementById('account-backup').hidden = !account.admin;
       document.getElementById('account-invite').hidden = !account.admin;
       document.getElementById('account-name').textContent = account.username;
     }).catch(() => {});
@@ -2348,7 +2354,8 @@
     modeSelect.addEventListener('change', applyAppearance);
     matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (modeSelect.value === 'system') applyAppearance(); });
     document.getElementById('account-household').addEventListener('click', () => householdDialog.showModal());
-    document.getElementById('account-tastes').addEventListener('click', () => { householdDialog.showModal(); (document.querySelector('[data-member]') || document.getElementById('new-member')).focus(); });
+    function openHouseholdBackup() { householdDialog.showModal(); const backup = document.getElementById('backup-details'); backup.open = true; backup.scrollIntoView({ block: 'start' }); document.getElementById('backup-summary').focus({ preventScroll: true }); }
+    document.getElementById('account-backup').addEventListener('click', openHouseholdBackup);
     document.querySelector('nav').addEventListener('click', event => {
       const button = event.target.closest('[data-panel]');
       if (!button) return;
@@ -3084,7 +3091,7 @@
 
     function showHouseholdError(error) {
       const message = document.getElementById('household-error');
-      message.textContent = error.error;
+      document.getElementById('protein-details').open = true; message.textContent = error.error;
       message.hidden = false;
     }
 

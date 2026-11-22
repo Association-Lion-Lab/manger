@@ -1,5 +1,31 @@
 # Choix techniques, limites et blocages
 
+## 22 novembre 2026 — « Mon foyer » : une entrée, trois blocs
+
+**Contexte.** Idée UX n° 8. Dans l'onglet Compte, « Personnes du foyer » et « Goûts et régimes » ouvraient la même fenêtre ; seule la cible du focus changeait. La fenêtre empilait les personnes, le Bar à protéines avec son formulaire complet et la sauvegarde. Le lien « Mon compte et les accès au foyer → » n'avait pas de style (bleu souligné). Les pastilles poisson, viande et œuf avaient des fonds pastel fixes, criards en thème sombre, et environ 32 px de haut.
+
+**Choix et raison.**
+- **Une entrée** : `#account-household` devient « Personnes et régimes » ; `#account-tastes` est supprimé.
+- **Ligne « Sauvegarde du foyer »** (`#account-backup`) : `openHouseholdBackup()` ouvre la fenêtre, déplie `#backup-details`, le place en haut (`scrollIntoView({ block: 'start' })`) et donne le focus à son résumé. Masquée par défaut, elle n'apparaît que si `/api/account` confirme un administrateur (même affectation que la sauvegarde dans la fenêtre) : sans réponse, un membre ne la voit pas. La sauvegarde dans la fenêtre garde son comportement d'avant.
+- **Fenêtre** : « Les gourmands » reste ouvert ; « Bar à protéines » passe dans un `<details id="protein-details">` replié ; la sauvegarde reste repliée. Le message `#household-error`, propre au bar, reste dans ce bloc ; `showHouseholdError` rouvre le bloc, au cas où il aurait été replié pendant l'envoi.
+- **Lien vers le compte retiré** de la fenêtre : l'onglet Compte y mène déjà (en-tête et « Inviter une personne »).
+- **Pastilles** : variables `--fish`, `--meat`, `--egg` par thème (clair et sombre), fond `color-mix` à 13 % comme la pastille végétale. Teintes claires assombries (`--fish: #1f6a82`, `--egg: #7a5a10`) pour garder au moins 4,5:1 sur le blanc et sur le fond crème ; teintes sombres entre 5,4:1 et 7,9:1 (calcul de relecture, non mesuré à l'écran). Dans la fenêtre, `min-height: 44px`. Le changement de couleur s'applique aussi aux pastilles ailleurs dans l'appli.
+
+**Alternatives écartées.**
+- Garder deux entrées avec deux ancres différentes : la fenêtre est courte, une seule entrée suffit.
+- Laisser le lien vers le compte avec la couleur d'accent : doublon de l'onglet.
+- Replier aussi « Les gourmands » : c'est la raison principale d'ouvrir la fenêtre.
+
+**Conséquences.** Aucun changement de serveur, d'API, de schéma ni de dépendance. Une fois ouverts, les blocs gardent leur état jusqu'au rechargement de la page : ouvrir « Personnes et régimes » après la ligne Sauvegarde montre la sauvegarde encore dépliée. Les textes « Compte → Personnes du foyer » deviennent « Compte → Personnes et régimes » (appli et `GUIDE.md`) ; les anciens comptes rendus d'essai gardent l'ancien libellé.
+
+**Relecture.** Relecture Sonnet sans bloquant ; remarques appliquées : contraste de l'œuf et du poisson en thème clair, ligne Sauvegarde masquée tant que le rôle n'est pas connu, erreur du bar toujours visible, deux chemins du guide alignés.
+
+**Validation.** Tests écrits d'abord (`household-entry-ui.test.js`, 4 en échec puis réussis) : une entrée, ligne Sauvegarde réservée aux administrateurs, ouverture dépliée en haut avec focus, blocs repliés par défaut, erreur du bar visible, lien retiré, pastilles sans couleur fixe et 44 px. Suite complète : 523 tests, 522 réussis, 1 ignoré (TLS).
+
+Contrôle dans le navigateur intégré (Chromium, 375 px, bases jetables, compte de test `admin`, personnes fictives Alex et Sam) : onglet Compte avec « Personnes et régimes » puis « Sauvegarde du foyer » ; la ligne Sauvegarde ouvre la fenêtre, bloc déplié, focus sur son résumé, Bar à protéines replié. La fenêtre étant courte, la sauvegarde reste en bas de l'écran plutôt qu'en haut, mais visible sans défiler. Pastilles de protéines à 44 px, lisibles en thèmes clair et sombre ; les cartes des personnes gardent leurs 66 px.
+
+**Reste à vérifier.** iPhone (application installée), Android, lecteur d'écran, contraste réel des nouvelles pastilles en thème sombre.
+
 ## 22 novembre 2026 — Invitation directe
 
 **Contexte.** Idée UX n° 4. « Inviter une personne » ouvrait `/account` en haut, sur « Mot de passe ». L'invitation était plus bas, dans un `<details>` d'environ 26 px de haut, et « Revenir aux repas » ramenait au planning plutôt qu'à l'onglet Compte d'où l'on venait.
