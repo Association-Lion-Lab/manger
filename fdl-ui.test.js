@@ -1,8 +1,8 @@
 const test=require('node:test'),assert=require('node:assert/strict');
 const {create}=require('./public/fdl-ui');
-function fixture({enabled=true,admin=true,active='recipes',items=[]}={}){
+function fixture({enabled=true,admin=true,active='recipes',items=[],linked=true,incoming=null}={}){
   function root(panel){const events={},nodes=new Map();return {events,hidden:true,innerHTML:'',getClientRects:()=>active===panel?[{}]:[],setAttribute(){},querySelectorAll:()=>[],querySelector(selector){if(!nodes.has(selector))nodes.set(selector,{innerHTML:'',textContent:'',dataset:{},getClientRects:()=>[]});return nodes.get(selector);},addEventListener:(name,fn)=>events[name]=fn};}
-  const account=root('account'),recipes=root('recipes'),calls=[],state={linked:true,updates:[{recipeId:1,title:'<script>indésirable</script>',modified:true}],notices:[]};
+  const account=root('account'),recipes=root('recipes'),calls=[],state={linked,updates:[{recipeId:1,title:'<script>indésirable</script>',modified:true}],notices:[]};
   let imports=0,release,hold=false,reloads=0,importFailure=false;
   const request=async(path,options={})=>{
     calls.push({path,options});
@@ -11,9 +11,25 @@ function fixture({enabled=true,admin=true,active='recipes',items=[]}={}){
     if(path==='/api/fdl/etat')return enabled?Response.json(state):Response.json({error:'Route inconnue'},{status:404});
     return Response.json({items,next:null});
   };
-  const ui=create({account,recipes,fetch:request,escape:value=>String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;'),reload:async()=>{reloads++;},navigate(){},confirm:()=>true});
-  return {ui,account,recipes,calls,hold(){hold=true;},release(){release();},imports:()=>imports,reloads:()=>reloads,activate(panel){active=panel;},failImport(){importFailure=true;}};
+  let taken=0;
+  const ui=create({account,recipes,fetch:request,escape:value=>String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;'),reload:async()=>{reloads++;},navigate(){},confirm:()=>true,incoming,onIncoming:()=>taken++});
+  return {ui,account,recipes,calls,hold(){hold=true;},release(){release();},imports:()=>imports,reloads:()=>reloads,taken:()=>taken,activate(panel){active=panel;},failImport(){importFailure=true;}};
 }
+
+test('FDL interface : lien « Importer dans Manger! » pré-remplit sans importer',async()=>{
+  const form=fixture({incoming:'46'});await form.ui.refresh();
+  assert.match(form.recipes.innerHTML,/name="lien"[^>]*value="46"/);
+  assert.equal(form.recipes.querySelector('details:last-of-type').open,true);
+  assert.match(form.recipes.querySelector('[data-fdl-message]').textContent,/Importer la recette/);
+  assert.equal(form.imports(),0);assert.equal(form.taken(),1);
+  await form.recipes.events.click({target:{closest:()=>({dataset:{fdl:'import',id:'12'}})}});await form.ui.refresh();
+  assert.doesNotMatch(form.recipes.innerHTML,/value="46"/);
+  const unlinked=fixture({incoming:'46',linked:false});await unlinked.ui.refresh();
+  assert.match(unlinked.recipes.querySelector('[data-fdl-message]').textContent,/pas relié à FDL/);
+  assert.equal(unlinked.imports(),0);assert.equal(unlinked.taken(),1);
+  const escaped=fixture({incoming:'"><img>'});await escaped.ui.refresh();
+  assert.doesNotMatch(escaped.recipes.innerHTML,/<img>/);
+});
 test('FDL interface : absence 404 masquée, administration réservée, titres échappés',async()=>{
   const absent=fixture({enabled:false});await absent.ui.refresh();assert.equal(absent.account.hidden,true);assert.equal(absent.recipes.hidden,true);assert.equal(absent.calls.length,1);
   const member=fixture({admin:false});await member.ui.refresh();assert.equal(member.account.hidden,true);assert.equal(member.recipes.hidden,false);

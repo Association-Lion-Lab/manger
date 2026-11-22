@@ -1,5 +1,6 @@
 (function(root,factory){if(typeof module==='object'&&module.exports)module.exports=factory();else root.MangerFdl=factory();})(typeof globalThis!=='undefined'?globalThis:this,function(){
-  function create({account,recipes,fetch:request,escape:e,reload,navigate=url=>location.assign(url),confirm:ask=message=>confirm(message)}){
+  // incoming: FDL id brought by the « Importer dans Manger! » link, only pre-filled: the import still needs a click.
+  function create({account,recipes,fetch:request,escape:e,reload,navigate=url=>location.assign(url),confirm:ask=message=>confirm(message),incoming=null,onIncoming=()=>{}}){
     let status=null,admin=false,busy=false,next=null,mine=false,query='',items=[],visible=20,refreshVersion=0;
     const action=(name,text,extra='')=>`<button type="button" class="secondary" data-fdl="${name}" ${extra}>${text}</button>`;
     async function json(path,options={}){
@@ -21,9 +22,13 @@
       const updates=status.updates||[],notices=status.notices||[];
       recipes.innerHTML=`${updates.length?`<details class="fdl-card"><summary>${updates.length} nouvelle${updates.length>1?'s':''} version${updates.length>1?'s':''} sur FDL</summary>${updates.map(u=>`<div class="fdl-result"><strong>${e(u.title)}</strong>${u.modified?'<p class="muted">Tes modifications locales seront remplacées.</p>':''}<div class="fdl-actions">${action('update','Mettre à jour',`data-id="${u.recipeId}"`)}${action('skip','Ignorer',`data-id="${u.recipeId}"`)}</div></div>`).join('')}</details>`:''}
         ${notices.length?`<details class="fdl-card"><summary>${notices.length} retrait${notices.length>1?'s':''} par la modération FDL</summary>${notices.map(n=>`<p>« ${e(n.title)} » a été retirée de FDL.</p>`).join('')}${action('notice','J’ai compris')}</details>`:''}
-        <details class="fdl-card"><summary>Recettes de Faim de Lion</summary>${status.linked?`<form data-fdl-search><label class="field"><span>Chercher sur FDL</span><input name="q" type="search" value="${e(query)}" placeholder="Un plat, un ingrédient…" maxlength="200"></label><div class="fdl-actions"><button class="secondary" type="submit">Rechercher</button>${action('mine','Mes recettes FDL')}</div></form><div data-fdl-results></div><form data-fdl-import><label class="field"><span>Ou coller un lien FDL</span><input name="lien" type="text" placeholder="Lien ou identifiant FDL" maxlength="2000" required></label><button class="secondary" type="submit">Importer la recette</button></form>`:'<p class="muted">Un administrateur peut relier un compte FDL depuis Compte.</p>'}</details><p data-fdl-message role="status"></p>`;
-      const browser=recipes.querySelector('details:last-of-type');if(browser){browser.dataset.fdlBrowser='';browser.open=Boolean(expanded);}
+        <details class="fdl-card"><summary>Recettes de Faim de Lion</summary>${status.linked?`<form data-fdl-search><label class="field"><span>Chercher sur FDL</span><input name="q" type="search" value="${e(query)}" placeholder="Un plat, un ingrédient…" maxlength="200"></label><div class="fdl-actions"><button class="secondary" type="submit">Rechercher</button>${action('mine','Mes recettes FDL')}</div></form><div data-fdl-results></div><form data-fdl-import><label class="field"><span>Ou coller un lien FDL</span><input name="lien" type="text" placeholder="Lien ou identifiant FDL" maxlength="2000" value="${e(incoming||'')}" required></label><button class="secondary" type="submit">Importer la recette</button></form>`:'<p class="muted">Un administrateur peut relier un compte FDL depuis Compte.</p>'}</details><p data-fdl-message role="status"></p>`;
+      const browser=recipes.querySelector('details:last-of-type');if(browser){browser.dataset.fdlBrowser='';browser.open=Boolean(expanded||incoming);}
       renderResults();lock(busy);
+      if(incoming){
+        message(status.linked?'Recette FDL prête : choisis « Importer la recette » pour l’ajouter au foyer.':'Ce foyer n’est pas relié à FDL. Un administrateur peut le relier depuis Compte.');
+        if(!status.linked)incoming=null;onIncoming();
+      }
     }
     function renderResults(){
       const root=recipes.querySelector('[data-fdl-results]');if(!root)return;
@@ -51,7 +56,7 @@
       finally{lock(false);}
     }
     async function importRecipe(lien){
-      await post('import',{lien});
+      await post('import',{lien});incoming=null;
       await reload();await refresh();if(items.length)await search();message('Recette importée dans le foyer.');
     }
     async function click(event){

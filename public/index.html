@@ -3239,9 +3239,13 @@
       if (isSecureContext && navigator.serviceWorker && localStorage.getItem('manger-offline-enabled') === 'yes') navigator.serviceWorker.getRegistration().then(registration => registration?.update()).catch(() => {});
     } catch {}
     document.querySelectorAll('[data-ui-icon]').forEach(element => { element.innerHTML = uiIcon(element.dataset.uiIcon); });
-    const fdlUi=MangerFdl.create({account:document.getElementById('fdl-account'),recipes:document.getElementById('fdl-recipes'),fetch:(...args)=>fetch(...args),escape:escapeHtml,reload:async()=>{if(!await load())throw new Error('La copie est enregistrée. Recharge la page pour actualiser les recettes.');}});
+    // « Importer dans Manger! » on FDL opens /#fdl=<id>; the id waits in the tab (sessionStorage) through a sign-in.
+    let fdlIncoming=null;
+    try{const id=new URLSearchParams(location.hash.slice(1)).get('fdl');if(id!==null){history.replaceState(null,'',location.pathname+location.search);if(/^\d{1,19}$/.test(id))sessionStorage.setItem('manger-fdl-import',id);}fdlIncoming=sessionStorage.getItem('manger-fdl-import');}catch{}
+    const fdlUi=MangerFdl.create({account:document.getElementById('fdl-account'),recipes:document.getElementById('fdl-recipes'),fetch:(...args)=>fetch(...args),escape:escapeHtml,reload:async()=>{if(!await load())throw new Error('La copie est enregistrée. Recharge la page pour actualiser les recettes.');},
+      incoming:fdlIncoming,onIncoming:()=>{try{sessionStorage.removeItem('manger-fdl-import');}catch{}}});
     document.querySelector('nav').addEventListener('click',event=>{if(event.target.closest('[data-panel="recipes"], [data-panel="account"]'))fdlUi.refresh();});
-    fdlUi.refresh();
+    if(fdlIncoming)document.querySelector('nav [data-panel="recipes"]').click();else fdlUi.refresh();
     load().catch(() => {}); // The shared loader displays a retry action without replacing the planning.
   </script>
 </body>
