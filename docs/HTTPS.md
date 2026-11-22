@@ -51,7 +51,7 @@ openssl x509 -in tls/ca.crt -noout -fingerprint -sha256
 
 ### Préparer un appareil invité depuis Manger!
 
-Depuis un appareil qui fait **déjà confiance** au serveur, un administrateur ouvre **Compte → Mon compte → Accès au foyer → Inviter par lien privé → Préparer l’accès sur un nouvel iPhone**. Cette aide apparaît uniquement en HTTPS natif avec `MANGER_TLS_CA` configuré et une autorité racine valide correspondant au certificat serveur. Le modèle Compose existant fournit déjà ce fichier : aucun nouveau port ni montage de clé d’autorité n’est requis.
+Depuis un appareil qui fait **déjà confiance** au serveur, un administrateur ouvre **Compte → Inviter une personne → Préparer l’accès sur un nouvel iPhone** (la section « Inviter par lien privé » s’ouvre déjà dépliée). Cette aide apparaît uniquement en HTTPS natif avec `MANGER_TLS_CA` configuré et une autorité racine valide correspondant au certificat serveur. Le modèle Compose existant fournit déjà ce fichier : aucun nouveau port ni montage de clé d’autorité n’est requis.
 
 1. **Télécharger le certificat public** récupère `manger-ca.cer`, au format DER. C’est le même certificat public que `tls/ca.crt`, avec la même empreinte SHA-256, sans clé privée ni données du foyer.
 2. **Partager le certificat…** apparaît si le navigateur accepte le partage de ce type de fichier. Le fichier est préparé avant l’appui, avec une lecture limitée à 10 secondes ; le partage est volontaire. Une annulation ne copie ni n’envoie rien automatiquement. Sinon, téléchargez le fichier puis joignez-le vous-même à un courriel ou transmettez-le par un canal de confiance.
