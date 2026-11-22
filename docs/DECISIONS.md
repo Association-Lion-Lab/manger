@@ -24,7 +24,9 @@
 
 Contrôle dans le navigateur intégré (Chromium, 375 px, thème sombre, bases jetables, compte de test `admin`) : « Inviter une personne » ouvre `/account#invitation-options`, section dépliée à 16 px du haut, aucun lien créé ; résumés visibles de 46 à 50 px ; « ‹ Compte » rouvre l'onglet Compte et efface `#account` de l'adresse.
 
-**Reste à vérifier.** Comportement sur iPhone (application installée et Safari), annonce par lecteur d'écran du `<details>` ouvert.
+**Validation réelle.** L'utilisateur a testé la branche sur son serveur et son iPhone le 22 novembre (« c'est bon »). Fusion dans `development` (`17a9049`), 519 tests, 518 réussis, 1 ignoré (TLS).
+
+**Reste à vérifier.** Android, annonce par lecteur d'écran du `<details>` ouvert.
 
 ## 19 novembre 2026 — Toucher et mouvement dans toute l'appli
 

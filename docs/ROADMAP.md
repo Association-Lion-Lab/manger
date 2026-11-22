@@ -2,13 +2,13 @@
 
 ## Invitation directe — 22 novembre 2026
 
-Livré sur la branche `feat/invitation-directe`, non fusionné. Idée UX n° 4 :
+Testé sur iPhone et fusionné dans `development` (`17a9049`). Idée UX n° 4 :
 - **Inviter une personne** (onglet Compte, administrateur) ouvre la page du compte sur « Inviter par lien privé », déjà déplié et placé en haut de l'écran ;
 - aucun lien n'est créé à l'arrivée : il faut toujours toucher « Créer un lien d'invitation » ;
 - « Revenir aux repas » devient **‹ Compte** et ramène à l'onglet Compte de l'appli ;
 - les lignes repliées de la page du compte font au moins 44 px de haut.
 
-Serveur, API, schéma et règles d'invitation (24 heures, une seule inscription) sont inchangés. Non vérifiés : téléphone réel, lecteur d'écran. [Décision](DECISIONS.md#22-novembre-2026--invitation-directe). Ensuite : « Mon foyer » réorganisé (idée n° 8).
+Serveur, API, schéma et règles d'invitation (24 heures, une seule inscription) sont inchangés. Validé sur iPhone le 22 novembre. Non vérifiés : Android, lecteur d'écran. [Décision](DECISIONS.md#22-novembre-2026--invitation-directe). Ensuite : « Mon foyer » réorganisé (idée n° 8).
 
 ## Toucher et mouvement dans toute l'appli — 19 novembre 2026
 
