@@ -435,10 +435,24 @@
     .account-settings > label { flex-wrap: wrap; cursor: default; }
     .account-settings select { flex: 1 1 100%; min-height: 44px; margin-left: 52px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 12px; color: var(--text); background: var(--field); }
     .account-footnote { margin: 22px 4px; color: var(--muted); font-size: 12px; }
+    #shopping-summary, .day strong { font-variant-numeric: tabular-nums; }
+    h1, h2 { text-wrap: balance; }
+    .recipe-cover { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+    .shopping-done { display: grid; justify-items: center; gap: 10px; color: var(--text); font-weight: 650; }
+    .shopping-done p { margin: 0; }
     @media (prefers-reduced-motion: no-preference) {
-      button { transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease; }
+      button { transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease, transform .12s ease; }
+      /* Pas sur .recipe-main : un transform ferait de ce bouton le repère de la photo ronde en absolu, qui sauterait sur le titre. */
+      button:active:not(:disabled):not(.recipe-main) { transform: scale(.97); }
       dialog[open] { animation: sheet-appear .18s ease-out; }
       @keyframes sheet-appear { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+      .panel { animation: panel-in .12s ease-out; }
+      @keyframes panel-in { from { opacity: 0; } to { opacity: 1; } }
+      .shopping-item span { transition: opacity .2s ease, color .2s ease; }
+      .shopping-item input[aria-busy="true"]:checked + span { opacity: .4; }
+      .shopping-done-new .shopping-mascot { animation: shopping-hop .9s ease-in-out 2; }
+      .shopping-done-new p { animation: panel-in .3s ease-out; }
+      @keyframes shopping-hop { 0%, 100% { transform: translateY(0) scale(1, 1); } 15% { transform: translateY(0) scale(1.06, .94); } 45% { transform: translateY(-12px) scale(.97, 1.03); } 75% { transform: translateY(0) scale(1.04, .96); } }
     }
     @media (prefers-reduced-transparency: reduce) { header, nav, .toolbar > .icon-button { background: var(--surface); backdrop-filter: none; border-color: var(--line); box-shadow: none; } }
     @media (max-width: 619px) {
@@ -1369,7 +1383,8 @@
     document.addEventListener('visibilitychange', syncShopping);
     window.addEventListener('focus', syncShopping);
     window.addEventListener('online', syncShopping);
-    function renderShopping() {
+    // celebrate : la dernière coche vient d'être confirmée ; la mascotte saute une fois (CSS, mouvement permis).
+    function renderShopping({ celebrate = false } = {}) {
       const summary = document.getElementById('shopping-summary');
       const container = document.getElementById('shopping');
       const remaining = state.shopping.filter(item => !item.checked).length;
@@ -1389,7 +1404,7 @@
       const rows = state.shopping.map((item, index) => ({ item, index }));
       const active = organizingShopping ? rows : rows.filter(({ item }) => !item.checked);
       const checked = organizingShopping ? [] : rows.filter(({ item }) => item.checked);
-      container.innerHTML = state.shopping.length ? `${active.length ? renderGroups(active) : '<div class="empty-state">Tout est coché.</div>'}${checked.length ? `<details id="shopping-checked" class="quiet-details"${checkedOpen ? ' open' : ''}><summary>Déjà dans le panier · ${checked.length}</summary>${renderGroups(checked)}</details>` : ''}` : '<div class="empty-state">Planifiez une recette ou ajoutez un article à acheter.</div>';
+      container.innerHTML = state.shopping.length ? `${active.length ? renderGroups(active) : `<div class="empty-state shopping-done${celebrate ? ' shopping-done-new' : ''}"><img class="shopping-mascot" src="/icon.svg" width="72" height="72" alt=""><p>Tout est dans le panier !</p></div>`}${checked.length ? `<details id="shopping-checked" class="quiet-details"${checkedOpen ? ' open' : ''}><summary>Déjà dans le panier · ${checked.length}</summary>${renderGroups(checked)}</details>` : ''}` : '<div class="empty-state">Planifiez une recette ou ajoutez un article à acheter.</div>';
       if (organizingShopping) container.querySelectorAll('[data-shopping]').forEach(input => {
         const index = Number(input.dataset.shopping);
         const item = state.shopping[index];
@@ -2393,20 +2408,25 @@
       if (pendingShoppingChecks.has(checkKey)) return;
       pendingShoppingChecks.set(checkKey, checked); shoppingSyncVersion++;
       checkbox.disabled = true; checkbox.setAttribute('aria-busy', 'true');
+      // Ligne cochée : 200 ms estompée et barrée avant de rejoindre « Déjà dans le panier », si le mouvement est permis.
+      const pause = checked && globalThis.matchMedia && !matchMedia('(prefers-reduced-motion: reduce)').matches ? new Promise(resolve => setTimeout(resolve, 200)) : null;
+      let celebrate = false;
       try {
         const response = await fetch('/api/shopping-checks', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ weekStart: week, name: item.name, unit: item.unit, manualId: item.manualId, checked }), signal: AbortSignal.timeout(15000) });
         if (!response.ok) throw new Error((await response.json().catch(() => null))?.error || 'La coche a été refusée. La liste précédente est conservée.');
         if (week !== key(state.weekStart)) return;
         const current = state.shopping.find(candidate => shoppingCheckKey(candidate, week) === checkKey);
         if (current) current.checked = checked;
+        celebrate = checked && state.shopping.every(item => item.checked);
         saveOfflineShopping();
       } catch (error) {
         if (week === key(state.weekStart)) shoppingError(new Error(['TypeError', 'TimeoutError', 'AbortError'].includes(error.name)
           ? 'Impossible de confirmer la coche. La liste précédente est conservée ; recharge-la avant de réessayer : le serveur a peut-être reçu la demande.' : error.message));
       } finally {
+        await pause;
         pendingShoppingChecks.delete(checkKey); shoppingSyncVersion++;
         checkbox.disabled = false; checkbox.setAttribute('aria-busy', 'false');
-        if (week === key(state.weekStart)) renderShopping();
+        if (week === key(state.weekStart)) renderShopping({ celebrate });
       }
     });
     function shoppingError(error) {
@@ -2745,6 +2765,7 @@
     async function toggleRecipeFavorite(recipe, button) {
       if (pendingFavorites.has(recipe.id) || button.disabled || (recipeDeleteBusy && editingRecipeId === recipe.id)) return;
       pendingFavorites.add(recipe.id);
+      let added = false;
       button.disabled = true;
       document.querySelectorAll(`[data-favorite-recipe="${recipe.id}"]`).forEach(control => control.disabled = true);
       if (recipeViewDialog.open && editingRecipeId === recipe.id) document.getElementById('favorite-recipe').disabled = true;
@@ -2756,6 +2777,7 @@
         if (typeof result?.favorite !== 'boolean') throw new Error('Confirmation du favori illisible. Recharge les recettes avant de réessayer.');
         const current = state.recipes.find(item => item.id === recipe.id);
         if (current) current.favorite = result.favorite;
+        added = result.favorite;
       } finally {
         pendingFavorites.delete(recipe.id);
         if (button.id !== 'favorite-recipe' || editingRecipeId === recipe.id) button.disabled = button.id === 'favorite-recipe' && recipeDeleteBusy;
@@ -2766,7 +2788,14 @@
           favorite.innerHTML = uiIcon('heart') + (current?.favorite ? 'Retirer des favoris' : 'Ajouter aux favoris');
           favorite.setAttribute('aria-pressed', String(Boolean(current?.favorite)));
         }
+        if (added) popHearts(recipe.id);
       }
+    }
+    // Favori ajouté : le cœur de chaque vue du plat bat une fois, si le mouvement est permis.
+    function popHearts(id) {
+      if (!globalThis.matchMedia || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      const selector = `[data-favorite-recipe="${id}"] .ui-icon` + (recipeViewDialog.open && editingRecipeId === id ? ', #favorite-recipe .ui-icon' : '');
+      document.querySelectorAll(selector).forEach(icon => icon.animate?.([{ transform: 'scale(1)' }, { transform: 'scale(1.3)' }, { transform: 'scale(1)' }], { duration: 240, easing: 'ease-out' }));
     }
     document.getElementById('favorite-recipe').addEventListener('click', async event => {
       const recipe = state.recipes.find(item => item.id === editingRecipeId);

@@ -78,3 +78,20 @@ test('favoris : une erreur tardive ne s’affiche pas sur la nouvelle fiche', as
   form.calls[0].reject(new TypeError('fetch failed')); await pending;
   assert.equal(form.node('recipe-view-error').hidden, true); assert.equal(form.node('favorite-recipe').disabled, false);
 });
+
+test('favoris : le cœur bat une fois quand un favori est ajouté, jamais au retrait, en échec ou en mouvement réduit', async () => {
+  const form = favorites(), pops = [], selectors = [], cards = form.context.document.querySelectorAll;
+  form.context.document.querySelectorAll = selector => { if (!selector.includes('.ui-icon')) return cards(selector); selectors.push(selector); return [{ animate: (frames, options) => pops.push(options.duration) }]; };
+  form.context.matchMedia = () => ({ matches: false });
+  const recipe = form.context.state.recipes[0];
+  const added = form.toggle(recipe, form.cards[0]); form.calls[0].resolve({ ok: true, json: async () => ({ favorite: true }) }); await added;
+  assert.deepEqual(pops, [240]); assert.match(selectors[0], /\[data-favorite-recipe="1"\] \.ui-icon, #favorite-recipe \.ui-icon/);
+  const removed = form.toggle(recipe, form.cards[0]); form.calls[1].resolve({ ok: true, json: async () => ({ favorite: false }) }); await removed;
+  const failed = form.toggle(recipe, form.cards[0]); form.calls[2].reject(new TypeError('fetch failed')); await failed.catch(() => {});
+  form.context.matchMedia = () => ({ matches: true });
+  const calm = form.toggle(recipe, form.cards[0]); form.calls[3].resolve({ ok: true, json: async () => ({ favorite: true }) }); await calm;
+  assert.deepEqual(pops, [240]);
+  form.context.matchMedia = () => ({ matches: false }); // fiche ouverte : plat 1
+  const other = form.toggle(form.context.state.recipes[1], form.cards[2]); form.calls[4].resolve({ ok: true, json: async () => ({ favorite: true }) }); await other;
+  assert.equal(selectors.at(-1), '[data-favorite-recipe="2"] .ui-icon', 'la fiche ouverte d’un autre plat ne bat pas');
+});

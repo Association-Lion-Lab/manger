@@ -269,3 +269,14 @@ test('menu guidé : les recettes déjà proposées sont envoyées à l’aperçu
   await form.click('close'); await form.open('2026-11-09');
   assert.deepEqual(seen(4), []);
 });
+
+test('menu guidé : « Autres idées » visible au-dessus des cartes, « Appliquer ces critères » dans le résumé replié', async () => {
+  const form = composer(); await form.open();
+  const html = form.dialog.innerHTML, details = html.match(/<details class="menu-preferences">[\s\S]*?<\/details>/)[0];
+  assert.match(html.replace(details, ''), /<div class="menu-count"><strong>5 recettes<\/strong><button type="button" class="secondary menu-refresh" data-menu-action="criteria" >[^<]*Autres idées<\/button><\/div>/);
+  assert.match(details, /data-menu-action="criteria" >Appliquer ces critères<\/button>/);
+  assert.doesNotMatch(html, /Actualiser les propositions/);
+  form.node('[data-menu-people]').value = '2'; form.node('[data-menu-minutes]').value = '30';
+  await form.click('criteria');
+  assert.equal(form.reads.length, 2, 'le bouton visible relance l’aperçu');
+});

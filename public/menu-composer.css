@@ -20,6 +20,9 @@
 .menu-count { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; margin: 28px 0 8px; }
 .menu-count strong { font-size: 1.25rem; }
 .menu-count > span { font-size: .8125rem; }
+.menu-count { align-items: center; }
+.menu-count .menu-refresh { width: auto; flex: none; min-height: 44px; display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; }
+.menu-count .menu-refresh .ui-icon { width: 18px; height: 18px; }
 .menu-recipe { padding: 22px 0; border-bottom: 1px dashed var(--line); }
 .menu-recipe-top { display: grid; grid-template-columns: 108px minmax(0, 1fr); align-items: center; gap: 20px; }
 .menu-cover { display: block; width: 108px; height: 108px; flex-shrink: 0; }

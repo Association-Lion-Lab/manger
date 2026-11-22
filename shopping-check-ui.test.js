@@ -71,3 +71,33 @@ test('courses : nouveau rendu conserve les coches et verrous en cours sans bloqu
   new Script(identity + '\n' + render + ';renderShopping();').runInNewContext(form.context);
   assert.match(form.node('shopping').innerHTML, /data-shopping="0" disabled aria-busy="true"/);
 });
+
+test('courses : pause de 200 ms en cochant si le mouvement est permis, fête quand la dernière coche est confirmée', async () => {
+  const form = list(), renders = [], delays = [];
+  form.context.renderShopping = options => renders.push(options || {});
+  form.context.matchMedia = () => ({ matches: false });
+  form.context.setTimeout = (resolve, ms) => { delays.push(ms); resolve(); };
+  const first = form.change(form.checkbox(0)); form.replies[0]({ ok: true }); await first;
+  assert.deepEqual(delays, [200]); assert.equal(renders.at(-1).celebrate, false);
+  const last = form.change(form.checkbox(1)); form.replies[1]({ ok: true }); await last;
+  assert.equal(renders.at(-1).celebrate, true, 'tout est coché');
+  const undo = form.change(form.checkbox(1, false)); form.replies[2]({ ok: true }); await undo;
+  assert.deepEqual(delays, [200, 200], 'pas de pause en décochant'); assert.equal(renders.at(-1).celebrate, false);
+  form.context.matchMedia = () => ({ matches: true });
+  const calm = form.change(form.checkbox(1)); form.replies[3]({ ok: true }); await calm;
+  assert.deepEqual(delays, [200, 200], 'mouvement réduit : pas de pause'); assert.equal(renders.at(-1).celebrate, true, 'le message reste');
+  const refused = form.change(form.checkbox(0, false)); form.replies[4]({ ok: false, json: async () => ({ error: 'Non.' }) }); await refused;
+  assert.equal(renders.at(-1).celebrate, false);
+});
+
+test('courses : tout coché, mascotte et message ; animation seulement juste après la dernière coche', () => {
+  const form = list(); form.context.state.shopping.forEach(item => { item.checked = true; });
+  const identity = html.match(/^    function shoppingCheckKey[^\n]+/m)[0];
+  const render = html.match(/^    function renderShopping[\s\S]*?(?=\n    function renderHousehold)/m)[0];
+  new Script(identity + '\n' + render + ';renderShopping({ celebrate: true });').runInNewContext(form.context);
+  assert.match(form.node('shopping').innerHTML, /class="empty-state shopping-done shopping-done-new"/);
+  assert.match(form.node('shopping').innerHTML, /<img class="shopping-mascot" src="\/icon.svg" width="72" height="72" alt="">/);
+  assert.match(form.node('shopping').innerHTML, /Tout est dans le panier !/);
+  new Script(identity + '\n' + render + ';renderShopping();').runInNewContext(form.context);
+  assert.match(form.node('shopping').innerHTML, /class="empty-state shopping-done"/);
+});
